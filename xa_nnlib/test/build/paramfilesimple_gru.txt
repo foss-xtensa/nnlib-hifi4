@@ -1,0 +1,11 @@
+@Start
+@Input_path ../test_inp/
+@Output_path ../test_out/
+@Ref_path ../test_ref/
+@Context_path ../test_inp/
+
+
+--in_feats 256 --out_feats 256 --membank_padding 1 --mat_prec 16 --vec_prec 16 --verify 1 --input_file gru/256x256/fix16x16/c/input.bin --output_file gru_256x256_fix16x16_output.bin --ref_file gru_256x256_fix16x16_output.bin --prev_h_file gru/256x256/fix16x16/c/context.bin --filter_path ../test_inp/gru/256x256/fix16x16/c/coef_data
+--in_feats 256 --out_feats 256 --membank_padding 1 --mat_prec 8 --vec_prec 16 --verify 1 --input_file gru/256x256/fix8x16/c/input.bin --output_file gru_256x256_fix8x16_output.bin --ref_file gru_256x256_fix8x16_output.bin --prev_h_file gru/256x256/fix8x16/c/context.bin --filter_path ../test_inp/gru/256x256/fix8x16/c/coef_data
+
+@Stop

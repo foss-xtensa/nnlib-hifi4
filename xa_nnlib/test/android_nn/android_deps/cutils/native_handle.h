@@ -1,0 +1,123 @@
+/*******************************************************************************
+* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* 
+* Permission is hereby granted, free of charge, to any person obtaining
+* a copy of this software and associated documentation files (the
+* "Software"), to use this Software with Cadence processor cores only and 
+* not with any other processors and platforms, subject to
+* the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included
+* in all copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+******************************************************************************/
+/*
+ * Copyright (C) 2009 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef NATIVE_HANDLE_H_
+#define NATIVE_HANDLE_H_
+
+#include <stdalign.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Declare a char array for use with native_handle_init */
+#define NATIVE_HANDLE_DECLARE_STORAGE(name, maxFds, maxInts) \
+    alignas(native_handle_t) char (name)[                            \
+      sizeof(native_handle_t) + sizeof(int) * ((maxFds) + (maxInts))]
+
+typedef struct native_handle
+{
+    int version;        /* sizeof(native_handle_t) */
+    int numFds;         /* number of file-descriptors at &data[0] */
+    int numInts;        /* number of ints at &data[numFds] */
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-length-array"
+#endif
+    int data[0];        /* numFds + numInts ints */
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+} native_handle_t;
+
+typedef const native_handle_t* buffer_handle_t;
+
+/*
+ * native_handle_close
+ * 
+ * closes the file descriptors contained in this native_handle_t
+ * 
+ * return 0 on success, or a negative error code on failure
+ * 
+ */
+int native_handle_close(const native_handle_t* h);
+
+/*
+ * native_handle_init
+ *
+ * Initializes a native_handle_t from storage.  storage must be declared with
+ * NATIVE_HANDLE_DECLARE_STORAGE.  numFds and numInts must not respectively
+ * exceed maxFds and maxInts used to declare the storage.
+ */
+native_handle_t* native_handle_init(char* storage, int numFds, int numInts);
+
+/*
+ * native_handle_create
+ * 
+ * creates a native_handle_t and initializes it. must be destroyed with
+ * native_handle_delete().
+ * 
+ */
+native_handle_t* native_handle_create(int numFds, int numInts);
+
+/*
+ * native_handle_clone
+ *
+ * creates a native_handle_t and initializes it from another native_handle_t.
+ * Must be destroyed with native_handle_delete().
+ *
+ */
+native_handle_t* native_handle_clone(const native_handle_t* handle);
+
+/*
+ * native_handle_delete
+ * 
+ * frees a native_handle_t allocated with native_handle_create().
+ * This ONLY frees the memory allocated for the native_handle_t, but doesn't
+ * close the file descriptors; which can be achieved with native_handle_close().
+ * 
+ * return 0 on success, or a negative error code on failure
+ * 
+ */
+int native_handle_delete(native_handle_t* h);
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* NATIVE_HANDLE_H_ */

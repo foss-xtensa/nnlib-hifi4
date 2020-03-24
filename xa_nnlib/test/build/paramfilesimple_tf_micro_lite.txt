@@ -1,0 +1,8 @@
+@Start
+@Input_path ../test_inp/
+@Output_path ../test_out/
+
+yes_1.wav yes_1_result.txt
+no_1.wav no_1_result.txt
+
+@Stop

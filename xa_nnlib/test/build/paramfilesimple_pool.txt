@@ -1,0 +1,42 @@
+@Start
+@Input_path ../test_inp/
+@Output_path ../test_out/
+@Ref_path ../test_ref/
+
+-read_inp_file_name inp_avgpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_out_file_name out_avgpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin  -read_ref_file_name out_avgpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin   -write_file 0 -verify 1 -inp_precision  8 -out_precision  8 -frames 2 -kernel_name avgpool -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43
+
+-read_inp_file_name inp_avgpool_inp_16_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_out_file_name out_avgpool_inp_16_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin  -read_ref_file_name out_avgpool_inp_16_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin  -write_file 0 -verify 1 -inp_precision 16 -out_precision 16 -frames 2 -kernel_name avgpool -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43
+
+-read_inp_file_name inp_avgpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_out_file_name out_avgpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin  -read_ref_file_name out_avgpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_file 0 -verify 1 -inp_precision -1 -out_precision -1 -frames 2 -kernel_name avgpool -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43
+
+-read_inp_file_name inp_maxpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_out_file_name out_maxpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin  -read_ref_file_name out_maxpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin   -write_file 0 -verify 1 -inp_precision  8 -out_precision  8 -frames 2 -kernel_name maxpool -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43
+
+-read_inp_file_name inp_maxpool_inp_16_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_out_file_name out_maxpool_inp_16_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin  -read_ref_file_name out_maxpool_inp_16_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin  -write_file 0 -verify 1 -inp_precision 16 -out_precision 16 -frames 2 -kernel_name maxpool -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43
+
+-read_inp_file_name inp_maxpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_out_file_name out_maxpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin  -read_ref_file_name out_maxpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_file 0 -verify 1 -inp_precision -1 -out_precision -1 -frames 2 -kernel_name maxpool -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43
+
+
+
+
+
+
+
+
+
+
+
+
+
+// f32 nhwc variants
+-write_file 0 -verify 1 -kernel_name maxpool -read_inp_file_name inp_maxpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_out_file_name out_maxpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nhwc.bin   -read_ref_file_name out_maxpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nhwc.bin   -inp_precision  -1 -out_precision -1 -frames 2 -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43 -inp_data_format 0 -out_data_format 0
+-write_file 0 -verify 1 -kernel_name avgpool -read_inp_file_name inp_avgpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin -write_out_file_name out_avgpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nhwc.bin   -read_ref_file_name out_avgpool_inp_f32_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nhwc.bin   -inp_precision  -1 -out_precision -1 -frames 2 -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43 -inp_data_format 0 -out_data_format 0
+
+// avgpool_asym8 nchw and nhwc
+-write_file 0 -verify 1 -kernel_name avgpool -read_inp_file_name inp_avgpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin   -write_out_file_name out_avgpool_inp_asym8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nchw.bin -read_ref_file_name out_avgpool_inp_asym8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nchw.bin -inp_precision  -3 -out_precision -3 -frames 2 -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43 -inp_data_format 1 -out_data_format 1
+-write_file 0 -verify 1 -kernel_name avgpool -read_inp_file_name inp_avgpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin   -write_out_file_name out_avgpool_inp_asym8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nhwc.bin -read_ref_file_name out_avgpool_inp_asym8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nhwc.bin -inp_precision  -3 -out_precision -3 -frames 2 -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43 -inp_data_format 0 -out_data_format 0
+
+// maxpool_asym8 nchw and nhwc
+-write_file 0 -verify 1 -kernel_name maxpool -read_inp_file_name inp_maxpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin   -write_out_file_name out_maxpool_inp_asym8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nchw.bin -read_ref_file_name out_maxpool_inp_asym8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nchw.bin -inp_precision  -3 -out_precision -3 -frames 2 -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43 -inp_data_format 1 -out_data_format 1
+-write_file 0 -verify 1 -kernel_name maxpool -read_inp_file_name inp_maxpool_inp_8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43.bin   -write_out_file_name out_maxpool_inp_asym8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nhwc.bin -read_ref_file_name out_maxpool_inp_asym8_ih_384_iw_128_ic_8_kh_12_kw_4_oh_43_ow_43_nhwc.bin -inp_precision  -3 -out_precision -3 -frames 2 -input_width 128 -input_height 384 -input_channels  8 -kernel_width  4 -kernel_height 12 -x_stride 4 -y_stride 12 -x_padding 2 -y_padding 6 -out_width 43 -out_height 43 -inp_data_format 0 -out_data_format 0
+
+@Stop

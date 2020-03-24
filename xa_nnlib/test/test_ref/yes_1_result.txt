@@ -1,0 +1,4 @@
+silence 4
+unknown 29
+yes 195
+no 29

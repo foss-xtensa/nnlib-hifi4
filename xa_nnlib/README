@@ -1,0 +1,101 @@
+#
+# Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+# 
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to use this Software with Cadence processor cores only and 
+# not with any other processors and platforms, subject to
+# the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+
+======================================================================
+Cadence HiFi4 Neural Network (NN) Library
+======================================================================
+
+======================================================================
+Revision History
+======================================================================
+
+Version 2.1.0 API 1.0: September 6, 2019
+
++ GA Release
++ Tested using RI.1 tools and xt-xcc/xt-xc++ compiler
++ Needs HiFi4 core with Xtensa C Library 
++ Programmer's Guide updated
+
+Known issues
+> Building with xt-clang compiler is not supported currently
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+ 
+----------------------------------------------------------------------
+
+Version 2.0.0 API 1.0: August 8, 2019
+
++ Beta Release
++ Added support for Android NN API v1.1 (Android P)
++ Asym8 datatype support added to low level kernels for ANN compatibility
++ Added 38 ANN operations from Android NN API v1.1 to the library
++ Added TF Micro Lite example testbench 
++ Tested using RI.1 tools
++ Needs HiFi4 core with Xtensa C Library 
++ [TENX-47056] Removed the ISS mode switching call from the testbenches 
+
+Known issues
+> Programmer's Guide is not finalized
+> 3 failures seen in ANN tests:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+ 
+----------------------------------------------------------------------
+
+Version 1.0.1 API 1.0: February 11, 2019
+
++ GA Release
++ Also available in xws file format
++ Programmer's Guide updated
++ Adapted to 3 digit release version number mechanism
+ 
+----------------------------------------------------------------------
+
+Version 1.0 API 1.0: January 7, 2019
+
++ GA Release
++ Added convolution, pooling low level kernels
++ Added LSTM Layer (forward path), CNN Layer
+ 
+----------------------------------------------------------------------
+
+Version 0.1_Alpha API 0.5: September 21, 2018
+
++ Alpha Release - Hifi4 Source Package only
++ NN Library implements:
+  Matrix-X-vector multiplication kernels
+  Activation function kernels
+  GRU layer implementation
+
++ Programmers Guide - partially complete, DRAFT version
++ Refer PG for GRU details
++ Refer xa_nnlib_kernels_api.h and PG: Appendix for kernels details
++ Refer PG - Appendix for kernels performance
+  (Measured with RG.5 tools, AE_HiFi4_LE5 with VFPU core)
+
++ Use 'build/runperf.sh' script for performance testing.
+  The scripts requires test vectors from 'nnlib_testvectors_v0.1_Alpha.tgz'
+  This test vectors package is shared separately.
+----------------------------------------------------------------------

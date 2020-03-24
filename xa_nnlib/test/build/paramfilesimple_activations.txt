@@ -1,0 +1,21 @@
+@Start
+@Input_path ../test_inp/
+@Output_path ../test_out/
+@Ref_path ../test_ref/
+
+//inp_32, out_32 variants
+-num_elements 64 -read_inp_file_name inp_activation_inp_32_N_64.bin -write_out_file_name out_sigmoid_inp_32_out_32_N_64.bin -read_ref_file_name out_sigmoid_inp_32_out_32_N_64.bin -write_file 0 -verify 1 -activation sigmoid -inp_precision 32 -out_precision 32
+
+//inp_32, out_16 variants
+-num_elements 80 -read_inp_file_name inp_activation_inp_32_N_80.bin -write_out_file_name out_sigmoid_inp_32_out_16_N_80.bin -read_ref_file_name out_sigmoid_inp_32_out_16_N_80.bin -write_file 0 -verify 1 -activation sigmoid -inp_precision 32 -out_precision 16
+
+//inp_f32, out_f32 variants
+-num_elements 64 -read_inp_file_name inp_activation_inp_f32_N_64.bin -write_out_file_name out_sigmoid_inp_f32_out_f32_N_64.bin -read_ref_file_name out_sigmoid_inp_f32_out_f32_N_64.bin -write_file 0 -verify 1 -activation sigmoid -inp_precision -1 -out_precision -1
+-write_file 0 -verify 1 -activation softmax -num_elements 64 -read_inp_file_name inp_activation_inp_f32_N_64.bin -write_out_file_name out_softmax_inp_f32_out_f32_N_64.bin -read_ref_file_name out_softmax_inp_f32_out_f32_N_64.bin -inp_precision -1 -out_precision -1
+-write_file 0 -verify 1 -activation relu    -num_elements 64 -read_inp_file_name inp_activation_inp_f32_N_64.bin -write_out_file_name out_relu_inp_f32_out_f32_plus_minus_100_N_64.bin -read_ref_file_name out_relu_inp_f32_out_f32_plus_minus_100_N_64.bin -inp_precision -1 -out_precision -1 -activation_min -100 -activation_max 100 -frames 1 
+
+//inp_asym8, out_asym8 variants
+-write_file 0 -verify 1 -activation sigmoid -num_elements 64 -read_inp_file_name inp_activation_inp_8_N_64.bin -write_out_file_name out_sigmoid_inp_asym8_out_asym8_N_64.bin -read_ref_file_name out_sigmoid_inp_asym8_out_asym8_N_64.bin -inp_precision -3 -out_precision -3 -zero_point 102 -input_range_radius 20 -input_multiplier 1717986918 -input_left_shift 5
+-write_file 0 -verify 1 -activation softmax -num_elements 64 -read_inp_file_name inp_activation_inp_8_N_64.bin -write_out_file_name out_softmax_inp_asym8_out_asym8_N_64.bin -read_ref_file_name out_softmax_inp_asym8_out_asym8_N_64.bin -inp_precision -3 -out_precision -3 -diffmin -20 -input_multiplier 1717986918 -input_left_shift 5
+-write_file 0 -verify 1 -activation relu    -num_elements 64 -read_inp_file_name inp_activation_inp_8_N_64.bin -write_out_file_name out_relu_inp_asym8_out_asym8_amin_9_amax_210_N_64.bin -read_ref_file_name out_relu_inp_asym8_out_asym8_amin_9_amax_210_N_64.bin -inp_precision -3 -out_precision -3 -activation_min 9 -activation_max 210 -frames 1 
+@Stop

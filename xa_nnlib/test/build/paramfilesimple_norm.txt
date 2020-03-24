@@ -1,0 +1,10 @@
+@Start
+@Input_path ../test_inp/
+@Output_path ../test_out/
+@Ref_path ../test_ref/
+
+// cmd to write files
+-write_out_file_name out_l2_norm_ne512_f32.bin -kernel_name l2_norm -inp_precision -1 -out_precision -1 -num_elms 512 -frames 2 -verify 1  -write_file 0 -read_inp_file_name inp_l2_norm_ne512_f32.bin -read_ref_file_name out_l2_norm_ne512_f32.bin
+
+
+@Stop

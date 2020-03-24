@@ -1,0 +1,10 @@
+@Start
+@Input_path ../test_inp/
+@Output_path ../test_out/
+@Ref_path ../test_ref/
+
+-rows 256 -cols1 256 -cols2 256 -membank_padding 1 -read_inp_file_name inp_matXvec_mat_16_inp_16_bias_16_R_256_C1_256_C2_256.bin -write_out_file_name out_matXvec_mat_16_inp_16_bias_16_R_256_C1_256_C2_256_sigmoid_out_16.bin -read_ref_file_name out_matXvec_mat_16_inp_16_bias_16_R_256_C1_256_C2_256_sigmoid_out_16.bin -write_file 0 -verify 1 -activation sigmoid -mat_precision 16 -inp_precision 16 -out_precision 16 -bias_precision 16
+-rows 256 -cols1 256 -cols2 256 -membank_padding 1 -read_inp_file_name inp_matXvec_mat_8_inp_8_bias_16_R_256_C1_256_C2_256.bin -write_out_file_name out_matXvec_mat_8_inp_8_bias_16_R_256_C1_256_C2_256_out_8.bin -read_ref_file_name out_matXvec_mat_8_inp_8_bias_16_R_256_C1_256_C2_256_out_8.bin -write_file 0 -verify 1 -mat_precision 8 -inp_precision 8 -out_precision 8 -bias_precision 16
+-rows 256 -cols1 256 -cols2 256 -membank_padding 1 -read_inp_file_name inp_matXvec_mat_f32_inp_f32_bias_f32_R_256_C1_256_C2_256.bin -write_out_file_name out_matXvec_mat_f32_inp_f32_bias_f32_R_256_C1_256_C2_256_sigmoid_out_f32.bin -read_ref_file_name out_matXvec_mat_f32_inp_f32_bias_f32_R_256_C1_256_C2_256_sigmoid_out_f32.bin -write_file 0 -verify 1 -activation sigmoid -mat_precision -1 -inp_precision -1 -out_precision -1 -bias_precision -1
+
+@Stop

@@ -1,0 +1,14 @@
+@Start
+@Input_path ../test_inp/
+@Output_path ../test_out/
+@Ref_path ../test_ref/
+
+-read_inp_file_name inp_conv2d_depth_ker_16_inp_16_bias_16_ih_32_iw_40_ic_32_cm_1_kh_7_kw_5_oc_24.bin -write_out_file_name out_cnn_conv2d_depth_ker_16_inp_16_bias_16_ih_32_iw_40_ic_32_cm_1_kh_7_kw_5_oc_24_out_16.bin -read_ref_file_name out_cnn_conv2d_depth_ker_16_inp_16_bias_16_ih_32_iw_40_ic_32_cm_1_kh_7_kw_5_oc_24_out_16.bin -write_file 0 -verify 1 -kernel_precision 16 -inp_precision 16 -bias_precision 16 -out_precision 16 -frames 2 -kernel_name conv2d_depth   -input_width 40 -input_height 32 -input_channels 32 -kernel_width 5 -kernel_height 7 -out_channels 24 -x_stride 1 -y_stride 1 -x_padding 0 -y_padding 0 -out_width 36 -out_height 26 -channels_multiplier 1 -bias_shift 0 -acc_shift 0 -out_data_format 1
+
+-read_inp_file_name inp_conv2d_depth_ker_f32_inp_f32_bias_f32_ih_32_iw_40_ic_32_cm_1_kh_7_kw_5_oc_24.bin -write_out_file_name out_cnn_conv2d_depth_ker_f32_inp_f32_bias_f32_ih_32_iw_40_ic_32_cm_1_kh_7_kw_5_oc_24_out_f32.bin -read_ref_file_name out_cnn_conv2d_depth_ker_f32_inp_f32_bias_f32_ih_32_iw_40_ic_32_cm_1_kh_7_kw_5_oc_24_out_f32.bin -write_file 0 -verify 1 -kernel_precision -1 -inp_precision -1 -bias_precision -1 -out_precision -1 -frames 2 -kernel_name conv2d_depth   -input_width 40 -input_height 32 -input_channels 32 -kernel_width 5 -kernel_height 7 -out_channels 24 -x_stride 1 -y_stride 1 -x_padding 0 -y_padding 0 -out_width 36 -out_height 26 -channels_multiplier 1 -bias_shift 0 -acc_shift 0 -out_data_format 1
+
+-read_inp_file_name inp_conv1d_std_ker_8_inp_8_bias_8_ih_32_iw_40_ic_32_kh_7_oc_24.bin -write_out_file_name out_cnn_conv1d_std_ker_8_inp_8_bias_8_ih_32_iw_40_ic_32_kh_7_oc_24_out_8.bin -read_ref_file_name out_cnn_conv1d_std_ker_8_inp_8_bias_8_ih_32_iw_40_ic_32_kh_7_oc_24_out_8.bin -write_file 0 -verify 1 -kernel_precision 8 -inp_precision 8 -bias_precision 8 -out_precision 8 -frames 2 -kernel_name conv1d_std -input_width 40 -input_height 32 -input_channels 32 -kernel_width 40 -kernel_height 7 -out_channels 24 -y_stride 1 -y_padding 0 -out_height 26 -bias_shift 0 -acc_shift 0 -out_data_format 0
+
+-read_inp_file_name inp_conv2d_std_ker_8_inp_16_bias_16_ih_32_iw_40_ic_32_kh_7_kw_5_oc_24.bin -write_out_file_name out_cnn_conv2d_std_ker_8_inp_16_bias_16_ih_32_iw_40_ic_32_kh_7_kw_5_oc_24_out_16.bin -read_ref_file_name out_cnn_conv2d_std_ker_8_inp_16_bias_16_ih_32_iw_40_ic_32_kh_7_kw_5_oc_24_out_16.bin -write_file 0 -verify 1 -kernel_precision 8 -inp_precision 16 -bias_precision 16 -out_precision 16 -frames 2 -kernel_name conv2d_std -input_width 40 -input_height 32 -input_channels 32 -kernel_width 5 -kernel_height 7 -out_channels 24 -x_stride 1 -y_stride 1 -x_padding 0 -y_padding 0 -out_width 36 -out_height 26 -bias_shift 0 -acc_shift 0 -out_data_format 0
+
+@Stop
