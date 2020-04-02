@@ -137,7 +137,6 @@ static void maxpool_asym8_hw(
             loop_count = input_width - loop_count;
 
             align_dst = AE_ZALIGN64();
-            align_src1 = AE_LA64_PP(p_src1_temp);
 
             for(i = 0; i < (loop_count >> 2); i++)
             {
