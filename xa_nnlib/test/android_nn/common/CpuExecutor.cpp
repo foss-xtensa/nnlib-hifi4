@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -440,9 +440,14 @@ int CpuExecutor::executeOperation(const Operation& operation) {
     // values. This function is to be used only for operations that do not
     // accept optional arguments.
     // TODO Have a version that works for optional arguments.
+#ifndef HIFI_BUILD
     auto allParametersPresent = [&operation, &ins, &outs, this](size_t requiredIns,
                                                                 size_t requiredOuts) -> bool {
         auto verify = [&operation, this](size_t requiredCount, const hidl_vec<uint32_t>& indexes,
+#endif //HIFI_BUILD
+    auto allParametersPresent = [&ins, &outs, this](size_t requiredIns,
+                                                                size_t requiredOuts) -> bool {
+        auto verify = [this](size_t requiredCount, const hidl_vec<uint32_t>& indexes,
                           const char* type) -> bool {
             size_t actualCount = indexes.size();
             if (actualCount != requiredCount) {
@@ -538,7 +543,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = addMulPrepare(in1.shape(), in2.shape(), &outShape) &&
                           setInfoAndAllocateIfNeeded(&out, outShape);
                 PROFILER_START("MUL aym8");
-                if(success) success = 
+                if(success) success =
                           mulQuant8(reinterpret_cast<const uint8_t*>(in1.buffer),
                                     in1.shape(),
                                     reinterpret_cast<const uint8_t*>(in2.buffer),
@@ -561,7 +566,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = floorPrepare(input.shape(), &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("FLOOR float32");
-                if(success) success = 
+                if(success) success =
                           floorFloat32(reinterpret_cast<const float*>(input.buffer),
                                        reinterpret_cast<float*>(output.buffer),
                                        outShape);
@@ -580,7 +585,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = dequantizePrepare(input.shape(), &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("DEQUANTIZE aym8");
-                if(success) success = 
+                if(success) success =
                           dequantizeQuant8ToFloat32(
                                   reinterpret_cast<const uint8_t*>(input.buffer),
                                   reinterpret_cast<float*>(output.buffer),
@@ -666,7 +671,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 #endif
 #ifndef HIFI_NNLIB_OPT
                 PROFILER_START("DEPTHWISE_CONV_2D float32");
-                if(success) success = 
+                if(success) success =
                           setInfoAndAllocateIfNeeded(&output, outShape) &&
                           depthwiseConvFloat32(reinterpret_cast<const float*>(input.buffer),
                                                input.shape(),
@@ -686,7 +691,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 printf("Scratch %d \n", scratch_size);
                 void *p_scratch = malloc(scratch_size);
                 PROFILER_START("DEPTHWISE_CONV_2D float32");
-                if(success) success = 
+                if(success) success =
                           setInfoAndAllocateIfNeeded(&output, outShape) &&
                           depthwiseConvFloat32(reinterpret_cast<const float*>(input.buffer),
                                                input.shape(),
@@ -728,7 +733,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 #endif
 #ifndef HIFI_NNLIB_OPT
                 PROFILER_START("DEPTHWISE_CONV_2D aym8");
-                if(success) success = 
+                if(success) success =
                           depthwiseConvQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                               input.shape(),
                                               reinterpret_cast<const uint8_t*>(filter.buffer),
@@ -747,7 +752,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 printf("Scratch %d \n", scratch_size);
                 void *p_scratch = malloc(scratch_size);
                 PROFILER_START("DEPTHWISE_CONV_2D aym8");
-                if(success) success = 
+                if(success) success =
                           depthwiseConvQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                               input.shape(),
                                               reinterpret_cast<const uint8_t*>(filter_padded.buffer),
@@ -846,7 +851,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 
 #ifndef HIFI_NNLIB_OPT
                 PROFILER_START("CONV_2D float32");
-                if(success) success = 
+                if(success) success =
                           convFloat32(reinterpret_cast<const float*>(input.buffer), input.shape(),
                                       reinterpret_cast<const float*>(filter.buffer), filter.shape(),
                                       reinterpret_cast<const float*>(bias.buffer), bias.shape(),
@@ -860,7 +865,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 printf("Scratch %d \n", scratch_size);
                 void *p_scratch = malloc(scratch_size);
                 PROFILER_START("CONV_2D float32");
-                if(success) success = 
+                if(success) success =
                           convFloat32(reinterpret_cast<const float*>(input.buffer), input.shape(),
                                       reinterpret_cast<const float*>(filter_padded.buffer), filter.shape(),
                                       reinterpret_cast<const float*>(bias.buffer), bias.shape(),
@@ -896,7 +901,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 #endif
 #ifndef HIFI_NNLIB_OPT
                 PROFILER_START("CONV_2D asym8");
-                if(success) success = 
+                if(success) success =
                           convQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                      input.shape(),
                                      reinterpret_cast<const uint8_t*>(filter.buffer),
@@ -914,7 +919,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 printf("Scratch %d \n", scratch_size);
                 void *p_scratch = malloc(scratch_size);
                 PROFILER_START("CONV_2D asym8");
-                if(success) success = 
+                if(success) success =
                           convQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                      input.shape(),
                                      reinterpret_cast<const uint8_t*>(filter_padded.buffer),
@@ -996,7 +1001,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 #endif
 #ifndef HIFI_NNLIB_OPT
                 PROFILER_START("AVERAGE_POOL_2D float32");
-                if(success) success = 
+                if(success) success =
                           averagePoolFloat32(reinterpret_cast<const float*>(input.buffer),
                                              input.shape(),
                                              padding_left, padding_right,
@@ -1009,9 +1014,9 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 #else
                 printf("Scratch %d \n", scratch_size);
                 void *p_scratch = malloc(scratch_size);
-                
+
                 PROFILER_START("AVERAGE_POOL_2D float32");
-                if(success) success = 
+                if(success) success =
                           averagePoolFloat32(reinterpret_cast<const float*>(input.buffer),
                                              input.shape(),
                                              padding_left, padding_right,
@@ -1038,7 +1043,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 #endif
 #ifndef HIFI_NNLIB_OPT
                 PROFILER_START("AVERAGE_POOL_2D asym8");
-                if(success) success = 
+                if(success) success =
                           averagePoolQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                             input.shape(),
                                             padding_left, padding_right,
@@ -1053,7 +1058,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 void *p_scratch = malloc(scratch_size);
 
                 PROFILER_START("AVERAGE_POOL_2D asym8");
-                if(success) success = 
+                if(success) success =
                           averagePoolQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                             input.shape(),
                                             padding_left, padding_right,
@@ -1128,7 +1133,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                                 &outShape, operation, scratch_size);
 #endif
                 PROFILER_START("L2_POOL_2D float32");
-                if(success) success = 
+                if(success) success =
                           setInfoAndAllocateIfNeeded(&output, outShape) &&
                           l2PoolFloat32(reinterpret_cast<const float*>(input.buffer),
                                         input.shape(),
@@ -1205,7 +1210,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 #endif
 #ifndef HIFI_NNLIB_OPT
                 PROFILER_START("MAX_POOL_2D float32");
-                if(success) success = 
+                if(success) success =
                           maxPoolFloat32(reinterpret_cast<const float*>(input.buffer),
                                          input.shape(),
                                          padding_left, padding_right,
@@ -1220,7 +1225,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 void *p_scratch = malloc(scratch_size);
 
                 PROFILER_START("MAX_POOL_2D float32");
-                if(success) success = 
+                if(success) success =
                           maxPoolFloat32(reinterpret_cast<const float*>(input.buffer),
                                          input.shape(),
                                          padding_left, padding_right,
@@ -1245,7 +1250,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 #endif
 #ifndef HIFI_NNLIB_OPT
                 PROFILER_START("MAX_POOL_2D asym8");
-                if(success) success = 
+                if(success) success =
                           setInfoAndAllocateIfNeeded(&output, outShape) &&
                           maxPoolQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                         input.shape(),
@@ -1261,7 +1266,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 void *p_scratch = malloc(scratch_size);
 
                 PROFILER_START("MAX_POOL_2D asym8");
-                if(success) success = 
+                if(success) success =
                           setInfoAndAllocateIfNeeded(&output, outShape) &&
                           maxPoolQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                         input.shape(),
@@ -1297,7 +1302,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("RELU float32");
-                if(success) success = 
+                if(success) success =
                           reluFloat32(reinterpret_cast<const float*>(input.buffer),
                                       input.shape(),
                                       reinterpret_cast<float*>(output.buffer),
@@ -1312,7 +1317,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("RELU asym8");
-                if(success) success = 
+                if(success) success =
                           reluQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                      input.shape(),
                                      reinterpret_cast<uint8_t*>(output.buffer),
@@ -1340,7 +1345,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("RELU1 float32");
-                if(success) success = 
+                if(success) success =
                           relu1Float32(reinterpret_cast<const float*>(input.buffer),
                                        input.shape(),
                                        reinterpret_cast<float*>(output.buffer),
@@ -1355,7 +1360,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("RELU1 asym8");
-                if(success) success = 
+                if(success) success =
                           relu1Quant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                       input.shape(),
                                       reinterpret_cast<uint8_t*>(output.buffer),
@@ -1383,7 +1388,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("RELU6 float32");
-                if(success) success = 
+                if(success) success =
                           relu6Float32(reinterpret_cast<const float*>(input.buffer),
                                        input.shape(),
                                        reinterpret_cast<float*>(output.buffer),
@@ -1398,7 +1403,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("RELU6 asym8");
-                if(success) success = 
+                if(success) success =
                           relu6Quant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                       input.shape(),
                                       reinterpret_cast<uint8_t*>(output.buffer),
@@ -1426,7 +1431,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("TANH float32");
-                if(success) success = 
+                if(success) success =
                           tanhFloat32(reinterpret_cast<const float*>(input.buffer),
                                       input.shape(),
                                       reinterpret_cast<float*>(output.buffer),
@@ -1454,7 +1459,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("LOGISTIC float32");
-                if(success) success = 
+                if(success) success =
                           logisticFloat32(reinterpret_cast<const float*>(input.buffer),
                                           input.shape(),
                                           reinterpret_cast<float*>(output.buffer),
@@ -1469,7 +1474,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("LOGISTIC asym8");
-                if(success) success = 
+                if(success) success =
                           logisticQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                          input.shape(),
                                          reinterpret_cast<uint8_t*>(output.buffer),
@@ -1505,7 +1510,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                           setInfoAndAllocateIfNeeded(&output, outShape);
 #endif
                 PROFILER_START("SOFTMAX float32");
-                if(success) success = 
+                if(success) success =
                           softmaxFloat32(reinterpret_cast<const float*>(input.buffer),
                                          input.shape(),
                                          beta,
@@ -1522,7 +1527,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
 #endif
 #ifndef HIFI_NNLIB_OPT
                 PROFILER_START("SOFTMAX asym8");
-                if(success) success = 
+                if(success) success =
                           softmaxQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                         input.shape(),
                                         beta,
@@ -1533,7 +1538,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 {
                     void *p_scratch = malloc(scratch_size);
                     PROFILER_START("SOFTMAX asym8");
-                    if(success) success = 
+                    if(success) success =
                         softmaxQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                       input.shape(),
                                       beta,
@@ -1562,7 +1567,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                                 &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("FULLY_CONNECTED float32");
-                if(success) success = 
+                if(success) success =
                           fullyConnectedFloat32(reinterpret_cast<const float*>(input.buffer),
                                                 input.shape(),
                                                 reinterpret_cast<const float*>(weights.buffer),
@@ -1578,7 +1583,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                                 &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("FULLY_CONNECTED asym8");
-                if(success) success = 
+                if(success) success =
                           fullyConnectedQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                                input.shape(),
                                                reinterpret_cast<const uint8_t*>(weights.buffer),
@@ -1614,7 +1619,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = concatenationPrepare(inputShapes, axis, &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("CONCATENATION float32");
-                if(success) success = 
+                if(success) success =
                           concatenationFloat32(inputDataPtrs, inputShapes, axis,
                                                reinterpret_cast<float*>(output.buffer), outShape);
                 PROFILER_STOP;
@@ -1630,7 +1635,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = concatenationPrepare(inputShapes, axis, &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("CONCATENATION asym8");
-                if(success) success = 
+                if(success) success =
                           concatenationQuant8(inputDataPtrs, inputShapes, axis,
                                               reinterpret_cast<uint8_t*>(output.buffer),
                                               outShape);
@@ -1649,7 +1654,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = genericNormalizationPrepare(input.shape(), &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("L2_NORMALIZATION float32");
-                if(success) success = 
+                if(success) success =
                           l2normFloat32(reinterpret_cast<const float*>(input.buffer),
                                         input.shape(),
                                         reinterpret_cast<float*>(output.buffer),
@@ -1659,7 +1664,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = genericNormalizationPrepare(input.shape(), &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("L2_NORMALIZATION asym8");
-                if(success) success = 
+                if(success) success =
                           l2normQuant8(reinterpret_cast<const uint8_t*>(input.buffer),
                                        input.shape(),
                                        reinterpret_cast<uint8_t*>(output.buffer),
@@ -1684,7 +1689,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = genericNormalizationPrepare(input.shape(), &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("LOCAL_RESPONSE_NORMALIZATION float32");
-                if(success) success = 
+                if(success) success =
                           localResponseNormFloat32(reinterpret_cast<const float*>(input.buffer),
                                                    input.shape(),
                                                    radius, bias, alpha, beta,
@@ -1709,7 +1714,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                      &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
             PROFILER_START("RESHAPE");
-            if(success) success = 
+            if(success) success =
                       reshapeGeneric(reinterpret_cast<const void*>(input.buffer),
                                      input.shape(),
                                      reinterpret_cast<void*>(output.buffer),
@@ -1733,7 +1738,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                                 &outShape) &&
                           setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("RESIZE_BILINEAR");
-                if(success) success = 
+                if(success) success =
                           resizeBilinearFloat32(reinterpret_cast<const float*>(input.buffer),
                                                 input.shape(),
                                                 reinterpret_cast<float*>(output.buffer),
@@ -1756,7 +1761,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                           &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
             PROFILER_START("DEPTH_TO_SPACE");
-            if(success) success = 
+            if(success) success =
                       depthToSpaceGeneric(input.buffer,
                                           input.shape(),
                                           blockSize,
@@ -1779,7 +1784,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                           &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
             PROFILER_START("SPACE_TO_DEPTH");
-            if(success) success = 
+            if(success) success =
                       spaceToDepthGeneric(input.buffer,
                                           input.shape(),
                                           blockSize,
@@ -1801,7 +1806,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
             success = embeddingLookupPrepare(values.shape(), lookups.shape(), &outputShape) &&
                 setInfoAndAllocateIfNeeded(&output, outputShape);
             PROFILER_START("EMBEDDING_LOOKUP");
-            if(success) success = 
+            if(success) success =
                 lookup.Eval();
             PROFILER_STOP;
         } break;
@@ -1826,7 +1831,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 setInfoAndAllocateIfNeeded(&output, outputShape) &&
                 setInfoAndAllocateIfNeeded(&hits, hitShape);
             PROFILER_START("HASHTABLE_LOOKUP");
-            if(success) success = 
+            if(success) success =
                 lookup.Eval();
             PROFILER_STOP;
         } break;
@@ -1841,7 +1846,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                              &outputShape) &&
                 setInfoAndAllocateIfNeeded(&output, outputShape);
             PROFILER_START("LSH_PROJECTION");
-            if(success) success = 
+            if(success) success =
                 lsh.Eval();
             PROFILER_STOP;
         } break;
@@ -1866,7 +1871,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 setInfoAndAllocateIfNeeded(&cellStateOut, cellStateShape) &&
                 setInfoAndAllocateIfNeeded(&output, outputShape);
             PROFILER_START("LSTM");
-            if(success) success = 
+            if(success) success =
                 lstm_cell.Eval();
             PROFILER_STOP;
         } break;
@@ -1884,7 +1889,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 setInfoAndAllocateIfNeeded(&hiddenStateOut, hiddenStateShape) &&
                 setInfoAndAllocateIfNeeded(&output, outputShape);
             PROFILER_START("RNN");
-            if(success) success = 
+            if(success) success =
                 rnn_cell.Eval();
             PROFILER_STOP;
         } break;
@@ -1902,7 +1907,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 setInfoAndAllocateIfNeeded(&stateOut, stateShape) &&
                 setInfoAndAllocateIfNeeded(&output, outputShape);
             PROFILER_START("SVDF");
-            if(success) success = 
+            if(success) success =
                 svdf.Eval();
             PROFILER_STOP;
         } break;
@@ -1922,7 +1927,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                           &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("BATCH_TO_SPACE_ND");
-                if(success) success = 
+                if(success) success =
                       batchToSpaceGeneric(input.buffer,
                                           input.shape(),
                                           reinterpret_cast<const int32_t*>(blockSize.buffer),
@@ -1949,7 +1954,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                           &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("SPACE_TO_BATCH_ND");
-                if(success) success = 
+                if(success) success =
                       spaceToBatchGeneric(input.buffer,
                                           input.shape(),
                                           reinterpret_cast<const int32_t*>(blockSize.buffer),
@@ -1975,7 +1980,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                  &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("PAD");
-                if(success) success = 
+                if(success) success =
                       padGeneric(input.buffer,
                                  input.shape(),
                                  reinterpret_cast<const int32_t*>(paddings.buffer),
@@ -1999,7 +2004,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                      &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("SQUEEZE");
-                if(success) success = 
+                if(success) success =
                       squeezeGeneric(input.buffer,
                                      input.shape(),
                                      output.buffer,
@@ -2022,7 +2027,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                        &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("TRANSPOSE");
-                if(success) success = 
+                if(success) success =
                       transposeGeneric(input.buffer,
                                        input.shape(),
                                        reinterpret_cast<const int32_t*>(perms.buffer),
@@ -2057,7 +2062,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                           &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("STRIDED_SLICE");
-                if(success) success = 
+                if(success) success =
                       stridedSliceGeneric(input.buffer,
                                           input.shape(),
                                           reinterpret_cast<const int32_t*>(begins.buffer),
@@ -2083,7 +2088,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = addMulPrepare(in1.shape(), in2.shape(), &outShape) &&
                           setInfoAndAllocateIfNeeded(&out, outShape);
                 PROFILER_START("DIV float32");
-                if(success) success = 
+                if(success) success =
                           divFloat32(reinterpret_cast<const float*>(in1.buffer),
                                      in1.shape(),
                                      reinterpret_cast<const float*>(in2.buffer),
@@ -2109,7 +2114,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 success = addMulPrepare(in1.shape(), in2.shape(), &outShape) &&
                           setInfoAndAllocateIfNeeded(&out, outShape);
                 PROFILER_START("SUB float32");
-                if(success) success = 
+                if(success) success =
                           subFloat32(reinterpret_cast<const float*>(in1.buffer),
                                      in1.shape(),
                                      reinterpret_cast<const float*>(in2.buffer),
@@ -2138,7 +2143,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                                   &outShape) &&
                       setInfoAndAllocateIfNeeded(&output, outShape);
                 PROFILER_START("MEAN");
-                if(success) success = 
+                if(success) success =
                       meanGeneric(input.buffer,
                                   input.shape(),
                                   reinterpret_cast<const int32_t*>(axis.buffer),

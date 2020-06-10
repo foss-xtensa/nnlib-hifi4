@@ -37,11 +37,15 @@
 
 #define LOG_TAG "Utils"
 
+#ifndef HIFI_BUILD
 #include "Utils.h"
-#include "NeuralNetworks.h"
-#include "NeuralNetworksOEM.h"
+#else
+#include "Utils_lib.h"
+#endif //HiFi_BUILD
 
 #ifndef HIFI_BUILD
+#include "NeuralNetworks.h"
+#include "NeuralNetworksOEM.h"
 #include <android-base/properties.h>
 #include <android-base/strings.h>
 #include <android-base/logging.h>
@@ -56,11 +60,10 @@ using ::android::hidl::allocator::V1_0::IAllocator;
 namespace android {
 namespace nn {
 
-#ifndef HIFI_BUILD  // Library part
-const char kVLogPropKey[] = "debug.nn.vlog";
+#ifndef HIFI_BUILD
 int vLogMask = ~0;
 
-#ifndef HIFI_BUILD
+const char kVLogPropKey[] = "debug.nn.vlog";
 // Split the space separated list of tags from verbose log setting and build the
 // logging mask from it. note that '1' and 'all' are special cases to enable all
 // verbose logging.
@@ -127,14 +130,22 @@ EntryType tableLookup(const EntryType (&table)[entryCount],
 
 #define COUNT(X) (sizeof(X) / sizeof(X[0]))
 
+#ifndef HIFI_BUILD
 const char* kTypeNames[kNumberOfDataTypes] = {
+#else
+const char* const kTypeNames[kNumberOfDataTypes] = {
+#endif
         "FLOAT32",        "INT32",        "UINT32",
         "TENSOR_FLOAT32", "TENSOR_INT32", "TENSOR_QUANT8_ASYMM",
 };
 
 static_assert(COUNT(kTypeNames) == kNumberOfDataTypes, "kTypeNames is incorrect");
 
+#ifndef HIFI_BUILD
 const char* kTypeNamesOEM[kNumberOfDataTypesOEM] = {
+#else
+const char* const kTypeNamesOEM[kNumberOfDataTypesOEM] = {
+#endif
         "OEM",            "TENSOR_OEM_BYTE",
 };
 
@@ -146,11 +157,17 @@ const char* getOperandTypeName(OperandType type) {
 }
 
 // TODO Check if this useful
+#ifndef HIFI_BUILD
 const char* kErrorNames[] = {
         "NO_ERROR", "OUT_OF_MEMORY", "INCOMPLETE", "NULL", "BAD_DATA",
 };
+#endif
 
+#ifndef HIFI_BUILD
 const char* kOperationNames[kNumberOfOperationTypes] = {
+#else
+const char* const kOperationNames[kNumberOfOperationTypes] = {
+#endif
         "ADD",
         "AVERAGE_POOL",
         "CONCATENATION",
@@ -193,7 +210,11 @@ const char* kOperationNames[kNumberOfOperationTypes] = {
 
 static_assert(COUNT(kOperationNames) == kNumberOfOperationTypes, "kOperationNames is incorrect");
 
+#ifndef HIFI_BUILD
 const char* kOperationNamesOEM[kNumberOfOperationTypesOEM] = {
+#else
+const char* const kOperationNamesOEM[kNumberOfOperationTypesOEM] = {
+#endif
         "OEM_OPERATION",
 };
 
@@ -344,8 +365,6 @@ uint32_t alignBytesNeeded(uint32_t index, size_t length) {
     uint32_t extra = (~(index - 1)) & pattern;
     return extra;
 }
-#endif //HIFI_BUILD
-
 
 #ifndef HIFI_BUILD
 void logModelToInfo(const V1_0::Model& model) {
@@ -369,6 +388,7 @@ void logModelToInfo(const V1_1::Model& model) {
 }
 #endif //HIFI_BUILD
 
+#ifndef HIFI_BUILD /* not used in library */
 // Validates the type. The used dimensions can be underspecified.
 int validateOperandType(const ANeuralNetworksOperandType& type, const char* tag,
                         bool allowPartial) {
@@ -418,6 +438,7 @@ int validateOperandType(const ANeuralNetworksOperandType& type, const char* tag,
     return ANEURALNETWORKS_NO_ERROR;
 }
 
+#ifndef HIFI_BUILD
 int validateOperandList(uint32_t count, const uint32_t* list, uint32_t operandCount,
                         const char* tag) {
     for (uint32_t i = 0; i < count; i++) {
@@ -480,14 +501,13 @@ int validateOperation(ANeuralNetworksOperationType opType,
         return n;
     }
 
-#ifndef HIFI_BUILD
     auto logInvalidInOutNumber = [opType, inputCount, outputCount](int expIn, int expOut) {
+#ifndef HIFI_BUILD
         LOG(ERROR) << "Invalid number of input operands ("
                    << inputCount << ", expected " << expIn << ") or output operands ("
                    << outputCount << ", expected " << expOut << ") for operation "
                    << kOperationNames[opType];
 #endif //HIFI_BUILD
-    auto logInvalidInOutNumber = [](int expIn, int expOut) {
     };
 
     switch (opType) {
@@ -1631,6 +1651,7 @@ int validateOperation(ANeuralNetworksOperationType opType,
             return ANEURALNETWORKS_BAD_DATA;
     }
 }
+#endif //HiFi_BUILD
 
 ErrorStatus convertResultCodeToErrorStatus(int resultCode) {
     switch (resultCode) {
@@ -1923,6 +1944,7 @@ uint32_t getProp(const char* str, uint32_t defaultValue) {
     }
 }
 #endif  // NN_DEBUGGABLE
+#endif //HIFI_BUILD
 
 } // namespace nn
 } // namespace android
