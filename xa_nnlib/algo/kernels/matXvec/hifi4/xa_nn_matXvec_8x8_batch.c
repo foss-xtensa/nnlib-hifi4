@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -19,9 +19,6 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
-#include "xtensa/tie/xt_hifi2.h"
-#include <xa_nnlib_kernels_api.h>
     #ifdef ROW_UNROLL
         #undef ROW_UNROLL
         #define ROW_UNROLL 4
@@ -30,6 +27,7 @@
     #endif
 #include "xa_nnlib_common_macros.h"
 #include "xa_nnlib_err_chk.h"
+#include "xa_nnlib_common.h"
 
 /*----------------------------Main function---------------------------------*/
 
@@ -86,7 +84,7 @@ WORD32 xa_nn_matXvec_batch_8x8_32(
     #define UNROLL_SETUP_ACC_BATCH              SETUP_ACC_BATCH_FOR_8bx8b
     #define UNROLL_SETUP_MAT1                   SETUP_MAT1_8b
     #define UNROLL_SETUP_VEC_BATCH              SETUP_VEC_BATCH_8b
-    #define SETUP_BIAS                          SETUP_BIAS_8b
+    #define SETUP_BIAS                          SETUP_BIAS_8b_BATCH
     #define UNROLL_LOAD_VEC_BATCH               LOAD_VEC_BATCH_8b
     #define UNROLL_LOAD_ROW_MAT1                LOAD_ROW_MAT1_8b
     #define LOAD_BIAS                           LOAD_BIAS_8b_FOR_8bx8b
@@ -252,8 +250,8 @@ WORD32 xa_nn_matXvec_batch_8x8_32(
     #undef UNROLL_ROW_STORE_ACC
     #undef UNROLL_STORE_ACC_BATCH
     #undef VEC_UNROLL
+    #undef ROW_UNROLL
 
     return 0;
 }
 
-    #undef ROW_UNROLL

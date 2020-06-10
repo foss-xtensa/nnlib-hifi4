@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -54,6 +54,8 @@
 #include "common.h"
 #include "common_fpu.h"
 
+#include "xa_nnlib_common.h"
+
 /* Tables and constants. */
 #include "tanhf_tbl.h"
 #include "expf_tbl.h"
@@ -70,7 +72,7 @@
   32x32  32-bit inputs, 32-bit output. Accuracy: 2 LSB.
   f      floating point input, floating point output, Accuracy: 2 ULP
   Input:
-  x[N]   input data, Q6.25 or floating point  
+  x[N]   input data, Q6.25 or floating point
   N      length of vectors
   Output:
   y[N]   result, Q16.15 or floating point
@@ -100,7 +102,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
     xtfloatx2 half=XT_CONST_S(3);
     int n,m,M;
     if (N<=0) return;
-    if (N&1) 
+    if (N&1)
     {
         *y++=scl_tanhf(*x++); N--;
     }
@@ -114,14 +116,14 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         */
         /* argumant reduction phase */
         pX    =(const xtfloatx2*)x;
-        aX=AE_LA64_PP(pX); 
+        aX=AE_LA64_PP(pX);
         pScrWr=(      xtfloatx2*)scratch;
-        for (n = 0; n < (M>>1); n++) 
+        for (n = 0; n < (M>>1); n++)
         {
             xtfloatx2 x, p0, dy,t;
             XT_LASX2IP(x,aX,pX);
             x = XT_ABS_SX2(x);
-            x=XT_MUL_SX2(two, x); 
+            x=XT_MUL_SX2(two, x);
             t=(xtfloatx2)80.f; x = XT_MIN_SX2(x, t);
 
             /* scale input to 1/ln(2) */
@@ -146,7 +148,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         pScrRd=(const xtfloatx2*)scratch;
         pScrWr=(      xtfloatx2*)scratch;
         pPolytanhf=(const ae_int32*)pow2f_coef;
-        for (n = 0; n < (M>>1); n++) 
+        for (n = 0; n < (M>>1); n++)
         {
             xtfloatx2 dy, y, y0,y1, y2, y3, y4, y5, y6, dy2;
             ae_int32x2 tmp;
@@ -172,7 +174,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         __Pragma("no_reorder")
         pScrRd=(const xtfloatx2*)scratch;
         pScrWr=(      xtfloatx2*)scratch;
-        for (n = 0; n < (M>>1); n++) 
+        for (n = 0; n < (M>>1); n++)
         {
             xtfloatx2  y, z, r, eps, p0;
             ae_int32x2 tmp, v1, v2, e1, e2;
@@ -201,17 +203,17 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             XT_MADD_SX2(r, r, eps);
             z = XT_SUB_SX2(one, r);
             XT_SSX2IP(z,pScrWr,2*sizeof(xtfloatx2));
-        }        
-        /* next, compute output for smaller argument 
+        }
+        /* next, compute output for smaller argument
            Use polynomial approximation for small input values. This branch is
            also used for a NaN on input.
         */
         __Pragma("no_reorder")
         pX    =(const xtfloatx2*)x;
         pScrWr=(( xtfloatx2*)scratch)+1;
-        aX=AE_LA64_PP(pX); 
+        aX=AE_LA64_PP(pX);
         pPolytanhf=(const ae_int32*)polytanhf_tbl;
-        for (n = 0; n < (M>>1); n++) 
+        for (n = 0; n < (M>>1); n++)
         {
             xtfloatx2 z, x, x2, x3, tn0, tn1, tn2, tn3;
             XT_LASX2IP(x,aX,pX);
@@ -236,13 +238,13 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         pY    =(      xtfloatx2*)y;
         pScrRd=(const xtfloatx2*)scratch;
         aX=AE_LA64_PP(pX); aY=AE_ZALIGN64();
-        for (n = 0; n < (M>>1); n++) 
+        for (n = 0; n < (M>>1); n++)
         {
             xtbool2 bbig,bsign;
             xtfloatx2 x, z, zbig;
             ae_int32x2 ux;
             XT_LASX2IP(x,aX,pX);
-            ux = XT_AE_MOVINT32X2_FROMXTFLOATX2(x); 
+            ux = XT_AE_MOVINT32X2_FROMXTFLOATX2(x);
             bsign=AE_LT32(ux,0);
             x = XT_ABS_SX2(x);
             bbig = XT_OLT_SX2(halfln3.f,x);
@@ -268,7 +270,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
     one  = XT_CONST_S(1);
     two  = XT_CONST_S(2);
     half = XT_CONST_S(3);
-    for (n = 0; n < N; n++) 
+    for (n = 0; n < N; n++)
     {
         xtbool bsmall;
         xtfloat x,y;
@@ -277,7 +279,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         int32_t ux;
         int32_t e1, e2;
         XT_LSIP(x,pX,sizeof(float32_t));
-        ux = XT_RFR(x); 
+        ux = XT_RFR(x);
         ux = (ux & 0x80000000);
         x = XT_ABS_S(x);
         bsmall = XT_OLT_S(halfln3.f,x);

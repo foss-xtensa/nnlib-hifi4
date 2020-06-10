@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -57,6 +57,8 @@
 #include "common.h"
 #include "common_fpu.h"
 
+#include "xa_nnlib_common.h"
+
 /* Tables and constants. */
 #include "tanhf_tbl.h"
 #include "expf_tbl.h"
@@ -84,7 +86,7 @@ float32_t halfexpf(float32_t* dy, float32_t x );
   32x32  32-bit inputs, 32-bit output. Accuracy: 2 LSB.
   f      floating point input, floating point output, Accuracy: 2 ULP
   Input:
-  x[N]   input data, Q6.25 or floating point  
+  x[N]   input data, Q6.25 or floating point
   N      length of vectors
   Output:
   y[N]   result, Q16.15 or floating point
@@ -124,7 +126,7 @@ float32_t scl_tanhf( float32_t x )
     one = (float32_t)XT_CONST_S(1);
     two = (float32_t)XT_CONST_S(2);
     half = (float32_t)XT_CONST_S(3);
-    ux = XT_RFR(x); 
+    ux = XT_RFR(x);
     ux = (ux & 0x80000000);
     x = XT_ABS_S(x);
     if (x > halfln3.f)

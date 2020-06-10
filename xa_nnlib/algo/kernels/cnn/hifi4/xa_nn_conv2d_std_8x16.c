@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -52,11 +52,11 @@ static WORD32 conv_x_left_pad(
       for(k=0;k<out_channels;k++)
       {
         ae_int64 acc = p_bias[k];
-        acc = AE_SLAA64S(acc, bias_shift); 
-        acc = AE_SLAA64S(acc, acc_shift); 
-        ae_int32 _ae_int32_tmp_var = AE_SLAA32S(AE_ROUND32F64SSYM(acc), 16); 
-        _ae_int32_tmp_var = AE_SLAA32S(_ae_int32_tmp_var, -16); 
-        p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = AE_MOVINT16_FROMINT32(_ae_int32_tmp_var); 
+        acc = AE_SLAA64S(acc, bias_shift);
+        acc = AE_SLAA64S(acc, acc_shift);
+        ae_int32 _ae_int32_tmp_var = AE_SLAA32S(AE_ROUND32F64SSYM(acc), 16);
+        _ae_int32_tmp_var = AE_SLAA32S(_ae_int32_tmp_var, -16);
+        p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = AE_MOVINT16_FROMINT32(_ae_int32_tmp_var);
       }
     }
   }
@@ -80,7 +80,7 @@ static WORD32 conv_x_right_pad(
 {
   WORD32 i,j,k;
   WORD32 idx_out_width_over_x_r_pad = (x_padding + input_width + x_stride - 1)/x_stride + 1;
-  WORD32 out_width_over_x_r_pad = out_width - idx_out_width_over_x_r_pad; 
+  WORD32 out_width_over_x_r_pad = out_width - idx_out_width_over_x_r_pad;
 
   /* When kernel convolves over x-right pad region only, output is just bias */
   for(i=0;i<out_height;i++)
@@ -90,15 +90,15 @@ static WORD32 conv_x_right_pad(
       for(k=0;k<out_channels;k++)
       {
         ae_int64 acc = p_bias[k];
-        acc = AE_SLAA64S(acc, bias_shift); 
-        acc = AE_SLAA64S(acc, acc_shift); 
-        ae_int32 _ae_int32_tmp_var = AE_SLAA32S(AE_ROUND32F64SSYM(acc), 16); 
-        _ae_int32_tmp_var = AE_SLAA32S(_ae_int32_tmp_var, -16); 
-        p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = AE_MOVINT16_FROMINT32(_ae_int32_tmp_var); 
+        acc = AE_SLAA64S(acc, bias_shift);
+        acc = AE_SLAA64S(acc, acc_shift);
+        ae_int32 _ae_int32_tmp_var = AE_SLAA32S(AE_ROUND32F64SSYM(acc), 16);
+        _ae_int32_tmp_var = AE_SLAA32S(_ae_int32_tmp_var, -16);
+        p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = AE_MOVINT16_FROMINT32(_ae_int32_tmp_var);
       }
     }
   }
-  return out_width_over_x_r_pad; 
+  return out_width_over_x_r_pad;
 }
 
 
@@ -131,10 +131,10 @@ WORD32 xa_nn_conv2d_std_8x16(
   XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
   /* Pointer alignment checks */
-  XA_NNLIB_ARG_CHK_ALIGN(p_out, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_inp, ALIGNMENT, -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD16), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD8), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_kernel, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_bias, ALIGNMENT, -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD16), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
@@ -163,16 +163,16 @@ WORD32 xa_nn_conv2d_std_8x16(
 
   WORD32 x_padding_var = x_padding;
   WORD32 input_channels_pad = PADDED_SIZE(input_channels, (ALIGNMENT>>1));
-  
+
   // Limit effective bias_shift and acc_shift to [-63 ... 63]
   // +8 to conform with 8bit left shift of 8bit kernel load
   //bias_shift = bias_shift + 8;
   bias_shift = bias_shift > 63 ? 63 : bias_shift < -63 ? -63 : bias_shift;
-  /* +48 to move acc to upper 16bits, as TRUNC keeps upper 32bits and ROUND keeps upper 16bits; 
+  /* +48 to move acc to upper 16bits, as TRUNC keeps upper 32bits and ROUND keeps upper 16bits;
      -8 to remove 8bit left shift of kernel */
   acc_shift = acc_shift + 32;
   acc_shift = acc_shift > 63 ? 63 : acc_shift < -63 ? -63 : acc_shift;
- 
+
   /* When kernel convolves over x-left pad region only */
   WORD32 out_width_over_x_pad = 0;
   if(x_padding_var >= kernel_width)
@@ -180,8 +180,8 @@ WORD32 xa_nn_conv2d_std_8x16(
     out_width_over_x_pad = conv_x_left_pad(x_padding, kernel_width, x_stride, out_width, out_height, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, bias_shift, acc_shift);
     x_padding_var -= out_width_over_x_pad * x_stride;
   }
-  
-  
+
+
   /* When kernel convolves over x-right pad region only */
   WORD32 out_width_over_x_r_pad = 0;
   // Determine x-right padding
@@ -195,14 +195,14 @@ WORD32 xa_nn_conv2d_std_8x16(
 
   /* When kernel convolves over input region */
   p_out += out_width_over_x_pad * out_width_offset;
-  // Initialize circular buffer 
+  // Initialize circular buffer
   // Determine y-bottom padding
   WORD32 y_b_pad = kernel_height + (out_height - 1) * y_stride - (y_padding + input_height);
   y_b_pad = y_b_pad < 0 ? 0 : y_b_pad;
- 
+
   conv2d_std_init_cir_buf(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, p_state);
-  
-  // Index to padded input width 
+
+  // Index to padded input width
   WORD32 idx_beg_inp_width_pad = kernel_width - x_stride;
   idx_beg_inp_width_pad = idx_beg_inp_width_pad < 0 ? 0 : idx_beg_inp_width_pad;
 
@@ -229,7 +229,7 @@ WORD32 xa_nn_conv2d_std_8x16(
        ,input_channels_pad * kernel_width * kernel_height /* vec_offset */
        ,out_channels_offset /* out_col_offset */
        ,out_height_offset /* out_row_offset */
-       ,bias_shift 
+       ,bias_shift
        ,acc_shift
       );
 

@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -26,11 +26,13 @@
 #include "xa_nnlib_common_macros.h"
 #include "xa_nnlib_err_chk.h"
 
+#include "xa_nnlib_common.h"
+
 /* 2D Convolution implementation */
-static inline void conv2d_8x8_hf4_convmul
+static inline void conv2d_nchw_8x8_hf4_convmul
 (pWORD8 __restrict__ p_out  /* Output:  [Stream] [(out_stride): (actual_out_height): (actual_out_width)] */
- ,pWORD8 __restrict__ p_ker  /* Kernel:  [Block] [1:             kernel_height:       kernel_width_pad] */
- ,pWORD8 __restrict__ p_inp  /* Input:   [Block] [1:             input_height:        input_width] */
+ ,const WORD8 *__restrict__ p_ker  /* Kernel:  [Block] [1:             kernel_height:       kernel_width_pad] */
+ ,const WORD8 *__restrict__ p_inp  /* Input:   [Block] [1:             input_height:        input_width] */
  ,WORD8 bias
  ,int input_height
  ,int input_width
@@ -105,7 +107,7 @@ static inline void conv2d_8x8_hf4_convmul
                     ((ae_int16x4 *)pt_inp
                      ,((sizeof(WORD8)) * ((i * y_stride * input_width) + j*4 + k*input_width))
                     );
-                pWORD8 pt_ker = (p_ker + k*kernel_width_pad);
+                const WORD8 *pt_ker = (p_ker + k*kernel_width_pad);
                 ae_int16x4 d_inp, d_ker;
                 ae_int16x4 d_inp0, d_inp1, d_inp2, d_inp3;
                 AE_L8X4F_IP(d_inp0, pt_inp, 4);
@@ -154,17 +156,17 @@ static inline void conv2d_8x8_hf4_convmul
             accu_int64_0 = AE_SLAA64S(accu_int64_0, -16);
             accu_int64_0 = AE_ADD64S(accu_int64_0, _ae_int64_sat_bias);
             accu_int64_0 = AE_SLAA64S(accu_int64_0, acc_shift);
-            ae_int32 accu_int32_0 = AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu_int64_0), 24),-24);  
+            ae_int32 accu_int32_0 = AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu_int64_0), 24),-24);
             out_ptr[(j * out_stride)] = (*((UWORD32 *)&accu_int32_0));
         }
     }
 }
 
-WORD32 xa_nn_conv2d_depthwise_8x8
+WORD32 xa_nn_conv2d_depthwise_nchw_8x8
 (pWORD8 __restrict__ p_out
- ,pWORD8 __restrict__ p_kernel
- ,pWORD8 __restrict__ p_inp 
- ,pWORD8 __restrict__ p_bias
+ ,const WORD8 *__restrict__ p_kernel
+ ,const WORD8 *__restrict__ p_inp
+ ,const WORD8 *__restrict__ p_bias
  ,WORD32  input_height
  ,WORD32  input_width
  ,WORD32  input_channels
@@ -179,41 +181,10 @@ WORD32 xa_nn_conv2d_depthwise_8x8
  ,WORD32  out_width
  ,WORD32  acc_shift
  ,WORD32  bias_shift
- ,WORD32  inp_data_format
  ,WORD32  out_data_format
  ,pVOID p_scratch
 )
 {
-    /* NULL pointer checks */
-    XA_NNLIB_ARG_CHK_PTR(p_out, -1);
-    XA_NNLIB_ARG_CHK_PTR(p_kernel, -1);
-    XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
-    XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
-    XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
-    /* Pointer alignment checks */
-    XA_NNLIB_ARG_CHK_ALIGN(p_out, ALIGNMENT, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_kernel, ALIGNMENT, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_inp, ALIGNMENT, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_bias, ALIGNMENT, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
-    /* Basic Parameter checks */
-    XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND((kernel_height <= 0 || kernel_width <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND((kernel_height > input_height), -1);
-    XA_NNLIB_ARG_CHK_COND((kernel_width > input_width), -1);
-    XA_NNLIB_ARG_CHK_COND((channels_multiplier <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
-    XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND((acc_shift < -31 || acc_shift > 31), -1);
-    XA_NNLIB_ARG_CHK_COND((bias_shift < -31 || bias_shift > 31), -1);
-    XA_NNLIB_ARG_CHK_COND((inp_data_format != 1), -1);
-    XA_NNLIB_ARG_CHK_COND((out_data_format != 0), -1);
-    /* Implementation dependent checks */
-    XA_NNLIB_ARG_CHK_COND((y_stride > kernel_height), -1);
-    XA_NNLIB_ARG_CHK_COND((x_stride > kernel_width), -1);
-
     xa_nn_conv2d_depthwise_init
         (p_scratch
          ,input_height
@@ -229,7 +200,7 @@ WORD32 xa_nn_conv2d_depthwise_8x8
          ,out_height
          ,out_width
          ,8
-         ,inp_data_format
+         ,1
         );
 
     xa_nn_conv2d_dw_state_t *p_state = (xa_nn_conv2d_dw_state_t *)p_scratch;
@@ -239,8 +210,8 @@ WORD32 xa_nn_conv2d_depthwise_8x8
     int kernel_width_pad = ALIGNED_SIZE(kernel_width, 4);
     int rows_to_add, top_pad, bottom_pad, rows_added;
     int input_row;
-    pWORD8 pt_ker;
-    pWORD8 pt_inp;
+    const WORD8 *pt_ker;
+    const WORD8 *pt_inp;
     pWORD8 p_inp_circ;
     p_scratch = (pWORD64)(p_state->p_scratch);
 
@@ -295,7 +266,7 @@ WORD32 xa_nn_conv2d_depthwise_8x8
                 pt_ker = &p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width_pad];
                 bias = p_bias[(itr_ic*channels_multiplier+itr_cm)];
 
-                conv2d_8x8_hf4_convmul
+                conv2d_nchw_8x8_hf4_convmul
                     ((&p_out[(itr_ic*channels_multiplier+itr_cm)+itr_oh*out_width*(input_channels*channels_multiplier)])
                      ,pt_ker
                      ,p_inp_circ
@@ -338,7 +309,7 @@ WORD32 xa_nn_conv2d_depthwise_8x8
             pt_ker = &p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width_pad];
             bias = p_bias[(itr_ic*channels_multiplier+itr_cm)];
 
-            conv2d_8x8_hf4_convmul
+            conv2d_nchw_8x8_hf4_convmul
                 ((&p_out[(itr_ic*channels_multiplier+itr_cm)+itr_oh*out_width*(input_channels*channels_multiplier)])
                  ,pt_ker
                  ,p_inp_circ
@@ -359,5 +330,433 @@ WORD32 xa_nn_conv2d_depthwise_8x8
         }
     }
 
+    return 0;
+}
+
+/* 2D Convolution implementation */
+static inline void conv2d_nhwc_8x8
+(pWORD8 __restrict__ p_out
+ ,const WORD8 *__restrict__ p_ker
+ ,const WORD8 *__restrict__ p_inp
+ ,const WORD8 *p_bias
+ ,int kernel_height
+ ,int kernel_width
+ ,int out_height
+ ,int out_width
+ ,int out_channels
+ ,int x_stride
+ ,int y_stride
+ ,WORD32  acc_shift
+ ,WORD32  bias_shift
+ ,pWORD32 __restrict__ p_scratch
+ )
+{
+    WORD32 out_channels_pad;
+    WORD32 i, itr_oh, itr_ch, itr_kh, itr_kw;
+    pWORD8 pt_inp0, pt_inp1, pt_ker;
+    pWORD8 out_ptr0, out_ptr1;
+    ae_int16x4 d_inp0, d_inp1, d_ker;
+    const ae_int32x2 *pt_bias;
+    ae_valign bias_a;
+    ae_int32x2 d_acc0, d_acc1;
+    ae_int32x2 d_acc2, d_acc3;
+    ae_int64 d64_bias0, d64_bias1, d64_bias2, d64_bias3;
+    ae_int64 d64_acc0, d64_acc1, d64_acc2, d64_acc3;
+    ae_int16x4 d_acc16x4;
+
+    out_channels_pad = (out_channels + 3)&(~3);
+
+    for(itr_oh = 0; itr_oh < (out_height-1); itr_oh+=2)
+    {
+        out_ptr0 = (WORD8 *)(&p_out[itr_oh*out_channels*out_width]);
+        out_ptr1 = (WORD8 *)(&p_out[(itr_oh+1)*out_channels*out_width]);
+        for(itr_ch = 0; itr_ch < out_channels; itr_ch+=4)
+        {
+            pt_inp0 = (WORD8 *)p_inp;
+            pt_inp1 = (WORD8 *)p_inp;
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp0, itr_ch + itr_oh*y_stride*kernel_width*out_channels_pad);
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp1, itr_ch + (itr_oh+1)*y_stride*kernel_width*out_channels_pad);
+            pt_ker = (WORD8 *)(&p_ker[itr_ch]);
+            d_acc0 = AE_ZERO32();
+            d_acc1 = AE_ZERO32();
+            d_acc2 = AE_ZERO32();
+            d_acc3 = AE_ZERO32();
+            for(itr_kh = 0; itr_kh < kernel_height; itr_kh++)
+            {
+                WORD8 *ptt_inp0, *ptt_inp1;
+                ptt_inp0 = pt_inp0;
+                ptt_inp1 = pt_inp1;
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)ptt_inp0, itr_kh*kernel_width*out_channels_pad);
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)ptt_inp1, itr_kh*kernel_width*out_channels_pad);
+#pragma no_unroll
+                for(itr_kw = 0; itr_kw < kernel_width; itr_kw++)
+                {
+                    d_inp0 = AE_L8X4F_I(ptt_inp0, 0);
+                    d_inp1 = AE_L8X4F_I(ptt_inp1, 0);
+                    d_ker = AE_L8X4F_I(pt_ker, 0);
+                    pt_ker += out_channels_pad;
+                    d_inp0 = AE_SRAI16(d_inp0, 8);
+                    d_inp1 = AE_SRAI16(d_inp1, 8);
+                    d_ker = AE_SRAI16(d_ker, 8);
+                    AE_MULA16X4(d_acc0, d_acc1, d_inp0, d_ker);
+                    AE_MULA16X4(d_acc2, d_acc3, d_inp1, d_ker);
+                    AE_ADDCIRC16X4_XC((ae_int16x4 *)ptt_inp0, out_channels_pad);
+                    AE_ADDCIRC16X4_XC((ae_int16x4 *)ptt_inp1, out_channels_pad);
+                }
+            }
+            d64_bias0 = AE_MOVINT64_FROMINT32X2(AE_MOVDA32X2(p_bias[itr_ch], 0));
+            d64_bias1 = AE_MOVINT64_FROMINT32X2(AE_MOVDA32X2(p_bias[itr_ch+1], 0));
+            d64_bias2 = AE_MOVINT64_FROMINT32X2(AE_MOVDA32X2(p_bias[itr_ch+2], 0));
+            d64_bias3 = AE_MOVINT64_FROMINT32X2(AE_MOVDA32X2(p_bias[itr_ch+3], 0));
+            d64_bias0 = AE_SLAA64S(d64_bias0, bias_shift-32);
+            d64_bias1 = AE_SLAA64S(d64_bias1, bias_shift-32);
+            d64_bias2 = AE_SLAA64S(d64_bias2, bias_shift-32);
+            d64_bias3 = AE_SLAA64S(d64_bias3, bias_shift-32);
+
+            d64_acc0 = AE_CVT64F32_H(d_acc0);
+            d64_acc1 = AE_CVT64F32_L(d_acc0);
+            d64_acc2 = AE_CVT64F32_H(d_acc1);
+            d64_acc3 = AE_CVT64F32_L(d_acc1);
+            d64_acc0 = AE_SRAI64(d64_acc0, 32);
+            d64_acc1 = AE_SRAI64(d64_acc1, 32);
+            d64_acc2 = AE_SRAI64(d64_acc2, 32);
+            d64_acc3 = AE_SRAI64(d64_acc3, 32);
+
+            d64_acc0 = AE_ADD64S(d64_acc0, d64_bias0);
+            d64_acc1 = AE_ADD64S(d64_acc1, d64_bias1);
+            d64_acc2 = AE_ADD64S(d64_acc2, d64_bias2);
+            d64_acc3 = AE_ADD64S(d64_acc3, d64_bias3);
+
+            d64_acc0 = AE_SLAA64S(d64_acc0, acc_shift+32);
+            d64_acc1 = AE_SLAA64S(d64_acc1, acc_shift+32);
+            d64_acc2 = AE_SLAA64S(d64_acc2, acc_shift+32);
+            d64_acc3 = AE_SLAA64S(d64_acc3, acc_shift+32);
+
+            d_acc0 = AE_ROUND32X2F64SSYM(d64_acc0, d64_acc1);
+            d_acc1 = AE_ROUND32X2F64SSYM(d64_acc2, d64_acc3);
+            d_acc16x4 = AE_SAT16X4(d_acc0, d_acc1);
+            d_acc16x4 = AE_SRAI16(AE_SLAI16S(d_acc16x4, 8), 8);
+#pragma no_unroll
+            for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
+            {
+                out_ptr0[itr_ch+i] = (WORD8)AE_MOVAD16_3(d_acc16x4);
+                d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
+            }
+
+            d64_acc0 = AE_CVT64F32_H(d_acc2);
+            d64_acc1 = AE_CVT64F32_L(d_acc2);
+            d64_acc2 = AE_CVT64F32_H(d_acc3);
+            d64_acc3 = AE_CVT64F32_L(d_acc3);
+            d64_acc0 = AE_SRAI64(d64_acc0, 32);
+            d64_acc1 = AE_SRAI64(d64_acc1, 32);
+            d64_acc2 = AE_SRAI64(d64_acc2, 32);
+            d64_acc3 = AE_SRAI64(d64_acc3, 32);
+
+            d64_acc0 = AE_ADD64S(d64_acc0, d64_bias0);
+            d64_acc1 = AE_ADD64S(d64_acc1, d64_bias1);
+            d64_acc2 = AE_ADD64S(d64_acc2, d64_bias2);
+            d64_acc3 = AE_ADD64S(d64_acc3, d64_bias3);
+
+            d64_acc0 = AE_SLAA64S(d64_acc0, acc_shift+32);
+            d64_acc1 = AE_SLAA64S(d64_acc1, acc_shift+32);
+            d64_acc2 = AE_SLAA64S(d64_acc2, acc_shift+32);
+            d64_acc3 = AE_SLAA64S(d64_acc3, acc_shift+32);
+
+            d_acc2 = AE_ROUND32X2F64SSYM(d64_acc0, d64_acc1);
+            d_acc3 = AE_ROUND32X2F64SSYM(d64_acc2, d64_acc3);
+            d_acc16x4 = AE_SAT16X4(d_acc2, d_acc3);
+            d_acc16x4 = AE_SRAI16(AE_SLAI16S(d_acc16x4, 8), 8);
+#pragma no_unroll
+            for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
+            {
+                out_ptr1[itr_ch+i] = (WORD8)AE_MOVAD16_3(d_acc16x4);
+                d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
+            }
+        }
+    }
+    if(itr_oh < out_height)
+    {
+        out_ptr0 = (WORD8 *)(&p_out[itr_oh*out_channels*out_width]);
+        pt_bias = (const ae_int32x2 *)p_bias;
+        bias_a = AE_LA64_PP(pt_bias);
+        for(itr_ch = 0; itr_ch < out_channels; itr_ch+=4)
+        {
+            pt_inp0 = (WORD8 *)p_inp;
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp0, itr_ch + itr_oh*y_stride*kernel_width*out_channels_pad);
+            pt_ker = (WORD8 *)(&p_ker[itr_ch]);
+            d_acc0 = AE_ZERO32();
+            d_acc1 = AE_ZERO32();
+            for(itr_kh = 0; itr_kh < kernel_height; itr_kh++)
+            {
+                WORD8 *ptt_inp0 = pt_inp0;
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)ptt_inp0, itr_kh*kernel_width*out_channels_pad);
+#pragma no_unroll
+                for(itr_kw = 0; itr_kw < kernel_width; itr_kw++)
+                {
+                    d_inp0 = AE_L8X4F_I(ptt_inp0, 0);
+                    d_ker = AE_L8X4F_I(pt_ker, 0);
+                    pt_ker += out_channels_pad;
+                    d_inp0 = AE_SRAI16(d_inp0, 8);
+                    d_ker = AE_SRAI16(d_ker, 8);
+                    AE_MULA16X4(d_acc0, d_acc1, d_inp0, d_ker);
+                    AE_ADDCIRC16X4_XC((ae_int16x4 *)ptt_inp0, out_channels_pad);
+                }
+            }
+            d64_bias0 = AE_MOVINT64_FROMINT32X2(AE_MOVDA32X2(p_bias[itr_ch], 0));
+            d64_bias1 = AE_MOVINT64_FROMINT32X2(AE_MOVDA32X2(p_bias[itr_ch+1], 0));
+            d64_bias2 = AE_MOVINT64_FROMINT32X2(AE_MOVDA32X2(p_bias[itr_ch+2], 0));
+            d64_bias3 = AE_MOVINT64_FROMINT32X2(AE_MOVDA32X2(p_bias[itr_ch+3], 0));
+            d64_bias0 = AE_SLAA64S(d64_bias0, bias_shift-32);
+            d64_bias1 = AE_SLAA64S(d64_bias1, bias_shift-32);
+            d64_bias2 = AE_SLAA64S(d64_bias2, bias_shift-32);
+            d64_bias3 = AE_SLAA64S(d64_bias3, bias_shift-32);
+
+            d64_acc0 = AE_CVT64F32_H(d_acc0);
+            d64_acc1 = AE_CVT64F32_L(d_acc0);
+            d64_acc2 = AE_CVT64F32_H(d_acc1);
+            d64_acc3 = AE_CVT64F32_L(d_acc1);
+            d64_acc0 = AE_SRAI64(d64_acc0, 32);
+            d64_acc1 = AE_SRAI64(d64_acc1, 32);
+            d64_acc2 = AE_SRAI64(d64_acc2, 32);
+            d64_acc3 = AE_SRAI64(d64_acc3, 32);
+
+            d64_acc0 = AE_ADD64S(d64_acc0, d64_bias0);
+            d64_acc1 = AE_ADD64S(d64_acc1, d64_bias1);
+            d64_acc2 = AE_ADD64S(d64_acc2, d64_bias2);
+            d64_acc3 = AE_ADD64S(d64_acc3, d64_bias3);
+
+            d64_acc0 = AE_SLAA64S(d64_acc0, acc_shift+32);
+            d64_acc1 = AE_SLAA64S(d64_acc1, acc_shift+32);
+            d64_acc2 = AE_SLAA64S(d64_acc2, acc_shift+32);
+            d64_acc3 = AE_SLAA64S(d64_acc3, acc_shift+32);
+
+            d_acc0 = AE_ROUND32X2F64SSYM(d64_acc0, d64_acc1);
+            d_acc1 = AE_ROUND32X2F64SSYM(d64_acc2, d64_acc3);
+            d_acc16x4 = AE_SAT16X4(d_acc0, d_acc1);
+            d_acc16x4 = AE_SRAI16(AE_SLAI16S(d_acc16x4, 8), 8);
+#pragma no_unroll
+            for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
+            {
+                out_ptr0[itr_ch+i] = (WORD8)AE_MOVAD16_3(d_acc16x4);
+                d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
+            }
+        }
+    }
+}
+
+static void xa_nn_conv2d_depthwise_nhwc_8x8
+(pWORD8 __restrict__ p_out
+ ,const WORD8 *__restrict__ p_kernel
+ ,const WORD8 *__restrict__ p_inp
+ ,const WORD8 *__restrict__ p_bias
+ ,WORD32  input_height
+ ,WORD32  input_width
+ ,WORD32  input_channels
+ ,WORD32  kernel_height
+ ,WORD32  kernel_width
+ ,WORD32  channels_multiplier
+ ,WORD32  x_stride
+ ,WORD32  y_stride
+ ,WORD32  x_padding
+ ,WORD32  y_padding
+ ,WORD32  out_height
+ ,WORD32  out_width
+ ,WORD32  acc_shift
+ ,WORD32  bias_shift
+ ,WORD32  out_data_format
+ ,pVOID p_scratch
+)
+{
+    xa_nn_conv2d_depthwise_init
+        (p_scratch
+         ,input_height
+         ,input_width
+         ,input_channels
+         ,kernel_height
+         ,kernel_width
+         ,channels_multiplier
+         ,x_stride
+         ,y_stride
+         ,x_padding
+         ,y_padding
+         ,out_height
+         ,out_width
+         ,8
+         ,0
+        );
+
+    xa_nn_circ_buf_t *p_state = (xa_nn_circ_buf_t *)p_scratch;
+    xa_nn_circ_buf_t *p_circ_buf = p_state;
+    int itr_ow;
+    int cols_to_add, left_pad, right_pad, cols_added;
+    int input_col;
+    const WORD8 *pt_inp;
+    pWORD8 p_inp_circ;
+
+    AE_SETCBEGIN0(p_circ_buf->p_begin);
+    AE_SETCEND0(p_circ_buf->p_end);
+
+    pt_inp = (const WORD8 *)p_inp;
+
+    CIRC_BUF_ADD_COLS_INIT(cols_added
+            ,cols_to_add
+            ,left_pad
+            ,right_pad
+            ,input_col
+            ,input_height
+            ,input_width
+            ,input_channels
+            ,kernel_width
+            ,channels_multiplier
+            ,x_stride
+            ,x_padding
+            ,y_padding
+            ,out_height
+            ,p_circ_buf
+            ,pt_inp
+            );
+
+    for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+    {
+        CIRC_BUF_ADD_COLS(cols_added
+                ,cols_to_add
+                ,left_pad
+                ,right_pad
+                ,input_col
+                ,input_height
+                ,input_width
+                ,input_channels
+                ,kernel_width
+                ,channels_multiplier
+                ,x_stride
+                ,x_padding
+                ,y_padding
+                ,out_height
+                ,p_circ_buf
+                ,pt_inp
+                );
+
+        p_inp_circ = (WORD8 *)p_circ_buf->p_curr;
+
+        conv2d_nhwc_8x8
+            ((pWORD8)(&p_out[itr_ow*input_channels*channels_multiplier])
+             ,p_kernel
+             ,p_inp_circ
+             ,p_bias
+             ,kernel_height
+             ,kernel_width
+             ,out_height
+             ,out_width
+             ,(input_channels * channels_multiplier)
+             ,x_stride
+             ,y_stride
+             ,acc_shift
+             ,bias_shift
+             ,p_scratch
+            );
+    }
+}
+
+WORD32 xa_nn_conv2d_depthwise_8x8
+(pWORD8 __restrict__ p_out
+ ,const WORD8 *__restrict__ p_kernel
+ ,const WORD8 *__restrict__ p_inp
+ ,const WORD8 *__restrict__ p_bias
+ ,WORD32  input_height
+ ,WORD32  input_width
+ ,WORD32  input_channels
+ ,WORD32  kernel_height
+ ,WORD32  kernel_width
+ ,WORD32  channels_multiplier
+ ,WORD32  x_stride
+ ,WORD32  y_stride
+ ,WORD32  x_padding
+ ,WORD32  y_padding
+ ,WORD32  out_height
+ ,WORD32  out_width
+ ,WORD32  acc_shift
+ ,WORD32  bias_shift
+ ,WORD32  inp_data_format
+ ,WORD32  out_data_format
+ ,pVOID p_scratch)
+{
+    /* NULL pointer checks */
+    XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+    XA_NNLIB_ARG_CHK_PTR(p_kernel, -1);
+    XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
+    XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
+    XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
+    /* Pointer alignment checks */
+    //XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD8), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_kernel, (ALIGNMENT>>1), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_inp, (ALIGNMENT>>1), -1);
+    //XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD8), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
+    /* Basic Parameter checks */
+    XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
+    XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
+    XA_NNLIB_ARG_CHK_COND((kernel_height <= 0 || kernel_width <= 0), -1);
+    XA_NNLIB_ARG_CHK_COND((kernel_height > input_height), -1);
+    XA_NNLIB_ARG_CHK_COND((kernel_width > input_width), -1);
+    XA_NNLIB_ARG_CHK_COND((channels_multiplier <= 0), -1);
+    XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
+    XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
+    XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
+    XA_NNLIB_ARG_CHK_COND((acc_shift < -31 || acc_shift > 31), -1);
+    XA_NNLIB_ARG_CHK_COND((bias_shift < -31 || bias_shift > 31), -1);
+    XA_NNLIB_ARG_CHK_COND((inp_data_format != 0 && inp_data_format != 1), -1);
+    XA_NNLIB_ARG_CHK_COND((out_data_format != 0), -1);
+    /* Implementation dependent checks */
+    XA_NNLIB_ARG_CHK_COND((y_stride > kernel_height), -1);
+    XA_NNLIB_ARG_CHK_COND((x_stride > kernel_width), -1);
+
+    if(inp_data_format == 0)
+    {
+        xa_nn_conv2d_depthwise_nhwc_8x8
+            (p_out
+             ,p_kernel
+             ,p_inp
+             ,p_bias
+             ,input_height
+             ,input_width
+             ,input_channels
+             ,kernel_height
+             ,kernel_width
+             ,channels_multiplier
+             ,x_stride
+             ,y_stride
+             ,x_padding
+             ,y_padding
+             ,out_height
+             ,out_width
+             ,acc_shift
+             ,bias_shift
+             ,out_data_format
+             ,p_scratch);
+    }
+    else if(inp_data_format == 1)
+    {
+        xa_nn_conv2d_depthwise_nchw_8x8
+            (p_out
+             ,p_kernel
+             ,p_inp
+             ,p_bias
+             ,input_height
+             ,input_width
+             ,input_channels
+             ,kernel_height
+             ,kernel_width
+             ,channels_multiplier
+             ,x_stride
+             ,y_stride
+             ,x_padding
+             ,y_padding
+             ,out_height
+             ,out_width
+             ,acc_shift
+             ,bias_shift
+             ,out_data_format
+             ,p_scratch);
+    }
     return 0;
 }

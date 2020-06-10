@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -32,6 +32,14 @@
     input = XT_MAX(min, XT_MIN(max, input));
 
 #define MAX_HEIGHT_16_BIT_ACC 127
+
+#define MAX_16X4(out, id2, id1, id0) {\
+        out = id1;\
+        b0 = AE_LT16(id1, id0); \
+        AE_MOVT16X4(out, id0, b0);\
+        b0 = AE_LT16(out, id2); \
+        AE_MOVT16X4(out, id2, b0);\
+}
 
 extern const unsigned int inv_256_tbl[257];
 typedef struct _xa_nn_avgpool_state_t
@@ -93,6 +101,63 @@ const   UWORD8* __restrict__ p_inp,
 void xa_nn_avgpool_asym8_hwc_32(
         UWORD8* __restrict__ p_out,
 const   UWORD8* __restrict__ p_inp,
+        WORD32   input_height,
+        WORD32   input_width,
+        WORD32   input_channels,
+        WORD32   kernel_height,
+        WORD32   kernel_width,
+        WORD32   x_stride,
+        WORD32   y_stride,
+        WORD32   x_padding,
+        WORD32   y_padding,
+        WORD32   out_height,
+        WORD32   out_width,
+        pVOID    p_scratch_in,
+        pVOID    p_zeros_mem,
+        WORD32   *p_den_height,
+        WORD32   *p_den_width);
+
+void xa_nn_avgpool_8_hwc_16(
+        WORD8* __restrict__ p_out,
+const   WORD8* __restrict__ p_inp,
+        WORD32   input_height,
+        WORD32   input_width,
+        WORD32   input_channels,
+        WORD32   kernel_height,
+        WORD32   kernel_width,
+        WORD32   x_stride,
+        WORD32   y_stride,
+        WORD32   x_padding,
+        WORD32   y_padding,
+        WORD32   out_height,
+        WORD32   out_width,
+        pVOID    p_scratch_in,
+        pVOID    p_zeros_mem,
+        WORD32   *p_den_height,
+        WORD32   *p_den_width);
+
+void xa_nn_avgpool_8_hwc_32(
+        WORD8* __restrict__ p_out,
+const   WORD8* __restrict__ p_inp,
+        WORD32   input_height,
+        WORD32   input_width,
+        WORD32   input_channels,
+        WORD32   kernel_height,
+        WORD32   kernel_width,
+        WORD32   x_stride,
+        WORD32   y_stride,
+        WORD32   x_padding,
+        WORD32   y_padding,
+        WORD32   out_height,
+        WORD32   out_width,
+        pVOID    p_scratch_in,
+        pVOID    p_zeros_mem,
+        WORD32   *p_den_height,
+        WORD32   *p_den_width);
+
+void xa_nn_avgpool_16_hwc_32(
+        WORD16* __restrict__ p_out,
+const   WORD16* __restrict__ p_inp,
         WORD32   input_height,
         WORD32   input_width,
         WORD32   input_channels,

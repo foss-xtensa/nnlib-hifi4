@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -132,7 +132,7 @@ WORD32 xa_nn_avgpool_getsize_nhwc(
 
         return total_size;
     }
-  
+
     if(inp_precision == -1)
     {
         den_array_size = out_width*out_height;
@@ -142,30 +142,30 @@ WORD32 xa_nn_avgpool_getsize_nhwc(
 
         total_size = ALIGNED_SIZE(total_size, ALIGNMENT);
     }
-    else if(inp_precision == -3)
+    else if((inp_precision == -3) || (inp_precision == 8))
     {
         int cw_plane_size;
         int zero_mem_bytes;
         cw_plane_size = input_width*input_channels;
 
-        if(kernel_height <= (int)MAX_HEIGHT_16_BIT_ACC)
+        if(kernel_height <= (int)MAX_HEIGHT_16_BIT_ACC) // Accumulation in 16 bit container
         {
-            zero_mem_bytes = XT_MAX(sizeof(UWORD8)*cw_plane_size, sizeof(WORD16)*input_channels); 
-            
-            total_size = ALIGNED_SIZE(sizeof(WORD32)* out_height, ALIGNMENT) + 
-                         ALIGNED_SIZE(sizeof(WORD32)* out_width, ALIGNMENT) + 
+            zero_mem_bytes = XT_MAX(sizeof(UWORD8)*cw_plane_size, sizeof(WORD16)*input_channels);
+
+            total_size = ALIGNED_SIZE(sizeof(WORD32)* out_height, ALIGNMENT) +
+                         ALIGNED_SIZE(sizeof(WORD32)* out_width, ALIGNMENT) +
                          ALIGNED_SIZE((sizeof(WORD16)*cw_plane_size), ALIGNMENT) +
                          ALIGNED_SIZE((sizeof(WORD32)*input_channels), ALIGNMENT) +
                          zero_mem_bytes;
 
             total_size = ALIGNED_SIZE(total_size, ALIGNMENT);
         }
-        else
+        else  // Accumulation in 32 bit container
         {
             zero_mem_bytes = XT_MAX(sizeof(UWORD8)*cw_plane_size, sizeof(WORD32)*input_channels);
-            
-            total_size = ALIGNED_SIZE(sizeof(WORD32)*out_height, ALIGNMENT) + 
-                         ALIGNED_SIZE(sizeof(WORD32)*out_width, ALIGNMENT) + 
+
+            total_size = ALIGNED_SIZE(sizeof(WORD32)*out_height, ALIGNMENT) +
+                         ALIGNED_SIZE(sizeof(WORD32)*out_width, ALIGNMENT) +
                          ALIGNED_SIZE(sizeof(WORD32)*cw_plane_size, ALIGNMENT) +
                          ALIGNED_SIZE(sizeof(WORD32)*input_channels, ALIGNMENT) +
                          zero_mem_bytes;
@@ -173,11 +173,27 @@ WORD32 xa_nn_avgpool_getsize_nhwc(
             total_size = ALIGNED_SIZE(total_size, ALIGNMENT);
         }
     }
+    else if(inp_precision == 16)
+    {
+        int cw_plane_size;
+        int zero_mem_bytes;
+
+        cw_plane_size = input_width*input_channels;
+        zero_mem_bytes = XT_MAX(sizeof(WORD16)*cw_plane_size, sizeof(WORD32)*input_channels);
+
+        total_size = ALIGNED_SIZE(sizeof(WORD32)*out_height, ALIGNMENT) +
+            ALIGNED_SIZE(sizeof(WORD32)*out_width, ALIGNMENT) +
+            ALIGNED_SIZE(sizeof(WORD32)*cw_plane_size, ALIGNMENT) +
+            ALIGNED_SIZE(sizeof(WORD32)*input_channels, ALIGNMENT) +
+            zero_mem_bytes;
+
+            total_size = ALIGNED_SIZE(total_size, ALIGNMENT);
+    }
     else
     {
         total_size = -1;
     }
-    
+
     return total_size;
 }
 
@@ -272,7 +288,7 @@ WORD32 xa_nn_avgpool_getsize(
     WORD32 out_data_format)
 {
     int scratch_size;
-    
+
     (void)out_precision;
     (void)input_height;
     (void)y_padding;
@@ -310,7 +326,7 @@ WORD32 xa_nn_avgpool_getsize(
         scratch_size = -1;
     }
 
-    return scratch_size;    
+    return scratch_size;
 }
 #endif
 

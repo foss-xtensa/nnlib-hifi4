@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -25,16 +25,18 @@
 #include "xa_nnlib_common_macros.h"
 #include "xa_nnlib_err_chk.h"
 
+#include "xa_nnlib_common.h"
+
 WORD32 xa_nn_matXvec_8x16_16(
-         WORD16 * __restrict__ p_out,           /* output */         
+         WORD16 * __restrict__ p_out,           /* output */
          WORD8 * __restrict__ p_mat1,          /* matrix1: rows x cols1 */
          WORD8 * __restrict__ p_mat2,          /* matrix2: rows x cols2 */
          WORD16 * __restrict__ p_vec1,          /* vec1: cols1 x 1 */
          WORD16 * __restrict__ p_vec2,          /* vec2: cols2 x 1 */
          WORD16 * __restrict__ p_bias,          /* bias */
-         WORD32 rows,                           
-         WORD32 cols1,                          
-         WORD32 cols2,                          
+         WORD32 rows,
+         WORD32 cols1,
+         WORD32 cols2,
          WORD32 row_stride1,                    /* row stride for matrix1 */
          WORD32 row_stride2,                    /* row stride for matrix2 */
          WORD32 acc_shift,                        /* out accumulator shift amount */
@@ -104,13 +106,13 @@ WORD32 xa_nn_matXvec_8x16_16(
       {
         SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
 
         SETUP_VEC2; SETUP_MAT2;
         for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC2; KERNEL_MAT2_VEC2;
         }
         ADD_BIAS_ACC; STORE_ACC;
@@ -121,13 +123,13 @@ WORD32 xa_nn_matXvec_8x16_16(
       {
         UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
         }
 
         SETUP_VEC2; UNROLL_SETUP_MAT2(0);
         for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC2; UNROLL_KERNEL_MAT2_VEC2(0);
         }
         UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -144,7 +146,7 @@ WORD32 xa_nn_matXvec_8x16_16(
       {
         SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
         ADD_BIAS_ACC; STORE_ACC;
@@ -155,7 +157,7 @@ WORD32 xa_nn_matXvec_8x16_16(
       {
         UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
         }
         UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -187,9 +189,9 @@ WORD32 xa_nn_matXvec_8x16_32(
          WORD16 * __restrict__ p_vec1,          /* vec1: cols1 x 1 */
          WORD16 * __restrict__ p_vec2,          /* vec2: cols2 x 1 */
          WORD16 * __restrict__ p_bias,          /* bias */
-         WORD32 rows,                           
-         WORD32 cols1,                          
-         WORD32 cols2,                          
+         WORD32 rows,
+         WORD32 cols1,
+         WORD32 cols2,
          WORD32 row_stride1,                    /* row stride for matrix1 */
          WORD32 row_stride2,                    /* row stride for matrix2 */
          WORD32 acc_shift,                        /* out accumulator shift amount */
@@ -260,13 +262,13 @@ WORD32 xa_nn_matXvec_8x16_32(
       {
         SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
 
         SETUP_VEC2; SETUP_MAT2;
         for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC2; KERNEL_MAT2_VEC2;
         }
         ADD_BIAS_ACC; STORE_ACC;
@@ -277,13 +279,13 @@ WORD32 xa_nn_matXvec_8x16_32(
       {
         UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
         }
 
         SETUP_VEC2; UNROLL_SETUP_MAT2(0);
         for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC2; UNROLL_KERNEL_MAT2_VEC2(0);
         }
         UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -300,7 +302,7 @@ WORD32 xa_nn_matXvec_8x16_32(
       {
         SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
         ADD_BIAS_ACC; STORE_ACC;
@@ -311,7 +313,7 @@ WORD32 xa_nn_matXvec_8x16_32(
       {
         UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
         }
         UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -344,9 +346,9 @@ WORD32 xa_nn_matXvec_8x16_64(
          WORD16 * __restrict__ p_vec1,          /* vec1: cols1 x 1 */
          WORD16 * __restrict__ p_vec2,          /* vec2: cols2 x 1 */
          WORD16 * __restrict__ p_bias,          /* bias */
-         WORD32 rows,                           
-         WORD32 cols1,                          
-         WORD32 cols2,                          
+         WORD32 rows,
+         WORD32 cols1,
+         WORD32 cols2,
          WORD32 row_stride1,                    /* row stride for matrix1 */
          WORD32 row_stride2,                    /* row stride for matrix2 */
          WORD32 acc_shift,                        /* out accumulator shift amount */
@@ -414,13 +416,13 @@ WORD32 xa_nn_matXvec_8x16_64(
       {
         SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
 
         SETUP_VEC2; SETUP_MAT2;
         for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC2; KERNEL_MAT2_VEC2;
         }
         ADD_BIAS_ACC; STORE_ACC;
@@ -431,13 +433,13 @@ WORD32 xa_nn_matXvec_8x16_64(
       {
         UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
         }
 
         SETUP_VEC2; UNROLL_SETUP_MAT2(0);
         for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC2; UNROLL_KERNEL_MAT2_VEC2(0);
         }
         UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -454,7 +456,7 @@ WORD32 xa_nn_matXvec_8x16_64(
       {
         SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
         ADD_BIAS_ACC; STORE_ACC;
@@ -465,7 +467,7 @@ WORD32 xa_nn_matXvec_8x16_64(
       {
         UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
         for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-        { 
+        {
           LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
         }
         UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -497,9 +499,9 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
          WORD16 * __restrict__ p_vec1,    /* vec1: cols1 x 1 */
          WORD16 * __restrict__ p_vec2,    /* vec2: cols2 x 1 */
          VOID   * __restrict__ p_bias,    /* bias */
-         WORD32 rows,                           
-         WORD32 cols1,                          
-         WORD32 cols2,                          
+         WORD32 rows,
+         WORD32 cols1,
+         WORD32 cols2,
          WORD32 row_stride1,              /* row stride for matrix1 */
          WORD32 row_stride2,              /* row stride for matrix2 */
          WORD32 acc_shift,                  /* out accumulator shift amount */
@@ -579,13 +581,13 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
             {
               SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
 
               SETUP_VEC2; SETUP_MAT2;
               for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC2; KERNEL_MAT2_VEC2;
               }
               ADD_BIAS_ACC; STORE_ACC;
@@ -596,13 +598,13 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
             {
               UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
               }
 
               SETUP_VEC2; UNROLL_SETUP_MAT2(0);
               for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC2; UNROLL_KERNEL_MAT2_VEC2(0);
               }
               UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -619,7 +621,7 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
             {
               SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
               ADD_BIAS_ACC; STORE_ACC;
@@ -630,7 +632,7 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
             {
               UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
               }
               UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -657,13 +659,13 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
             {
               SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
 
               SETUP_VEC2; SETUP_MAT2;
               for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC2; KERNEL_MAT2_VEC2;
               }
               ADD_BIAS_ACC; STORE_ACC;
@@ -674,13 +676,13 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
             {
               UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
               }
 
               SETUP_VEC2; UNROLL_SETUP_MAT2(0);
               for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC2; UNROLL_KERNEL_MAT2_VEC2(0);
               }
               UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -697,7 +699,7 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
             {
               SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
               ADD_BIAS_ACC; STORE_ACC;
@@ -708,7 +710,7 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
             {
               UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
               }
               UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -745,9 +747,9 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
          WORD16 * __restrict__ p_vec1,    /* vec1: cols1 x 1 */
          WORD16 * __restrict__ p_vec2,    /* vec2: cols2 x 1 */
          VOID   * __restrict__ p_bias,    /* bias */
-         WORD32 rows,                           
-         WORD32 cols1,                          
-         WORD32 cols2,                          
+         WORD32 rows,
+         WORD32 cols1,
+         WORD32 cols2,
          WORD32 row_stride1,              /* row stride for matrix1 */
          WORD32 row_stride2,              /* row stride for matrix2 */
          WORD32 acc_shift,                  /* out accumulator shift amount */
@@ -827,13 +829,13 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
             {
               SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
 
               SETUP_VEC2; SETUP_MAT2;
               for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC2; KERNEL_MAT2_VEC2;
               }
               ADD_BIAS_ACC; STORE_ACC;
@@ -844,13 +846,13 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
             {
               UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
               }
 
               SETUP_VEC2; UNROLL_SETUP_MAT2(0);
               for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC2; UNROLL_KERNEL_MAT2_VEC2(0);
               }
               UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -867,7 +869,7 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
             {
               SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
               ADD_BIAS_ACC; STORE_ACC;
@@ -878,7 +880,7 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
             {
               UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
               }
               UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -905,13 +907,13 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
             {
               SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
 
               SETUP_VEC2; SETUP_MAT2;
               for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC2; KERNEL_MAT2_VEC2;
               }
               ADD_BIAS_ACC; STORE_ACC;
@@ -922,13 +924,13 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
             {
               UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
               }
 
               SETUP_VEC2; UNROLL_SETUP_MAT2(0);
               for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC2; UNROLL_KERNEL_MAT2_VEC2(0);
               }
               UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);
@@ -945,7 +947,7 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
             {
               SETUP_ACC; SETUP_VEC1; SETUP_MAT1;
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
               ADD_BIAS_ACC; STORE_ACC;
@@ -956,7 +958,7 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
             {
               UNROLL_SETUP_ACC(0); SETUP_VEC1; UNROLL_SETUP_MAT1(0);
               for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
-              { 
+              {
                 LOAD_VEC1; UNROLL_KERNEL_MAT1_VEC1(0) ;
               }
               UNROLL_ADD_BIAS_ACC(0); UNROLL_STORE_ACC(0);

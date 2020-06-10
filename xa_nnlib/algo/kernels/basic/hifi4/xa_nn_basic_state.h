@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -67,31 +67,6 @@
     *out_ptr++ = (UWORD8)o2;\
     *out_ptr++ = (UWORD8)o3;\
     *out_ptr++ = (UWORD8)o4;\
-}
-
-#define PRIME_8X4U(p_char, tmp) \
-    int offset_##p_char = 0, ls_##p_char, rs_##p_char; \
-    rs_##p_char = 0; \
-    ls_##p_char = 64; \
-    tmp = AE_ZERO16(); \
-    while(((unsigned int)p_char + offset_##p_char) & 3) {\
-        ae_int16x4 tmp2 = AE_MOVDA16(*(((const UWORD8 *)p_char)+offset_##p_char)); \
-        tmp2 = AE_MOVINT16X4_FROMINT64(AE_SRLA64(AE_MOVINT64_FROMINT16X4(tmp2), 48)); \
-        tmp = AE_MOVINT16X4_FROMINT64(AE_SLAI64(AE_MOVINT64_FROMINT16X4(tmp), 16)); \
-        tmp = AE_OR16(tmp, tmp2); \
-        rs_##p_char += 16;  \
-        ls_##p_char -= 16; \
-        offset_##p_char++; \
-    }\
-    tmp = AE_MOVINT16X4_FROMINT64(AE_SLAA64(AE_MOVINT64_FROMINT16X4(tmp), ls_##p_char)); \
-
-#define AE_LA8X4U_IP(d, a, p) { \
-    ae_int16x4 d_tmp, d_tmp2; \
-    d_tmp = AE_L8X4F_I(p+offset_##p, 0); \
-    p += 4; \
-    d_tmp2 = AE_MOVINT16X4_FROMINT64(AE_SRLA64(AE_MOVINT64_FROMINT16X4(d_tmp), rs_##p+8)); \
-    d = AE_OR16(a, d_tmp2); \
-    a = AE_MOVINT16X4_FROMINT64(AE_SLAA64(AE_MOVINT64_FROMINT16X4(d_tmp), ls_##p-8)); \
 }
 
 #endif /* #ifndef __XA_NN_BASIC_STATE_H__ */

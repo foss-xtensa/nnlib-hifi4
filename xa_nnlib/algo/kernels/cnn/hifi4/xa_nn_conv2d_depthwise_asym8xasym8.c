@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -25,6 +25,8 @@
 #include "xa_nn_conv2d_depthwise_state.h"
 #include "xa_nnlib_common_macros.h"
 #include "xa_nnlib_err_chk.h"
+
+#include "xa_nnlib_common.h"
 
 #define MULTIPLYBYQUANTIZEDMULTIPLIER_X2(inp, multiplier, left_shift, right_shift) \
     inp = AE_SLAA32(inp, left_shift); \
@@ -676,10 +678,10 @@ WORD32 xa_nn_conv2d_depthwise_asym8xasym8
     XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
     XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
     /* Pointer alignment checks */
-    XA_NNLIB_ARG_CHK_ALIGN(p_out, (ALIGNMENT>>1), -1);
+    //XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD8), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_kernel, (ALIGNMENT>>1), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_inp, (ALIGNMENT>>1), -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_bias, (ALIGNMENT>>1), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD32), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);

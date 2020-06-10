@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -22,6 +22,8 @@
 #include "xa_type_def.h"
 #include "common.h"
 #include "xa_nn_conv2d_std_state.h"
+
+#include "xa_nnlib_common.h"
 
 #define ZERO16  AE_ZERO16()
 #define ZERO64  AE_ZERO64()
@@ -128,7 +130,7 @@
 
 #define SETUP_VEC_BATCH                             UNROLL_SETUP_VEC_BATCH(0)               UNROLL_SETUP_VEC_BATCH(1)
 
-#define SETUP_BIAS_BATCH                            UNROLL_ROW_SETUP_BIAS_BATCH(0)          UNROLL_ROW_SETUP_BIAS_BATCH(1)          UNROLL_ROW_SETUP_BIAS_BATCH(2)      UNROLL_ROW_SETUP_BIAS_BATCH(3)  
+#define SETUP_BIAS_BATCH                            UNROLL_ROW_SETUP_BIAS_BATCH(0)          UNROLL_ROW_SETUP_BIAS_BATCH(1)          UNROLL_ROW_SETUP_BIAS_BATCH(2)      UNROLL_ROW_SETUP_BIAS_BATCH(3)
 #define SETUP_BIAS_BATCH_VEC_UNROLL(idx_row)        UNROLL_SETUP_BIAS_BATCH(idx_row,0)      UNROLL_SETUP_BIAS_BATCH(idx_row,1)
 #define SETUP_BIAS_BATCH_TAIL                       UNROLL_SETUP_BIAS_BATCH(0,0)            UNROLL_SETUP_BIAS_BATCH(1,0)            UNROLL_SETUP_BIAS_BATCH(2,0)        UNROLL_SETUP_BIAS_BATCH(3,0)
 

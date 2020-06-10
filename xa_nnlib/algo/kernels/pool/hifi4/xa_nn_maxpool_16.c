@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -25,6 +25,8 @@
 #include "xa_nn_maxpool_state.h"
 #include "xa_nnlib_common_macros.h"
 #include "xa_nnlib_err_chk.h"
+
+#include "xa_nnlib_common.h"
 
 #define INCR_N_ROW(ptr, n) \
     ptr = (ae_int16x4 *)((WORD16 *)(ptr) + (n) * (input_width));
@@ -57,10 +59,9 @@
         b0 = AE_LT16(id1, id0); \
         AE_MOVT16X4(id1, id0, b0); \
 
-/* Max pooling without using extra copy of input data 
+/* Max pooling without using extra copy of input data
  * Works with unaligned input, output.
  */
-
 static void maxpool_16(
     WORD16* __restrict__ p_out,
     WORD16* __restrict__ p_inp,
@@ -80,8 +81,8 @@ static void maxpool_16(
 
     int itr_oh, itr_ow;
     int left_pad_aligned, right_pad, total_out_width, scratch_width;
-    ae_int16x4 * p_src1, * p_src2, * p_src3; 
-    ae_int16x4 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp; 
+    ae_int16x4 * p_src1, * p_src2, * p_src3;
+    ae_int16x4 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp;
     ae_int16x4 *p_dst, *p_dst_temp;
     ae_valign align_src1, align_src2, align_src3;
     int i;
@@ -98,7 +99,7 @@ static void maxpool_16(
         p_dst_pad[i] = 0x8000;
     }
 
-    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width); 
+    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width);
     right_pad = total_out_width - (x_padding + input_width);
 
     /* Right padding of temporary output with min_value,
@@ -111,7 +112,7 @@ static void maxpool_16(
 
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)
     {
-        int pool_height, pool_width; 
+        int pool_height, pool_width;
         int start_row, end_row;
 
         /* Pool height processing */
@@ -129,14 +130,14 @@ static void maxpool_16(
         if(pool_height)
         {
             p_src1 = (ae_int16x4 *)p_inp;
-            INCR_N_ROW(p_src1, start_row); 
+            INCR_N_ROW(p_src1, start_row);
             pool_height--;
 
             p_src2 = p_src1;
-            INCR_ROW_IF_HEIGHT(p_src2, pool_height); 
+            INCR_ROW_IF_HEIGHT(p_src2, pool_height);
 
             p_src3 = p_src2;
-            INCR_ROW_IF_HEIGHT(p_src3, pool_height); 
+            INCR_ROW_IF_HEIGHT(p_src3, pool_height);
 
             /* Compare three rows per iteration */
             do
@@ -186,10 +187,10 @@ static void maxpool_16(
                 p_src1 = p_dst;
 
                 p_src2 = p_src3;
-                INCR_ROW_IF_HEIGHT(p_src2, pool_height); 
+                INCR_ROW_IF_HEIGHT(p_src2, pool_height);
 
                 p_src3 = p_src2;
-                INCR_ROW_IF_HEIGHT(p_src3, pool_height); 
+                INCR_ROW_IF_HEIGHT(p_src3, pool_height);
 
             }while(1);
         }
@@ -271,10 +272,10 @@ static void maxpool_16(
 
         }while(1);
 
-        WORD16 *ptr_out1 = p_scratch + total_out_width; 
+        WORD16 *ptr_out1 = p_scratch + total_out_width;
         for(itr_ow = 0; itr_ow < out_width; itr_ow++)
         {
-            p_out[itr_oh * out_width * 1 /* out_stride */ + itr_ow * 1 /* out_stride */] = ptr_out1[itr_ow * x_stride]; 
+            p_out[itr_oh * out_width * 1 /* out_stride */ + itr_ow * 1 /* out_stride */] = ptr_out1[itr_ow * x_stride];
         }
     }
 }
@@ -306,8 +307,8 @@ WORD32 xa_nn_maxpool_16(
     XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
     XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
     /* Pointer alignment checks */
-    XA_NNLIB_ARG_CHK_ALIGN(p_out, ALIGNMENT, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_inp, ALIGNMENT, -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD16), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD16), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
@@ -318,41 +319,68 @@ WORD32 xa_nn_maxpool_16(
     XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
+#ifndef NNLIB_V2
     XA_NNLIB_ARG_CHK_COND((out_data_format != 1), -1);
+#else
+    XA_NNLIB_ARG_CHK_COND((out_data_format != 0) && (out_data_format != 1), -1);
+#endif
 #ifdef NNLIB_V2
-    XA_NNLIB_ARG_CHK_COND((inp_data_format != 1), -1);
-    
+    XA_NNLIB_ARG_CHK_COND((inp_data_format != 0) && (inp_data_format != 1), -1);
     // Different I/O data formats (not supported!)
     XA_NNLIB_ARG_CHK_COND((out_data_format != inp_data_format), -1);
-#endif    
+#endif
 
-    err = xa_nn_maxpool_init(16
-                             ,p_scratch
-                             ,input_width
-                             ,kernel_height
-                             ,kernel_width
-                             ,x_stride
-                             ,y_stride
-                             ,x_padding
-                             ,out_width
-                             );
-    if(err<0)
-        return err;
-
-    xa_nn_maxpool_state_t *p_state = (xa_nn_maxpool_state_t *)p_scratch;
-    WORD16 *p_scratch_in = (WORD16 *)(p_state->p_scratch);
-    int itr_ic;
-    WORD16 *pt_inp, *pt_out;
-
-    for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
+    if((input_channels == 1) || (out_data_format == 1))
     {
-        pt_inp = &p_inp[itr_ic * input_height * input_width];
-        pt_out = &p_out[itr_ic * out_height * out_width];
+        err = xa_nn_maxpool_init(16
+                ,p_scratch
+                ,input_width
+                ,kernel_height
+                ,kernel_width
+                ,x_stride
+                ,y_stride
+                ,x_padding
+                ,out_width
+                );
+        if(err<0)
+            return err;
 
-        maxpool_16(pt_out
-                ,pt_inp
+        xa_nn_maxpool_state_t *p_state = (xa_nn_maxpool_state_t *)p_scratch;
+        WORD16 *p_scratch_in = (WORD16 *)(p_state->p_scratch);
+        int itr_ic;
+        WORD16 *pt_inp, *pt_out;
+
+        for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
+        {
+            pt_inp = &p_inp[itr_ic * input_height * input_width];
+            pt_out = &p_out[itr_ic * out_height * out_width];
+
+            maxpool_16(pt_out
+                    ,pt_inp
+                    ,input_height
+                    ,input_width
+                    ,kernel_height
+                    ,kernel_width
+                    ,x_stride
+                    ,y_stride
+                    ,x_padding
+                    ,y_padding
+                    ,out_height
+                    ,out_width
+                    ,p_scratch_in
+                    );
+        }
+    }
+#ifdef NNLIB_V2
+    else
+    {
+        void *p_scratch_aligned = (void *)ALIGN_PTR(p_scratch, ALIGNMENT);
+
+        xa_nn_maxpool_16_hwc(p_out
+                ,p_inp
                 ,input_height
                 ,input_width
+                ,input_channels
                 ,kernel_height
                 ,kernel_width
                 ,x_stride
@@ -361,8 +389,9 @@ WORD32 xa_nn_maxpool_16(
                 ,y_padding
                 ,out_height
                 ,out_width
-                ,p_scratch_in
-                );
+                ,p_scratch_aligned);
     }
+#endif
     return 0;
 }
+

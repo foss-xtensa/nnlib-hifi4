@@ -63,3 +63,10 @@ else
         endif
     endif
 endif
+
+xclib_tmp:=$(shell grep "SW_CLibrary = xclib"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
+ifneq ("", "$(xclib_tmp)")
+    xclib=1
+else
+    xclib=0
+endif

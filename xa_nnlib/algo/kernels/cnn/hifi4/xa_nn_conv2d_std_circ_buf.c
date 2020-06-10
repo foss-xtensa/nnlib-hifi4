@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -24,6 +24,8 @@
 #include "common.h"
 #include "xa_nn_conv2d_std_state.h"
 #include "xa_nnlib_err_chk.h"
+
+#include "xa_nnlib_common.h"
 
 WORD32 xa_nn_conv2d_std_getsize(
     WORD32 input_height,
@@ -73,7 +75,7 @@ WORD32 xa_nn_conv2d_std_getsize(
       break;
   }
 
-  // Computing circular buffer size 
+  // Computing circular buffer size
   // Determine y-bottom padding
   WORD32 y_b_pad = kernel_height + (out_height - 1) * y_stride - (y_padding + input_height);
   y_b_pad = y_b_pad < 0 ? 0 : y_b_pad;
@@ -141,7 +143,7 @@ VOID xa_nn_conv2d_std_init_state(
   p_state->cir_buf.p_begin = p_mem;
   p_state->cir_buf.p_curr = p_mem;
 
-  // Computing circular buffer size 
+  // Computing circular buffer size
   // Determine y-bottom padding
   WORD32 y_b_pad = kernel_height + (out_height - 1) * y_stride - (y_padding + input_height);
   y_b_pad = y_b_pad < 0 ? 0 : y_b_pad;
@@ -177,7 +179,7 @@ VOID conv2d_std_init_cir_buf(
   WORD8 *p_dst = (WORD8 *)p_state->cir_buf.p_curr;
   AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, planes_to_keep * input_channels_pad * input_bytewidth);
 
-  // Initialize circular buffer 
+  // Initialize circular buffer
   // Set first 'y_padding' rows of cir_buf to zero
   for(i=0;i<y_padding;i++)
   {
@@ -196,7 +198,7 @@ VOID conv2d_std_init_cir_buf(
   {
     copy_x_pad_width = planes_to_add;
   }
-  else 
+  else
   {
     copy_inp_width = planes_to_add - x_padding;
   }
@@ -217,7 +219,7 @@ VOID conv2d_std_init_cir_buf(
     AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, planes_to_keep * input_channels_pad * input_bytewidth);
     p_inp += (input_width - copy_inp_width) * input_channels * input_bytewidth;
   }
-  
+
   // Set last 'y_b_pad' rows of cir_buf to zero
   for(i=0;i<y_b_pad;i++)
   {
@@ -354,7 +356,7 @@ VOID conv2d_std_init_cir_buf_asym8(
   UWORD8 pad_val_u8 = (UWORD8)pad_val;
   AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, planes_to_keep * input_channels_pad * input_bytewidth);
 
-  // Initialize circular buffer 
+  // Initialize circular buffer
   // Set first 'y_padding' rows of cir_buf to zero
   for(i=0;i<y_padding;i++)
   {
@@ -373,7 +375,7 @@ VOID conv2d_std_init_cir_buf_asym8(
   {
     copy_x_pad_width = planes_to_add;
   }
-  else 
+  else
   {
     copy_inp_width = planes_to_add - x_padding;
   }
@@ -394,7 +396,7 @@ VOID conv2d_std_init_cir_buf_asym8(
     AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, planes_to_keep * input_channels_pad * input_bytewidth);
     p_inp += (input_width - copy_inp_width) * input_channels * input_bytewidth;
   }
-  
+
   // Set last 'y_b_pad' rows of cir_buf to zero
   for(i=0;i<y_b_pad;i++)
   {

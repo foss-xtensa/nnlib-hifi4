@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -25,6 +25,8 @@
 #include "xa_nn_maxpool_state.h"
 #include "xa_nnlib_err_chk.h"
 #include <math.h>
+
+#include "xa_nnlib_common.h"
 
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_maxpool_f32,(
@@ -75,7 +77,7 @@ const FLOAT32* __restrict__ p_inp,
             width--; \
         }
 
-/* Max pooling without using extra copy of input data 
+/* Max pooling without using extra copy of input data
  * Works with unaligned input, output.
  */
 
@@ -98,8 +100,8 @@ static void maxpool_f32_hw(
 
     int itr_oh, itr_ow;
     int left_pad_aligned, right_pad, total_out_width, scratch_width;
-    xtfloatx2 * p_src1, * p_src2, * p_src3; 
-    xtfloatx2 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp; 
+    xtfloatx2 * p_src1, * p_src2, * p_src3;
+    xtfloatx2 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp;
     xtfloatx2 *p_dst, *p_dst_temp;
     ae_valign align_src1, align_src2, align_src3;
     int i;
@@ -115,7 +117,7 @@ static void maxpool_f32_hw(
         p_dst_pad[i] = -INFINITY;
     }
 
-    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width); 
+    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width);
     right_pad = total_out_width - (x_padding + input_width);
 
     /* Right padding of temporary output with min_value,
@@ -128,7 +130,7 @@ static void maxpool_f32_hw(
 
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)
     {
-        int pool_height, pool_width; 
+        int pool_height, pool_width;
         int start_row, end_row;
 
         /* Pool height processing */
@@ -146,14 +148,14 @@ static void maxpool_f32_hw(
         if(pool_height)
         {
             p_src1 = (xtfloatx2 *)p_inp;
-            INCR_N_ROW(p_src1, start_row); 
+            INCR_N_ROW(p_src1, start_row);
             pool_height--;
 
             p_src2 = p_src1;
-            INCR_ROW_IF_HEIGHT(p_src2, pool_height); 
+            INCR_ROW_IF_HEIGHT(p_src2, pool_height);
 
             p_src3 = p_src2;
-            INCR_ROW_IF_HEIGHT(p_src3, pool_height); 
+            INCR_ROW_IF_HEIGHT(p_src3, pool_height);
 
             /* Compare three rows per iteration */
             do
@@ -202,10 +204,10 @@ static void maxpool_f32_hw(
                 p_src1 = p_dst;
 
                 p_src2 = p_src3;
-                INCR_ROW_IF_HEIGHT(p_src2, pool_height); 
+                INCR_ROW_IF_HEIGHT(p_src2, pool_height);
 
                 p_src3 = p_src2;
-                INCR_ROW_IF_HEIGHT(p_src3, pool_height); 
+                INCR_ROW_IF_HEIGHT(p_src3, pool_height);
 
             }while(1);
         }
@@ -287,10 +289,10 @@ static void maxpool_f32_hw(
 
         }while(1);
 
-        FLOAT32 *ptr_out1 = p_scratch + total_out_width; 
+        FLOAT32 *ptr_out1 = p_scratch + total_out_width;
         for(itr_ow = 0; itr_ow < out_width; itr_ow++)
         {
-            p_out[itr_oh * out_width * 1 /* out_stride */ + itr_ow * 1 /* out_stride */] = ptr_out1[itr_ow * x_stride]; 
+            p_out[itr_oh * out_width * 1 /* out_stride */ + itr_ow * 1 /* out_stride */] = ptr_out1[itr_ow * x_stride];
         }
     }
 }
@@ -340,7 +342,7 @@ const   FLOAT32* __restrict__ p_inp,
     // Different I/O formats (not supported!)
     XA_NNLIB_ARG_CHK_COND((out_data_format != inp_data_format), -1);
 #endif
-    
+
     if((input_channels == 1) || (out_data_format == 1))
     {
         err = xa_nn_maxpool_init(-1

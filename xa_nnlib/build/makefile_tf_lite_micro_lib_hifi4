@@ -1,0 +1,142 @@
+#
+# Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+# 
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to use this Software with Cadence processor cores only and 
+# not with any other processors and platforms, subject to
+# the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+
+
+.PHONY: all install clean
+
+ROOTDIR = ..
+CODEC_NAME = tf_lite_micro_lib
+TFDIR = test/tf_micro_lite
+NOSTRIP=1
+RELEASE_BUILD?=1
+
+CFLAGS += \
+      -DMODEL_INT16 \
+      -DNNLIB_V2 \
+      -DEIGEN_NO_MALLOC
+
+CFLAGS += -Dhifi4
+
+ifeq ($(DISABLE_ARG_CHK), 1)
+CFLAGS += -DDISABLE_ARG_CHK
+endif
+
+INCLUDES = \
+    -I$(ROOTDIR)/include \
+    -I$(ROOTDIR)/include/nnlib \
+    -I$(ROOTDIR)/test/include/ \
+
+# For TF Micro Lite
+INCLUDES += \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/flatbuffers/include \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/gemmlowp \
+    -I$(ROOTDIR)/$(TFDIR) \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/c \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/kernels \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/kernels/xtensa_hifi \
+
+TFULITE_SRCDIRS = \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/kernels/xtensa_hifi \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/memory_planner \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite \
+
+TFULITE_SRCDIRS += \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/core/api \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/c \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/kernels \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/kernels/internal \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/compiler/mlir/lite \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/core/api \
+
+vpath %.cpp $(TFULITE_SRCDIRS)
+vpath %.c   $(TFULITE_SRCDIRS)
+vpath %.cc  $(TFULITE_SRCDIRS)
+
+TFULITECCOBJS += \
+    activations.o \
+    pooling.o \
+    conv.o \
+    depthwise_conv.o \
+    fully_connected.o \
+    logistic.o \
+    softmax.o \
+    floor.o \
+
+TFULITECCOBJS += \
+    kernel_util.o \
+    quantization_util.o \
+    error_reporter.o \
+    flatbuffer_conversions.o \
+    micro_interpreter.o \
+    micro_error_reporter.o \
+    stderr_reporter.o \
+    mutable_op_resolver.o \
+    tensor_utils.o \
+    debug_log.o \
+    debug_log_numbers.o \
+    minimal_logging_default.o \
+    minimal_logging.o \
+    micro_allocator.o \
+    micro_string.o \
+    micro_utils.o \
+    simple_memory_allocator.o \
+    greedy_memory_planner.o \
+    memory_helpers.o \
+    op_resolver.o \
+    util.o \
+
+
+LIBO2OBJS =
+LIBOSOBJS =
+LIBOSCPPOBJS =
+
+ifeq ($(RELEASE_BUILD), 1)
+LIBO2CPPOBJS = $(TFULITECCOBJS)
+else
+LIBO2CCOBJS = $(TFULITECCOBJS)
+endif
+
+CFLAGS += \
+        -DHIFI_NNLIB_OPT \
+        -DNNLIB_V2\
+        -DPROFILE \
+        -ffunction-sections \
+        -fpermissive \
+        -DGEMMLOWP_USE_MEMALIGN \
+        -DXTENSA_NNLIB_MAX_SCRATCH_SIZE=716800 \
+        
+
+ifneq ($(CC), xt-clang)
+  CFLAGS += -OPT:Olimit=12125
+endif
+
+ifeq ($(CPU), x86)
+vpath %.c $(ROOTDIR)/algo/cstub/src
+CSTUBOSOBJS =
+
+INCLUDES += \
+    -I$(ROOTDIR)/algo/cstub/include
+endif
+
+include $(ROOTDIR)/build/common.mk

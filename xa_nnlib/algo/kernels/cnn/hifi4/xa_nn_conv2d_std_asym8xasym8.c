@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -90,7 +90,7 @@ static WORD32 conv_x_right_pad(
   WORD32 i,j,k;
   WORD32 idx_out_width_over_x_r_pad = (x_padding + input_width + x_stride - 1)/x_stride + 1;
   WORD32 left_shift, right_shift;
-  WORD32 out_width_over_x_r_pad = out_width - idx_out_width_over_x_r_pad; 
+  WORD32 out_width_over_x_r_pad = out_width - idx_out_width_over_x_r_pad;
 
   left_shift = out_shift<0?0:out_shift;
   right_shift = out_shift>0?0:-out_shift;
@@ -113,7 +113,7 @@ static WORD32 conv_x_right_pad(
       }
     }
   }
-  return out_width_over_x_r_pad; 
+  return out_width_over_x_r_pad;
 }
 
 WORD32 xa_nn_conv2d_std_asym8xasym8(
@@ -148,10 +148,10 @@ WORD32 xa_nn_conv2d_std_asym8xasym8(
   XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
   /* Pointer alignment checks */
-  XA_NNLIB_ARG_CHK_ALIGN(p_out, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_inp, ALIGNMENT, -1);
+  //XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(UWORD8), -1);
+  //XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(UWORD8), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_kernel, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_bias, ALIGNMENT>>1, -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
@@ -182,7 +182,7 @@ WORD32 xa_nn_conv2d_std_asym8xasym8(
 
   WORD32 x_padding_var = x_padding;
   WORD32 input_channels_pad = PADDED_SIZE(input_channels, (ALIGNMENT>>1));
- 
+
   /* When kernel convolves over x-left pad region only */
   WORD32 out_width_over_x_pad = 0;
   if(x_padding_var >= kernel_width)
@@ -190,8 +190,8 @@ WORD32 xa_nn_conv2d_std_asym8xasym8(
     out_width_over_x_pad = conv_x_left_pad(x_padding, kernel_width, x_stride, out_width, out_height, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, out_multiplier, out_shift, out_zero_bias);
     x_padding_var -= out_width_over_x_pad * x_stride;
   }
-  
-  
+
+
   /* When kernel convolves over x-right pad region only */
   WORD32 out_width_over_x_r_pad = 0;
   // Determine x-right padding
@@ -205,14 +205,14 @@ WORD32 xa_nn_conv2d_std_asym8xasym8(
 
   /* When kernel convolves over input region */
   p_out += out_width_over_x_pad * out_width_offset;
-  // Initialize circular buffer 
+  // Initialize circular buffer
   // Determine y-bottom padding
   WORD32 y_b_pad = kernel_height + (out_height - 1) * y_stride - (y_padding + input_height);
   y_b_pad = y_b_pad < 0 ? 0 : y_b_pad;
- 
+
   conv2d_std_init_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, p_state, -input_zero_bias);
 
-  // Index to padded input width 
+  // Index to padded input width
   WORD32 idx_beg_inp_width_pad = kernel_width - x_stride;
   idx_beg_inp_width_pad = idx_beg_inp_width_pad < 0 ? 0 : idx_beg_inp_width_pad;
 

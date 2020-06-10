@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include "xa_type_def.h"
 #include "xtensa/tie/xt_hifi2.h"
+
+#include "xa_nnlib_common.h"
 
 #define ZERO64   AE_MOVINT64_FROMINT32X2(AE_MOVDA32(0))
 
@@ -59,24 +61,24 @@
   accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
   p_out[(row+N)*out_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu1_ ##N),16),-16)); \
 
-#if (UNROLL_S == 1)  
+#if (UNROLL_S == 1)
 #define SETUP_S SETUP_ROW_S(0)
 #define KERNEL_S KERNEL_ROW_S_I(0)
 #define STORE_S STORE_ROW_S(0)
 
 #elif (UNROLL_S == 2)
-#define SETUP_S  SETUP_ROW_S(0)  SETUP_ROW_S(1) 
+#define SETUP_S  SETUP_ROW_S(0)  SETUP_ROW_S(1)
 #define KERNEL_S KERNEL_ROW_S_I(0) KERNEL_ROW_S(1)
-#define STORE_S  STORE_ROW_S(0)  STORE_ROW_S(1) 
+#define STORE_S  STORE_ROW_S(0)  STORE_ROW_S(1)
 
 #elif (UNROLL_S == 4)
-#define SETUP_S  SETUP_ROW_S(0)  SETUP_ROW_S(1)  SETUP_ROW_S(2)  SETUP_ROW_S(3) 
+#define SETUP_S  SETUP_ROW_S(0)  SETUP_ROW_S(1)  SETUP_ROW_S(2)  SETUP_ROW_S(3)
 #define KERNEL_S KERNEL_ROW_S_I(0) KERNEL_ROW_S(1) KERNEL_ROW_S(2) KERNEL_ROW_S(3)
-#define STORE_S  STORE_ROW_S(0)  STORE_ROW_S(1)  STORE_ROW_S(2)  STORE_ROW_S(3) 
+#define STORE_S  STORE_ROW_S(0)  STORE_ROW_S(1)  STORE_ROW_S(2)  STORE_ROW_S(3)
 #elif (UNROLL_S == 8)
-#define SETUP_S   SETUP_ROW_S(0)  SETUP_ROW_S(1)  SETUP_ROW_S(2)  SETUP_ROW_S(3)  SETUP_ROW_S(4)  SETUP_ROW_S(5)  SETUP_ROW_S(6)  SETUP_ROW_S(7) 
+#define SETUP_S   SETUP_ROW_S(0)  SETUP_ROW_S(1)  SETUP_ROW_S(2)  SETUP_ROW_S(3)  SETUP_ROW_S(4)  SETUP_ROW_S(5)  SETUP_ROW_S(6)  SETUP_ROW_S(7)
 #define KERNEL_S KERNEL_ROW_S_I(0) KERNEL_ROW_S(1) KERNEL_ROW_S(2) KERNEL_ROW_S(3) KERNEL_ROW_S(4) KERNEL_ROW_S(5) KERNEL_ROW_S(6) KERNEL_ROW_S(7)
-#define STORE_S   STORE_ROW_S(0)  STORE_ROW_S(1)  STORE_ROW_S(2)  STORE_ROW_S(3)  STORE_ROW_S(4)  STORE_ROW_S(5)  STORE_ROW_S(6)  STORE_ROW_S(7) 
+#define STORE_S   STORE_ROW_S(0)  STORE_ROW_S(1)  STORE_ROW_S(2)  STORE_ROW_S(3)  STORE_ROW_S(4)  STORE_ROW_S(5)  STORE_ROW_S(6)  STORE_ROW_S(7)
 
 #endif
 
@@ -85,8 +87,8 @@ WORD32 xa_nn_matXvec_8x16_16_circ_nb(
   WORD8  * __restrict__ p_mat,
   WORD16 * __restrict__ p_vec,
   WORD16 * __restrict__ p_bias,
-  WORD32 rows, 
-  WORD32 cols, 
+  WORD32 rows,
+  WORD32 cols,
   WORD32 out_offset,
   WORD32 bias_shift,
   WORD32 acc_shift)
@@ -116,20 +118,20 @@ WORD32 xa_nn_matXvec_8x16_16_circ_nb(
 #pragma ymemory (p_mat1_1)
 #pragma ymemory (p_mat1_2)
 #pragma ymemory (p_mat1_3)
-      for (col = 0; col < (cols>>2); col++) { 
+      for (col = 0; col < (cols>>2); col++) {
         KERNEL_S;
       }
       STORE_S;
     }
   }
-  // Handle remaining rows 
+  // Handle remaining rows
   for (; row < rows ; row++)
   {
     ae_int16x4 *p_src1 = (ae_int16x4*)p_vec;
     SETUP_ROW_S(0);
-    for (col = 0; col < (cols>>2); col++) { 
+    for (col = 0; col < (cols>>2); col++) {
       KERNEL_ROW_S_I(0);
-    } 
+    }
     STORE_ROW_S(0);
   }
 
