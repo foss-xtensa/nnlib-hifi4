@@ -27,6 +27,38 @@ Cadence HiFi4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
+Version 2.2.0 API 1.0: April 22, 2020
+
++ GA Release
++ Tested using RI.2 tools and xt-xcc/xt-xc++, xt-clan/xt-clang++ compilers
++ Improved support for NHWC (depth-first) data format for convolution and pooling kernels
++ Improved implementation of pointwise convolution kernels
++ Improved Relu support
++ Added support for SVDF operator (floating point variant) in TFLiteMicro
++ Enabled compilation of the NN library for cores with newlib as well as xclib
++ Enabled cross compilation for HiFi3z, HiFi5 and Fusion-F1 AVS with 16-bit Quad MAC
++ Added mechanism for controlling code size of the library
++ Updated TFLiteMicro speech commands example application
++ Added two supporting libraries for the TFLiteMicro speech commands example
++ Added a supporting library containing code of the ANN API support 
++ Programmer's Guide updated
+
+Limitations
+> The ANN test bench, TFLite Micro example application and the supporting libraries
+  need support for C++11 standard. This is supported only with Xtensa C library. 
+> For configurations without VFPU, the floating point  variants of the kernels 
+  are not supported and should not be used. 
+
+Known issues
+> Compiler optimizations are disabled for C++ source files 
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+ 
+----------------------------------------------------------------------
+
 Version 2.1.0 API 1.0: September 6, 2019
 
 + GA Release

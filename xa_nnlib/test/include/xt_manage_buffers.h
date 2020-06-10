@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -57,7 +57,7 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D);
 void write_buf1D(buf1D_t *pbuf, FILE *file,int extensionIndicator, char * var_name);
 void write_buf2D(buf2D_t *pbuf, FILE *file,int extensionIndicator, char * var_name);
 
-int compare_buf1D(buf1D_t *pbuf_ref, buf1D_t *pbuf_out, int method);
+int compare_buf1D(buf1D_t *pbuf_ref, buf1D_t *pbuf_out, int method, int precision, int sum_length);
 int compare_buf2D(buf2D_t *pbuf_ref, buf2D_t *pbuf_out, int method);
 
 int interleave_buf1D_real(buf1D_t *pbuf, buf1D_t *pbuf_interleaved, int length);

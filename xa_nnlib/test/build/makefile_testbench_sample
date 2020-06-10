@@ -20,12 +20,16 @@
 #
 
 
-.PHONY: all  NNLIB 
+.PHONY: all run
 
 ROOTDIR = ../..
+TFDIR = test/tf_micro_lite
 
 QUIET =
 WARNING_AS_ERROR ?= 1
+RELEASE_BUILD?=1
+include detect_core.mk
+
 ifeq ($(CPU), x86)
 
   CC = gcc
@@ -47,10 +51,13 @@ else
   CPU_PREFIX = xa
 
   CFLAGS = -Wall -fsigned-char -mlongcalls -D__PROFILE__ -I$(ROOTDIR)/include $(EXTRA_CFLAGS)
-  ifeq ($(WARNING_AS_ERROR),1)
+  ifeq ($(WARNING_AS_ERROR),0)
   CFLAGS += -Werror 
   endif
-  LDFLAGS = -mlongcalls -lm
+  CFLAGS += -mtext-section-literals 
+  LDFLAGS = -Wl,--gc-sections
+  LDFLAGS += -mlongcalls -lm
+  CXX_LDFLAGS += -std=c++11
 
 endif
 
@@ -66,54 +73,75 @@ CFLAGS += \
 AOSP_SRC_DIR = test/android_nn/android_deps
 
 CFLAGS += \
-	-DNNTEST_ONLY_PUBLIC_API  \
-	-D__ANDROID_API__=28 \
-	-DHIFI_BUILD \
-	-std=c++11 \
-	-fpermissive \
+    -DNNTEST_ONLY_PUBLIC_API  \
+    -D__ANDROID_API__=28 \
+    -DHIFI_BUILD \
+    -fpermissive \
+    -DGEMMLOWP_USE_MEMALIGN \
+    -DXTENSA_NNLIB_MAX_SCRATCH_SIZE=716800 \
+
+
+CPPFLAGS += \
+     -std=c++11
 
 INCLUDES = \
     -I$(ROOTDIR)/test/include \
     -I$(ROOTDIR)/include \
     -I$(ROOTDIR)/include/nnlib \
-    -I$(ROOTDIR)/include/nnlib/android_nn \
 
 INCLUDES_ANN = \
+    -I$(ROOTDIR)/test/android_nn/include \
     -I$(ROOTDIR)/test/android_nn/common/include \
     -I$(ROOTDIR)/test/android_nn/runtime/include \
-	-I$(ROOTDIR)/test/android_nn/tools/test_generator/include \
-	-I$(ROOTDIR)/$(AOSP_SRC_DIR) \
-	-I$(ROOTDIR)/$(AOSP_SRC_DIR)/android/system/core/base/include \
-	-I$(ROOTDIR)/$(AOSP_SRC_DIR)/android/system/libhidl/base/include \
+    -I$(ROOTDIR)/test/android_nn/tools/test_generator/include \
+    -I$(ROOTDIR)/$(AOSP_SRC_DIR) \
+    -I$(ROOTDIR)/$(AOSP_SRC_DIR)/android/system/core/base/include \
+    -I$(ROOTDIR)/$(AOSP_SRC_DIR)/android/system/libhidl/base/include \
     -I$(ROOTDIR)/test/android_nn/runtime/test \
 
 # For TF Micro Lite
 INCLUDES_TF_MICRO = \
-    -I$(ROOTDIR)/test/tf_micro_lite/include \
-	-I$(ROOTDIR)/test/tf_micro_lite/kernels \
-    -I$(ROOTDIR)/test/tf_micro_lite/gemmlowp \
     -I$(ROOTDIR)/test/tf_micro_lite/test/src \
-	-I$(ROOTDIR)/test/tf_micro_lite/include  \
-	-I$(ROOTDIR)/test/tf_micro_lite/test/tensorflow/tensorflow/lite/experimental/micro/kernels \
-	-I$(ROOTDIR)/test/tf_micro_lite/test/tensorflow \
-	-I$(ROOTDIR)/test/tf_micro_lite/test/flatbuffers/include \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/flatbuffers/include \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/gemmlowp \
+    -I$(ROOTDIR)/$(TFDIR) \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/c \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/kernels \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/kernels/xtensa_hifi \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/experimental/microfrontend/lib \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/kissfft \
 
 TFULITE_SRCDIRS = \
     $(ROOTDIR)/test/tf_micro_lite/fft \
-	$(ROOTDIR)/test/tf_micro_lite/kernels \
+    $(ROOTDIR)/test/tf_micro_lite/kernels/xtensa \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/examples/micro_speech \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/examples/micro_speech/micro_features \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/kernels/xtensa_hifi \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/memory_planner \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite \
+
+TFULITE_SRCDIRS += \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/experimental/microfrontend/lib \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/kissfft/tools \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/kissfft \
 
 TFULITE_SRCDIRS += \
     $(ROOTDIR)/test/tf_micro_lite/test/src \
-	$(ROOTDIR)/test/tf_micro_lite/test/tensorflow/tensorflow/lite/experimental/micro/kernels \
-	$(ROOTDIR)/test/tf_micro_lite/test/tensorflow/tensorflow/lite/experimental/micro \
-	$(ROOTDIR)/test/tf_micro_lite/test/tensorflow/tensorflow/lite/experimental/micro/examples/micro_speech \
-	$(ROOTDIR)/test/tf_micro_lite/test/tensorflow/tensorflow/lite/core/api \
-	$(ROOTDIR)/test/tf_micro_lite/test/tensorflow/tensorflow/lite/c \
-	$(ROOTDIR)/test/tf_micro_lite/test/tensorflow/tensorflow/lite/kernels \
-	$(ROOTDIR)/test/tf_micro_lite/test/tensorflow/tensorflow/lite/kernels/internal \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/core/api \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/c \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/kernels \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/kernels/internal \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/compiler/mlir/lite \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/core/api \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/core/api \
+
 
 ifeq ($(DEBUG),1)
   OPT_O2 = -O0 -g
+  OPT_O0 = -O0 -g
 else
   OPT_O2 = -O2
 endif
@@ -126,8 +154,12 @@ vpath %.cpp $(ROOTDIR)/$(AOSP_SRC_DIR)/android/system/libhidl/base
 vpath %.cpp $(ROOTDIR)/$(AOSP_SRC_DIR)/cutils
 vpath %.cpp $(TFULITE_SRCDIRS)
 vpath %.c   $(TFULITE_SRCDIRS)
+vpath %.cc  $(TFULITE_SRCDIRS)
 
-NNLIBLIB     = $(ROOTDIR)/lib/$(CPU_PREFIX)_nnlib$(DETECTED_CORE).a
+NNLIB     = $(ROOTDIR)/lib/$(CPU_PREFIX)_nnlib$(DETECTED_CORE).a
+ANNLIB    = $(ROOTDIR)/lib/$(CPU_PREFIX)_annlib$(DETECTED_CORE).a
+TFLMLIB   = $(ROOTDIR)/lib/$(CPU_PREFIX)_tf_lite_micro_lib$(DETECTED_CORE).a
+TFMFLIB   = $(ROOTDIR)/lib/$(CPU_PREFIX)_tf_micro_frontend_lib$(DETECTED_CORE).a
 
 MATMULBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_matXvec_test
 CONVBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_conv_test
@@ -158,72 +190,49 @@ LSTMOBJS = \
 CNNOBJS = \
     xa_nn_cnn_testbench.o 
 BASICOBJS = \
-	xa_nn_basic_testbench.o
+    xa_nn_basic_testbench.o
 SOFTMAXOBJS = \
-	xa_nn_softmax_testbench.o
+    xa_nn_softmax_testbench.o
 NORMOBJS = \
-	xa_nn_norm_testbench.o
+    xa_nn_norm_testbench.o
 
 UTILOBJS = \
     xt_manage_buffers.o \
     file_io.o
 
 ANNOBJS = \
-	TestMain.o \
+    TestMain.o \
     Memory.o \
     Callbacks.o \
-	Utils.o \
-	NeuralNetworks.o \
-	Manager.o \
-	ModelBuilder.o \
-	CompilationBuilder.o \
-	ExecutionPlan.o \
-	ExecutionBuilder.o \
-	ValidateHal.o \
-	CpuExecutor.o \
+    Utils.o \
+    NeuralNetworks.o \
+    Manager.o \
+    ModelBuilder.o \
+    CompilationBuilder.o \
+    ExecutionPlan.o \
+    ExecutionBuilder.o \
+    ValidateHal.o \
+    CpuExecutor.o \
     HidlSupport.o \
-	native_handle.o \
+    native_handle.o \
 
-TFULITECOBJS = \
-    fft_cplx_stages_S3_32x32_hifi3.o \
-	fft_cplx_stages_S2_32x32_hifi3.o \
-	fft_cplx32x32_hifi3.o \
-	fft_real_twd512_32x32_tbl.o \
-	fft_real32x32_hifi3.o \
-	vec_bexp32_hifi3.o \
-	fft_twd256_32x32_tbl.o
 
-TFULITECPPOBJS = \
-    depthwise_conv.o \
-	fully_connected.o \
-	softmax.o \
-	kernel_util.o \
-	quantization_util.o
+ifeq ($(RELEASE_BUILD), 1)
+TFULITECPPOBJS += \
+    low_latency_conv_10kws_micro_features_model_data.o \
+    xa_nnlib_micro_speech_test.o \
+
+else
+TFULITECCOBJS += \
+    low_latency_conv_10kws_micro_features_model_data.o \
+    xa_nnlib_micro_speech_test.o \
+
+endif
+
+TFULITECPPOBJS += \
 
 TFULITECOBJS += \
     speech_test.o \
-    c_api_internal.o \
-
-TFULITECPPOBJS += \
-	frontend_inference_test.o \
-	error_reporter.o \
-	flatbuffer_conversions.o \
-	op_resolver.o \
-	preprocessor_fixed.o \
-	frontend_test.o \
-	inference_test.o \
-	micro_error_reporter.o \
-	micro_interpreter.o \
-	micro_mutable_op_resolver.o \
-	simple_tensor_allocator.o \
-	no_30ms_sample_data.o \
-	yes_30ms_sample_data.o \
-	no_power_spectrum_data.o \
-	yes_power_spectrum_data.o \
-	no_features_data.o \
-	yes_features_data.o \
-	tiny_conv_model_data.o \
-	all_ops_resolver.o \
 
 
 OBJS_MATMULOBJS  = $(addprefix $(OBJDIR)/,$(MATMULOBJS))
@@ -240,7 +249,10 @@ OBJS_SOFTMAXOBJS  = $(addprefix $(OBJDIR)/,$(SOFTMAXOBJS))
 OBJS_NORMOBJS  = $(addprefix $(OBJDIR)/,$(NORMOBJS))
 OBJS_ANNOBJS  = $(addprefix $(OBJDIR)/,$(ANNOBJS))
 OBJS_TFULITECOBJS  = $(addprefix $(OBJDIR)/,$(TFULITECOBJS))
+OBJS_TFULITECCOBJS  = $(addprefix $(OBJDIR)/,$(TFULITECCOBJS))
 OBJS_TFULITECPPOBJS  = $(addprefix $(OBJDIR)/,$(TFULITECPPOBJS))
+
+all: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(SOFTMAXBIN) $(NORMBIN) $(ANNBIN) $(TFULITEBIN)
 
 run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(SOFTMAXBIN) $(NORMBIN) $(ANNBIN) $(TFULITEBIN)
 	xt-run --mem_model --nosummary xa_nn_matXvec_test
@@ -255,8 +267,6 @@ run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN)
 	xt-run --mem_model --nosummary xa_nn_ann_test
 	xt-run --mem_model --nosummary xa_nn_tfulite_test
 
-all: NNLIB
-NNLIB: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(SOFTMAXBIN) $(NORMBIN) $(ANNBIN) $(TFULITEBIN)
 
 nn_activation: $(ACTBIN)
 nn_cnn: $(CNNBIN)
@@ -271,41 +281,48 @@ nn_norm: $(NORMBIN)
 nn_ann: $(ANNBIN) 
 nn_tfulite: $(TFULITEBIN) 
 
-$(MATMULBIN): $(OBJDIR) $(OBJS_MATMULOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_MATMULOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(MATMULBIN): $(OBJDIR) $(OBJS_MATMULOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_MATMULOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(CONVBIN): $(OBJDIR) $(OBJS_CONVOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_CONVOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(CONVBIN): $(OBJDIR) $(OBJS_CONVOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_CONVOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(POOLBIN): $(OBJDIR) $(OBJS_POOLOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_POOLOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(POOLBIN): $(OBJDIR) $(OBJS_POOLOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_POOLOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(ACTBIN): $(OBJDIR) $(OBJS_ACTOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_ACTOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(ACTBIN): $(OBJDIR) $(OBJS_ACTOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_ACTOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(GRUBIN): $(OBJDIR) $(OBJS_GRUOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_GRUOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(GRUBIN): $(OBJDIR) $(OBJS_GRUOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_GRUOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(LSTMBIN): $(OBJDIR) $(OBJS_LSTMOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_LSTMOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(LSTMBIN): $(OBJDIR) $(OBJS_LSTMOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_LSTMOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(CNNBIN): $(OBJDIR) $(OBJS_CNNOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_CNNOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(CNNBIN): $(OBJDIR) $(OBJS_CNNOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_CNNOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(BASICBIN): $(OBJDIR) $(OBJS_BASICOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_BASICOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(BASICBIN): $(OBJDIR) $(OBJS_BASICOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_BASICOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(SOFTMAXBIN): $(OBJDIR) $(OBJS_SOFTMAXOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_SOFTMAXOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(SOFTMAXBIN): $(OBJDIR) $(OBJS_SOFTMAXOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_SOFTMAXOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(NORMBIN): $(OBJDIR) $(OBJS_NORMOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_NORMOBJS) $(OBJS_UTILOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(NORMBIN): $(OBJDIR) $(OBJS_NORMOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_NORMOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(ANNBIN): $(OBJDIR) $(OBJS_ANNOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_ANNOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+ifeq ($(xclib), 1)
+$(ANNBIN): $(OBJDIR) $(OBJS_ANNOBJS) $(ANNLIB) $(NNLIB)
+	$(CXX) -o $@ $(OBJS_ANNOBJS) $(ANNLIB) $(NNLIB) $(LDFLAGS) $(CXX_LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
-$(TFULITEBIN): $(OBJDIR) $(OBJS_TFULITECPPOBJS) $(OBJS_TFULITECOBJS) $(NNLIBLIB)
-	$(CXX) -o $@ $(OBJS_TFULITECPPOBJS) $(OBJS_TFULITECOBJS) $(NNLIBLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+$(TFULITEBIN): $(OBJDIR) $(OBJS_TFULITECPPOBJS) $(OBJS_TFULITECOBJS) $(OBJS_TFULITECCOBJS) $(TFLMLIB) $(TFMFLIB) $(NNLIB)
+	$(CXX) -o $@ $(OBJS_TFULITECPPOBJS) $(OBJS_TFULITECOBJS) $(OBJS_TFULITECCOBJS) $(TFLMLIB) $(TFMFLIB) $(NNLIB) $(LDFLAGS) $(CXX_LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+else
+
+$(ANNBIN) $(TFULITEBIN):
+	@echo "$@ not supported with newlib"
+
+endif
 
 $(OBJDIR):
 	-$(MKPATH) $(OBJDIR)
@@ -316,18 +333,22 @@ $(OBJS_MATMULOBJS) $(OBJS_CONVOBJS) $(OBJS_POOLOBJS) $(OBJS_UTILOBJS) $(OBJS_ACT
 
 $(OBJS_ANNOBJS): $(OBJDIR)/%.o: %.cpp
 	@echo "Compiling $<"
-	$(QUIET) $(CXX) $(OPT_O2) $(CFLAGS) $(INCLUDES) $(INCLUDES_ANN) -o $@ -c $<
+	$(QUIET) $(CXX) $(OPT_O0) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $(INCLUDES_ANN) -o $@ -c $<
 
 $(OBJS_TFULITECOBJS): $(OBJDIR)/%.o: %.c
 	@echo "Compiling $<"
 	$(QUIET) $(CC) $(OPT_O2) $(CFLAGS) $(INCLUDES) $(INCLUDES_TF_MICRO) -o $@ -c $<
 
+$(OBJS_TFULITECCOBJS): $(OBJDIR)/%.o: %.cc
+	@echo "Compiling $<"
+	$(QUIET) $(CXX) $(OPT_O0) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $(INCLUDES_TF_MICRO) -o $@ -c $<
+
 $(OBJS_TFULITECPPOBJS): $(OBJDIR)/%.o: %.cpp
 	@echo "Compiling $<"
-	$(QUIET) $(CXX) $(OPT_O2) $(CFLAGS) $(INCLUDES) $(INCLUDES_TF_MICRO) -o $@ -c $<
+	$(QUIET) $(CXX) $(OPT_O0) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $(INCLUDES_TF_MICRO) -o $@ -c $<
 
 
 clean:
-	-$(RM) $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(BASICBIN) $(SOFTMAXBIN) $(NORMBIN) $(ANNBIN) $(TFULITEBIN)
+	-$(RM) $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(SOFTMAXBIN) $(NORMBIN) $(ANNBIN) $(TFULITEBIN)
 	-$(RM) $(OBJDIR)$(S)*.o
 

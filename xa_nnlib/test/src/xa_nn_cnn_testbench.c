@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -164,7 +164,7 @@ typedef struct _test_config_t
 int default_config(test_config_t *p_cfg)
 {
   if(p_cfg)
-  { 
+  {
 
     p_cfg->help     = 0;
     p_cfg->input_height = 16;
@@ -188,8 +188,8 @@ int default_config(test_config_t *p_cfg)
     p_cfg->out_precision = 16;
     p_cfg->bias_precision = 16;
     strcpy(p_cfg->kernel_name, "conv2d_std");
-    p_cfg->frames   = 2;  
-    p_cfg->write_file = 0;  
+    p_cfg->frames   = 2;
+    p_cfg->write_file = 0;
     p_cfg->read_inp_file_name[0] = '\0';
     p_cfg->read_ref_file_name[0] = '\0';
     p_cfg->write_inp_file_name[0]='\0';
@@ -247,7 +247,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_STRING("-write_inp_file_name",p_cfg->write_inp_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_out_file_name",p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
-    
+
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
     exit(1);
@@ -261,33 +261,33 @@ int map_test_cfg_to_cnn_cfg(test_config_t *p_cfg, xa_nnlib_cnn_init_config_t *cn
     {
         memset(cnn_cfg, 0, sizeof(xa_nnlib_cnn_init_config_t));
 
-        if      (!strcmp(p_cfg->kernel_name,"conv1d_std"))   cnn_cfg->algo = XA_NNLIB_CNN_CONV1D_STD;  
-        else if (!strcmp(p_cfg->kernel_name,"conv2d_std"))   cnn_cfg->algo = XA_NNLIB_CNN_CONV2D_STD;  
-        else if (!strcmp(p_cfg->kernel_name,"conv2d_depth")) cnn_cfg->algo = XA_NNLIB_CNN_CONV2D_DS;  
+        if      (!strcmp(p_cfg->kernel_name,"conv1d_std"))   cnn_cfg->algo = XA_NNLIB_CNN_CONV1D_STD;
+        else if (!strcmp(p_cfg->kernel_name,"conv2d_std"))   cnn_cfg->algo = XA_NNLIB_CNN_CONV2D_STD;
+        else if (!strcmp(p_cfg->kernel_name,"conv2d_depth")) cnn_cfg->algo = XA_NNLIB_CNN_CONV2D_DS;
 
         cnn_cfg->x_stride = p_cfg->x_stride;
         cnn_cfg->y_stride = p_cfg->y_stride;
         cnn_cfg->x_padding = p_cfg->x_padding;
         cnn_cfg->y_padding = p_cfg->y_padding;
         cnn_cfg->channels_multiplier = p_cfg->channels_multiplier;
-        
+
         cnn_cfg->bias_shift = p_cfg->bias_shift;
         cnn_cfg->acc_shift  = p_cfg->acc_shift;
- 
+
         cnn_cfg->output_height   = p_cfg->out_height;
         cnn_cfg->output_width    = p_cfg->out_width;
         cnn_cfg->output_channels = p_cfg->out_channels;
         cnn_cfg->output_format   = p_cfg->out_data_format;
-        
+
 
         if(!strcmp(p_cfg->kernel_name,"conv1d_std"))
-        {   
+        {
             int input_channelsXwidth_pad;
             if(p_cfg->inp_precision == -1)
               input_channelsXwidth_pad = (p_cfg->input_channels * p_cfg->input_width + 2 - 1) & ~(2 - 1);
             else
               input_channelsXwidth_pad = (p_cfg->input_channels * p_cfg->input_width + 4 - 1) & ~(4 - 1);
-          
+
             cnn_cfg->output_width    = 1;
 
             FILL_KERNEL_SHAPE_CUBE_DIMS(cnn_cfg->kernel_std_shape, p_cfg->kernel_height, p_cfg->kernel_width, p_cfg->input_channels, SHAPE_CUBE_DWH_T, p_cfg->out_channels)
@@ -310,33 +310,33 @@ int map_test_cfg_to_cnn_cfg(test_config_t *p_cfg, xa_nnlib_cnn_init_config_t *cn
         }
         else if(!strcmp(p_cfg->kernel_name,"conv2d_depth"))
         {
-            int kernel_width_pad = ((p_cfg->kernel_width + 3) & (~3)); 
+            int kernel_width_pad = ((p_cfg->kernel_width + 3) & (~3));
             FILL_KERNEL_SHAPE_CUBE_DIMS(cnn_cfg->kernel_ds_depth_shape, p_cfg->kernel_height, p_cfg->kernel_width, p_cfg->input_channels*p_cfg->channels_multiplier, SHAPE_CUBE_WHD_T, 1)
             FILL_KERNEL_SHAPE_CUBE_OFFSETS(cnn_cfg->kernel_ds_depth_shape, (kernel_width_pad), (1), (kernel_width_pad*p_cfg->kernel_height))
-            FILL_SHAPE_VECTOR(cnn_cfg->bias_ds_depth_shape, p_cfg->input_channels*p_cfg->channels_multiplier) 
+            FILL_SHAPE_VECTOR(cnn_cfg->bias_ds_depth_shape, p_cfg->input_channels*p_cfg->channels_multiplier)
             FILL_SHAPE_MATRIX(cnn_cfg->kernel_ds_point_shape, p_cfg->out_channels, p_cfg->input_channels*p_cfg->channels_multiplier)
             FILL_SHAPE_VECTOR(cnn_cfg->bias_ds_point_shape, p_cfg->out_channels)
             FILL_IO_SHAPE_CUBE(cnn_cfg->input_shape, p_cfg->input_height, p_cfg->input_width, p_cfg->input_channels, SHAPE_CUBE_WHD_T)
         }
 
-        if (p_cfg->kernel_precision ==  8 && p_cfg->inp_precision == 16 && p_cfg->out_precision == 16 && p_cfg->bias_precision == 16) 
+        if (p_cfg->kernel_precision ==  8 && p_cfg->inp_precision == 16 && p_cfg->out_precision == 16 && p_cfg->bias_precision == 16)
         {
             cnn_cfg->precision = XA_NNLIB_CNN_8bx16b;
         }
-        else if (p_cfg->kernel_precision == 16 && p_cfg->inp_precision == 16 && p_cfg->out_precision == 16 && p_cfg->bias_precision == 16) 
+        else if (p_cfg->kernel_precision == 16 && p_cfg->inp_precision == 16 && p_cfg->out_precision == 16 && p_cfg->bias_precision == 16)
         {
             cnn_cfg->precision = XA_NNLIB_CNN_16bx16b;
         }
-        else if (p_cfg->kernel_precision ==  8 && p_cfg->inp_precision ==  8 && p_cfg->out_precision ==  8 && p_cfg->bias_precision ==  8) 
+        else if (p_cfg->kernel_precision ==  8 && p_cfg->inp_precision ==  8 && p_cfg->out_precision ==  8 && p_cfg->bias_precision ==  8)
         {
             cnn_cfg->precision = XA_NNLIB_CNN_8bx8b;
         }
-        else if (p_cfg->kernel_precision == -1 && p_cfg->inp_precision == -1 && p_cfg->out_precision == -1 && p_cfg->bias_precision == -1) 
+        else if (p_cfg->kernel_precision == -1 && p_cfg->inp_precision == -1 && p_cfg->out_precision == -1 && p_cfg->bias_precision == -1)
         {
             cnn_cfg->precision = XA_NNLIB_CNN_f32xf32;
         }
     }
- 
+
     return 0;
 }
 
@@ -380,8 +380,8 @@ int xa_nn_main_process(int argc, char *argv[])
   int frame;
   int err = 0;
   int pass_count=0;
-  char profiler_name[MAX_PROFILER_NAME_LENGTH]; 
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
+  char profiler_name[MAX_PROFILER_NAME_LENGTH];
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
   xa_nnlib_handle_t cnn_handle;
   int inp_size=0, kernel_size, out_size;
   int kernel_size_pad, input_channels_pad;
@@ -418,7 +418,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-  
+
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -430,7 +430,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
   map_test_cfg_to_cnn_cfg(&cfg, &cnn_cfg);
- 
+
 
   if(!strcmp(cfg.kernel_name,"conv2d_std"))
   {
@@ -476,7 +476,7 @@ int xa_nn_main_process(int argc, char *argv[])
     bias_size = cfg.out_channels;
   }
 
-  // Set profiler name 
+  // Set profiler name
   sprintf(profiler_params, "cnn_");
   strcpy(profiler_name, profiler_params);
   if(cfg.kernel_name[0])
@@ -487,9 +487,9 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_params, "_f32xf32");
     strcat(profiler_name, profiler_params);
-    
+
     // If VFPU is not supported, return
-    if(!XCHAL_HAVE_HIFI4_VFPU)
+    if(!HIFI_VFPU)
     {
       printf("%s: NOT TESTED\n", profiler_name);
       return 0;
@@ -500,16 +500,16 @@ int xa_nn_main_process(int argc, char *argv[])
     sprintf(profiler_params, "_%dx%d", cfg.kernel_precision, cfg.inp_precision);
     strcat(profiler_name, profiler_params);
   }
-  
+
   // Set profiler parameters
   if(!strcmp(cfg.kernel_name,"conv1d_std"))
   {
-    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, out_channels=%d, out_height=%d", 
+    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, out_channels=%d, out_height=%d",
       cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.out_channels, cfg.out_height);
   }
   else
   {
-    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d", 
+    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d",
       cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, cfg.out_height, cfg.out_width);
   }
 
@@ -518,7 +518,7 @@ int xa_nn_main_process(int argc, char *argv[])
   if(cfg.write_file)
   {
     /* If write_file (generate test vectors) is enabled, random data would be generated and
-       used; the input data and output data generated would be written into files. 
+       used; the input data and output data generated would be written into files.
      */
     fptr_inp = file_open(pb_input_file_path, cfg.write_inp_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
   }
@@ -536,8 +536,8 @@ int xa_nn_main_process(int argc, char *argv[])
   // Open reference file if verify flag is enabled
   if(cfg.verify)
   {
-    p_ref = create_buf1D(out_size, cfg.out_precision); 
-    
+    p_ref = create_buf1D(out_size, cfg.out_precision);
+
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
 
@@ -555,7 +555,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     p_kernel = create_buf1D(kernel_size_pad, cfg.kernel_precision);                          VALIDATE_PTR(p_kernel);
     p_bias = create_buf1D(bias_size, cfg.bias_precision);                                    VALIDATE_PTR(p_bias);
-    p_kernel_point = create_buf1D(kernel_point_size*cfg.out_channels, cfg.kernel_precision); VALIDATE_PTR(p_kernel_point);
+    p_kernel_point = create_buf1D(kernel_point_size, cfg.kernel_precision); VALIDATE_PTR(p_kernel_point);
     p_dw_out = create_buf1D(dw_out_size, cfg.out_precision);                                 VALIDATE_PTR(p_dw_out);
     p_bias_point = create_buf1D(bias_point_size, cfg.bias_precision);                        VALIDATE_PTR(p_bias_point);
 
@@ -572,13 +572,13 @@ int xa_nn_main_process(int argc, char *argv[])
     int scratch_size;
 
     /* Get persistent and scratch sizes and allocate them */
-    persistent_size = xa_nnlib_cnn_get_persistent_fast(&cnn_cfg);  
+    persistent_size = xa_nnlib_cnn_get_persistent_fast(&cnn_cfg);
     if(persistent_size < 0)
     {
       fprintf(stderr, "Invalid Config, failed with error code: 0x%x \n", persistent_size);
       return persistent_size;
     }
-    scratch_size = xa_nnlib_cnn_get_scratch_fast(&cnn_cfg);   
+    scratch_size = xa_nnlib_cnn_get_scratch_fast(&cnn_cfg);
     if(scratch_size < 0)
     {
       fprintf(stderr, "Invalid Config, failed with error code: 0x%x \n", scratch_size);
@@ -610,12 +610,12 @@ int xa_nn_main_process(int argc, char *argv[])
       return err;
     }
   }
-  
+
   /* Set up kernel and bias pointers */
   {
     void *kernel[2];
     void *bias[2];
-    
+
     if(!strcmp(cfg.kernel_name,"conv2d_std") || !strcmp(cfg.kernel_name,"conv1d_std"))
     {
       kernel[0] = p_kernel->p;
@@ -628,9 +628,9 @@ int xa_nn_main_process(int argc, char *argv[])
       kernel[1] = p_kernel_point->p;
       bias[1]   = p_bias_point->p;
     }
-    xa_nnlib_cnn_set_config(cnn_handle, XA_NNLIB_CNN_KERNEL, &kernel[0]); 
-    xa_nnlib_cnn_set_config(cnn_handle, XA_NNLIB_CNN_BIAS, &bias[0]); 
-  }  
+    xa_nnlib_cnn_set_config(cnn_handle, XA_NNLIB_CNN_KERNEL, &kernel[0]);
+    xa_nnlib_cnn_set_config(cnn_handle, XA_NNLIB_CNN_BIAS, &bias[0]);
+  }
 
   /* Execution Loop */
   {
@@ -647,11 +647,11 @@ int xa_nn_main_process(int argc, char *argv[])
         load_conv1d_std_input_data(cfg.write_file, fptr_inp, p_inp, p_kernel, p_bias, cfg.input_channels, cfg.input_width, input_channelsXwidth_pad);
 
       XTPWR_PROFILER_START(0);
-      err = xa_nnlib_cnn_process(cnn_handle, 
-                                 p_scratch, 
-                                 p_inp->p, 
-                                 p_out->p, 
-                                 &cnn_cfg.input_shape, 
+      err = xa_nnlib_cnn_process(cnn_handle,
+                                 p_scratch,
+                                 p_inp->p,
+                                 p_out->p,
+                                 &cnn_cfg.input_shape,
                                  &output_shape);
       XTPWR_PROFILER_STOP(0);
 
@@ -671,7 +671,7 @@ int xa_nn_main_process(int argc, char *argv[])
       if(cfg.verify)
       {
         read_buf1D_from_file(fptr_ref, p_ref);
-        pass_count += compare_buf1D(p_ref, p_out, cfg.verify);
+        pass_count += compare_buf1D(p_ref, p_out, cfg.verify, cfg.out_precision, kernel_size_pad);
       }
       else
       {
@@ -784,7 +784,7 @@ int main (int argc, char *argv[])
                 else strcpy((char *)pb_ref_file_path, "");
                 continue;
             }
-            
+
             if(strcmp(fargv[0], "@Start") == 0)
             {
                 processcmd = 1;

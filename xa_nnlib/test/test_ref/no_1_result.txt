@@ -1,4 +1,12 @@
 silence 0
-unknown 29
-yes 29
-no 198
+unknown 13
+yes 0
+no 178
+up 5
+down 2
+left 1
+right 1
+on 0
+off 2
+stop 2
+go 52
