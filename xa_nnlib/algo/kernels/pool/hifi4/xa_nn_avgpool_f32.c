@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -68,7 +68,8 @@ static void avgpool_f32_hw(
     int itr_oh, itr_ow;
     int left_pad_aligned, right_pad, total_out_width, scratch_width;
     xtfloatx2 * p_src1, * p_src2;
-    xtfloatx2 * __restrict p_src1_temp, * __restrict p_src2_temp; 
+    xtfloatx2 * __restrict p_src1_temp, * __restrict p_src2_temp;
+    xtfloatx2 * p_src0_temp;
     xtfloatx2 *p_dst, *p_dst_temp;
     ae_valign align_src1, align_src2;
     int i;
@@ -84,7 +85,7 @@ static void avgpool_f32_hw(
         p_dst_pad[i] = 0.0f;
     }
 
-    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width); 
+    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width);
     right_pad = total_out_width - (x_padding + input_width);
 
     /* Right padding of temporary output with min_value,
@@ -97,7 +98,7 @@ static void avgpool_f32_hw(
 
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)
     {
-        int pool_height, pool_width; 
+        int pool_height, pool_width;
         int start_row, end_row;
 
         /* Pool height processing */
@@ -118,15 +119,15 @@ static void avgpool_f32_hw(
             p_src1 = (xtfloatx2 *)((FLOAT32 *)p_src1 + start_row*input_width);
             pool_height--;
             p_dst_temp = p_dst;
-            p_src1_temp = p_src1;
+            p_src0_temp = p_src1;
 
             /* prime */
-            align_src1 = XT_LASX2PP(p_src1_temp);
+            align_src1 = XT_LASX2PP(p_src0_temp);
 
             for(i = 0; i < (input_width >> 1); i++)
             {
                 xtfloatx2 i1;
-                XT_LASX2IP(i1, align_src1, p_src1_temp);
+                XT_LASX2IP(i1, align_src1, p_src0_temp);
                 XT_SSX2IP(i1, p_dst_temp, 8);
             }
 
@@ -134,7 +135,7 @@ static void avgpool_f32_hw(
             if(input_width & 1)
             {
                 xtfloatx2 out;
-                out = ((FLOAT32 *)p_src1_temp)[0];
+                out = ((FLOAT32 *)p_src0_temp)[0];
                 ((FLOAT32 *)p_dst_temp)[0] = out;
             }
 
@@ -185,7 +186,6 @@ static void avgpool_f32_hw(
                 p_dst_pad[i] = 0.0f;
             }
         }
-
         /* Pool width processing */
 
         /* On scratch, compare width-wise with padding*/
@@ -197,15 +197,15 @@ static void avgpool_f32_hw(
         p_src1 = (xtfloatx2 *)((FLOAT32 *)p_scratch + left_pad_aligned - x_padding);
         pool_width--;
         p_dst_temp = p_dst;
-        p_src1_temp = p_src1;
+        p_src0_temp = p_src1;
 
         /* prime */
-        align_src1 = XT_LASX2PP(p_src1_temp);
+        align_src1 = XT_LASX2PP(p_src0_temp);
 
         for(i = 0; i < (scratch_width >> 1); i++)
         {
             xtfloatx2 src1;
-            XT_LASX2IP(src1, align_src1, p_src1_temp);
+            XT_LASX2IP(src1, align_src1, p_src0_temp);
             XT_SSX2IP(src1, p_dst_temp, 8);
         }
 
@@ -213,7 +213,7 @@ static void avgpool_f32_hw(
         if(scratch_width & 1)
         {
            xtfloatx2 src1;
-           src1 = ((FLOAT32 *)p_src1_temp)[0];
+           src1 = ((FLOAT32 *)p_src0_temp)[0];
            ((FLOAT32 *)p_dst_temp)[0] = src1;
         }
 
@@ -301,8 +301,8 @@ const   FLOAT32* __restrict__ p_inp,
     XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
     XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
     /* Pointer alignment checks */
-    XA_NNLIB_ARG_CHK_ALIGN(p_out, 4, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_inp, 4, -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(FLOAT32), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(FLOAT32), -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
@@ -386,7 +386,7 @@ const   FLOAT32* __restrict__ p_inp,
 
         p_scratch_aligned = (void *)ALIGN_PTR(p_scratch, ALIGNMENT);
 
-        p_rec_den = (FLOAT32 *)((WORD8 *)p_scratch_aligned + 
+        p_rec_den = (FLOAT32 *)((WORD8 *)p_scratch_aligned +
             2*ALIGNED_SIZE((sizeof(FLOAT32) * input_channels * input_width), ALIGNMENT));
 
         p_den = p_rec_den;
@@ -421,7 +421,7 @@ const   FLOAT32* __restrict__ p_inp,
             p_rec_den[itr_oh] = 0;
         }
 
-        
+
         xa_nn_avgpool_f32_hwc(p_out
                 ,p_inp
                 ,input_height

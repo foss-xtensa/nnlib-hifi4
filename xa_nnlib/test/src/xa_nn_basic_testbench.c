@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -81,7 +81,7 @@ typedef struct _test_config_t
 int default_config(test_config_t *p_cfg)
 {
   if(p_cfg)
-  { 
+  {
     p_cfg->help     = 0;
     p_cfg->output_zero_bias = 127;
     p_cfg->output_left_shift = 1;
@@ -97,9 +97,9 @@ int default_config(test_config_t *p_cfg)
     p_cfg->left_shift = 0;
     p_cfg->io_length  = 1024;
     p_cfg->io_precision = -1;
-    p_cfg->frames   = 2;  
+    p_cfg->frames   = 2;
     strcpy(p_cfg->kernel_name, "elm_add");
-    p_cfg->write_file = 0;  
+    p_cfg->write_file = 0;
     p_cfg->read_inp1_file_name[0] = '\0';
     p_cfg->read_inp2_file_name[0] = '\0';
     p_cfg->read_ref_file_name[0] = '\0';
@@ -131,20 +131,20 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_INDICATE("--help", p_cfg->help);
     ARGTYPE_INDICATE("-help", p_cfg->help);
     ARGTYPE_INDICATE("-h", p_cfg->help);
-    ARGTYPE_ONETIME_CONFIG("-output_zero_bias",p_cfg->output_zero_bias);                       
-    ARGTYPE_ONETIME_CONFIG("-output_left_shift",p_cfg->output_left_shift);                        
-    ARGTYPE_ONETIME_CONFIG("-output_multiplier",p_cfg->output_multiplier);                
-    ARGTYPE_ONETIME_CONFIG("-output_activation_min",p_cfg->output_activation_min);            
-    ARGTYPE_ONETIME_CONFIG("-output_activation_max",p_cfg->output_activation_max);            
-    ARGTYPE_ONETIME_CONFIG("-input1_zero_bias",p_cfg->input1_zero_bias);                    
-    ARGTYPE_ONETIME_CONFIG("-input1_left_shift",p_cfg->input1_left_shift);                     
-    ARGTYPE_ONETIME_CONFIG("-input1_multiplier",p_cfg->input1_multiplier);                
-    ARGTYPE_ONETIME_CONFIG("-input2_zero_bias",p_cfg->input2_zero_bias);                    
-    ARGTYPE_ONETIME_CONFIG("-input2_left_shift",p_cfg->input2_left_shift);                     
-    ARGTYPE_ONETIME_CONFIG("-input2_multiplier",p_cfg->input2_multiplier);                
-    ARGTYPE_ONETIME_CONFIG("-left_shift",p_cfg->left_shift);                           
-    ARGTYPE_ONETIME_CONFIG("-io_length",p_cfg->io_length);                           
-    ARGTYPE_ONETIME_CONFIG("-io_precision",p_cfg->io_precision);                        
+    ARGTYPE_ONETIME_CONFIG("-output_zero_bias",p_cfg->output_zero_bias);
+    ARGTYPE_ONETIME_CONFIG("-output_left_shift",p_cfg->output_left_shift);
+    ARGTYPE_ONETIME_CONFIG("-output_multiplier",p_cfg->output_multiplier);
+    ARGTYPE_ONETIME_CONFIG("-output_activation_min",p_cfg->output_activation_min);
+    ARGTYPE_ONETIME_CONFIG("-output_activation_max",p_cfg->output_activation_max);
+    ARGTYPE_ONETIME_CONFIG("-input1_zero_bias",p_cfg->input1_zero_bias);
+    ARGTYPE_ONETIME_CONFIG("-input1_left_shift",p_cfg->input1_left_shift);
+    ARGTYPE_ONETIME_CONFIG("-input1_multiplier",p_cfg->input1_multiplier);
+    ARGTYPE_ONETIME_CONFIG("-input2_zero_bias",p_cfg->input2_zero_bias);
+    ARGTYPE_ONETIME_CONFIG("-input2_left_shift",p_cfg->input2_left_shift);
+    ARGTYPE_ONETIME_CONFIG("-input2_multiplier",p_cfg->input2_multiplier);
+    ARGTYPE_ONETIME_CONFIG("-left_shift",p_cfg->left_shift);
+    ARGTYPE_ONETIME_CONFIG("-io_length",p_cfg->io_length);
+    ARGTYPE_ONETIME_CONFIG("-io_precision",p_cfg->io_precision);
     ARGTYPE_ONETIME_CONFIG("-frames",p_cfg->frames);
     ARGTYPE_STRING("-kernel_name",p_cfg->kernel_name, MAX_KERNEL_NAME_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-write_file",p_cfg->write_file);
@@ -155,7 +155,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_STRING("-write_inp2_file_name",p_cfg->write_inp2_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_out_file_name",p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
-    
+
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
     exit(1);
@@ -189,8 +189,8 @@ void show_usage(void)
     printf ("\t-input1_left_shift: input1_left_shift(Only needed in add_asym8); Default=0\n");
     printf ("\t-input1_multiplier: input1_multiplier(Only needed in add_asym8); Default=0x7fff\n");
     printf ("\t-input2_zero_bias: input2_zero_bias(Only needed in add_asym8); Default=-127\n");
-    printf ("\t-input2_left_shift: input2_left_shift(Only needed in add_asym8); Default=0\n");          
-    printf ("\t-input2_multiplier: input2_multiplier(Only needed in add_asym8); Default=0x7fff\n");   
+    printf ("\t-input2_left_shift: input2_left_shift(Only needed in add_asym8); Default=0\n");
+    printf ("\t-input2_multiplier: input2_multiplier(Only needed in add_asym8); Default=0x7fff\n");
     printf ("\t-left_shift: global left_shift(Only needed in add_asym8); Default=0\n");
 }
 
@@ -265,7 +265,7 @@ void show_usage(void)
   }
 
 
-#if (XCHAL_HAVE_HIFI4_VFPU || XCHAL_HAVE_HIFI5_VFPU)
+#if HIFI_VFPU
 #define PROCESS_BASIC_FUNC \
     BASIC_FLOAT32(elm_mul, -1, -1) \
     else BASIC_FLOAT32(elm_add, -1, -1) \
@@ -279,7 +279,9 @@ void show_usage(void)
     else {  printf("unsupported basic operation\n"); return -1;}
 #else
 #define PROCESS_BASIC_FUNC \
-    {  printf("unsupported basic operation\n"); return -1;}
+    MUL_ASYM8(elm_mul, -3, -3) \
+    else ADD_ASYM8(elm_add, -3, -3) \
+    else {  printf("unsupported basic operation\n"); return -1;}
 #endif
 
 int xa_nn_main_process(int argc, char *argv[])
@@ -288,8 +290,8 @@ int xa_nn_main_process(int argc, char *argv[])
   int frame;
   int err = 0;
   int pass_count=0;
-  char profiler_name[MAX_PROFILER_NAME_LENGTH]; 
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
+  char profiler_name[MAX_PROFILER_NAME_LENGTH];
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
 
   test_config_t cfg;
 
@@ -307,7 +309,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-  
+
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -320,13 +322,13 @@ int xa_nn_main_process(int argc, char *argv[])
   }
 
 
-  // Set profiler name 
+  // Set profiler name
   if(cfg.io_precision == -1)
   {
     sprintf(profiler_name, "%s_f32", cfg.kernel_name);
-    
+
     // If VFPU is not supported, return
-    if(!XCHAL_HAVE_HIFI4_VFPU)
+    if(!HIFI_VFPU)
     {
       printf("%s: NOT TESTED\n", profiler_name);
       return 0;
@@ -349,7 +351,7 @@ int xa_nn_main_process(int argc, char *argv[])
   if(cfg.write_file)
   {
     /* If write_file (generate test vectors) is enabled, random data would be generated and
-       used; the input data and output data generated would be written into files. 
+       used; the input data and output data generated would be written into files.
      */
     fptr_inp1 = file_open(pb_input_file_path, cfg.write_inp1_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
     fptr_inp2 = file_open(pb_input_file_path, cfg.write_inp2_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
@@ -369,8 +371,8 @@ int xa_nn_main_process(int argc, char *argv[])
   // Open reference file if verify flag is enabled
   if(cfg.verify)
   {
-    ptr_ref =  create_buf1D(cfg.io_length, cfg.io_precision); 
-    
+    ptr_ref =  create_buf1D(cfg.io_length, cfg.io_precision);
+
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
 
@@ -378,7 +380,7 @@ int xa_nn_main_process(int argc, char *argv[])
   p_inp1 = create_buf1D(cfg.io_length, cfg.io_precision); VALIDATE_PTR(p_inp1);
   p_inp2 = create_buf1D(cfg.io_length, cfg.io_precision); VALIDATE_PTR(p_inp2);
   p_out = create_buf1D(cfg.io_length, cfg.io_precision); VALIDATE_PTR(p_out);
-  
+
   XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, cfg.io_length, "cyc/point", 0);
 
   // Frame processing loop
@@ -390,7 +392,7 @@ int xa_nn_main_process(int argc, char *argv[])
 
     // Call the activation specified on command line
     PROCESS_BASIC_FUNC
-    
+
 /*
     if(cfg.io_precision == -1)
     {
@@ -423,7 +425,7 @@ int xa_nn_main_process(int argc, char *argv[])
     if(cfg.verify)
     {
       read_buf1D_from_file(fptr_ref, ptr_ref);
-      pass_count += compare_buf1D(ptr_ref, p_out, cfg.verify);
+      pass_count += compare_buf1D(ptr_ref, p_out, cfg.verify, cfg.io_precision, 1);
     }
     else
     {
@@ -447,7 +449,7 @@ int xa_nn_main_process(int argc, char *argv[])
     fclose(fptr_ref);
     free_buf1D(ptr_ref);
   }
-  
+
   return 0;
 }
 
@@ -527,7 +529,7 @@ int main (int argc, char *argv[])
                 else strcpy((char *)pb_ref_file_path, "");
                 continue;
             }
-            
+
             if(strcmp(fargv[0], "@Start") == 0)
             {
                 processcmd = 1;

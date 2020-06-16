@@ -1,0 +1,112 @@
+#
+# Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+# 
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to use this Software with Cadence processor cores only and 
+# not with any other processors and platforms, subject to
+# the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+
+
+.PHONY: all install clean
+
+ROOTDIR = ..
+CODEC_NAME = annlib
+TENSORFLOW_DIR = test/android_nn/tensorflow
+AOSP_SRC_DIR = test/android_nn/android_deps
+NOSTRIP=1
+
+CFLAGS += \
+      -DMODEL_INT16 \
+      -DNNLIB_V2 \
+      -DEIGEN_NO_MALLOC
+
+CFLAGS += -Dhifi4
+
+ifeq ($(DISABLE_ARG_CHK), 1)
+CFLAGS += -DDISABLE_ARG_CHK
+endif
+
+
+vpath %.cpp $(ROOTDIR)/test/android_nn/common/operations
+vpath %.cpp $(ROOTDIR)/test/android_nn/common
+vpath %.cpp  $(ROOTDIR)/$(TENSORFLOW_DIR)/tensorflow/contrib/lite/kernels/internal
+vpath %.cpp  $(ROOTDIR)/$(TENSORFLOW_DIR)/tensorflow/contrib/lite/kernels/internal/reference
+vpath %.cpp  $(ROOTDIR)/$(AOSP_SRC_DIR)/android/external/libtextclassifier/util/hash \
+
+ANN_OBJS = \
+    OperationsUtils.o \
+    Utils_lib.o \
+    Pooling.o \
+    Activation.o \
+    Conv2D.o \
+    DepthwiseConv2D.o \
+    FullyConnected.o \
+    LSTM.o \
+    RNN.o \
+    Concatenation.o \
+    Normalization.o \
+    Reshape.o \
+    SimpleMath.o \
+    StridedSlice.o \
+    SVDF.o \
+    EmbeddingLookup.o \
+    HashtableLookup.o \
+    LSHProjection.o \
+    tensor_utils.o \
+    portable_tensor_utils.o \
+    farmhash.o \
+
+
+LIBO2OBJS =
+LIBOSOBJS =
+LIBOSCPPOBJS =
+
+LIBO2CPPOBJS = $(ANN_OBJS)
+
+INCLUDES = \
+    -I$(ROOTDIR)/include \
+    -I$(ROOTDIR)/include/nnlib \
+    -I$(ROOTDIR)/test/android_nn/include \
+    -I$(ROOTDIR)/test/android_nn/include/operations \
+    -I$(ROOTDIR)/test/android_nn/common/include_lib \
+    -I$(ROOTDIR)/test/android_nn/gemmlowp \
+    -I$(ROOTDIR)/$(TENSORFLOW_DIR) \
+    -I$(ROOTDIR)/$(AOSP_SRC_DIR) \
+    -I$(ROOTDIR)/$(AOSP_SRC_DIR)/android/external/libtextclassifier \
+
+
+CFLAGS += \
+        -DNN_INCLUDE_CPU_IMPLEMENTATION \
+        -D__ANDROID_API__=28 \
+        -DHIFI_BUILD \
+        -DHIFI_NNLIB_OPT \
+        -ffunction-sections \
+        
+#LIBLDFLAGS = -Wl,--gc-sections -Wl,--undefined=xa_nnlib_get_lib_name_string
+
+ifneq ($(CC), xt-clang)
+  CFLAGS += -OPT:Olimit=12125
+endif
+
+ifeq ($(CPU), x86)
+vpath %.c $(ROOTDIR)/algo/cstub/src
+CSTUBOSOBJS =
+
+INCLUDES += \
+    -I$(ROOTDIR)/algo/cstub/include
+endif
+
+include $(ROOTDIR)/build/common.mk

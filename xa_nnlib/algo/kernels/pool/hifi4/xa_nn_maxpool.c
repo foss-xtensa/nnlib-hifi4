@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -99,7 +99,7 @@ WORD32 xa_nn_maxpool_getsize_nhwc(WORD32  inp_precision,
 {
     int scratch_bytewidth, scratch_size;
 
-    if(input_channels == 1)        
+    if(input_channels == 1)
     {
           scratch_size = xa_nn_maxpool_getsize_nchw(inp_precision
                   ,input_width
@@ -119,6 +119,16 @@ WORD32 xa_nn_maxpool_getsize_nhwc(WORD32  inp_precision,
         return ALIGNED_SIZE(input_channels*input_width*scratch_bytewidth, ALIGNMENT);
     }
     else if(inp_precision == -3)
+    {
+        scratch_bytewidth = sizeof(WORD16);
+        return ALIGNED_SIZE((input_channels*(input_width + 1)*scratch_bytewidth), ALIGNMENT);
+    }
+    else if(inp_precision == 8)
+    {
+        scratch_bytewidth = sizeof(WORD16);
+        return ALIGNED_SIZE((input_channels*(input_width + 1)*scratch_bytewidth), ALIGNMENT);
+    }
+    else if(inp_precision == 16)
     {
         scratch_bytewidth = sizeof(WORD16);
         return ALIGNED_SIZE((input_channels*(input_width + 1)*scratch_bytewidth), ALIGNMENT);
@@ -246,7 +256,7 @@ WORD32 xa_nn_maxpool_getsize(
         scratch_size = -1;
     }
 
-    return scratch_size;    
+    return scratch_size;
 }
 #endif
 

@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -20,78 +20,9 @@
 
 ******************************************************************************/
 #include "common_fpu.h"
-#include "xa_type_def.h"
-#include "xa_nnlib_kernels_api.h"
+#include "xa_nnlib_common.h"
 #include "xa_nn_avgpool_state.h"
-#include "xa_nnlib_err_chk.h"
 #include <math.h>
-
-#if !HAVE_VFPU
-DISCARD_FUN_FOR_NONVOID_RETURN(void, xa_nn_avgpool_asym8_hwc_32,(
-        UWORD8* __restrict__ p_out,
-const   UWORD8* __restrict__ p_inp,
-        WORD32   input_height,
-        WORD32   input_width,
-        WORD32   input_channels,
-        WORD32   kernel_height,
-        WORD32   kernel_width,
-        WORD32   x_stride,
-        WORD32   y_stride,
-        WORD32   x_padding,
-        WORD32   y_padding,
-        WORD32   out_height,
-        WORD32   out_width,
-        pVOID    p_scratch_in,
-        pVOID    p_zeros_mem,
-        WORD32   *p_den_height,
-        WORD32   *p_den_width))
-
-DISCARD_FUN_FOR_NONVOID_RETURN(void, xa_nn_avgpool_asym8_hwc_16,(
-        UWORD8* __restrict__ p_out,
-const   UWORD8* __restrict__ p_inp,
-        WORD32   input_height,
-        WORD32   input_width,
-        WORD32   input_channels,
-        WORD32   kernel_height,
-        WORD32   kernel_width,
-        WORD32   x_stride,
-        WORD32   y_stride,
-        WORD32   x_padding,
-        WORD32   y_padding,
-        WORD32   out_height,
-        WORD32   out_width,
-        pVOID    p_scratch_in,
-        pVOID    p_zeros_mem,
-        WORD32   *p_den_height,
-        WORD32   *p_den_width))
-
-#else /* #if !HAVE_VFPU */
-
-#define PRIME_8X4U(p_char, tmp) \
-    int offset_##p_char = 0, ls_##p_char, rs_##p_char; \
-    rs_##p_char = 0; \
-    ls_##p_char = 64; \
-    tmp = AE_ZERO16(); \
-    while(((unsigned int)p_char + offset_##p_char) & 3) {\
-        ae_int16x4 tmp2 = AE_MOVDA16(*(((const UWORD8 *)p_char)+offset_##p_char)); \
-        tmp2 = AE_MOVINT16X4_FROMINT64(AE_SRLA64(AE_MOVINT64_FROMINT16X4(tmp2), 48)); \
-        tmp = AE_MOVINT16X4_FROMINT64(AE_SLAI64(AE_MOVINT64_FROMINT16X4(tmp), 16)); \
-        tmp = AE_OR16(tmp, tmp2); \
-        rs_##p_char += 16;  \
-        ls_##p_char -= 16; \
-        offset_##p_char++; \
-    }\
-    tmp = AE_MOVINT16X4_FROMINT64(AE_SLAA64(AE_MOVINT64_FROMINT16X4(tmp), ls_##p_char)); \
-
-#define AE_LA8X4U_IP(d, a, p) { \
-    ae_int16x4 d_tmp, d_tmp2; \
-    d_tmp = AE_L8X4F_I(p+offset_##p, 0); \
-    p += 4; \
-    d_tmp2 = AE_MOVINT16X4_FROMINT64(AE_SRLA64(AE_MOVINT64_FROMINT16X4(d_tmp), rs_##p+8)); \
-    d = AE_OR16(a, d_tmp2); \
-    a = AE_MOVINT16X4_FROMINT64(AE_SLAA64(AE_MOVINT64_FROMINT16X4(d_tmp), ls_##p-8)); \
-}
-
 
 #define INCR_N_PLANE(ptr, n, plane_size) \
     ptr = (ptr) + ((n) * (plane_size));
@@ -135,7 +66,7 @@ const   UWORD8* __restrict__ p_inp,
 
 
 
-/* Average pooling without using extra copy of input data 
+/* Average pooling without using extra copy of input data
  * Works with unaligned input, output.
  */
 
@@ -162,16 +93,17 @@ const   UWORD8* __restrict__ p_inp,
 
     int itr_oh, itr_ow;
     int plane_size;
-    WORD8 * p_src1, * p_src2, * p_src3; 
-    WORD16 * p_src1_w, * p_src2_w, * p_src3_w; 
-    WORD8 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp; 
-    ae_int16x4 * __restrict p_src1_temp_w, * __restrict p_src2_temp_w, * __restrict p_src3_temp_w; 
+    WORD8 * p_src1, * p_src2, * p_src3;
+    WORD16 * p_src1_w, * p_src2_w, * p_src3_w;
+    WORD8 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp;
+    ae_int16x4 * __restrict p_src1_temp_w, * __restrict p_src2_temp_w, * __restrict p_src3_temp_w;
     ae_int16x4 * p_dst, *p_dst_temp;
     ae_int32x2 * p_dst_temp_w, *p_src1_32x2;
     UWORD8 *p_out_temp;
     ae_int16x4 * p_src1_scratch;
     ae_valign align_src1, align_src2, align_src3, align_dst;
-    ae_int16x4 i1_la, i2_la, i3_la;
+    ALIGN_REGISTER_TYPE i1_la, i2_la, i3_la;
+
     int i;
     WORD16 *p_dst_pad;
 
@@ -179,7 +111,7 @@ const   UWORD8* __restrict__ p_inp,
 
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)
     {
-        int pool_height, pool_width; 
+        int pool_height, pool_width;
         int start_row, end_row;
         int start_plane, end_plane;
 
@@ -197,14 +129,14 @@ const   UWORD8* __restrict__ p_inp,
         if(pool_height)
         {
             p_src1 = (WORD8 *)p_inp;
-            INCR_N_PLANE(p_src1, start_plane, plane_size); 
+            INCR_N_PLANE(p_src1, start_plane, plane_size);
             pool_height--;
 
             p_src2 = p_src1;
-            INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size); 
+            INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size);
 
             p_src3 = p_src2;
-            INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size); 
+            INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size);
 
             align_dst = AE_ZALIGN64(); // zero alignment reg
 
@@ -253,12 +185,12 @@ const   UWORD8* __restrict__ p_inp,
             if(pool_height)
             {
                 p_src2 = p_src3;
-                INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size); 
+                INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size);
 
                 p_src3 = p_src2;
-                INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size); 
+                INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size);
 
-                do 
+                do
                 {
                     p_dst_temp = p_dst;
                     p_src1_scratch = p_dst;
@@ -301,15 +233,15 @@ const   UWORD8* __restrict__ p_inp,
 
                         AE_S16_0_IP(out, (ae_int16 *)p_dst_temp, 2);
                     }
-                    
+
                     if(!pool_height)
                         break;
 
                     p_src2 = p_src3;
-                    INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size); 
+                    INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size);
 
                     p_src3 = p_src2;
-                    INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size); 
+                    INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size);
 
                 }while(1);
             }
@@ -335,18 +267,18 @@ const   UWORD8* __restrict__ p_inp,
             pool_width = end_row - start_row;
             p_out_temp = p_out + (itr_oh*out_width*input_channels) + (itr_ow*input_channels);
             p_dst = (ae_int16x4 *)((WORD16 *)p_scratch + plane_size);
-           
+
             if(pool_width)
             {
                 p_src1_w = (WORD16 *)p_scratch;
-                INCR_N_ROW(p_src1_w, start_row, input_channels); 
+                INCR_N_ROW(p_src1_w, start_row, input_channels);
                 pool_width--;
 
                 p_src2_w = p_src1_w;
-                INCR_ROW_IF_WIDTH_16(p_src2_w, pool_width, input_channels); 
+                INCR_ROW_IF_WIDTH_16(p_src2_w, pool_width, input_channels);
 
                 p_src3_w = p_src2_w;
-                INCR_ROW_IF_WIDTH_16(p_src3_w, pool_width, input_channels); 
+                INCR_ROW_IF_WIDTH_16(p_src3_w, pool_width, input_channels);
 
                 // 1st instance
                 {
@@ -399,14 +331,14 @@ const   UWORD8* __restrict__ p_inp,
                         AE_S32_L_IP(wout1, (ae_int32 *)p_dst_temp_w, sizeof(WORD32));
                     }
                 }
-                
+
                 if(pool_width)
                 {
                     p_src2_w = p_src3_w;
-                    INCR_ROW_IF_WIDTH_16(p_src2_w, pool_width, input_channels); 
+                    INCR_ROW_IF_WIDTH_16(p_src2_w, pool_width, input_channels);
 
                     p_src3_w = p_src2_w;
-                    INCR_ROW_IF_WIDTH_16(p_src3_w, pool_width, input_channels); 
+                    INCR_ROW_IF_WIDTH_16(p_src3_w, pool_width, input_channels);
 
                     /* Compare three rows per iteration */
                     do
@@ -435,7 +367,7 @@ const   UWORD8* __restrict__ p_inp,
 
                             AE_MULA16X4(wout1, wout2, i2, one);
                             AE_MULA16X4(wout1, wout2, i3, one);
-                            
+
                             AE_SA32X2_IP(wout1, align_dst, p_dst_temp_w);
                             AE_SA32X2_IP(wout2, align_dst, p_dst_temp_w);
                         }
@@ -466,10 +398,10 @@ const   UWORD8* __restrict__ p_inp,
                             break;
 
                         p_src2_w = p_src3_w;
-                        INCR_ROW_IF_WIDTH_16(p_src2_w, pool_width, input_channels); 
+                        INCR_ROW_IF_WIDTH_16(p_src2_w, pool_width, input_channels);
 
                         p_src3_w = p_src2_w;
-                        INCR_ROW_IF_WIDTH_16(p_src3_w, pool_width, input_channels); 
+                        INCR_ROW_IF_WIDTH_16(p_src3_w, pool_width, input_channels);
 
                     }while(1);
                 }
@@ -478,14 +410,14 @@ const   UWORD8* __restrict__ p_inp,
                 ae_int32x2 den_h, den_w, d_tmp32, d_out1, d_tmp32hw;
                 ae_int64 d_tmp;
                 WORD32 *p_out1;
-                
+
                 p_out1 = (WORD32 *)p_dst;
 
                 den_h = AE_MOVDA32(p_den_height[itr_oh]);
                 den_w = AE_MOVDA32(p_den_width[itr_ow]);
                 d_tmp = AE_MUL32U_LL(den_h, den_w);
-                
-                /* Max value of den_h or den_w is 0x80000000 
+
+                /* Max value of den_h or den_w is 0x80000000
                    so 1 left shift is possible without overflow */
                 d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
 
@@ -532,21 +464,22 @@ const   UWORD8* __restrict__ p_inp,
     int itr_oh, itr_ow;
     int plane_size;
     int i;
-    WORD8 * p_src1, * p_src2, * p_src3; 
-    WORD8 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp; 
+    WORD8 * p_src1, * p_src2, * p_src3;
+    WORD8 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp;
     ae_int32x2 * p_src1_scratch;
-    WORD32 * p_src1_w, * p_src2_w, * p_src3_w; 
-    ae_int32x2 * __restrict p_src1_temp_w, * __restrict p_src2_temp_w, * __restrict p_src3_temp_w; 
+    WORD32 * p_src1_w, * p_src2_w, * p_src3_w;
+    ae_int32x2 * __restrict p_src1_temp_w, * __restrict p_src2_temp_w, * __restrict p_src3_temp_w;
     ae_int32x2 * p_dst, *p_dst_temp;
     UWORD8 *p_out_temp;
     ae_valign align_src1, align_src2, align_src3, align_dst;
-    ae_int16x4 i1_la, i2_la, i3_la;
+    ALIGN_REGISTER_TYPE i1_la, i2_la, i3_la;
+
     WORD32 *p_dst_pad;
 
     plane_size = input_width * input_channels;
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)
     {
-        int pool_height, pool_width; 
+        int pool_height, pool_width;
         int start_row, end_row;
         int start_plane, end_plane;
 
@@ -564,14 +497,14 @@ const   UWORD8* __restrict__ p_inp,
         if(pool_height)
         {
             p_src1 = (WORD8 *)p_inp;
-            INCR_N_PLANE(p_src1, start_plane, plane_size); 
+            INCR_N_PLANE(p_src1, start_plane, plane_size);
             pool_height--;
 
             p_src2 = p_src1;
-            INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size); 
+            INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size);
 
             p_src3 = p_src2;
-            INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size); 
+            INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size);
 
             align_dst = AE_ZALIGN64(); // zero alignment reg
             /* 1st instance: Add three rows per iteration */
@@ -619,7 +552,7 @@ const   UWORD8* __restrict__ p_inp,
                     AE_MUL16X4 (wout1, wout2, i1, one);
                     AE_MULA16X4(wout1, wout2, i2, one);
                     AE_MULA16X4(wout1, wout2, i3, one);
-                        
+
                     AE_S32_L_IP(wout1, (ae_int32 *)p_dst_temp, sizeof(WORD32));
                 }
             }
@@ -627,12 +560,12 @@ const   UWORD8* __restrict__ p_inp,
             if(pool_height)
             {
                 p_src2 = p_src3;
-                INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size); 
+                INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size);
 
                 p_src3 = p_src2;
-                INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size); 
+                INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size);
 
-                do 
+                do
                 {
                     p_dst_temp = p_dst;
                     p_src1_scratch = p_dst;
@@ -675,7 +608,7 @@ const   UWORD8* __restrict__ p_inp,
 
                         wout1 = AE_MOVDA32(p_w[i]);
                         wout2 = wout1;
-                        
+
                         i2 = AE_MOVDA16(((UWORD8 *)p_src2_temp)[i] );
                         i3 = AE_MOVDA16(((UWORD8 *)p_src3_temp)[i] );
 
@@ -684,15 +617,15 @@ const   UWORD8* __restrict__ p_inp,
 
                         AE_S32_L_IP(wout1, (ae_int32 *)p_dst_temp, sizeof(WORD32));
                     }
-                    
+
                     if(!pool_height)
                         break;
 
                     p_src2 = p_src3;
-                    INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size); 
+                    INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size);
 
                     p_src3 = p_src2;
-                    INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size); 
+                    INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size);
 
                 }while(1);
             }
@@ -703,7 +636,7 @@ const   UWORD8* __restrict__ p_inp,
             p_dst_pad = (WORD32 *)p_scratch;
             for(i = 0; i < plane_size; i++)
             {
-                p_dst_pad[i] = 0;  
+                p_dst_pad[i] = 0;
             }
         }
 
@@ -718,18 +651,18 @@ const   UWORD8* __restrict__ p_inp,
             pool_width = end_row - start_row;
             p_out_temp = p_out + (itr_oh*out_width*input_channels) + (itr_ow*input_channels);
             p_dst = (ae_int32x2 *)((WORD32 *)p_scratch + plane_size);
-           
+
             if(pool_width)
             {
                 p_src1_w = (WORD32 *)p_scratch;
-                INCR_N_ROW(p_src1_w, start_row, input_channels); 
+                INCR_N_ROW(p_src1_w, start_row, input_channels);
                 pool_width--;
 
                 p_src2_w = p_src1_w;
-                INCR_ROW_IF_WIDTH_32(p_src2_w, pool_width, input_channels); 
+                INCR_ROW_IF_WIDTH_32(p_src2_w, pool_width, input_channels);
 
                 p_src3_w = p_src2_w;
-                INCR_ROW_IF_WIDTH_32(p_src3_w, pool_width, input_channels); 
+                INCR_ROW_IF_WIDTH_32(p_src3_w, pool_width, input_channels);
 
                 /* Add three rows per iteration */
                 do
@@ -766,9 +699,9 @@ const   UWORD8* __restrict__ p_inp,
                     {
                         ae_int32x2 i1, i2, i3, out;
 
-                        i1 = AE_MOVDA32(((WORD16 *)p_src2_temp_w)[i]);
-                        i2 = AE_MOVDA32(((WORD16 *)p_src2_temp_w)[i]);
-                        i3 = AE_MOVDA32(((WORD16 *)p_src3_temp_w)[i]);
+                        i1 = AE_MOVDA32(((WORD32 *)p_src2_temp_w)[i]);
+                        i2 = AE_MOVDA32(((WORD32 *)p_src2_temp_w)[i]);
+                        i3 = AE_MOVDA32(((WORD32 *)p_src3_temp_w)[i]);
 
                         out = AE_ADD32S(i2, i2);
                         out = AE_ADD32S(out, i3);
@@ -783,10 +716,10 @@ const   UWORD8* __restrict__ p_inp,
                     p_src1_w = (WORD32 *)p_dst;
 
                     p_src2_w = p_src3_w;
-                    INCR_ROW_IF_WIDTH_32(p_src2_w, pool_width, input_channels); 
+                    INCR_ROW_IF_WIDTH_32(p_src2_w, pool_width, input_channels);
 
                     p_src3_w = p_src2_w;
-                    INCR_ROW_IF_WIDTH_32(p_src3_w, pool_width, input_channels); 
+                    INCR_ROW_IF_WIDTH_32(p_src3_w, pool_width, input_channels);
 
                 }while(1);
 
@@ -801,7 +734,7 @@ const   UWORD8* __restrict__ p_inp,
                 den_w = AE_MOVDA32(p_den_width[itr_ow]);
                 d_tmp = AE_MUL32U_LL(den_h, den_w);
 
-                /* Max value of den_h or den_w is 0x80000000 
+                /* Max value of den_h or den_w is 0x80000000
                    so 1 left shift is possible without overflow */
 
                 d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
@@ -825,5 +758,4 @@ const   UWORD8* __restrict__ p_inp,
     }
 }
 
-#endif /* #if !HAVE_VFPU */
 

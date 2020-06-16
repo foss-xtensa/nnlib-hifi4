@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -21,7 +21,8 @@
 ******************************************************************************/
 #include <xtensa/config/core-isa.h>
 #include "xt_manage_buffers.h"
-#define COLS_PER_ROW 32  
+#include <math.h>
+#define COLS_PER_ROW 32
 #define DBG_PRINT printf
 //#define DBG_PRINT(...) //printf
 
@@ -34,18 +35,18 @@ int  RAND(void)
   {
     srand(1);
     flag=0;
-  } 
+  }
 
   signed_random = 2*(rand() - ((long long)RAND_MAX + 1)/2);
   last_bit = rand() & 1;
 
   if(signed_random > 0)
   {
-     return signed_random - last_bit; 
+     return signed_random - last_bit;
   }
   else
   {
-     return signed_random + last_bit; 
+     return signed_random + last_bit;
   }
 }
 
@@ -54,7 +55,7 @@ buf1D_t *create_buf1D(int len, int precision)
   int size_in_bytes;
   buf1D_t *pbuf = malloc(sizeof(buf1D_t));
   if(NULL == pbuf)
-  { 
+  {
     DBG_PRINT("unable to allocate structure pbuf size(%d )\n", (int) sizeof(buf2D_t));
     return NULL;
   }
@@ -91,7 +92,7 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
   int size_in_bytes;
 
   buf2D_t *pbuf = malloc(sizeof(buf2D_t));
-  if(NULL == pbuf) 
+  if(NULL == pbuf)
   {
     DBG_PRINT("unable to allocate structure pbuf size(%d )\n", (int)sizeof(buf2D_t));
     return NULL;
@@ -121,8 +122,8 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
   // We need to ensure the adjacent rows fall in different banks!
   {
     int width_in_bytes = (pbuf->bytes_per_element * cols);
-    int bank_offset = width_in_bytes & XCHAL_DATA_WIDTH; 
-    if(  (1 == pad ) && 
+    int bank_offset = width_in_bytes & XCHAL_DATA_WIDTH;
+    if(  (1 == pad ) &&
         (rows > 1)  &&
         (0== bank_offset))
     {
@@ -180,7 +181,7 @@ int interleave_buf1D(buf1D_t *pbuf, buf1D_t *pbuf_interleaved, int length)
        case 8: numbytes = sizeof(char);        break;
       case 16: numbytes = sizeof(short int);   break;
       case 32: numbytes = sizeof(int);         break;
-      case 64: numbytes = sizeof(double);     break;    
+      case 64: numbytes = sizeof(double);     break;
     }
 
     ptr2 = pbuf->p+numbytes * length * 2;
@@ -189,7 +190,7 @@ int interleave_buf1D(buf1D_t *pbuf, buf1D_t *pbuf_interleaved, int length)
     {
       ptr3[j] = ptr1[i]; j++;
       ptr3[j] = ptr1[i+1]; j++;
-      
+
       ptr3[j] = ptr2[i]; j++;
       ptr3[j] = ptr2[i+1]; j++;
 
@@ -205,7 +206,7 @@ int deinterleave_buf1D(buf1D_t *pbuf, buf1D_t *pbuf_deinterleaved, int length)
     int * ptr3 = pbuf->p;
     int j=0;
     int i=0;
-    
+
     switch(pbuf->precision)
     {
       case -1: numbytes = sizeof(float);       break;
@@ -213,9 +214,9 @@ int deinterleave_buf1D(buf1D_t *pbuf, buf1D_t *pbuf_deinterleaved, int length)
        case 8: numbytes = sizeof(char);        break;
       case 16: numbytes = sizeof(short int);   break;
       case 32: numbytes = sizeof(int);         break;
-      case 64: numbytes = sizeof(double);     break;    
+      case 64: numbytes = sizeof(double);     break;
     }
-    
+
     ptr2 = pbuf_deinterleaved->p + numbytes*length*2;
 
     for (i=0;i< 2*length ;i+=2)
@@ -245,7 +246,7 @@ int interleave_buf1D_real(buf1D_t *pbuf, buf1D_t *pbuf_interleaved, int length)
        case 8: numbytes = sizeof(char);        break;
       case 16: numbytes = sizeof(short int);   break;
       case 32: numbytes = sizeof(int);         break;
-      case 64: numbytes = sizeof(double);     break;    
+      case 64: numbytes = sizeof(double);     break;
     }
 
     ptr2 = pbuf->p+numbytes * length;
@@ -266,7 +267,7 @@ int deinterleave_buf1D_real(buf1D_t *pbuf, buf1D_t *pbuf_deinterleaved, int leng
     int * ptr3 = pbuf->p;
     int j=0;
     int i=0;
-    
+
     switch(pbuf->precision)
     {
       case -1: numbytes = sizeof(float);       break;
@@ -274,9 +275,9 @@ int deinterleave_buf1D_real(buf1D_t *pbuf, buf1D_t *pbuf_deinterleaved, int leng
       case  8: numbytes = sizeof(char);        break;
       case 16: numbytes = sizeof(short int);   break;
       case 32: numbytes = sizeof(int);         break;
-      case 64: numbytes = sizeof(double);      break;    
+      case 64: numbytes = sizeof(double);      break;
     }
-    
+
     ptr2 = pbuf_deinterleaved->p + numbytes*length;
 
     for (i=0;i< length ;i++)
@@ -303,7 +304,7 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
         }
       }
       break;
-    case ASYM8_TYPE: 
+    case ASYM8_TYPE:
       {
         char *p = (char *) ptr_buf1D->p;
         for (i = 0; i < ptr_buf1D->length; i++)
@@ -312,7 +313,7 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
         }
       }
       break;
-    case 8: 
+    case 8:
       {
         char *p = (char *) ptr_buf1D->p;
         for (i = 0; i < ptr_buf1D->length; i++)
@@ -339,7 +340,7 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
         }
       }
       break;
-    case 64: 
+    case 64:
       {
         long long *p = (long long *) ptr_buf1D->p;
         for (i = 0; i < ptr_buf1D->length; i++)
@@ -348,7 +349,7 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
         }
       }
       break;
-    default: 
+    default:
       printf("Error in setting random input for vector - Unknown precision %d\n",ptr_buf1D->precision);
       return -1;
   }
@@ -372,7 +373,7 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
-    case ASYM8_TYPE: 
+    case ASYM8_TYPE:
       {
         char *p = (char *) ptr_buf2D->p;
         for (i = 0; i < ptr_buf2D->rows * ptr_buf2D->row_offset; i++)
@@ -381,7 +382,7 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
-    case 8: 
+    case 8:
       {
         char *p = (char *) ptr_buf2D->p;
         for (i = 0; i < ptr_buf2D->rows * ptr_buf2D->row_offset; i++)
@@ -408,7 +409,7 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
-    case 64: 
+    case 64:
       {
         long long *p = (long long *) ptr_buf2D->p;
         for (i = 0; i < ptr_buf2D->rows * ptr_buf2D->row_offset; i++)
@@ -417,7 +418,7 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
-    default: 
+    default:
       printf("Error in setting random input for matrix - Unknown precision %d\n",ptr_buf2D->precision);
       return -1;
   }
@@ -511,13 +512,66 @@ static int verify_bitexact(void *p_ref, void *p_out, int len)
   return 0;
 }
 
+static float machine_eps(float value, int sum_length)
+{
+    float epsilon = 1.19e-07;
+    float eps, eps_sum;
+    int eps_exp;
+    frexp(value, &eps_exp);
+
+
+    if(eps_exp > 0){
+        eps = epsilon * eps_exp;
+        eps_sum = ((sum_length+1)/2)*eps + eps;
+    }
+    else if(eps_exp < 0){
+        eps = epsilon /(eps_exp * (-1));
+        eps_sum = ((sum_length+1)/2)*eps + eps;
+    }
+    else
+        eps = epsilon;
+        eps_sum = ((sum_length+1)/2)*eps + eps;
+
+    return eps_sum;
+}
+
+static int verify_epsf32(void *p_ref, void *p_out, int len, int sum_length)
+{
+  int i;
+  float *p_in1 = (float *)p_ref;
+  float *p_in2 = (float *)p_out;
+  float ref_lo, ref_hi;
+  float eps;
+
+  for(i = 0; i < len; i++)
+  {
+    eps = machine_eps(p_in1[i], sum_length);
+    ref_lo = p_in1[i] - eps;
+    ref_hi = p_in1[i] + eps;
+    if(p_in2[i] < ref_lo || p_in2[i] > ref_hi) {return -1;}
+  }
+  return 0;
+}
 /*
  * Compare 1D buffers.
  * Return 1 is match else 0
  */
-int compare_buf1D(buf1D_t *pbuf_ref, buf1D_t *pbuf_out, int method)
+int compare_buf1D(buf1D_t *pbuf_ref, buf1D_t *pbuf_out, int method, int precision, int sum_length)
 {
-   if(method == 1) /* Bitexact match */
+  if(method == 1 && (precision == -1))/*For f32 cases only*/
+   {
+       int length = pbuf_ref->length;
+       if(verify_epsf32(pbuf_ref->p, pbuf_out->p, length, sum_length))
+       {
+           return 0;
+       }
+       else
+       {
+           return 1;
+       }
+
+   }
+  if(method == 1 && (precision != -1)) /* Bitexact match */
    {
        int size_in_bytes = (pbuf_ref->bytes_per_element * pbuf_ref->length);
        if(verify_bitexact(pbuf_ref->p, pbuf_out->p, size_in_bytes))
@@ -529,7 +583,7 @@ int compare_buf1D(buf1D_t *pbuf_ref, buf1D_t *pbuf_out, int method)
            return 1;
        }
    }
-      
+
    return 1;
 }
 
@@ -554,7 +608,7 @@ int compare_buf2D(buf2D_t *pbuf_ref, buf2D_t *pbuf_out, int method)
            return 1;
        }
    }
-      
+
    return 0;
 }
 

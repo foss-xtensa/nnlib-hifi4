@@ -51,10 +51,10 @@ else
     include $(CONFIGDIR)/misc/hostenv.mk
     CFLAGS += -Wall 
     ifeq ($(WARNING_AS_ERROR),1)
-    CFLAGS += -Werror
-	endif
+      CFLAGS += -Werror
+    endif
     CFLAGS += -mno-mul16 -mno-mul32 -mno-div32 -fsigned-char -fno-exceptions -mlongcalls -INLINE:requested -mcoproc -fno-zero-initialized-in-bss
-	CFLAGS += -mtext-section-literals 
+    CFLAGS += -mtext-section-literals 
 endif
 
 OBJDIR = objs$(S)$(CODEC_NAME)$(DETECTED_CORE)
@@ -70,6 +70,7 @@ ALL_OBJS := \
   $(OBJ_LIBO2OBJS) \
   $(OBJ_LIBOSOBJS) \
   $(OBJ_LIBO2CPPOBJS) \
+  $(OBJ_LIBOSCPPOBJS) \
   $(OBJ_LIBO2CCOBJS) \
 
 ALL_DEPS := $(foreach dep,$(ALL_OBJS),${dep:%.o=%.d})
@@ -95,21 +96,23 @@ ifeq ($(DEBUG),1)
   NOSTRIP = 1
   OPT_O2 = -O0 -g 
   OPT_OS = -O0 -g
+  OPT_O0 = -O0 -g 
   CFLAGS += -DDEBUG
 else
 ifeq ($(CPU), x86)
   OPT_O2 = -O2 -g 
   OPT_OS = -O2 -g 
+  OPT_O0 = -O0 -g 
 else
   OPT_O2 = -O3 -LNO:simd 
   OPT_OS = -Os 
+  OPT_O0 = -O0 
   CFLAGS += -DNDEBUG=1
 endif
 endif
 
 
-all: $(OBJDIR) $(LIB) 
-$(CODEC_NAME): $(OBJDIR) $(LIB) 
+all: $(OBJDIR) $(LIB)
 
 install: $(LIB)
 	@echo "Installing $(LIB)"
@@ -148,15 +151,15 @@ $(OBJ_LIBOSOBJS): $(OBJDIR)/%.o: %.c
 	
 $(OBJ_LIBO2CPPOBJS): $(OBJDIR)/%.o: %.cpp
 	@echo "Compiling $<"
-	$(QUIET) $(CXX) -o $@ $(OPT_O2) $(CFLAGS) $(INCLUDES) -c $<
+	$(QUIET) $(CXX) -o $@ $(OPT_O0) $(CFLAGS) -std=c++11 $(INCLUDES) -c $<
 	
 $(OBJ_LIBO2CCOBJS): $(OBJDIR)/%.o: %.cc
 	@echo "Compiling $<"
-	$(QUIET) $(CXX) -o $@ $(OPT_O2) $(CFLAGS) $(INCLUDES) -c $<
+	$(QUIET) $(CXX) -o $@ $(OPT_O0) $(CFLAGS) -std=c++11 $(INCLUDES) -c $<
 	
 $(OBJ_LIBOSCPPOBJS): $(OBJDIR)/%.o: %.cpp
 	@echo "Compiling $<"
-	$(QUIET) $(CXX) -o $@ $(OPT_OS) $(CFLAGS) $(INCLUDES) -c $<
+	$(QUIET) $(CXX) -o $@ $(OPT_O0) $(CFLAGS) -std=c++11 $(INCLUDES) -c $<
 	
 $(LIB): %.a: $(OBJDIR)/%.o
 	@echo "Creating Library $@"

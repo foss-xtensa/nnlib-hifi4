@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -76,8 +76,6 @@ void prefix_outdir_name(char *out_file)
 #if defined(__cplusplus)
 extern "C" {
 #endif
-int preprocessor_test(void *in, void *out);
-int micro_speech_test(void *in, void *out);
 int frontendprocess_inference(void *in, void *out);
 #if defined(__cplusplus)
 }
@@ -93,56 +91,68 @@ int xa_tf_micro_lite_main_process(int argc, char **argv)
   short *input=NULL;
   short *output=NULL;
   FILE *fp, *fout;
- 
+
   if(argc<3)
   {
     printf("Usage: %s <input-wav-file.wav> <test_result.txt>\n", argv[0]);
     return -1;
   }
 
-  strncpy(pb_input_file_name, argv[1],MAX_CMD_LINE_LENGTH); 
+  strncpy(pb_input_file_name, argv[1],MAX_CMD_LINE_LENGTH);
   prefix_inpdir_name(pb_input_file_name);
   fp = fopen(pb_input_file_name, "rb");
   if (fp==NULL) {
       printf("Unable to open file '%s'\n", pb_input_file_name);
       return -1;
-  }         
+  }
 
-  strncpy(pb_output_file_name, argv[2],MAX_CMD_LINE_LENGTH); 
+  strncpy(pb_output_file_name, argv[2],MAX_CMD_LINE_LENGTH);
   prefix_outdir_name(pb_output_file_name);
   fout = fopen(pb_output_file_name, "w");
   if (fout==NULL) {
       printf("Unable to open file '%s'\n", pb_output_file_name);
       return -1;
-  }         
+  }
 
-  fseek(fp, 0, SEEK_SET);       
-  input = (short *)malloc(SAMPLE_RATE*sizeof(short)); 
+  fseek(fp, 0, SEEK_SET);
+  input = (short *)malloc(SAMPLE_RATE*sizeof(short));
   output = (short *)malloc(SAMPLE_RATE*sizeof(short));
   if(input==NULL || output==NULL)
-  { 
+  {
       printf("memory allocation failed\n");
       return -1;
   }
-  fread(input, SAMPLE_RATE, sizeof(short), fp); 
+  fread(input, SAMPLE_RATE, sizeof(short), fp);
 
   printf("frontend inference running\n");
   frontendprocess_inference(input, output);
 
-  printf("frontend running\n");
-  preprocessor_test(input, output);
-  
-  printf("inference running\n");
-  micro_speech_test(input, output);
-  
-  printf("silence %d\n", output[SILENCE_INDEX]);
-  printf("unknown %d\n", output[UNKNOWN_INDEX]);
-  printf("yes %d\n", output[YES_INDEX]);
-  printf("no %d\n", output[NO_INDEX]);
-  fprintf(fout, "silence %d\n", output[SILENCE_INDEX]);
-  fprintf(fout, "unknown %d\n", output[UNKNOWN_INDEX]);
-  fprintf(fout, "yes %d\n", output[YES_INDEX]);
-  fprintf(fout, "no %d\n", output[NO_INDEX]);
+  const int kSilenceIndex = 0;
+  const int kUnknownIndex = 1;
+
+  const int kYesIndex = 2;
+  const int kNoIndex = 3;
+  const int kUpIndex = 4;
+  const int kDownIndex = 5;
+  const int kLeftIndex = 6;
+  const int kRightIndex = 7;
+  const int kOnIndex = 8;
+  const int kOffIndex = 9;
+  const int kStopIndex = 10;
+  const int kGoIndex = 11;
+
+  fprintf(fout, "silence %d\n", output[kSilenceIndex]);
+  fprintf(fout, "unknown %d\n", output[kUnknownIndex]);
+  fprintf(fout, "yes %d\n", output[kYesIndex]);
+  fprintf(fout, "no %d\n", output[kNoIndex]);
+  fprintf(fout, "up %d\n", output[kUpIndex]);
+  fprintf(fout, "down %d\n", output[kDownIndex]);
+  fprintf(fout, "left %d\n", output[kLeftIndex]);
+  fprintf(fout, "right %d\n", output[kRightIndex]);
+  fprintf(fout, "on %d\n", output[kOnIndex]);
+  fprintf(fout, "off %d\n", output[kOffIndex]);
+  fprintf(fout, "stop %d\n", output[kStopIndex]);
+  fprintf(fout, "go %d\n", output[kGoIndex]);
 
   free(input);
   free(output);

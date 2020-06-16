@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -49,7 +49,7 @@ static void avgpool_16(
     ae_int16x4 * p_src1, * p_src2;
     ae_int16x4 * __restrict p_src1_temp, * __restrict p_src2_temp;
     ae_int32x2 * p_wsrc1, * p_wsrc2;
-    ae_int32x2 * __restrict p_wsrc1_temp, * __restrict p_wsrc2_temp; 
+    ae_int32x2 * __restrict p_wsrc1_temp, * __restrict p_wsrc2_temp;
     ae_int32x2 *p_dst, *p_dst_temp;
     ae_valign align_src1, align_src2;
     ae_valign align_wsrc1, align_wsrc2;
@@ -66,7 +66,7 @@ static void avgpool_16(
         p_dst_pad[i] = 0;
     }
 
-    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width); 
+    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width);
     right_pad = total_out_width - (x_padding + input_width);
 
     /* Right padding of temporary output with min_value,
@@ -79,7 +79,7 @@ static void avgpool_16(
 
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)
     {
-        int pool_height, pool_width; 
+        int pool_height, pool_width;
         int start_row, end_row;
 
         /* Pool height processing */
@@ -250,7 +250,7 @@ static void avgpool_16(
             den_w = *(ae_int32 *)(&p_den_width[itr_ow]);
             d_out1 = *(ae_int32 *)(&ptr_out1[itr_ow*x_stride]);
             d_tmp = AE_MUL32U_LL(den_h, den_w);
-            /* Max value of den_h or den_w is 0x80000000 
+            /* Max value of den_h or den_w is 0x80000000
             so 1 left shift is possible without overflow */
             d_tmp32 = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
             d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
@@ -284,8 +284,8 @@ WORD32 xa_nn_avgpool_16(
     XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
     XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
     /* Pointer alignment checks */
-    XA_NNLIB_ARG_CHK_ALIGN(p_out, ALIGNMENT, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_inp, ALIGNMENT, -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD16), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD16), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
@@ -296,64 +296,137 @@ WORD32 xa_nn_avgpool_16(
     XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
+#ifndef NNLIB_V2
     XA_NNLIB_ARG_CHK_COND((out_data_format != 1), -1);
+#else
+    XA_NNLIB_ARG_CHK_COND((out_data_format != 0) && (out_data_format != 1), -1);
+#endif
     /* Implementation dependent checks */
     XA_NNLIB_ARG_CHK_COND((kernel_height > 256), -1);
     XA_NNLIB_ARG_CHK_COND((kernel_width > 256), -1);
 
 #ifdef NNLIB_V2
-    XA_NNLIB_ARG_CHK_COND((inp_data_format != 1), -1);
-    
+    XA_NNLIB_ARG_CHK_COND((inp_data_format != 0) && (inp_data_format != 1), -1);
     // Different I/O data formats (not supported!)
     XA_NNLIB_ARG_CHK_COND((out_data_format != inp_data_format), -1);
-#endif    
+#endif
 
-    xa_nn_avgpool_init(16,
-                       p_scratch,
-                       input_width,
-                       kernel_height,
-                       kernel_width,
-                       x_stride,
-                       y_stride,
-                       x_padding,
-                       out_height,
-                       out_width);
-
-    xa_nn_avgpool_state_t *p_state = (xa_nn_avgpool_state_t *)p_scratch;
-    int itr_ic, itr_oh, itr_ow;
-    WORD16 *pt_inp, *pt_out;
-    WORD32 *p_tmp_out = (WORD32 *)(p_state->p_tmp_out);
-
-    /* Calculate denominators for division */
-    int kernel_x_start, kernel_x_end, kernel_y_start, kernel_y_end;
-    for(itr_oh = 0; itr_oh < out_height; itr_oh++)
+    if((input_channels == 1) || (out_data_format == 1))
     {
-        kernel_y_start = itr_oh*y_stride - y_padding;
-        kernel_y_end = kernel_y_start + kernel_height;
-        LIMIT(kernel_y_start, 0, input_height)
-        LIMIT(kernel_y_end, 0, input_height)
-        p_state->p_den_height[itr_oh] = inv_256_tbl[(kernel_y_end - kernel_y_start)];
+        xa_nn_avgpool_init(16,
+                p_scratch,
+                input_width,
+                kernel_height,
+                kernel_width,
+                x_stride,
+                y_stride,
+                x_padding,
+                out_height,
+                out_width);
+
+        xa_nn_avgpool_state_t *p_state = (xa_nn_avgpool_state_t *)p_scratch;
+        int itr_ic, itr_oh, itr_ow;
+        WORD16 *pt_inp, *pt_out;
+        WORD32 *p_tmp_out = (WORD32 *)(p_state->p_tmp_out);
+
+        /* Calculate denominators for division */
+        int kernel_x_start, kernel_x_end, kernel_y_start, kernel_y_end;
+        for(itr_oh = 0; itr_oh < out_height; itr_oh++)
+        {
+            kernel_y_start = itr_oh*y_stride - y_padding;
+            kernel_y_end = kernel_y_start + kernel_height;
+            LIMIT(kernel_y_start, 0, input_height)
+                LIMIT(kernel_y_end, 0, input_height)
+                p_state->p_den_height[itr_oh] = inv_256_tbl[(kernel_y_end - kernel_y_start)];
+        }
+        for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+        {
+            kernel_x_start = itr_ow*x_stride - x_padding;
+            kernel_x_end = kernel_x_start + kernel_width;
+            LIMIT(kernel_x_start, 0, input_width)
+                LIMIT(kernel_x_end, 0, input_width)
+                p_state->p_den_width[itr_ow] = inv_256_tbl[(kernel_x_end - kernel_x_start)];
+        }
+
+        for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
+        {
+            pt_inp = &p_inp[itr_ic * input_height * input_width];
+            pt_out = &p_out[itr_ic * out_height * out_width];
+
+            avgpool_16(pt_out
+                    ,pt_inp
+                    ,p_state->p_den_height
+                    ,p_state->p_den_width
+                    ,input_height
+                    ,input_width
+                    ,kernel_height
+                    ,kernel_width
+                    ,x_stride
+                    ,y_stride
+                    ,x_padding
+                    ,y_padding
+                    ,out_height
+                    ,out_width
+                    ,p_tmp_out
+                    );
+        }
     }
-    for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+#ifdef NNLIB_V2
+    else
     {
-        kernel_x_start = itr_ow*x_stride - x_padding;
-        kernel_x_end = kernel_x_start + kernel_width;
-        LIMIT(kernel_x_start, 0, input_width)
-        LIMIT(kernel_x_end, 0, input_width)
-        p_state->p_den_width[itr_ow] = inv_256_tbl[(kernel_x_end - kernel_x_start)];
-    }
+        int i;
+        void *p_scratch_aligned;
+        WORD8 *p_zeros, *p_zeros_mem;
+        WORD32 *p_rec_den, *p_den_height, *p_den_width;
+        WORD32 *p_s;
+        int kernel_x_start, kernel_x_end, kernel_y_start, kernel_y_end;
+        int cw_plane_size, zero_mem_bytes;
 
-    for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
-    {
-        pt_inp = &p_inp[itr_ic * input_height * input_width];
-        pt_out = &p_out[itr_ic * out_height * out_width];
 
-        avgpool_16(pt_out
-                ,pt_inp
-                ,p_state->p_den_height
-                ,p_state->p_den_width
+        cw_plane_size = input_width * input_channels;
+        p_scratch_aligned = (void *)ALIGN_PTR(p_scratch, ALIGNMENT);
+
+        p_rec_den = (WORD32 *)p_scratch_aligned;
+        p_den_height = p_rec_den;
+        for(i = 0; i < out_height; i++)
+        {
+            kernel_y_start = i*y_stride - y_padding;
+            kernel_y_end = kernel_y_start + kernel_height;
+            LIMIT(kernel_y_start, 0, input_height)
+            LIMIT(kernel_y_end, 0, input_height)
+            *p_rec_den++ = inv_256_tbl[(kernel_y_end - kernel_y_start)];
+        }
+
+        p_den_width = (WORD32 *)((WORD8 *)p_scratch_aligned + ALIGNED_SIZE(sizeof(WORD32)*out_height, ALIGNMENT));
+        p_rec_den = (WORD32 *)p_den_width;
+
+        for(i = 0; i < out_width; i++)
+        {
+            kernel_x_start = i*x_stride - x_padding;
+            kernel_x_end = kernel_x_start + kernel_width;
+            LIMIT(kernel_x_start, 0, input_width)
+            LIMIT(kernel_x_end, 0, input_width)
+            *p_rec_den++ = inv_256_tbl[(kernel_x_end - kernel_x_start)];
+        }
+
+        p_s = (WORD32 *)((WORD8 *)p_den_width + ALIGNED_SIZE(sizeof(WORD32)*out_width, ALIGNMENT));
+        p_rec_den = p_s;
+
+        p_zeros = (WORD8 *)((WORD8 *)p_s + ALIGNED_SIZE(sizeof(WORD32)*cw_plane_size, ALIGNMENT));
+        p_zeros = (WORD8 *)((WORD8 *)p_zeros + ALIGNED_SIZE(sizeof(WORD32)*input_channels, ALIGNMENT));
+        p_zeros_mem = p_zeros;
+        zero_mem_bytes = XT_MAX(sizeof(WORD16)*cw_plane_size, sizeof(WORD32)*input_channels);
+
+        for(i = 0; i < zero_mem_bytes; i++)
+        {
+            *p_zeros++ = 0;
+        }
+
+        xa_nn_avgpool_16_hwc_32(p_out
+                ,p_inp
                 ,input_height
                 ,input_width
+                ,input_channels
                 ,kernel_height
                 ,kernel_width
                 ,x_stride
@@ -362,9 +435,13 @@ WORD32 xa_nn_avgpool_16(
                 ,y_padding
                 ,out_height
                 ,out_width
-                ,p_tmp_out
-                );
+                ,p_s
+                ,(void *)p_zeros_mem
+                ,p_den_height
+                ,p_den_width);
     }
+#endif
+
     return 0;
 }
 

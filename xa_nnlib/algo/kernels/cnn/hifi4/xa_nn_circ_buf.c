@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -25,6 +25,7 @@
 #include "xa_nn_circ_buf.h"
 #include "xa_nnlib_common_macros.h"
 
+#include "xa_nnlib_common.h"
 int xa_nn_circ_buf_nchw_getsize(
     WORD32 bytewidth,
     WORD32 input_width,
@@ -470,7 +471,10 @@ void xa_nn_circ_buf_nhwc_add_cols(
                     for(k = 0; k < input_channels; k++)
                     {
                         WORD8 val = p_src1[((i-top_padding)*input_width + j)*input_channels + k];
-                        memset(&p_dst1[k*channels_multiplier], val, channels_multiplier);
+                        for(cm = 0; cm < channels_multiplier; cm++)
+                        {
+                            p_dst1[k*channels_multiplier + cm] = val;
+                        }
                     }
                     AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*bytewidth);
                 }
@@ -613,7 +617,10 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
                     for(k = 0; k < input_channels; k++)
                     {
                         WORD8 val = p_src1[((i-top_padding)*input_width + j)*input_channels + k];
-                        memset(&p_dst1[k*channels_multiplier], val, channels_multiplier);
+                        for(cm = 0; cm < channels_multiplier; cm++)
+                        {
+                            p_dst1[k*channels_multiplier + cm] = val;
+                        }
                     }
                     AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*bytewidth);
                 }

@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -22,9 +22,19 @@
 #ifndef __STANDARDS_H__
 #define __STANDARDS_H__
 
+#include <xtensa/config/core-isa.h>
+
 #if defined(__cplusplus)
 extern "C"
 {
+#endif
+
+#if ( (XCHAL_HAVE_HIFI4_VFPU) )
+#define HIFI_VFPU 1
+#elif ( (XCHAL_HAVE_HIFI3Z_VFPU) )
+#define HIFI_VFPU 1
+#else
+#define HIFI_VFPU 0
 #endif
 
 typedef double flt64;
@@ -61,7 +71,7 @@ typedef enum _xa_nnlib_prec_t
   PREC_F32   = -1,
   PREC_F16   = -2,
   PREC_ASYM8 = -3
-    
+
 } xa_nnlib_prec_t;
 
 typedef enum _xa_nnlib_shape_type_t

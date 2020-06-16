@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -56,7 +56,7 @@ using ::android::hidl::allocator::V1_0::IAllocator;
 namespace android {
 namespace nn {
 
-#ifndef HIFI_BUILD  // Library part 
+#ifndef HIFI_BUILD  // Library part
 const char kVLogPropKey[] = "debug.nn.vlog";
 int vLogMask = ~0;
 
@@ -480,13 +480,14 @@ int validateOperation(ANeuralNetworksOperationType opType,
         return n;
     }
 
-    auto logInvalidInOutNumber = [opType, inputCount, outputCount](int expIn, int expOut) {
 #ifndef HIFI_BUILD
+    auto logInvalidInOutNumber = [opType, inputCount, outputCount](int expIn, int expOut) {
         LOG(ERROR) << "Invalid number of input operands ("
                    << inputCount << ", expected " << expIn << ") or output operands ("
                    << outputCount << ", expected " << expOut << ") for operation "
                    << kOperationNames[opType];
 #endif //HIFI_BUILD
+    auto logInvalidInOutNumber = [](int expIn, int expOut) {
     };
 
     switch (opType) {

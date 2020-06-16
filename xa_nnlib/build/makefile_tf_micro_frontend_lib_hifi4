@@ -1,0 +1,127 @@
+#
+# Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+# 
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to use this Software with Cadence processor cores only and 
+# not with any other processors and platforms, subject to
+# the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+
+
+.PHONY: all install clean
+
+ROOTDIR = ..
+CODEC_NAME = tf_micro_frontend_lib
+TFDIR = test/tf_micro_lite
+NOSTRIP=1
+RELEASE_BUILD?=1
+
+CFLAGS += \
+      -DMODEL_INT16 \
+      -DNNLIB_V2 \
+      -DEIGEN_NO_MALLOC
+
+CFLAGS += -Dhifi4
+
+ifeq ($(DISABLE_ARG_CHK), 1)
+CFLAGS += -DDISABLE_ARG_CHK
+endif
+
+INCLUDES = \
+
+# For TF Micro Lite
+INCLUDES += \
+    -I$(ROOTDIR)/$(TFDIR) \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/c \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/experimental/microfrontend/lib \
+    -I$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/kissfft \
+
+
+TFMF_SRCDIRS += \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/experimental/microfrontend/lib \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/kissfft/tools \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/tools/make/downloads/kissfft \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/c \
+
+
+vpath %.cpp $(TFMF_SRCDIRS)
+vpath %.c   $(TFMF_SRCDIRS)
+vpath %.cc  $(TFMF_SRCDIRS)
+
+
+#TFMFCOBJS = \
+    fft_cplx_stages_S3_32x32_hifi3.o \
+    fft_cplx_stages_S2_32x32_hifi3.o \
+    fft_cplx32x32_hifi3.o \
+    fft_real_twd512_32x32_tbl.o \
+    fft_real32x32_hifi3.o \
+    vec_bexp32_hifi3.o \
+    fft_twd256_32x32_tbl.o
+
+TFMFCOBJS += \
+    common.o \
+    frontend.o \
+    frontend_util.o \
+    window.o \
+    window_util.o \
+    filterbank.o \
+    filterbank_util.o \
+    noise_reduction.o \
+    noise_reduction_util.o \
+    pcan_gain_control.o \
+    pcan_gain_control_util.o \
+    log_scale.o \
+    log_scale_util.o \
+    log_lut.o \
+    kiss_fftr.o \
+    kiss_fft.o \
+
+TFMFCCOBJS += \
+    fft_util.o \
+    fft.o \
+
+TFMFCPPOBJS += \
+
+LIBO2OBJS =
+LIBOSOBJS =
+LIBOSCPPOBJS =
+
+LIBO2OBJS = $(TFMFCOBJS)
+LIBO2CPPOBJS = $(TFMFCPPOBJS)
+ifeq ($(RELEASE_BUILD), 1)
+LIBO2CPPOBJS += $(TFMFCCOBJS)
+else
+LIBO2CCOBJS = $(TFMFCCOBJS)
+endif
+
+
+CFLAGS += \
+        -DPROFILE \
+        -ffunction-sections \
+        -fpermissive \
+
+ifneq ($(CC), xt-clang)
+  CFLAGS += -OPT:Olimit=12125
+endif
+
+ifeq ($(CPU), x86)
+vpath %.c $(ROOTDIR)/algo/cstub/src
+CSTUBOSOBJS =
+
+INCLUDES += \
+    -I$(ROOTDIR)/algo/cstub/include
+endif
+
+include $(ROOTDIR)/build/common.mk

@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -19,9 +19,7 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
-#include "xtensa/tie/xt_hifi2.h"
-#include <xa_nnlib_kernels_api.h>
+#include "xa_nnlib_common.h"
 
 #ifdef ROW_UNROLL
 #undef ROW_UNROLL
@@ -31,7 +29,6 @@
 #define GET_SUM_BY_MULTIPLY
 
 #include "xa_nnlib_common_macros.h"
-#include "xa_nnlib_err_chk.h"
 
 WORD32 xa_nn_matXvec_asym8xasym8_asym8(
     UWORD8 * __restrict__ p_out,
@@ -210,55 +207,6 @@ WORD32 xa_nn_matXvec_asym8xasym8_asym8(
     inp = AE_MULFP32X2RAS(inp, AE_MOVDA32(multiplier)); \
     inp = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(inp), right_shift), AE_SRAA64(AE_CVT64F32_L(inp), right_shift));
 
-#define PRIME_8X4F(p_char, tmp) \
-    int offset_##p_char = 0, ls_##p_char, rs_##p_char; \
-    rs_##p_char = 0; \
-    ls_##p_char = 64; \
-    tmp = AE_ZERO16(); \
-    while(((unsigned int)p_char + offset_##p_char) & 3) {\
-        ae_int16x4 tmp2 = AE_MOVDA16(((short)*(p_char+offset_##p_char)) << 8); \
-        tmp2 = AE_MOVINT16X4_FROMINT64(AE_SRLA64(AE_MOVINT64_FROMINT16X4(tmp2), 48)); \
-        tmp = AE_MOVINT16X4_FROMINT64(AE_SLAI64(AE_MOVINT64_FROMINT16X4(tmp), 16)); \
-        tmp = AE_OR16(tmp, tmp2); \
-        rs_##p_char += 16;  \
-        ls_##p_char -= 16; \
-        offset_##p_char++; \
-    }\
-    tmp = AE_MOVINT16X4_FROMINT64(AE_SLAA64(AE_MOVINT64_FROMINT16X4(tmp), ls_##p_char)); \
-
-#define PRIME_8X4U(p_char, tmp) \
-    int offset_##p_char = 0, ls_##p_char, rs_##p_char; \
-    rs_##p_char = 0; \
-    ls_##p_char = 64; \
-    tmp = AE_ZERO16(); \
-    while(((unsigned int)p_char + offset_##p_char) & 3) {\
-        ae_int16x4 tmp2 = AE_MOVDA16(*(((const UWORD8 *)p_char)+offset_##p_char)); \
-        tmp2 = AE_MOVINT16X4_FROMINT64(AE_SRLA64(AE_MOVINT64_FROMINT16X4(tmp2), 48)); \
-        tmp = AE_MOVINT16X4_FROMINT64(AE_SLAI64(AE_MOVINT64_FROMINT16X4(tmp), 16)); \
-        tmp = AE_OR16(tmp, tmp2); \
-        rs_##p_char += 16;  \
-        ls_##p_char -= 16; \
-        offset_##p_char++; \
-    }\
-    tmp = AE_MOVINT16X4_FROMINT64(AE_SLAA64(AE_MOVINT64_FROMINT16X4(tmp), ls_##p_char)); \
-
-#define AE_LA8X4F_IP(d, a, p) { \
-    ae_int16x4 d_tmp, d_tmp2; \
-    d_tmp = AE_L8X4F_I(p+offset_##p, 0); \
-    p += 4; \
-    d_tmp2 = AE_MOVINT16X4_FROMINT64(AE_SRLA64(AE_MOVINT64_FROMINT16X4(d_tmp), rs_##p)); \
-    d = AE_OR16(a, d_tmp2); \
-    a = AE_MOVINT16X4_FROMINT64(AE_SLAA64(AE_MOVINT64_FROMINT16X4(d_tmp), ls_##p)); \
-}
-
-#define AE_LA8X4U_IP(d, a, p) { \
-    ae_int16x4 d_tmp, d_tmp2; \
-    d_tmp = AE_L8X4F_I(p+offset_##p, 0); \
-    p += 4; \
-    d_tmp2 = AE_MOVINT16X4_FROMINT64(AE_SRLA64(AE_MOVINT64_FROMINT16X4(d_tmp), rs_##p+8)); \
-    d = AE_OR16(a, d_tmp2); \
-    a = AE_MOVINT16X4_FROMINT64(AE_SLAA64(AE_MOVINT64_FROMINT16X4(d_tmp), ls_##p-8)); \
-}
 
     int left_shift, right_shift;
     const WORD8 *p_mat1_0;
@@ -273,8 +221,11 @@ WORD32 xa_nn_matXvec_asym8xasym8_asym8(
     ae_int16x4 dm0, dm1, dm2;
     ae_int16x4 dv0;
     ae_int64 d_acc0, d_acc1, d_acc2;
-    ae_int16x4 mat1_0_a, mat1_1_a, mat1_2_a, vec1_0_a;
-    ae_int16x4 mat2_0_a, mat2_1_a, mat2_2_a, vec2_0_a;
+
+    ALIGN_REGISTER_TYPE mat1_0_a, mat1_1_a, mat1_2_a, vec1_0_a;
+
+    ALIGN_REGISTER_TYPE mat2_0_a, mat2_1_a, mat2_2_a, vec2_0_a;
+
     ae_int32x2 dm0_32, dm1_32, dv0_32, d_acc0_32, d_acc1_32;
     int m, n, k;
 

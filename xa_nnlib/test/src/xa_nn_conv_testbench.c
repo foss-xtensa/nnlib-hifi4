@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -95,7 +95,7 @@ typedef struct _test_config_t
 int default_config(test_config_t *p_cfg)
 {
   if(p_cfg)
-  { 
+  {
 
     p_cfg->help     = 0;
     p_cfg->input_height = 16;
@@ -127,8 +127,8 @@ int default_config(test_config_t *p_cfg)
     p_cfg->out_shift = -8;
     p_cfg->out_zero_bias = 128;
     strcpy(p_cfg->kernel_name, "conv2d_std");
-    p_cfg->frames   = 2;  
-    p_cfg->write_file = 0;  
+    p_cfg->frames   = 2;
+    p_cfg->write_file = 0;
     p_cfg->read_inp_file_name[0] = '\0';
     p_cfg->read_ref_file_name[0] = '\0';
     p_cfg->write_inp_file_name[0]='\0';
@@ -194,7 +194,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_STRING("-write_inp_file_name",p_cfg->write_inp_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_out_file_name",p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
-    
+
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
     exit(1);
@@ -451,7 +451,7 @@ void show_usage(void)
     printf("[Error] [%s] convolution is not supported\n", cfg.kernel_name); return -1;}
 #endif /* NNLIB_V2 */
 
-#if XCHAL_HAVE_HIFI4_VFPU
+#if HIFI_VFPU
 #define PROCESS_CONV \
     if CONV_KERNEL_FN(conv2d_std, 8, 16, 16, 16) \
     else if CONV_KERNEL_FN(conv2d_std, 8, 8, 8, 8) \
@@ -492,9 +492,9 @@ int xa_nn_main_process(int argc, char *argv[])
   int frame;
   int err = 0;
   int pass_count=0;
-  char profiler_name_0[MAX_PROFILER_NAME_LENGTH]; 
-  char profiler_name_1[MAX_PROFILER_NAME_LENGTH]; 
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
+  char profiler_name_0[MAX_PROFILER_NAME_LENGTH];
+  char profiler_name_1[MAX_PROFILER_NAME_LENGTH];
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
   void *p_scratch;
   int inp_size=0, kernel_size, out_size;
   int kernel_size_pad, input_channels_pad;
@@ -521,7 +521,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-  
+
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -589,7 +589,7 @@ int xa_nn_main_process(int argc, char *argv[])
     out_size = cfg.out_height * cfg.out_channels;
   }
 
-  // Set profiler name 
+  // Set profiler name
   if(cfg.kernel_name[0])
   {
     strcpy(profiler_name_0,cfg.kernel_name);
@@ -602,13 +602,13 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_params, "_f32xf32");
     strcat(profiler_name_0, profiler_params);
-    
+
     if(!strcmp(cfg.kernel_name,"conv2d_depth"))
     {
       strcat(profiler_name_1, profiler_params);
     }
     // If VFPU is not supported, return
-    if(!XCHAL_HAVE_HIFI4_VFPU)
+    if(!HIFI_VFPU)
     {
       printf("%s: NOT TESTED\n", profiler_name_0);
       return 0;
@@ -627,7 +627,7 @@ int xa_nn_main_process(int argc, char *argv[])
 #endif //HIFI_BUILD
   else
   {
-    sprintf(profiler_params, "_%dx%d", 
+    sprintf(profiler_params, "_%dx%d",
         cfg.kernel_precision, cfg.inp_precision);
     strcat(profiler_name_0, profiler_params);
     if(!strcmp(cfg.kernel_name,"conv2d_depth"))
@@ -635,16 +635,16 @@ int xa_nn_main_process(int argc, char *argv[])
       strcat(profiler_name_1, profiler_params);
     }
   }
-  
+
   // Set profiler parameters
   if(!strcmp(cfg.kernel_name,"conv1d_std"))
   {
-    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, out_channels=%d, out_height=%d", 
+    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, out_channels=%d, out_height=%d",
       cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.out_channels, cfg.out_height);
   }
   else
   {
-    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d", 
+    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d",
       cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, cfg.out_height, cfg.out_width);
   }
 
@@ -653,7 +653,7 @@ int xa_nn_main_process(int argc, char *argv[])
   if(cfg.write_file)
   {
     /* If write_file (generate test vectors) is enabled, random data would be generated and
-       used; the input data and output data generated would be written into files. 
+       used; the input data and output data generated would be written into files.
      */
     fptr_inp = file_open(pb_input_file_path, cfg.write_inp_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
   }
@@ -671,8 +671,8 @@ int xa_nn_main_process(int argc, char *argv[])
   // Open reference file if verify flag is enabled
   if(cfg.verify)
   {
-    p_ref = create_buf1D(out_size, cfg.out_precision); 
-    
+    p_ref = create_buf1D(out_size, cfg.out_precision);
+
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
 
@@ -688,11 +688,11 @@ int xa_nn_main_process(int argc, char *argv[])
   }
   else if(!strcmp(cfg.kernel_name,"conv2d_depth"))
   {
-    p_kernel = create_buf1D(kernel_size_pad, cfg.kernel_precision);                                 VALIDATE_PTR(p_kernel);
-    p_bias = create_buf1D(bias_size, cfg.bias_precision);                            VALIDATE_PTR(p_bias);
-    p_kernel_point = create_buf1D(kernel_point_size*cfg.out_channels, cfg.kernel_precision);    VALIDATE_PTR(p_kernel_point);
-    p_dw_out = create_buf1D(dw_out_size, cfg.out_precision);                                    VALIDATE_PTR(p_dw_out);
-    p_bias_point = create_buf1D(bias_point_size, cfg.bias_precision);                                  VALIDATE_PTR(p_bias_point);
+    p_kernel = create_buf1D(kernel_size_pad, cfg.kernel_precision);            VALIDATE_PTR(p_kernel);
+    p_bias = create_buf1D(bias_size, cfg.bias_precision);                      VALIDATE_PTR(p_bias);
+    p_kernel_point = create_buf1D(kernel_point_size, cfg.kernel_precision);    VALIDATE_PTR(p_kernel_point);
+    p_dw_out = create_buf1D(dw_out_size, cfg.out_precision);                   VALIDATE_PTR(p_dw_out);
+    p_bias_point = create_buf1D(bias_point_size, cfg.bias_precision);          VALIDATE_PTR(p_bias_point);
 
     int total_conv2d_depth_MACS = (
        (cfg.channels_multiplier * cfg.input_channels * cfg.out_height * cfg.out_width * cfg.kernel_height * cfg.kernel_width) /* MACs in depthwise */
@@ -703,11 +703,11 @@ int xa_nn_main_process(int argc, char *argv[])
     XTPWR_PROFILER_OPEN(0, profiler_name_0, profiler_params, total_conv2d_depth_MACS, "MACs/cyc", 1);
     XTPWR_PROFILER_OPEN(1, profiler_name_1, profiler_params, total_conv2d_point_MACS, "MACs/cyc", 1);
   }
-  
+
   // Init
   WORD32 scratch_size=0;
 
-  // Get persistent size and allocate 
+  // Get persistent size and allocate
   if(!strcmp(cfg.kernel_name,"conv2d_std"))
   {
     scratch_size = xa_nn_conv2d_std_getsize(cfg.input_height,cfg.input_channels,cfg.kernel_height,cfg.kernel_width,cfg.y_stride,cfg.y_padding,cfg.out_height,cfg.inp_precision); PRINT_VAR(scratch_size)
@@ -791,7 +791,7 @@ int xa_nn_main_process(int argc, char *argv[])
     if(cfg.verify)
     {
       read_buf1D_from_file(fptr_ref, p_ref);
-      pass_count += compare_buf1D(p_ref, p_out, cfg.verify);
+      pass_count += compare_buf1D(p_ref, p_out, cfg.verify, cfg.out_precision, kernel_size_pad);
     }
     else
     {
@@ -906,7 +906,7 @@ int main (int argc, char *argv[])
                 else strcpy((char *)pb_ref_file_path, "");
                 continue;
             }
-            
+
             if(strcmp(fargv[0], "@Start") == 0)
             {
                 processcmd = 1;

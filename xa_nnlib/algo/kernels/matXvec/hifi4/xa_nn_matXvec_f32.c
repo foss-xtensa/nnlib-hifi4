@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -644,6 +644,7 @@ WORD32 static dual_mtx_vecmpyf_bias_add_generic( FLOAT32 * z,
     return 0;
   }
 } /* dual_mtx_vecmpyf_bias_add_generic() */
+
 #endif /* HAVE_VFPU */
 
 
@@ -989,5 +990,88 @@ WORD32  xa_nn_matXvec_f32xf32_f32(
   return ret;
 }
 #endif /* !HAVE_VFPU */
+
+#if !HAVE_VFPU
+DISCARD_FUN_FOR_NONVOID_RETURN(WORD32,xa_nn_dot_prod_f32xf32_f32,(
+    FLOAT32  *  p_out,
+    FLOAT32  *  p_inp1,
+    FLOAT32  *  p_inp2,
+    WORD32 vec_length,
+    WORD32 num_vecs))
+#else
+WORD32 xa_nn_dot_prod_f32xf32_f32(
+         FLOAT32 * __restrict__ p_out,          /* pointer to output */
+         const FLOAT32 * __restrict__ p_inp1,   /* pointer to input1 */
+         const FLOAT32 * __restrict__ p_inp2,   /* pointer to input2 */
+         WORD32 vec_length,
+         WORD32 num_vecs)
+{
+    /* NULL pointer checks */
+    XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+    XA_NNLIB_ARG_CHK_PTR(p_inp1, -1);
+    XA_NNLIB_ARG_CHK_PTR(p_inp2, -1);
+    /* Pointer alignment checks */
+    XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(FLOAT32), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_inp1, sizeof(FLOAT32), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_inp2, sizeof(FLOAT32), -1);
+    /* Basic Parameter checks */
+    XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
+    XA_NNLIB_ARG_CHK_COND((num_vecs <= 0), -1);
+
+    xtfloatx2 *pt_inp1, *pt_inp2;
+    xtfloatx2 d_inp1, d_inp2;
+    xtfloatx2 d_acc;
+    float d_out;
+    int i, j;
+
+    if(((((unsigned)p_inp1)&7) == 0) && ((((unsigned)p_inp2)&7) == 0) && ((vec_length&1) == 0))
+    {
+        pt_inp1 = (xtfloatx2 *)p_inp1;
+        pt_inp2 = (xtfloatx2 *)p_inp2;
+        for(i = 0; i < num_vecs; i++)
+        {
+            d_acc = (xtfloatx2)0.0f;
+            for(j = 0; j < (vec_length>>1); j++)
+            {
+                d_inp1 = *pt_inp1++;
+                d_inp2 = *pt_inp2++;
+                XT_MADD_SX2(d_acc, d_inp1, d_inp2);
+            }
+            d_out = XT_ADD_S(XT_HIGH_S(d_acc), XT_LOW_S(d_acc));
+            *(float *)(&p_out[i]) = d_out;
+        }
+    }
+    else
+    {
+        ae_valign inp1_a, inp2_a;
+
+        for(i = 0; i < num_vecs; i++)
+        {
+            pt_inp1 = (xtfloatx2 *)(&p_inp1[i*vec_length]);
+            pt_inp2 = (xtfloatx2 *)(&p_inp2[i*vec_length]);
+            inp1_a = XT_LASX2PP(pt_inp1);
+            inp2_a = XT_LASX2PP(pt_inp2);
+            d_acc = (xtfloatx2)0.0f;
+            for(j = 0; j < (vec_length>>1); j++)
+            {
+                XT_LASX2IP(d_inp1, inp1_a, pt_inp1);
+                XT_LASX2IP(d_inp2, inp2_a, pt_inp2);
+                XT_MADD_SX2(d_acc, d_inp1, d_inp2);
+            }
+            d_out = XT_ADD_S(XT_HIGH_S(d_acc), XT_LOW_S(d_acc));
+            float *pt_inp1u, *pt_inp2u;
+            pt_inp1u = (float *)pt_inp1;
+            pt_inp2u = (float *)pt_inp2;
+            if((vec_length&1) != 0)
+            {
+                XT_MADD_S(d_out, pt_inp1u[j], pt_inp2u[j]);
+            }
+            *(float *)(&p_out[i]) = d_out;
+        }
+    }
+    return 0;
+}
+#endif /* #if !HAVE_VFPU */
+
 #endif
 
