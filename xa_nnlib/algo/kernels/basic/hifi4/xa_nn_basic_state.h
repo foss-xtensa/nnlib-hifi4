@@ -31,6 +31,11 @@
 #define LIMIT(input, min, max) \
     input = XT_MAX(min, XT_MIN(max, input));
 
+#define MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out, inp, multiplier, left_shift, right_shift) \
+    inp = AE_SLAA32S(inp, left_shift); \
+    out = AE_MULFP32X2RAS(inp, AE_MOVDA32(multiplier)); \
+    out = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(out), right_shift), AE_SRAA64(AE_CVT64F32_L(out), right_shift));
+
 #define MultiplyByQuantizedMultiplierSmallerThanOneExp(prod, val, multiplier, lsh) {\
     ae_int64 temp64_h, temp64_l;\
     prod = AE_MULFP32X2RAS(val, multiplier);\
