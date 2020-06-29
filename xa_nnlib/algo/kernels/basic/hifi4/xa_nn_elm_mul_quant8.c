@@ -61,8 +61,9 @@ WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
     ae_f16x4 x1, x2;
     ae_int32x2 temp;
     ae_f16x4 temp16X4, zero_bias1, zero_bias2;
-    ae_f32x2 op_multiplier, op_zero_bias, activation_min, activation_max;
-    ae_int32x2 ZERO = AE_ZERO32();
+    ae_f32x2 op_zero_bias, activation_min, activation_max;
+    int left_shift = out_shift < 0 ? 0 : out_shift;
+    int right_shift = out_shift > 0 ? 0 : -out_shift;
 
     // Taking input zero_bias into 16X4 variable
     temp = AE_MOVDA32X2(inp1_zero_bias, inp1_zero_bias);
@@ -76,7 +77,6 @@ WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
 
     // Taking into 32x2 variable
     op_zero_bias = AE_MOVDA32X2(out_zero_bias, out_zero_bias);
-    op_multiplier = AE_MOVDA32X2(out_multiplier, out_multiplier);
 
     activation_min = AE_MOVDA32X2(out_activation_min, out_activation_min);
     activation_max = AE_MOVDA32X2(out_activation_max, out_activation_max);
@@ -103,8 +103,8 @@ WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
             AE_MUL16X4(prod32, prod10, v1, v2);
 
             // unclamped result
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(unclamped_out32, prod32, op_multiplier, out_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(unclamped_out10, prod10, op_multiplier, out_shift)
+            MULTIPLYBYQUANTIZEDMULTIPLIER_X2(unclamped_out32, prod32, out_multiplier, left_shift, right_shift)
+            MULTIPLYBYQUANTIZEDMULTIPLIER_X2(unclamped_out10, prod10, out_multiplier, left_shift, right_shift)
             unclamped_out32 = AE_ADD32(unclamped_out32, op_zero_bias);
             unclamped_out10 = AE_ADD32(unclamped_out10, op_zero_bias);
 
@@ -139,8 +139,8 @@ WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
             AE_MUL16X4(prod32, prod10, v1, v2);
 
             // unclamped result
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(unclamped_out32, prod32, op_multiplier, out_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(unclamped_out10, prod10, op_multiplier, out_shift)
+            MULTIPLYBYQUANTIZEDMULTIPLIER_X2(unclamped_out32, prod32, out_multiplier, left_shift, right_shift)
+            MULTIPLYBYQUANTIZEDMULTIPLIER_X2(unclamped_out10, prod10, out_multiplier, left_shift, right_shift)
             unclamped_out32 = AE_ADD32(unclamped_out32, op_zero_bias);
             unclamped_out10 = AE_ADD32(unclamped_out10, op_zero_bias);
 
@@ -152,6 +152,10 @@ WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
             STORE_8X4_FROM_32X4(out, clamped_out32, clamped_out10)
         }
     }
+
+    p_i1 = (WORD8 *)p_inp1 + (num_elm & ~3);
+    p_i2 = (WORD8 *)p_inp2 + (num_elm & ~3);
+
     // Remainder Loop
     for(i=0; i < (num_elm & 3); i++)
     {
@@ -174,7 +178,7 @@ WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
         AE_MUL16X4(prod32, prod10, v1, v2);
 
         // unclamped result
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(unclamped_out32, prod32, op_multiplier, out_shift)
+        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(unclamped_out32, prod32, out_multiplier, left_shift, right_shift)
         unclamped_out32 = AE_ADD32(unclamped_out32, op_zero_bias);
 
         // clamped_out
