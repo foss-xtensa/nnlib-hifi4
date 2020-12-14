@@ -19,13 +19,10 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
-#include <string.h>
-#include "common.h"
-#include "xa_nn_conv2d_std_state.h"
-#include "xa_nnlib_err_chk.h"
-
 #include "xa_nnlib_common.h"
+#include "xa_nnlib_common_macros.h"
+#include "xa_nn_conv2d_std_state.h"
+#include <string.h>
 
 WORD32 xa_nn_conv2d_std_getsize(
     WORD32 input_height,
@@ -35,6 +32,7 @@ WORD32 xa_nn_conv2d_std_getsize(
     WORD32 y_stride,
     WORD32 y_padding,
     WORD32 out_height,
+    WORD32 output_channels,
     WORD32 input_precision)
 {
   XA_NNLIB_CHK_COND((input_height <= 0), -1);
@@ -50,6 +48,7 @@ WORD32 xa_nn_conv2d_std_getsize(
   WORD32 input_size;
   WORD32 align_size;
 
+  mem_req += ALIGNMENT;
   mem_req += ALIGNED_SIZE(sizeof(xa_nn_conv_state_t), ALIGNMENT);
   /* Input precision is checked here */
   switch(input_precision)
@@ -70,6 +69,10 @@ WORD32 xa_nn_conv2d_std_getsize(
       input_size = sizeof(UWORD8);
       align_size = ALIGNMENT>>1;
       break;
+    case -4:
+      input_size = sizeof(WORD8);
+      align_size = ALIGNMENT>>1;
+      break;
     default:
       return -1;
       break;
@@ -79,12 +82,48 @@ WORD32 xa_nn_conv2d_std_getsize(
   // Determine y-bottom padding
   WORD32 y_b_pad = kernel_height + (out_height - 1) * y_stride - (y_padding + input_height);
   y_b_pad = y_b_pad < 0 ? 0 : y_b_pad;
-  WORD32 input_channels_pad = PADDED_SIZE(input_channels, align_size);
+
+  WORD32 input_channels_pad;
+
+#ifdef HW_AE_ADDCIRC16X4_XC 
+  if(input_precision == PREC_ASYM8S)
+  {
+    input_channels_pad = input_channels;
+  }
+  else
+#endif /* NO_HW_AE_ADDCIRC16X4_XC */
+  {
+    input_channels_pad = PADDED_SIZE(input_channels, align_size);
+  }
+
   WORD32 cir_buf_size_bytes = (y_padding + input_height + y_b_pad) * kernel_width * input_channels_pad * input_size;
+  while(cir_buf_size_bytes%16 !=0)
+  {
+    cir_buf_size_bytes+= kernel_width*input_channels_pad*input_size;
+  }
 
   /* scratch memory for convolution using matrix multiplication */
-  mem_req += cir_buf_size_bytes;
+  mem_req += ALIGNED_SIZE(cir_buf_size_bytes, ALIGNMENT);
   mem_req += BUS_WIDTH;
+
+#ifdef HW_AE_ADDCIRC16X4_XC 
+  if( 
+      (input_precision != PREC_ASYM8S) &&
+      (input_precision != PREC_F32) &&
+      (input_precision != PREC_16) &&
+      (input_channels_pad != input_channels)
+    )
+#else
+  if( 
+      (input_precision != PREC_F32) &&
+      (input_precision != PREC_16) && 
+      (input_channels_pad != input_channels)
+    )
+#endif
+  {
+    int padded_kernel_size = kernel_height * kernel_width * input_channels_pad * output_channels * input_size;
+    mem_req += ALIGNED_SIZE(padded_kernel_size, ALIGNMENT);
+  }
 
   return mem_req;
 }
@@ -100,7 +139,9 @@ VOID xa_nn_conv2d_std_init_state(
     WORD32 y_stride,
     WORD32 y_padding,
     WORD32 out_height,
-    WORD32 input_precision)
+    WORD32 output_channels,
+    WORD32 input_precision,
+    WORD32 kernel_precision)
 {
   WORD8 *p_mem = (WORD8 *)p_scratch;
   xa_nn_conv_state_t *p_state = (xa_nn_conv_state_t *)p_mem;
@@ -125,15 +166,18 @@ VOID xa_nn_conv2d_std_init_state(
       input_size = sizeof(UWORD8);
       align_size = ALIGNMENT>>1;
       break;
+    case -4:
+    case -5:
+      input_size = sizeof(WORD8);
+      align_size = ALIGNMENT>>1;
+      break;
     default:
       input_size = 0;
       align_size = 0;
       break;
   }
-
   p_mem += sizeof(xa_nn_conv_state_t);
   p_mem = ALIGNED_ADDR(p_mem, ALIGNMENT);
-
 
   if(((UWORD32)p_kernel & BUS_WIDTH_MASK) == ((UWORD32)p_mem & BUS_WIDTH_MASK))
   {
@@ -147,14 +191,94 @@ VOID xa_nn_conv2d_std_init_state(
   // Determine y-bottom padding
   WORD32 y_b_pad = kernel_height + (out_height - 1) * y_stride - (y_padding + input_height);
   y_b_pad = y_b_pad < 0 ? 0 : y_b_pad;
-  WORD32 input_channels_pad = PADDED_SIZE(input_channels, align_size);
+
+  WORD32 input_channels_pad;
+
+#ifdef HW_AE_ADDCIRC16X4_XC 
+  if(input_precision == PREC_ASYM8S)
+  {
+    input_channels_pad = input_channels;
+  }
+  else
+#endif /* NO_HW_AE_ADDCIRC16X4_XC */
+  {
+    input_channels_pad = PADDED_SIZE(input_channels, align_size);
+  }
+
   WORD32 cir_buf_size_bytes = (y_padding + input_height + y_b_pad) * kernel_width * input_channels_pad * input_size;
+  while(cir_buf_size_bytes%16 !=0)
+  {
+    cir_buf_size_bytes+= kernel_width*input_channels_pad*input_size;
+  }
 
   p_mem += cir_buf_size_bytes;
   p_state->cir_buf.p_end = p_mem;
 
   AE_SETCBEGIN0(p_state->cir_buf.p_begin);
   AE_SETCEND0(p_state->cir_buf.p_end);
+
+  p_mem = ALIGNED_ADDR(p_mem, ALIGNMENT);
+
+  p_state->p_kernel_padded = (void *)p_kernel;
+
+#ifdef HW_AE_ADDCIRC16X4_XC 
+  if( 
+      (input_precision != PREC_ASYM8S) &&
+      (input_precision != PREC_F32) &&
+      (input_precision != PREC_16) &&
+      (input_channels_pad != input_channels)
+    )
+#else
+  if( 
+      (input_precision != PREC_F32) &&
+      (input_precision != PREC_16) &&
+      (input_channels_pad != input_channels)
+    )
+#endif
+  {
+    int oc, kh, kw, kernel_size;
+    p_state->p_kernel_padded = (void *)p_mem;
+
+    switch(kernel_precision)
+    {
+      case 8:
+        kernel_size = sizeof(WORD8);
+        break;
+      case 16:
+        kernel_size = sizeof(WORD16);
+        break;
+      case -1:
+        kernel_size = sizeof(WORD32);
+        break;
+      case -3:
+        kernel_size = sizeof(UWORD8);
+        break;
+      case -4:
+      case -5:
+        kernel_size = sizeof(WORD8);
+        break;
+      default:
+        kernel_size = 0;
+        break;
+    }
+
+    pWORD8 p_src = (pWORD8) p_kernel;
+    pWORD8 p_dst = (pWORD8) p_state->p_kernel_padded;
+
+    for(oc = 0; oc < output_channels; oc++)
+    for(kh = 0; kh < kernel_height; kh++)
+    {
+      for(kw = 0; kw < kernel_width; kw++)
+      {
+        memcpy(p_dst, p_src, kernel_size * input_channels);
+        p_dst += kernel_size * input_channels;
+        p_src += kernel_size * input_channels;
+
+        memset(p_dst, 0, kernel_size * (input_channels_pad - input_channels));
+        p_dst += kernel_size * (input_channels_pad - input_channels);
+      }
+    }
+  }
 
 }
 

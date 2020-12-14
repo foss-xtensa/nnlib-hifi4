@@ -19,11 +19,9 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
-#include "common.h"
-#include "xa_nnlib_kernels_api.h"
+#include "xa_nnlib_common.h"
+#include "xa_nnlib_common_macros.h"
 #include "xa_nn_conv2d_std_state.h"
-#include "xa_nnlib_err_chk.h"
 
 
 static WORD32 conv_x_left_pad(
@@ -150,9 +148,9 @@ WORD32 xa_nn_conv2d_std_asym8xasym8(
   /* Pointer alignment checks */
   //XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(UWORD8), -1);
   //XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(UWORD8), -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_kernel, ALIGNMENT, -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_kernel, 4, -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD32), -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
+  //XA_NNLIB_ARG_CHK_ALIGN(p_scratch, sizeof(WORD8), -1);
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
@@ -173,8 +171,21 @@ WORD32 xa_nn_conv2d_std_asym8xasym8(
   WORD32 input_bytewidth = 1;
   VOID *pp_inp = (VOID *)p_inp;
 
+  p_scratch = ALIGNED_ADDR(p_scratch, ALIGNMENT);
   xa_nn_conv_state_t *p_state = (xa_nn_conv_state_t *)p_scratch;
-  xa_nn_conv2d_std_init_state((void*)p_state,(void*)p_kernel,input_height,input_channels,kernel_height,kernel_width,x_stride,y_stride,y_padding,out_height,input_bytewidth*8);
+  xa_nn_conv2d_std_init_state((void*)p_state
+      ,(void*)p_kernel
+      ,input_height
+      ,input_channels
+      ,kernel_height
+      ,kernel_width
+      ,x_stride
+      ,y_stride
+      ,y_padding
+      ,out_height
+      ,out_channels
+      ,PREC_ASYM8U
+      ,PREC_ASYM8U);
 
   WORD32 out_channels_offset = out_data_format ? out_height * out_width : 1;
   WORD32 out_height_offset = out_data_format ? out_width : out_width * out_channels;
@@ -182,7 +193,7 @@ WORD32 xa_nn_conv2d_std_asym8xasym8(
 
   WORD32 x_padding_var = x_padding;
   WORD32 input_channels_pad = PADDED_SIZE(input_channels, (ALIGNMENT>>1));
-
+  
   /* When kernel convolves over x-left pad region only */
   WORD32 out_width_over_x_pad = 0;
   if(x_padding_var >= kernel_width)
@@ -230,7 +241,7 @@ WORD32 xa_nn_conv2d_std_asym8xasym8(
     xa_nn_matXvec_asym8xasym8_asym8_circ
       (p_out /* output */
        ,p_state->cir_buf.p_curr/* matrix: rows x cols */
-       ,p_kernel /* vec: cols */
+       ,p_state->p_kernel_padded /* vec: cols */
        ,p_bias /* bias */
        ,out_height /* rows */
        ,input_channels_pad * kernel_width * kernel_height /* cols */

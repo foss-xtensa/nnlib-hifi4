@@ -68,7 +68,7 @@ bool fullyConnectedFloat32(const float* inputData, const Shape& inputShape,
     CalculateActivationRangeFloat(activation, &output_activation_min,
                                   &output_activation_max);
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     // b/80425683, optimized implementation produces incorrect results when the
     // number of input elements is the squre of batch_size.
     uint32_t batch_size = getSizeOfDimension(outputShape, 0);

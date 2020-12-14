@@ -20,12 +20,9 @@
 
 ******************************************************************************/
 #include "common_fpu.h"
-#include "xa_type_def.h"
-#include <xtensa/tie/xt_hifi2.h>
-#include "xa_nnlib_kernels_api.h"
+#include "xa_nnlib_common.h"
 #include "xa_nn_conv2d_depthwise_state.h"
 #include "xa_nnlib_common_macros.h"
-#include "xa_nnlib_err_chk.h"
 
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_conv2d_pointwise_f32,(

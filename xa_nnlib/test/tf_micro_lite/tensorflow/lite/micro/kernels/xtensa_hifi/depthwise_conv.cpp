@@ -160,22 +160,17 @@ TfLiteStatus EvalFloat(TfLiteContext* context, TfLiteNode* node,
     const int filter_width = filter_shape.Dims(2);
     const int output_height = output_shape.Dims(1);
     const int output_width = output_shape.Dims(2);
-    const int filter_depth = filter_shape.Dims(3);
     TFLITE_DCHECK_EQ(output_depth, input_depth * depth_multiplier);
     TFLITE_DCHECK_EQ(bias_shape.FlatSize(), output_depth);
 
     int32_t err, input_data_format = 0, output_data_format = 0;
     void* p_scratch;
-    float* p_filter;
-    int filter_depth_padded, filter_size_padded, required_scratch;
+    int required_scratch;
     int input_precision = PREC_F32;
-    int h, c, i;
+    int i;
 
     ALLOCATE_XTENSA_NNLIB_SCRATCH_MEM;
     p_scratch = xtensa_nnlib_scratch_buf;
-
-    filter_depth_padded = (filter_depth + 1) & (~1);
-    filter_size_padded = filter_height * filter_width * filter_depth_padded;
 
     required_scratch = xa_nn_conv2d_depthwise_getsize(
         input_height, input_width, input_depth, filter_height, filter_width,
@@ -188,31 +183,16 @@ TfLiteStatus EvalFloat(TfLiteContext* context, TfLiteNode* node,
       return kTfLiteError;
     }
 
-    required_scratch += ALIGNED_SIZE(sizeof(float) * filter_size_padded, 8);
     if (required_scratch > (int)XTENSA_NNLIB_MAX_SCRATCH_SIZE) {
       TF_LITE_KERNEL_LOG(context,
                          "DepthwiseConvFloat: insufficient scratch memory");
       return kTfLiteError;
     }
 
-    p_filter = (float*)p_scratch;
-    p_scratch = (void*)((uint8_t*)p_filter +
-                        ALIGNED_SIZE(sizeof(float) * filter_size_padded, 8));
-
-    for (h = 0; h < filter_height * filter_width; h++) {
-      for (c = 0; c < filter_depth; c++) {
-        p_filter[h * filter_depth_padded + c] =
-            filter_data[h * filter_depth + c];
-      }
-      for (c = filter_depth; c < filter_depth_padded; c++) {
-        p_filter[h * filter_depth_padded + c] = 0;
-      }
-    }
-
     for (i = 0; i < batches; i++) {
       err = xa_nn_conv2d_depthwise_f32(
           &output_data[i * output_height * output_width * output_depth],
-          p_filter,  // filter_data,
+          filter_data,
           &input_data[i * input_height * input_width * input_depth], bias_data,
           input_height, input_width, input_depth, filter_height, filter_width,
           depth_multiplier, stride_width, stride_height, pad_width, pad_height,
@@ -231,8 +211,8 @@ TfLiteStatus EvalFloat(TfLiteContext* context, TfLiteNode* node,
     CHECK_ERR_HIFI_NNLIB_KER(
         err,
         "DepthwiseConvFloat: xa_nn_vec_activation_min_max_f32_f32 failed");
-  }
-  else
+  } 
+  else 
 #endif /* HIFI_VFPU */
   {
     tflite::DepthwiseParams op_params;
@@ -335,16 +315,13 @@ TfLiteStatus EvalQuantized(TfLiteContext* context, TfLiteNode* node,
     const int filter_width = filter_shape.Dims(2);
     const int output_height = output_shape.Dims(1);
     const int output_width = output_shape.Dims(2);
-    const int filter_depth = filter_shape.Dims(3);
     TFLITE_DCHECK_EQ(output_depth, input_depth * depth_multiplier);
     TFLITE_DCHECK_EQ(bias_shape.FlatSize(), output_depth);
 
     int32_t err, i, input_data_format = 0, output_data_format = 0;
     void* p_scratch;
-    uint8* p_filter;
-    int filter_depth_padded, filter_size_padded, required_scratch;
+    int required_scratch;
     int input_precision = PREC_ASYM8;
-    int h;
 
     ALLOCATE_XTENSA_NNLIB_SCRATCH_MEM;
     p_scratch = xtensa_nnlib_scratch_buf;
@@ -360,30 +337,16 @@ TfLiteStatus EvalQuantized(TfLiteContext* context, TfLiteNode* node,
       return kTfLiteError;
     }
 
-    filter_depth_padded = (filter_depth + 3) & (~3);
-    filter_size_padded = filter_height * filter_width * filter_depth_padded;
-    required_scratch += ALIGNED_SIZE(sizeof(uint8_t) * filter_size_padded, 8);
-
     if (required_scratch > (int)XTENSA_NNLIB_MAX_SCRATCH_SIZE) {
       TF_LITE_KERNEL_LOG(context,
                          "DepthwiseConvAsym8: insufficient scratch memory");
       return kTfLiteError;
     }
 
-    p_filter = (uint8*)p_scratch;
-    p_scratch = (void*)(p_filter +
-                        ALIGNED_SIZE(sizeof(uint8_t) * filter_size_padded, 8));
-    int pad_value = filter_depth_padded - filter_depth;
-
-    for (h = 0; h < filter_height * filter_width; h++) {
-      memcpy(&p_filter[h*filter_depth_padded], &filter_data[h*filter_depth], filter_depth);
-      memset(&p_filter[h*filter_depth_padded + filter_depth], -filter_offset, pad_value);
-    }
-
     for (i = 0; i < batches; i++) {
       err = xa_nn_conv2d_depthwise_asym8xasym8(
           &output_data[i * output_height * output_width * output_depth],
-          p_filter,  // filter_data,
+          filter_data,
           &input_data[i * input_height * input_width * input_depth], bias_data,
           input_height, input_width, input_depth, filter_height, filter_width,
           depth_multiplier, stride_width, stride_height, pad_width, pad_height,
@@ -459,15 +422,15 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   int input_depth = SizeOfDimension(input, 3);
   int depth_multiplier = params->depth_multiplier;
   int total_macs = output_height*output_width*filter_height*filter_width*input_depth*depth_multiplier;
-  char profiler_name_0[MAX_PROFILER_NAME_LENGTH];
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
+  char profiler_name_0[MAX_PROFILER_NAME_LENGTH]; 
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
   strcpy(profiler_name_0,"conv2d_depthwise");
-  sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, channel_multiplier=%d, out_height=%d, out_width=%d",
+  sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, channel_multiplier=%d, out_height=%d, out_width=%d", 
     input_height, input_width, input_depth, filter_height, filter_width, depth_multiplier, output_height, output_width);
   XTPWR_PROFILER_OPEN(0, profiler_name_0, profiler_params, total_macs, "MACs/cyc", 1);
 #endif
-
-  XTPWR_PROFILER_START(0);
+  
+  XTPWR_PROFILER_START(0);  
   // All per-channel quantized tensors need valid zero point and scale arrays.
   if (input->type == kTfLiteInt8) {
     TF_LITE_ENSURE_EQ(context, filter->quantization.type,

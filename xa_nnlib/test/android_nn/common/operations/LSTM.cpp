@@ -367,12 +367,12 @@ bool LSTMCell::Prepare(const Operation &operation,
   if (use_cifg) {
     // Reserving space for Cell, Forget, Output gates
     scratchShape->dimensions.clear();
-    scratchShape->dimensions.push_back(n_batch);
+    scratchShape->dimensions.push_back(n_batch); 
     scratchShape->dimensions.push_back(n_cell * 3);
   } else {
     // Reserving space for Input, Cell, Forget, Output gates
     scratchShape->dimensions.clear();
-    scratchShape->dimensions.push_back(n_batch);
+    scratchShape->dimensions.push_back(n_batch); 
     scratchShape->dimensions.push_back(n_cell * 4);
   }
 #endif
@@ -411,7 +411,7 @@ bool LSTMCell::Eval() {
     output_gate_scratch = input_gate_scratch + 3 * n_cell * n_batch;
   }
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
   // Initialize scratch buffers with bias.
   if (!use_cifg) {
     tflite::tensor_utils::VectorBatchVectorAssign(GetBuffer<float>(input_gate_bias_),
@@ -578,7 +578,7 @@ bool LSTMCell::Eval() {
   {
     ret = xa_nn_matXvec_f32xf32_f32(
         cell_scratch+b*n_cell,
-        GetBuffer<float>(input_to_cell_weights_), GetBuffer<float>(recurrent_to_cell_weights_),
+        GetBuffer<float>(input_to_cell_weights_), GetBuffer<float>(recurrent_to_cell_weights_), 
         GetBuffer<float>(input_)+b*n_input, GetBuffer<float>(output_state_in_)+b*n_output,
         GetBuffer<float>(cell_bias_), n_cell, n_input, n_output, n_input, n_output);
     if(ret)
@@ -609,7 +609,7 @@ bool LSTMCell::Eval() {
   if (use_peephole) {
     for(b = 0; b < n_batch; b++)
     {
-      ret = xa_nn_elm_mul_acc_f32xf32_f32(forget_gate_scratch + b * n_cell,
+      ret = xa_nn_elm_mul_acc_f32xf32_f32(forget_gate_scratch + b * n_cell, 
           GetBuffer<float>(cell_to_forget_weights_),
           GetBuffer<float>(cell_state_in_) + b * n_cell, n_cell);
       if(ret)
@@ -619,7 +619,7 @@ bool LSTMCell::Eval() {
   ret = xa_nn_vec_sigmoid_f32_f32(forget_gate_scratch, forget_gate_scratch, n_cell * n_batch);
 
   // For each batch and cell: update the cell.
-  ret = xa_nn_elm_mul_f32xf32_f32(GetBuffer<float>(cell_state_out_), forget_gate_scratch,
+  ret = xa_nn_elm_mul_f32xf32_f32(GetBuffer<float>(cell_state_out_), forget_gate_scratch, 
       GetBuffer<float>(cell_state_in_), n_batch * n_cell);
 #ifndef HIFI_BUILD
   switch(params_.activation_) {
@@ -669,7 +669,7 @@ bool LSTMCell::Eval() {
   if (use_peephole) {
     for(b = 0; b < n_batch; b++)
     {
-      ret = xa_nn_elm_mul_acc_f32xf32_f32(output_gate_scratch + b * n_cell,
+      ret = xa_nn_elm_mul_acc_f32xf32_f32(output_gate_scratch + b * n_cell, 
           GetBuffer<float>(cell_to_output_weights_),
           GetBuffer<float>(cell_state_out_) + b * n_cell, n_cell);
       if(ret)

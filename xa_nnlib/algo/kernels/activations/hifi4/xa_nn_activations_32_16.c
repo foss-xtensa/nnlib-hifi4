@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -19,42 +19,11 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-/* ------------------------------------------------------------------------ */
-/* Copyright (c) 2017 by Cadence Design Systems, Inc. ALL RIGHTS RESERVED.  */
-/* These coded instructions, statements, and computer programs ("Cadence    */
-/* Libraries") are the copyrighted works of Cadence Design Systems Inc.	    */
-/* Cadence IP is licensed for use with Cadence processor cores only and     */
-/* must not be used for any other processors and platforms. Your use of the */
-/* Cadence Libraries is subject to the terms of the license agreement you   */
-/* have entered into with Cadence Design Systems, or a sublicense granted   */
-/* to you by a direct Cadence licensee.                                     */
-/* ------------------------------------------------------------------------ */
-/*  IntegrIT, Ltd.   www.integrIT.com, info@integrIT.com                    */
-/*                                                                          */
-/* DSP Library                                                              */
-/*                                                                          */
-/* This library contains copyrighted materials, trade secrets and other     */
-/* proprietary information of IntegrIT, Ltd. This software is licensed for  */
-/* use with Cadence processor cores only and must not be used for any other */
-/* processors and platforms. The license to use these sources was given to  */
-/* Cadence, Inc. under Terms and Condition of a Software License Agreement  */
-/* between Cadence, Inc. and IntegrIT, Ltd.                                 */
-/* ------------------------------------------------------------------------ */
-/*          Copyright (C) 2015-2017 IntegrIT, Limited.                      */
-/*                      All Rights Reserved.                                */
-/* ------------------------------------------------------------------------ */
-/*
-  NatureDSP Signal Processing Library. Math functions
-    Sigmoid
-    C code optimized for HiFi3
-  IntegrIT, 2006-2017
-*/
-#include "xtensa/tie/xt_hifi2.h"
+#include "xa_nnlib_common.h"
 #include "NatureDSP_Signal_math.h"
-#include "xa_type_def.h"
 /*-------------------------------------------------------------------------
   Sigmoid
-  The functions compute the sigmoid of input argument. 32-bit fixed-point 
+  The functions compute the sigmoid of input argument. 32-bit fixed-point
   functions accept inputs in Q6.25 and form outputs in Q0.15 format.
 
   Precision:
@@ -73,7 +42,7 @@
   ----------------
   return result, Q0.15
 -------------------------------------------------------------------------*/
-WORD32 xa_nn_vec_sigmoid_32_16(               
+WORD32 xa_nn_vec_sigmoid_32_16(
     WORD16       * __restrict__ y,             /* result, Q0.15 */
     const WORD32 * __restrict__ x,             /* input data, Q6.25 */
     WORD32       N)                            /* length of vectors */
@@ -156,7 +125,7 @@ WORD32 xa_nn_vec_sigmoid_32_16(
         AE_MULAFP32X2RAS(Z, Z, D);
         t = AE_SUB32(2147483647, Z);AE_MULSFP32X2RAS(t, Z, X);D = t;
         AE_MULAFP32X2RAS(Z, Z, D);
-        
+
         Z = AE_SRAA32RS(Z, 16);
 
         AE_LA32X2_IP(X, aX1, pX1);
@@ -205,7 +174,7 @@ WORD32 xa_nn_vec_sigmoid_32_16(
         Y_16 = AE_SAT16X4(Z, Z);
         *pY = Y_16;
     }
-    
+
     return 0;
 } /* xa_nn_vec_sigmoid_32_16() */
 
@@ -219,19 +188,19 @@ WORD32 xa_nn_vec_sigmoid_32_16(
   32x16  32-bit inputs, 16-bit output. Accuracy: 2 LSB.
 
   Input:
-  x[N]   input data, Q6.25  
+  x[N]   input data, Q6.25
   N      length of vectors
   Output:
-  y[N]   result, Q0.15 
+  y[N]   result, Q0.15
 
   Restriction:
   x,y should not overlap
 
   Scalar versions:
   ----------------
-  return result, Q0.15 
+  return result, Q0.15
 -------------------------------------------------------------------------*/
-WORD32 xa_nn_vec_tanh_32_16(               
+WORD32 xa_nn_vec_tanh_32_16(
     WORD16       * __restrict__ y,             /* result, Q0.15 */
     const WORD32 * __restrict__ x,             /* input data, Q6.25 */
     WORD32       N)                            /* length of vectors */

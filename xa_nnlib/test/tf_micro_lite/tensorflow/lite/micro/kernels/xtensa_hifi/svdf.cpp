@@ -133,7 +133,7 @@ static inline TfLiteStatus ApplyTimeWeightsBiasAndActivation(
     err = xa_nn_elm_add_f32xf32_f32(output_ptr_batch,
                                     output_ptr_batch,
                                     scratch_bias,
-                                    num_units);
+                                    num_units); 
     CHECK_ERR_HIFI_NNLIB_KER(err, "xa_nn_elm_add_f32xf32_f32 failed");
 #else
   for (int b = 0; b < batch_size; ++b) {

@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -19,11 +19,9 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
-#include "common.h"
-#include "xa_nnlib_kernels_api.h"
+#include "xa_nnlib_common.h"
+#include "xa_nnlib_common_macros.h"
 #include "xa_nn_conv1d_std_state.h"
-#include "xa_nnlib_err_chk.h"
 
 static WORD32 conv_y_top_pad(
     WORD32 y_padding,
@@ -48,9 +46,9 @@ static WORD32 conv_y_top_pad(
     for(j=0;j<out_channels;j++)
     {
       ae_int64 acc = p_bias[j];
-      acc = AE_SLAA64S(acc, bias_shift); 
-      acc = AE_SLAA64S(acc, acc_shift); 
-      p_out[i*out_height_offset+j*out_channels_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),16),-16)); 
+      acc = AE_SLAA64S(acc, bias_shift);
+      acc = AE_SLAA64S(acc, acc_shift);
+      p_out[i*out_height_offset+j*out_channels_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),16),-16));
     }
   }
   return out_height_over_y_pad;
@@ -71,7 +69,7 @@ static WORD32 conv_y_bottom_pad(
 {
   WORD32 i,j;
   WORD32 idx_out_height_over_y_b_pad = (y_padding + input_height + y_stride - 1)/y_stride + 1;
-  WORD32 out_height_over_y_b_pad = out_height - idx_out_height_over_y_b_pad; 
+  WORD32 out_height_over_y_b_pad = out_height - idx_out_height_over_y_b_pad;
 
   /* When kernel convolves over y-bottom pad region only, output is just bias */
   for(i=idx_out_height_over_y_b_pad;i<out_height;i++)
@@ -79,12 +77,12 @@ static WORD32 conv_y_bottom_pad(
     for(j=0;j<out_channels;j++)
     {
       ae_int64 acc = p_bias[j];
-      acc = AE_SLAA64S(acc, bias_shift); 
-      acc = AE_SLAA64S(acc, acc_shift); 
-      p_out[i*out_height_offset+j*out_channels_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),16),-16)); 
+      acc = AE_SLAA64S(acc, bias_shift);
+      acc = AE_SLAA64S(acc, acc_shift);
+      p_out[i*out_height_offset+j*out_channels_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),16),-16));
     }
   }
-  return out_height_over_y_b_pad; 
+  return out_height_over_y_b_pad;
 }
 
 
@@ -145,14 +143,14 @@ WORD32 xa_nn_conv1d_std_16x16(
 
   WORD32 y_padding_var = y_padding;
   WORD32 input_channelsXwidth_pad = PADDED_SIZE(input_channels*input_width, (ALIGNMENT>>1));
-  
+
   // Limit effective bias_shift and acc_shift to [-63 ... 63]
   bias_shift = bias_shift > 63 ? 63 : bias_shift < -63 ? -63 : bias_shift;
   /* +48 to move acc to upper 16bits, as TRUNC keeps upper 32bits and ROUND keeps upper 16bits */
   acc_shift = acc_shift + 32;
   acc_shift = acc_shift > 63 ? 63 : acc_shift < -63 ? -63 : acc_shift;
 
- 
+
   /* When kernel convolves over y-top pad region only */
   WORD32 out_height_over_y_pad = 0;
   if(y_padding_var >= kernel_height)
@@ -160,8 +158,8 @@ WORD32 xa_nn_conv1d_std_16x16(
     out_height_over_y_pad = conv_y_top_pad(y_padding, kernel_height, y_stride, out_height, out_channels, out_channels_offset, out_height_offset, p_bias, p_out, bias_shift, acc_shift);
     y_padding_var -= out_height_over_y_pad * y_stride;
   }
-  
-  
+
+
   /* When kernel convolves over y-bottom pad region only */
   WORD32 out_height_over_y_b_pad = 0;
   // Determine y-bottom padding
@@ -176,11 +174,11 @@ WORD32 xa_nn_conv1d_std_16x16(
   /* When kernel convolves over input region */
   p_out += out_height_over_y_pad * out_height_offset;
 
-  // Initialize circular buffer 
- 
+  // Initialize circular buffer
+
   conv1d_std_init_cir_buf(input_channels, input_channelsXwidth_pad, input_bytewidth, input_width, kernel_height, y_stride, y_padding_var, (VOID**)&pp_inp, p_state);
-  
-  // Index to padded input height 
+
+  // Index to padded input height
   WORD32 idx_beg_inp_height_pad = kernel_height - y_stride;
 
   // Process Loop to compute one output line [out_channels] per iteration
@@ -201,7 +199,7 @@ WORD32 xa_nn_conv1d_std_16x16(
        ,out_channels /* rows */
        ,input_channelsXwidth_pad * kernel_height /* cols */
        ,out_channels_offset
-       ,bias_shift 
+       ,bias_shift
        ,acc_shift
       );
 

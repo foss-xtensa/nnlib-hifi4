@@ -54,7 +54,7 @@ namespace nn {
 bool reluFloat32(const float* inputData, const Shape& inputShape,
                  float* outputData, const Shape& outputShape) {
     int numElements = getNumberOfElements(inputShape);
-#if HIFI_VFPU && defined HIFI_NNLIB_OPT
+#if HIFI_VFPU && defined HIFI_NNLIB_OPT 
 #if 0
     xa_nn_vec_relu_f32_f32(outputData, inputData, INFINITY, numElements);
 #else
@@ -77,7 +77,7 @@ bool reluFloat32(const float* inputData, const Shape& inputShape,
 bool relu1Float32(const float* inputData, const Shape& inputShape,
                   float* outputData, const Shape& outputShape) {
     int numElements = getNumberOfElements(inputShape);
-#if HIFI_VFPU && defined HIFI_NNLIB_OPT
+#if HIFI_VFPU && defined HIFI_NNLIB_OPT 
     xa_nn_vec_activation_min_max_f32_f32(
                                     outputData,
                                     inputData,
@@ -96,7 +96,7 @@ bool relu1Float32(const float* inputData, const Shape& inputShape,
 bool relu6Float32(const float* inputData, const Shape& inputShape,
                   float* outputData, const Shape& outputShape) {
     int numElements = getNumberOfElements(inputShape);
-#if HIFI_VFPU && defined HIFI_NNLIB_OPT
+#if HIFI_VFPU && defined HIFI_NNLIB_OPT 
 #if 0
     xa_nn_vec_relu6_f32_f32(outputData, inputData, numElements);
 #else
@@ -120,13 +120,13 @@ bool tanhFloat32(const float* inputData, const Shape& inputShape,
                  float* outputData, const Shape& outputShape) {
     int numElements = getNumberOfElements(inputShape);
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     for (int i=0; i<numElements; i++, inputData++, outputData++) {
         *outputData = std::tanh(*inputData);
     }
 #else
     int err;
-    err = xa_nn_vec_tanh_f32_f32(outputData, inputData, numElements);
+    err = xa_nn_vec_tanh_f32_f32(outputData, inputData, numElements); 
 #endif
     return true;
 }
@@ -134,7 +134,7 @@ bool tanhFloat32(const float* inputData, const Shape& inputShape,
 bool logisticFloat32(const float* inputData, const Shape& inputShape,
                      float* outputData, const Shape& outputShape) {
     int numElements = getNumberOfElements(inputShape);
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     for (int i=0; i<numElements; i++, inputData++, outputData++) {
         *outputData = 1.f / (1.f + std::exp(-*inputData));
     }
@@ -172,7 +172,7 @@ bool softmaxFloat32(const float* inputData, const Shape& inputShape,
         return false;
     }
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     tflite::reference_ops::Softmax(inputData, dim, beta,
                                    outputData, dim);
 #else
@@ -186,24 +186,24 @@ bool softmaxFloat32(const float* inputData, const Shape& inputShape,
 
         if(beta != 1)
         {
-            for (int b = 0; b < batches*height*width*depth; ++b)
+            for (int b = 0; b < batches*height*width*depth; ++b) 
             {
-                p_in_tmp[b] = p_in_tmp[b]*beta;
+                p_in_tmp[b] = p_in_tmp[b]*beta; 
             }
         }
 
-        for (int b = 0; b < batches; ++b)
+        for (int b = 0; b < batches; ++b) 
         {
-            for (int x = 0; x < width; ++x)
+            for (int x = 0; x < width; ++x) 
             {
-                for (int y = 0; y < height; ++y)
+                for (int y = 0; y < height; ++y) 
                 {
                     int offset;
 
-                    offset = Offset(dim, 0, x, y, b);
+                    offset = Offset(dim, 0, x, y, b);                    
 
-                    err = xa_nn_vec_softmax_f32_f32(&outputData[offset],
-                            &inputData[offset],
+                    err = xa_nn_vec_softmax_f32_f32(&outputData[offset], 
+                            &inputData[offset], 
                             depth);
                 }
             }
@@ -231,16 +231,16 @@ bool softmaxFloat32(const float* inputData, const Shape& inputShape,
 bool reluQuant8(const uint8_t* inputData, const Shape& inputShape,
                 uint8_t* outputData, const Shape& outputShape) {
 #ifdef HIFI_NNLIB_OPT
-    int numElements = getNumberOfElements(inputShape);
-    int32_t output_activation_min = 0;
-    int32_t output_activation_max = 0;
-
-    CalculateActivationRangeUint8(kActivationRelu, inputShape,
-                                  &output_activation_min,
-                                  &output_activation_max);
-
-    xa_nn_vec_activation_min_max_asym8_asym8(outputData,
-                                   inputData,
+    int numElements = getNumberOfElements(inputShape);                  
+    int32_t output_activation_min = 0;                                  
+    int32_t output_activation_max = 0;                                  
+    
+    CalculateActivationRangeUint8(kActivationRelu, inputShape,               
+                                  &output_activation_min,               
+                                  &output_activation_max);              
+                                                                        
+    xa_nn_vec_activation_min_max_asym8_asym8(outputData, 
+                                   inputData, 
                                    output_activation_min,
                                    output_activation_max,
                                    numElements);
@@ -253,16 +253,16 @@ bool reluQuant8(const uint8_t* inputData, const Shape& inputShape,
 bool relu1Quant8(const uint8_t* inputData, const Shape& inputShape,
                  uint8_t* outputData, const Shape& outputShape) {
 #ifdef HIFI_NNLIB_OPT
-    int numElements = getNumberOfElements(inputShape);
-    int32_t output_activation_min = 0;
-    int32_t output_activation_max = 0;
-
-    CalculateActivationRangeUint8(kActivationRelu1, inputShape,
-                                  &output_activation_min,
-                                  &output_activation_max);
-
-    xa_nn_vec_activation_min_max_asym8_asym8(outputData,
-                                   inputData,
+    int numElements = getNumberOfElements(inputShape);                  
+    int32_t output_activation_min = 0;                                  
+    int32_t output_activation_max = 0;                                  
+    
+    CalculateActivationRangeUint8(kActivationRelu1, inputShape,               
+                                  &output_activation_min,               
+                                  &output_activation_max);              
+                                                                        
+    xa_nn_vec_activation_min_max_asym8_asym8(outputData, 
+                                   inputData, 
                                    output_activation_min,
                                    output_activation_max,
                                    numElements);
@@ -275,16 +275,16 @@ bool relu1Quant8(const uint8_t* inputData, const Shape& inputShape,
 bool relu6Quant8(const uint8_t* inputData, const Shape& inputShape,
                  uint8_t* outputData, const Shape& outputShape) {
 #ifdef HIFI_NNLIB_OPT
-    int numElements = getNumberOfElements(inputShape);
-    int32_t output_activation_min = 0;
-    int32_t output_activation_max = 0;
-
-    CalculateActivationRangeUint8(kActivationRelu6, inputShape,
-                                  &output_activation_min,
-                                  &output_activation_max);
-
-    xa_nn_vec_activation_min_max_asym8_asym8(outputData,
-                                   inputData,
+    int numElements = getNumberOfElements(inputShape);                  
+    int32_t output_activation_min = 0;                                  
+    int32_t output_activation_max = 0;                                  
+    
+    CalculateActivationRangeUint8(kActivationRelu6, inputShape,               
+                                  &output_activation_min,               
+                                  &output_activation_max);              
+                                                                        
+    xa_nn_vec_activation_min_max_asym8_asym8(outputData, 
+                                   inputData, 
                                    output_activation_min,
                                    output_activation_max,
                                    numElements);
@@ -332,12 +332,12 @@ bool logisticQuant8(const uint8_t* inputData, const Shape& inputShape,
     const int size = RequiredBufferSizeForDims(convertShapeToDims(inputShape));
 
 
-    err = xa_nn_vec_sigmoid_asym8_asym8(outputData,
-                               inputData,
-                               inputShape.offset,
-                               input_range_radius,
+    err = xa_nn_vec_sigmoid_asym8_asym8(outputData, 
+                               inputData, 
+                               inputShape.offset, 
+                               input_range_radius, 
                                input_multiplier,
-                               input_left_shift,
+                               input_left_shift, 
                                size);
 #endif
 
@@ -351,7 +351,7 @@ bool softmaxQuant8(const uint8_t* inputData, const Shape& inputShape,
                    const float beta,
 #ifndef HIFI_NNLIB_OPT
                    uint8_t* outputData, const Shape& outputShape) {
-#else
+#else                   
                    uint8_t* outputData, const Shape& outputShape, void *p_scratch) {
 #endif
     tflite::Dims<4> dim;
@@ -412,20 +412,20 @@ bool softmaxQuant8(const uint8_t* inputData, const Shape& inputShape,
         const int width   = MatchingArraySize(dim, 1, dim, 1);
         const int depth   = MatchingArraySize(dim, 0, dim, 0);
 
-        for (int b = 0; b < batches; ++b)
+        for (int b = 0; b < batches; ++b) 
         {
-            for (int x = 0; x < width; ++x)
+            for (int x = 0; x < width; ++x) 
             {
-                for (int y = 0; y < height; ++y)
+                for (int y = 0; y < height; ++y) 
                 {
                     int offset;
 
-                    offset = Offset(dim, 0, x, y, b);
-                    err = xa_nn_vec_softmax_asym8_asym8(&outputData[offset],
-                            &inputData[offset],
+                    offset = Offset(dim, 0, x, y, b);                    
+                    err = xa_nn_vec_softmax_asym8_asym8(&outputData[offset], 
+                            &inputData[offset], 
                             diff_min,
                             input_left_shift,
-                            input_multiplier,
+                            input_multiplier,                
                             depth,
                             p_scratch);
                 }

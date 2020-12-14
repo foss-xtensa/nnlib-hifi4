@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -19,44 +19,13 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-/* ------------------------------------------------------------------------ */
-/* Copyright (c) 2017 by Cadence Design Systems, Inc. ALL RIGHTS RESERVED.  */
-/* These coded instructions, statements, and computer programs ("Cadence    */
-/* Libraries") are the copyrighted works of Cadence Design Systems Inc.	    */
-/* Cadence IP is licensed for use with Cadence processor cores only and     */
-/* must not be used for any other processors and platforms. Your use of the */
-/* Cadence Libraries is subject to the terms of the license agreement you   */
-/* have entered into with Cadence Design Systems, or a sublicense granted   */
-/* to you by a direct Cadence licensee.                                     */
-/* ------------------------------------------------------------------------ */
-/*  IntegrIT, Ltd.   www.integrIT.com, info@integrIT.com                    */
-/*                                                                          */
-/* DSP Library                                                              */
-/*                                                                          */
-/* This library contains copyrighted materials, trade secrets and other     */
-/* proprietary information of IntegrIT, Ltd. This software is licensed for  */
-/* use with Cadence processor cores only and must not be used for any other */
-/* processors and platforms. The license to use these sources was given to  */
-/* Cadence, Inc. under Terms and Condition of a Software License Agreement  */
-/* between Cadence, Inc. and IntegrIT, Ltd.                                 */
-/* ------------------------------------------------------------------------ */
-/*          Copyright (C) 2015-2017 IntegrIT, Limited.                      */
-/*                      All Rights Reserved.                                */
-/* ------------------------------------------------------------------------ */
-/*
-  NatureDSP Signal Processing Library. Math functions
-    Sigmoid
-    C code optimized for HiFi3
-  IntegrIT, 2006-2017
-*/
-#include "xtensa/tie/xt_hifi2.h"
+#include "xa_nnlib_common.h"
 #include "NatureDSP_Signal_math.h"
-#include "xa_type_def.h"
 
 #define GET_8X2_FROM_32X2(var,ptr)\
 {\
 /*
-*	Z(var) is 32x2 vector. 
+*	Z(var) is 32x2 vector.
 *	Procedure to make 32-bit to 8-bit with symmetric rounding:
 *	1. We want to extract the 2nd LSB (out of 4 in 32-bit) with rounding
 *	2. Shift the vector left by 8 bits
@@ -84,7 +53,7 @@
 #define GET_8_FROM_32(var,ptr)\
 {\
 /*
-*	Z(var) is 32x2 vector. 
+*	Z(var) is 32x2 vector.
 *	Procedure to make 32-bit to 8-bit with symmetric rounding:
 *	1. We want to extract the 2nd LSB (out of 4 in 32-bit) with rounding
 *	2. Shift the vector left by 8 bits
@@ -108,7 +77,7 @@
 
 /*-------------------------------------------------------------------------
   Sigmoid
-  The functions compute the sigmoid of input argument. 32-bit fixed-point 
+  The functions compute the sigmoid of input argument. 32-bit fixed-point
   functions accept inputs in Q6.25 and form outputs in Q0.7 format.
 
   Precision:
@@ -127,7 +96,7 @@
   ----------------
   return result, Q0.7
 -------------------------------------------------------------------------*/
-WORD32 xa_nn_vec_sigmoid_32_8(               
+WORD32 xa_nn_vec_sigmoid_32_8(
     WORD8       * __restrict__ y,             /* result, Q0.7 */
     const WORD32 * __restrict__ x,             /* input data, Q6.25 */
     WORD32       N)                            /* length of vectors */
@@ -170,7 +139,7 @@ WORD32 xa_nn_vec_sigmoid_32_8(
     int n;
     ae_int32x2 X, X0, X1, E, Y, Z, D;
     ae_f32x2 t;
-    
+
     xtbool2 sign;
     const ae_int32x2 * restrict pX = (const ae_int32x2 *)x;
     const ae_int32x2 * restrict pX1 = (const ae_int32x2 *)x;
@@ -208,7 +177,7 @@ WORD32 xa_nn_vec_sigmoid_32_8(
         AE_MULAFP32X2RAS(Z, Z, D);
         t = AE_SUB32(2147483647, Z);AE_MULSFP32X2RAS(t, Z, X);D = t;
         AE_MULAFP32X2RAS(Z, Z, D);
-        
+
         AE_LA32X2_IP(X, aX1, pX1);
         sign = AE_LT32(X, 0);
 
@@ -247,7 +216,7 @@ WORD32 xa_nn_vec_sigmoid_32_8(
         Y = AE_SUB32(2147483647, Z);
         AE_MOVT32X2(Z, Y, sign);
 
-		GET_8_FROM_32(Z,pY8); 
+		GET_8_FROM_32(Z,pY8);
     }
 
     return 0;
@@ -263,7 +232,7 @@ WORD32 xa_nn_vec_sigmoid_32_8(
   32x8  32-bit inputs, 8-bit output. Accuracy: 2 LSB.
 
   Input:
-  x[N]   input data, Q6.25  
+  x[N]   input data, Q6.25
   N      length of vectors
   Output:
   y[N]   result, Q0.7
@@ -275,7 +244,7 @@ WORD32 xa_nn_vec_sigmoid_32_8(
   ----------------
   return result, Q0.7
 -------------------------------------------------------------------------*/
-WORD32 xa_nn_vec_tanh_32_8(               
+WORD32 xa_nn_vec_tanh_32_8(
     WORD8       * __restrict__ y,             /* result, Q0.7 */
     const WORD32 * __restrict__ x,             /* input data, Q6.25 */
     WORD32       N)                            /* length of vectors */
@@ -396,7 +365,7 @@ WORD32 xa_nn_vec_tanh_32_8(
         X = AE_NEG32S(Z);
         AE_MOVT32X2(Z, X, sign);
 
-		GET_8_FROM_32(Z,pY8); 
+		GET_8_FROM_32(Z,pY8);
     }
 
     return 0;

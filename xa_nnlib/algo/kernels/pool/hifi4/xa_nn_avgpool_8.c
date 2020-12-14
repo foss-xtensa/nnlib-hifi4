@@ -20,35 +20,35 @@
 
 ******************************************************************************/
 #include "xa_type_def.h"
-#include "common.h"
+#include "xa_nnlib_common.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_avgpool_state.h"
 #include "xa_nnlib_err_chk.h"
 
 static void avgpool_8(
-    WORD8 *__restrict__ p_out,
-    WORD8 *__restrict__ p_inp,
-    WORD32 *p_den_height,
-    WORD32 *p_den_width,
-    WORD32  input_height,
-    WORD32  input_width,
-    WORD32  kernel_height,
-    WORD32  kernel_width,
-    WORD32  x_stride,
-    WORD32  y_stride,
-    WORD32  x_padding,
-    WORD32  y_padding,
-    WORD32  out_height,
-    WORD32  out_width,
-    pVOID   p_scratch_in)
+      WORD8 *__restrict__ p_out,
+const WORD8 *__restrict__ p_inp,
+      WORD32 *p_den_height,
+      WORD32 *p_den_width,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
+      pVOID   p_scratch_in)
 {
     WORD32 *p_scratch = (WORD32 *)(p_scratch_in);
 
     int itr_oh, itr_ow;
     int left_pad_aligned, right_pad, total_out_width, scratch_width;
     int pre_loop_count, loop_count, post_loop_count;
-    WORD8 * p_src1, * p_src2;
-    WORD8 * __restrict p_src1_temp, * __restrict p_src2_temp;
+    const WORD8 * p_src1, * p_src2;
+    const WORD8 * __restrict p_src1_temp, * __restrict p_src2_temp;
     ae_int32x2 * p_wsrc1, * p_wsrc2;
     ae_int32x2 * __restrict p_wsrc1_temp, * __restrict p_wsrc2_temp;
     ae_int32x2 *p_dst, *p_dst_temp;
@@ -303,24 +303,24 @@ static void avgpool_8(
 }
 
 WORD32 xa_nn_avgpool_8(
-    WORD8* __restrict__ p_out,
-    WORD8* __restrict__ p_inp,
-    WORD32  input_height,
-    WORD32  input_width,
-    WORD32  input_channels,
-    WORD32  kernel_height,
-    WORD32  kernel_width,
-    WORD32  x_stride,
-    WORD32  y_stride,
-    WORD32  x_padding,
-    WORD32  y_padding,
-    WORD32  out_height,
-    WORD32  out_width,
+      WORD8* __restrict__ p_out,
+const WORD8* __restrict__ p_inp,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  input_channels,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
 #ifdef NNLIB_V2
-    WORD32  inp_data_format,
+      WORD32  inp_data_format,
 #endif
-    WORD32  out_data_format,
-    VOID *p_scratch)
+      WORD32  out_data_format,
+      VOID *p_scratch)
 {
     /* NULL pointer checks */
     XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -369,7 +369,8 @@ WORD32 xa_nn_avgpool_8(
 
         xa_nn_avgpool_state_t *p_state = (xa_nn_avgpool_state_t *)p_scratch;
         int itr_ic, itr_oh, itr_ow;
-        WORD8 *pt_inp, *pt_out;
+        const WORD8 *pt_inp; 
+        WORD8 *pt_out;
         WORD32 *p_tmp_out = (WORD32 *)(p_state->p_tmp_out);
 
         /* Calculate denominators for division */

@@ -59,7 +59,7 @@ namespace nn {
     uint32_t height       = getSizeOfDimension(inputShape, 1);                  \
     uint32_t width        = getSizeOfDimension(inputShape, 2);                  \
     uint32_t outHeight    = getSizeOfDimension(outputShape, 1);                 \
-    uint32_t outWidth     = getSizeOfDimension(outputShape, 2);
+    uint32_t outWidth     = getSizeOfDimension(outputShape, 2); 
 
 bool averagePoolFloat32(const float* inputData, const Shape& inputShape,
                         int32_t padding_left, int32_t padding_right,
@@ -72,14 +72,14 @@ bool averagePoolFloat32(const float* inputData, const Shape& inputShape,
                         float* outputData, const Shape& outputShape, void* p_scratch) {
 #endif
 
-
+    
     float output_activation_min, output_activation_max;
-
+    
     CalculateActivationRangeFloat(activation, &output_activation_min,
                                   &output_activation_max);
 
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     ANDROID_NN_POOLING_PARAMETERS
     tflite::reference_ops::AveragePool(
             inputData, convertShapeToDims(inputShape),
@@ -88,7 +88,7 @@ bool averagePoolFloat32(const float* inputData, const Shape& inputShape,
             output_activation_min, output_activation_max,
             outputData, convertShapeToDims(outputShape));
 #else
-//    uint32_t out_channels = getSizeOfDimension(outputShape, 3);
+//    uint32_t out_channels = getSizeOfDimension(outputShape, 3);                 
     ANDROID_NN_POOLING_PARAMETERS_HIFI_BUILD
     int input_channels = getSizeOfDimension(inputShape, 3);
     int err_f, itr;
@@ -99,7 +99,7 @@ bool averagePoolFloat32(const float* inputData, const Shape& inputShape,
 
     for(itr=0; itr<batch_size; itr++)
     {
-       ptr_tmp_out = &outputData[outHeight*outWidth*input_channels*itr];
+       ptr_tmp_out = &outputData[outHeight*outWidth*input_channels*itr]; 
        ptr_tmp_in  = &inputData[height*width*input_channels*itr];
 
         err_f =  xa_nn_avgpool_f32(ptr_tmp_out,
@@ -165,12 +165,12 @@ bool averagePoolQuant8(const uint8_t* inputData, const Shape& inputShape,
     int err_f, itr;
     int batch_size = (int)getSizeOfDimension(outputShape, 0);
     uint8_t *ptr_tmp_out;
-    const uint8_t *ptr_tmp_in;
+    const uint8_t *ptr_tmp_in;  
 
 
     for(itr=0; itr<batch_size; itr++)
     {
-       ptr_tmp_out = &outputData[outHeight*outWidth*input_channels*itr];
+       ptr_tmp_out = &outputData[outHeight*outWidth*input_channels*itr]; 
        ptr_tmp_in  = &inputData[height*width*input_channels*itr];
 
         err_f =  xa_nn_avgpool_asym8(ptr_tmp_out,
@@ -190,7 +190,7 @@ bool averagePoolQuant8(const uint8_t* inputData, const Shape& inputShape,
                 0,
                 p_scratch);
     }
-
+    
     int total_elements = outHeight * outWidth * input_channels * batch_size;
     err_f = xa_nn_vec_activation_min_max_asym8_asym8(outputData,
                                            (const uint8_t *)outputData,
@@ -250,7 +250,7 @@ bool maxPoolFloat32(const float* inputData, const Shape& inputShape,
     float output_activation_min, output_activation_max;
     CalculateActivationRangeFloat(activation, &output_activation_min,
                                   &output_activation_max);
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     ANDROID_NN_POOLING_PARAMETERS
     tflite::reference_ops::MaxPool(
             inputData, convertShapeToDims(inputShape),
@@ -268,7 +268,7 @@ bool maxPoolFloat32(const float* inputData, const Shape& inputShape,
 
     for(itr=0; itr<batch_size; itr++)
     {
-       ptr_tmp_out = &outputData[outHeight*outWidth*input_channels*itr];
+       ptr_tmp_out = &outputData[outHeight*outWidth*input_channels*itr]; 
        ptr_tmp_in  = &inputData[height*width*input_channels*itr];
 
         err_f =  xa_nn_maxpool_f32(ptr_tmp_out,
@@ -288,7 +288,7 @@ bool maxPoolFloat32(const float* inputData, const Shape& inputShape,
                 0,
                 p_scratch);
     }
-
+    
     int total_elements = outHeight * outWidth * input_channels * batch_size;
     err_f = xa_nn_vec_activation_min_max_f32_f32(outputData,
                                          (const float *)outputData,
@@ -334,11 +334,11 @@ bool maxPoolQuant8(const uint8_t* inputData, const Shape& inputShape,
     int err_f, itr;
     int batch_size = (int)getSizeOfDimension(outputShape, 0);
     uint8_t *ptr_tmp_out;
-    const uint8_t *ptr_tmp_in;
+    const uint8_t *ptr_tmp_in;  
 
     for(itr=0; itr<batch_size; itr++)
     {
-       ptr_tmp_out = &outputData[outHeight*outWidth*input_channels*itr];
+       ptr_tmp_out = &outputData[outHeight*outWidth*input_channels*itr]; 
        ptr_tmp_in  = &inputData[height*width*input_channels*itr];
 
         err_f =  xa_nn_maxpool_asym8(ptr_tmp_out,

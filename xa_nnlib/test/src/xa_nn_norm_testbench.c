@@ -69,15 +69,15 @@ typedef struct _test_config_t
 int default_config(test_config_t *p_cfg)
 {
   if(p_cfg)
-  {
+  { 
 
     p_cfg->help     = 0;
     p_cfg->num_elms = 256;
     p_cfg->inp_precision = 16;
     p_cfg->out_precision = 16;
     strcpy(p_cfg->kernel_name, "l2_norm");
-    p_cfg->frames   = 2;
-    p_cfg->write_file = 0;
+    p_cfg->frames   = 2;  
+    p_cfg->write_file = 0;  
     p_cfg->read_inp_file_name[0] = '\0';
     p_cfg->read_ref_file_name[0] = '\0';
     p_cfg->write_inp_file_name[0]='\0';
@@ -118,7 +118,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_STRING("-write_inp_file_name",p_cfg->write_inp_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_out_file_name",p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
-
+    
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
     exit(1);
@@ -165,8 +165,8 @@ int xa_nn_main_process(int argc, char *argv[])
   int frame;
   int err = 0;
   int pass_count=0;
-  char profiler_name[MAX_PROFILER_NAME_LENGTH];
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
+  char profiler_name[MAX_PROFILER_NAME_LENGTH]; 
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
   int inp_size, out_size;
   int num_ops=0;
 
@@ -184,7 +184,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-
+  
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -199,7 +199,7 @@ int xa_nn_main_process(int argc, char *argv[])
   inp_size = cfg.num_elms;
   out_size = cfg.num_elms;
 
-  // Set profiler name
+  // Set profiler name 
   if(cfg.kernel_name[0])
   {
     strcpy(profiler_name,cfg.kernel_name);
@@ -208,7 +208,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_params, "_f32");
     strcat(profiler_name, profiler_params);
-
+    
     // If VFPU is not supported, return
     if(!HIFI_VFPU)
     {
@@ -218,11 +218,11 @@ int xa_nn_main_process(int argc, char *argv[])
   }
   else
   {
-    sprintf(profiler_params, "_%d",
+    sprintf(profiler_params, "_%d", 
         cfg.inp_precision);
     strcat(profiler_name, profiler_params);
   }
-
+  
   // Set profiler parameters
   sprintf(profiler_params, "num_elms=%d", cfg.num_elms);
 
@@ -230,7 +230,7 @@ int xa_nn_main_process(int argc, char *argv[])
   if(cfg.write_file)
   {
     /* If write_file (generate test vectors) is enabled, random data would be generated and
-       used; the input data and output data generated would be written into files.
+       used; the input data and output data generated would be written into files. 
      */
     fptr_inp = file_open(pb_input_file_path, cfg.write_inp_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
   }
@@ -248,15 +248,15 @@ int xa_nn_main_process(int argc, char *argv[])
   // Open reference file if verify flag is enabled
   if(cfg.verify)
   {
-    p_ref = create_buf1D(out_size, cfg.out_precision);
-
+    p_ref = create_buf1D(out_size, cfg.out_precision); 
+    
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
 
   // Allocate Memory
   p_inp = create_buf1D(inp_size, cfg.inp_precision);                              VALIDATE_PTR(p_inp);
   p_out = create_buf1D(out_size, cfg.out_precision);                              VALIDATE_PTR(p_out);
-
+  
   if(!strcmp(cfg.kernel_name,"l2_norm"))
     num_ops = 2*cfg.num_elms;   // First calculated square root of energy and then divide input by it
 
@@ -389,7 +389,7 @@ int main (int argc, char *argv[])
                 else strcpy((char *)pb_ref_file_path, "");
                 continue;
             }
-
+            
             if(strcmp(fargv[0], "@Start") == 0)
             {
                 processcmd = 1;

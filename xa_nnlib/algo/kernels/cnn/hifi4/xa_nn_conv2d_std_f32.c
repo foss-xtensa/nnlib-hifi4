@@ -19,12 +19,11 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include <string.h>
-#include "xa_type_def.h"
 #include "common_fpu.h"
-#include "xa_nnlib_kernels_api.h"
+#include "xa_nnlib_common.h"
+#include "xa_nnlib_common_macros.h"
 #include "xa_nn_conv2d_std_state.h"
-#include "xa_nnlib_err_chk.h"
+#include <string.h>
 
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_conv2d_std_f32,(
@@ -141,7 +140,7 @@ WORD32 xa_nn_conv2d_std_f32(
   XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(FLOAT32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_kernel, ALIGNMENT, -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(FLOAT32), -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
+  //XA_NNLIB_ARG_CHK_ALIGN(p_scratch, sizeof(WORD8), -1);
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
@@ -158,8 +157,21 @@ WORD32 xa_nn_conv2d_std_f32(
   WORD32 input_bytewidth = sizeof(*p_inp);
   VOID *pp_inp = (VOID *)p_inp;
 
+  p_scratch = ALIGNED_ADDR(p_scratch, ALIGNMENT);
   xa_nn_conv_state_t *p_state = (xa_nn_conv_state_t *)p_scratch;
-  xa_nn_conv2d_std_init_state((void*)p_state,(void*)p_kernel,input_height,input_channels,kernel_height,kernel_width,x_stride,y_stride,y_padding,out_height,-1);
+  xa_nn_conv2d_std_init_state((void*)p_state
+      ,(void*)p_kernel
+      ,input_height
+      ,input_channels
+      ,kernel_height
+      ,kernel_width
+      ,x_stride
+      ,y_stride
+      ,y_padding
+      ,out_height
+      ,out_channels
+      ,PREC_F32
+      ,PREC_F32);
 
   WORD32 out_channels_offset = out_data_format ? out_height * out_width : 1;
   WORD32 out_height_offset = out_data_format ? out_width : out_width * out_channels;
@@ -213,7 +225,7 @@ WORD32 xa_nn_conv2d_std_f32(
     xa_nn_matXvec_f32_circ
       (p_out /* output */
        ,p_state->cir_buf.p_curr/* matrix: rows x cols */
-       ,p_kernel /* vec: cols */
+       ,p_state->p_kernel_padded /* vec: cols */
        ,p_bias /* bias */
        ,out_height /* rows */
        ,input_channels_pad * kernel_width * kernel_height /* cols */

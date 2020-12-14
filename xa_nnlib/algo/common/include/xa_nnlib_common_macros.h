@@ -64,7 +64,6 @@
 #define INCREMENT_IN_BYTES_FOR_FLOAT32   4
 #define INCREMENT_IN_BYTES_FOR_FLOAT32x2 (INCREMENT_IN_BYTES_FOR_FLOAT32 * 2)
 
-#if 1
 /* Limit effective bias_shift and acc_shift to [-63 ... 63] */
 #define LIMIT_VARIABLE(_var, _left_limit, _right_limit) \
   _var = _var > _right_limit ? _right_limit : _var < _left_limit ? _left_limit : _var;
@@ -94,7 +93,6 @@
   ADJUST_ACC_LSH_AxB_C(A, B, C); \
   ADJUST_BIAS_LSH_AxB(A, B); \
 
-#endif /* 1 */
 /* ==================================================================================================== */
 #define SETUP_BIAS_f32 \
   xtfloat _xtfloat_bias = (xtfloat)0.0f; \
@@ -234,7 +232,7 @@
   xtfloat _xtfloat_vec_batch_ ##idx_vec  = (xtfloat)0.0f ; \
   xtfloatx2 *_xtfloatx2_p_vec_batch_ ##idx_vec  = (xtfloatx2 *)(p_vec1 + (vec_itr + idx_vec)*vec_offset); \
   xtfloat *_xtfloat_p_vec_batch_ ##idx_vec; \
-  ae_valign _align_xtfloatx2_p_vec_batch_ ##idx_vec = AE_LA64_PP(_xtfloatx2_p_vec_batch_ ##idx_vec);
+  ae_valign _align_xtfloatx2_p_vec_batch_ ##idx_vec = AE_LA64_PP(_xtfloatx2_p_vec_batch_ ##idx_vec); 
 
 #define SETUP_VEC_BATCH_ASYM8b SETUP_VEC_BATCH_8b
 #define SETUP_VEC_OFFSET_BATCH_ASYM8b SETUP_VEC_OFFSET_BATCH_8b
@@ -354,8 +352,8 @@
 #define LOAD_BIAS_8b_FOR_8bx8b \
   _WORD8_bias = *_WORD8_p_bias++; \
   _UWORD32_bias = _WORD8_bias; \
-  _ae_int64_bias = AE_MOVINT64_FROMINT32X2((AE_MOVDA32X2(_UWORD32_bias, 0))); \
-  _ae_int64_bias = AE_SRAA64(_ae_int64_bias, 32); \
+  _ae_int64_bias = AE_MOVINT64_FROMINT32X2((AE_MOVDA32(_UWORD32_bias))); \
+  _ae_int64_bias = AE_SRAI64(_ae_int64_bias, 32); \
   _ae_int64_sat_bias = AE_SLAA64S(_ae_int64_bias, bias_shift); \
 
 #define LOAD_BIAS_8b_FOR_8bx8b_MATMUL \
@@ -363,8 +361,8 @@
   {\
   _WORD8_bias = *_WORD8_p_bias++; \
   _UWORD32_bias = _WORD8_bias; \
-  _ae_int64_bias = AE_MOVINT64_FROMINT32X2((AE_MOVDA32X2(_UWORD32_bias, 0))); \
-  _ae_int64_bias = AE_SRAA64(_ae_int64_bias, 32); \
+  _ae_int64_bias = AE_MOVINT64_FROMINT32X2((AE_MOVDA32(_UWORD32_bias))); \
+  _ae_int64_bias = AE_SRAI64(_ae_int64_bias, 32); \
   _ae_int64_sat_bias = AE_SLAA64S(_ae_int64_bias, bias_shift); \
   }
 
@@ -548,23 +546,23 @@
   /* Copy 8-bits to unsigned 32-bits */ \
   _UWORD32_bias = _WORD8_bias; \
   /*Move unsigned 32 bit value to DR register*/ \
-  _ae_int64_bias = AE_MOVINT64_FROMINT32X2((AE_MOVDA32X2(_UWORD32_bias, 0))); \
-  _ae_int64_bias = AE_SRAA64(_ae_int64_bias, 32); \
+  _ae_int64_bias = AE_MOVINT64_FROMINT32X2((AE_MOVDA32(_UWORD32_bias))); \
+  _ae_int64_bias = AE_SRAI64(_ae_int64_bias, 32); \
   _ae_int64_sat_bias = AE_SLAA64S(_ae_int64_bias, bias_shift); \
-  _ae_int64_acc_ ## idx = AE_SRAA64(_ae_int64_acc_ ## idx, 16); \
+  _ae_int64_acc_ ## idx = AE_SRAI64(_ae_int64_acc_ ## idx, 16); \
   _ae_int64_acc_ ## idx = AE_ADD64S(_ae_int64_acc_ ## idx, _ae_int64_sat_bias); \
 
 #define ADD_BIAS_32b_ACC_FOR_8bx8b(idx) \
   ae_int32_loadip(_ae_int32_bias, _ae_int32_p_bias, INCREMENT_IN_BYTES_FOR_INT32); \
   _ae_int64_sat_bias = AE_SLAA64S(((ae_int64) _ae_int32_bias), bias_shift); \
-  _ae_int64_acc_ ## idx = AE_SRAA64(_ae_int64_acc_ ## idx, 16); \
+  _ae_int64_acc_ ## idx = AE_SRAI64(_ae_int64_acc_ ## idx, 16); \
   _ae_int64_acc_ ## idx = AE_ADD64S(_ae_int64_acc_ ## idx, _ae_int64_sat_bias); \
 
 #define ADD_BIAS_16b_ACC_FOR_8bx16b(idx) \
   ae_int16_loadip(_ae_int16_bias, _ae_int16_p_bias, INCREMENT_IN_BYTES_FOR_INT16); \
   /* Saturate 16b bias after shift to 64b */ \
   _ae_int64_sat_bias = AE_SLAA64S(((ae_int64) _ae_int16_bias), bias_shift); \
-  _ae_int64_acc_ ## idx = AE_SRAA64(_ae_int64_acc_ ## idx, 8); \
+  _ae_int64_acc_ ## idx = AE_SRAI64(_ae_int64_acc_ ## idx, 8); \
   _ae_int64_acc_ ## idx = AE_ADD64S(_ae_int64_acc_ ## idx, _ae_int64_sat_bias); \
 
 #define ADD_BIAS_16b_ACC_FOR_16bx8b ADD_BIAS_16b_ACC_FOR_8bx16b
@@ -573,7 +571,7 @@
   ae_int64_loadip(_ae_int64_bias, _ae_int64_p_bias, INCREMENT_IN_BYTES_FOR_INT64); \
   /* Saturate 64b bias after shift to 64b */ \
   _ae_int64_sat_bias = AE_SLAA64S(((ae_int64) _ae_int64_bias), bias_shift); \
-  _ae_int64_acc_ ## idx = AE_SRAA64(_ae_int64_acc_ ## idx, 8); \
+  _ae_int64_acc_ ## idx = AE_SRAI64(_ae_int64_acc_ ## idx, 8); \
   _ae_int64_acc_ ## idx = AE_ADD64S(_ae_int64_acc_ ## idx, _ae_int64_sat_bias); \
 
 #define ADD_BIAS_16b_ACC_FOR_16bx16b(idx) \
@@ -632,22 +630,22 @@
   ADD_BIAS_BATCH_ACC_VEC_UNROLL(idx_row); \
 
 #define ADD_BIAS_BATCH_8b_ACC_FOR_8bx8b(idx_row,idx_vec)\
-  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAA64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, 16); \
+  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAI64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, 16); \
   _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_ADD64S(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, _ae_int64_sat_bias); \
 
 #define ADD_BIAS_BATCH_8b_ACC_FOR_8bx8b_MATMUL(idx_row,idx_vec)\
-  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAA64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, 16); \
+  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAI64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, 16); \
   if(p_bias!=NULL)\
   {\
   _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_ADD64S(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, _ae_int64_sat_bias); \
   }
 
 #define ADD_BIAS_BATCH_16b_ACC_FOR_8bx16b(idx_row,idx_vec)\
-  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAA64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, 8); \
+  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAI64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, 8); \
   _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_ADD64S(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, _ae_int64_sat_bias); \
 
 #define ADD_BIAS_BATCH_16b_ACC_FOR_8bx16b_MATMUL(idx_row,idx_vec)\
-  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAA64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, 8); \
+  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAI64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, 8); \
   if(p_bias!=NULL)\
   {\
     _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_ADD64S(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, _ae_int64_sat_bias); \
@@ -694,15 +692,15 @@
 #define STORE_ACC_8bx8b_AT_OUT_8b(idx) \
       ae_int32 _ae_int32_tmp_var_ ## idx; \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx = \
-  AE_SLAA32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 24); \
-  _ae_int32_tmp_var_ ## idx = AE_SLAA32S(_ae_f32x2_tmp_var_ ## idx, -24); \
+  AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 24); \
+  _ae_int32_tmp_var_ ## idx = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx, 24); \
   (*((WORD8 *) p_out + m_itr + idx)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
 
 #define STORE_ACC_8bx8b_AT_OUT_16b(idx) \
       ae_int32 _ae_int32_tmp_var_ ## idx; \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx = \
-  AE_SLAA32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 16); \
-  _ae_int32_tmp_var_ ## idx = AE_SLAA32S(_ae_f32x2_tmp_var_ ## idx, -16); \
+  AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 16); \
+  _ae_int32_tmp_var_ ## idx = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx, 16); \
   (*((WORD16 *) p_out + m_itr + idx)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
 
 #define STORE_ACC_8bx8b_AT_OUT_32b(idx) \
@@ -721,8 +719,8 @@
 #define STORE_ACC_8bx16b_AT_OUT_16b(idx) \
       ae_int32 _ae_int32_tmp_var_ ## idx; \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx = \
-  AE_SLAA32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 16); \
-  _ae_int32_tmp_var_ ## idx = AE_SLAA32S(_ae_f32x2_tmp_var_ ## idx, -16); \
+  AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 16); \
+  _ae_int32_tmp_var_ ## idx = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx, 16); \
   (*((WORD16 *) p_out + m_itr + idx)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
 
 #define STORE_ACC_16bx8b_AT_OUT_16b STORE_ACC_8bx16b_AT_OUT_16b
@@ -743,8 +741,8 @@
 #define STORE_ACC_16bx16b_AT_OUT_16b(idx) \
       ae_int32 _ae_int32_tmp_var_ ## idx; \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx = \
-  AE_SLAA32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 16); \
-  _ae_int32_tmp_var_ ## idx = AE_SLAA32S(_ae_f32x2_tmp_var_ ## idx, -16); \
+  AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 16); \
+  _ae_int32_tmp_var_ ## idx = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx, 16); \
   (*((WORD16 *) p_out + m_itr + idx)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
 
 #define STORE_ACC_16bx16b_AT_OUT_32b(idx) \
@@ -769,15 +767,15 @@
 #define STORE_ACC_BATCH_8bx8b_AT_OUT_8b(idx_row,idx_vec) \
   ae_int32 _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec; \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec = \
-  AE_SLAA32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 24); \
-  _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SLAA32S(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, -24); \
+  AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 24); \
+  _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, 24); \
   (*((WORD8 *) p_out[vec_itr + idx_vec] + m_itr + idx_row)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec)); \
 
 #define STORE_STRIDE_ACC_BATCH_8bx8b_AT_OUT_8b(idx_row,idx_vec) \
   ae_int32 _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec; \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec = \
-  AE_SLAA32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 24); \
-  _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SLAA32S(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, -24); \
+  AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 24); \
+  _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, 24); \
   (*((WORD8 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec)); \
 
 #define STORE_ACC_BATCH_ROW_8bx16b_AT_OUT_64b(idx_row)\
@@ -809,15 +807,15 @@
 #define STORE_ACC_BATCH_16bx16b_AT_OUT_16b(idx_row,idx_vec) \
       ae_int32 _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec; \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec = \
-  AE_SLAA32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 16); \
-  _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SLAA32S(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, -16); \
+  AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 16); \
+  _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, 16); \
   (*((WORD16 *) p_out[vec_itr + idx_vec] + m_itr + idx_row)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec)); \
 
 #define STORE_STRIDE_ACC_BATCH_16bx16b_AT_OUT_16b(idx_row,idx_vec) \
   ae_int32 _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec; \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec = \
-  AE_SLAA32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 16); \
-  _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SLAA32S(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, -16); \
+  AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 16); \
+  _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, 16); \
   (*((WORD16 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec)); \
 
 #define STORE_ACC_BATCH_ROW_AT_OUT_f32(idx_row)\

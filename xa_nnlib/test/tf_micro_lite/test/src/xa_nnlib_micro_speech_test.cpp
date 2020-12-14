@@ -81,7 +81,7 @@ extern unsigned char yes_wav[];
 
 int frontendprocess_inference(void *in, void *out) {
 
-/****File Read upto 1Second audio data***/
+/****File Read upto 1Second audio data***/   
   uint8_t audio_spectrogram[AUDIO_SAMPLE_DATA];
 
   tflite::MicroErrorReporter micro_error_reporter;
@@ -255,7 +255,7 @@ int frontendprocess_inference(void *in, void *out) {
   PRINT_VAR(go_score)
 
 
-  //Debug logs are not implemented,so using out_ptr returning success value here
+  //Debug logs are not implemented,so using out_ptr returning success value here   
   // out_ptr[2] = 0xA;
   short *out_ptr = (short*)out;
   int i = 0;

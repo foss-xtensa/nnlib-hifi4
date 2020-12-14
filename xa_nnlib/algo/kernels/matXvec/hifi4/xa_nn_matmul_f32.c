@@ -19,51 +19,48 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
 #include "common_fpu.h"
-#include "xtensa/tie/xt_hifi2.h"
-#include <xa_nnlib_kernels_api.h>
+#include "xa_nnlib_common.h"
 
-    #ifdef ROW_UNROLL
-        #undef ROW_UNROLL
-        #define ROW_UNROLL 4
-    #else
-        #define ROW_UNROLL 4
-    #endif
+#ifdef ROW_UNROLL
+    #undef ROW_UNROLL
+    #define ROW_UNROLL 4
+#else
+    #define ROW_UNROLL 4
+#endif
 
 #include "xa_nnlib_common_macros.h"
-#include "xa_nnlib_err_chk.h"
 
 /*----------------------------Main function---------------------------------*/
 
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(WORD32,xa_nn_matmul_f32xf32_f32,(
-    FLOAT32 * __restrict__ p_out,
-    const FLOAT32 * __restrict__ p_mat1,
-    const FLOAT32 * __restrict__ p_vec1,
-    const FLOAT32 * __restrict__ p_bias,
+    FLOAT32 * __restrict__ p_out,        
+    const FLOAT32 * __restrict__ p_mat1, 
+    const FLOAT32 * __restrict__ p_vec1, 
+    const FLOAT32 * __restrict__ p_bias, 
     WORD32 rows,
     WORD32 cols1,
-    WORD32 row_stride1,
-    WORD32 vec_count,
+    WORD32 row_stride1,                   
+    WORD32 vec_count,                     
     WORD32 vec_offset,
     WORD32 out_offset,
-    WORD32 out_stride))
+    WORD32 out_stride))                      
 
 #else
 WORD32 xa_nn_matmul_f32xf32_f32(
 
-    FLOAT32 * __restrict__ p_out,
-    const FLOAT32 * __restrict__ p_mat1,
-    const FLOAT32 * __restrict__ p_vec1,
-    const FLOAT32 * __restrict__ p_bias,
+    FLOAT32 * __restrict__ p_out,          
+    const FLOAT32 * __restrict__ p_mat1,   
+    const FLOAT32 * __restrict__ p_vec1,   
+    const FLOAT32 * __restrict__ p_bias,   
     WORD32 rows,
     WORD32 cols1,
-    WORD32 row_stride1,
-    WORD32 vec_count,
+    WORD32 row_stride1,                    
+    WORD32 vec_count,                      
     WORD32 vec_offset,
     WORD32 out_offset,
-    WORD32 out_stride)
+    WORD32 out_stride)                      
 {
     /* NULL pointer checks */
     XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -79,7 +76,7 @@ WORD32 xa_nn_matmul_f32xf32_f32(
     XA_NNLIB_ARG_CHK_COND((vec_offset == 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_offset == 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_stride == 0), -1);
-
+  
     /* Iterators used in for loops */
     int m_itr, c_itr, vec_itr;
     xtfloat* p_out_tmp;
@@ -104,7 +101,7 @@ WORD32 xa_nn_matmul_f32xf32_f32(
     #define UNROLL_STORE_ACC_BATCH              STORE_STRIDE_ACC_BATCH_AT_OUT_f32
 
     CHK_MATMUL_ALIGN(p_mat1, sizeof(FLOAT32), p_vec1, sizeof(FLOAT32), cols1, row_stride1, vec_offset, 2);
-
+    
     if(chk_align)
     {
         if(vec_count > VEC_UNROLL)
@@ -326,13 +323,13 @@ WORD32 xa_nn_matmul_f32xf32_f32(
                         LOAD_ROW_MAT1_f32_SINGLE_UNALIGNED(1);
                         KERNEL_MAT1_VEC_BATCH_f32_SINGLE_UNALIGNED(0,0);
                         KERNEL_MAT1_VEC_BATCH_f32_SINGLE_UNALIGNED(1,0);
-                    }
+                    }  
 
-                    LOAD_BIAS;
+                    LOAD_BIAS; 
                     UNROLL_ADD_BIAS_ACC_BATCH(0,0);
-                    LOAD_BIAS;
+                    LOAD_BIAS; 
                     UNROLL_ADD_BIAS_ACC_BATCH(1,0);
-
+                
                     STORE_STRIDE_ACC_BATCH_AT_OUT_f32(0,0);
                     STORE_STRIDE_ACC_BATCH_AT_OUT_f32(1,0);
                 }
@@ -368,7 +365,7 @@ WORD32 xa_nn_matmul_f32xf32_f32(
     {
         return -1;
     }
-
+    
     #undef UNROLL_ROW_SETUP_ACC_BATCH
     #undef UNROLL_SETUP_ACC_BATCH
     #undef UNROLL_SETUP_MAT1

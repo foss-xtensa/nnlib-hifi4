@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -38,9 +38,11 @@ static WORD32 xa_nn_conv2d_depthwise_nchw_getsize
  ,WORD32 scratch_bytewidth
  )
 {
+    int kernel_width_pad = ALIGNED_SIZE(kernel_width, 4);
+    int kernel_height_pad = ALIGNED_SIZE(kernel_height, 4);
     WORD32 circ_buf_height = (kernel_height + ((OUT_HEIGHT_PER_ITER - 1) * y_stride));
 
-    int total_size, state_size, circ_buf_size, scratch_size;
+    int total_size, state_size, circ_buf_size, scratch_size, padded_kernel_size;
     int circ_buf_width;
     int output_width_for_x_stride_1;
     int output_height;
@@ -86,7 +88,9 @@ static WORD32 xa_nn_conv2d_depthwise_nchw_getsize
     /* Get aligned size so as to have next memory pointer aligned */
     scratch_size = ALIGNED_SIZE(scratch_size, ALIGNMENT);
 
-    total_size = state_size + circ_buf_size + scratch_size;
+    /* TBD: Exact calculation needs API change, using input bytewidth for now */
+    padded_kernel_size = kernel_width_pad * kernel_height_pad * circ_buf_bytewidth;
+    total_size = state_size + circ_buf_size + padded_kernel_size + scratch_size;
 
     if (0 > total_size)
     {
@@ -153,8 +157,8 @@ static WORD32 xa_nn_conv2d_depthwise_nhwc_getsize
  ,WORD32 circ_buf_bytewidth
  )
 {
-    int total_size, state_size, circ_buf_size;
-    state_size = ALIGNED_SIZE(sizeof(xa_nn_circ_buf_t), ALIGNMENT);
+    int total_size, state_size, circ_buf_size, kernel_size;
+    state_size = ALIGNED_SIZE(sizeof(xa_nn_conv2d_dw_state_t), ALIGNMENT);
     circ_buf_size =
         xa_nn_circ_buf_nhwc_getsize
         (circ_buf_bytewidth
@@ -167,13 +171,18 @@ static WORD32 xa_nn_conv2d_depthwise_nhwc_getsize
          ,y_padding
          ,output_height
         );
+    circ_buf_size = ALIGNED_SIZE(circ_buf_size, ALIGNMENT);
+    kernel_size = circ_buf_bytewidth * kernel_height * kernel_width * 4; // 4 is depth
+    kernel_size = ALIGNED_SIZE(kernel_size, ALIGNMENT);
+    if(circ_buf_bytewidth == 4) // f32 case, kernel need not be copied to scratch
+        kernel_size = 0;
     if (0 > circ_buf_size)
     {
         return -1;
     }
     else
     {
-        total_size = state_size + circ_buf_size;
+        total_size = state_size + circ_buf_size + kernel_size;
         return total_size;
     }
 }
@@ -193,11 +202,11 @@ static VOID xa_nn_conv2d_depthwise_nhwc_init
 
 {
     pWORD8 p_mem = p_scratch;
-    xa_nn_circ_buf_t *p_state = (xa_nn_circ_buf_t *)p_mem;
-    int state_size;
-    state_size = ALIGNED_SIZE(sizeof(xa_nn_circ_buf_t), ALIGNMENT);
+    xa_nn_conv2d_dw_state_t *p_state = (xa_nn_conv2d_dw_state_t *)p_mem;
+    int state_size, circ_buf_size;
+    state_size = ALIGNED_SIZE(sizeof(xa_nn_conv2d_dw_state_t), ALIGNMENT);
     p_mem = (p_mem + state_size);
-    xa_nn_circ_buf_nhwc_init(p_state
+    xa_nn_circ_buf_nhwc_init(&(p_state->circ_buf)
             ,p_mem
             ,circ_buf_bytewidth
             ,input_height
@@ -209,6 +218,12 @@ static VOID xa_nn_conv2d_depthwise_nhwc_init
             ,y_padding
             ,output_height
             );
+    
+    circ_buf_size = (int)((unsigned)p_state->circ_buf.p_end - (unsigned)p_state->circ_buf.p_begin);
+    circ_buf_size = ALIGNED_SIZE(circ_buf_size, ALIGNMENT);
+
+    p_mem = (p_mem + circ_buf_size);
+    p_state->p_scratch = (pVOID)p_mem;
 }
 
 WORD32 xa_nn_conv2d_depthwise_getsize
@@ -260,6 +275,8 @@ WORD32 xa_nn_conv2d_depthwise_getsize
             break;
 
         case -3: /* For asym8 */
+        case -4: /* For asym8s */
+        case -5: /* For sym8s */
             scratch_bytewidth = 4;
             circ_buf_bytewidth = 1;
             break;

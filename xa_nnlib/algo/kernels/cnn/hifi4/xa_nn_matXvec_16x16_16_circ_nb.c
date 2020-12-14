@@ -20,9 +20,6 @@
 
 ******************************************************************************/
 #include <stddef.h>
-#include "xa_type_def.h"
-#include "xtensa/tie/xt_hifi2.h"
-
 #include "xa_nnlib_common.h"
 
 #if defined(CUST_UNROLL) && (CUST_UNROLL != 0)
