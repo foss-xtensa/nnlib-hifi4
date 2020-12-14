@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -19,15 +19,6 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-/* ------------------------------------------------------------------------ */
-/* Copyright (c) 2018 by Cadence Design Systems, Inc. ALL RIGHTS RESERVED.  */
-/* These coded instructions, statements, and computer programs ("Cadence    */
-/* Libraries") are the copyrighted works of Cadence Design Systems Inc.	    */
-/* Cadence IP is licensed for use with Cadence processor cores only and     */
-/* must not be used for any other processors and platforms. Your use of the */
-/* Cadence Libraries is subject to the terms of the license agreement you   */
-/* have entered into with Cadence Design Systems, or a sublicense granted   */
-/* to you by a direct Cadence licensee.                                     */
 /* ------------------------------------------------------------------------ */
 /*  IntegrIT, Ltd.   www.integrIT.com, info@integrIT.com                    */
 /*                                                                          */
@@ -86,12 +77,12 @@
 #define __Pragma(a)
 #endif
 
-#define IS_ALIGN(p) ((((int)(p))&0x7) == 0) 
+#define IS_ALIGN(p) ((((int)(p))&0x7) == 0)
 
 #ifdef _MSC_VER
-    #define ALIGN(x)    _declspec(align(x)) 
+    #define ALIGN(x)    _declspec(align(x))
 #else
-    #define ALIGN(x)    __attribute__((aligned(x))) 
+    #define ALIGN(x)    __attribute__((aligned(x)))
 #endif
 
 #define INV_TBL_BITS 7
@@ -165,7 +156,7 @@ typedef const short * cint16_ptr;
 // Conditionalization support
 //-----------------------------------------------------
 /* place DISCARD_FUN(retval_type,name) instead of function definition for functions
-   to be discarded from the executable 
+   to be discarded from the executable
    THIS WORKS only for external library functions declared as extern "C" and
    not supported for internal references without "C" qualifier!
 */
@@ -206,9 +197,9 @@ retval_type name arglist \
 #endif
 
 #ifdef __cplusplus
-#define externC extern "C" 
+#define externC extern "C"
 #else
-#define externC extern 
+#define externC extern
 #endif
 
 /* maximum size (in bytes) allocated storage on stack by temporary arrays inside library functions */

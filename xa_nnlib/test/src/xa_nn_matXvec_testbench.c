@@ -84,7 +84,7 @@ typedef struct _test_config_t
 int default_config(test_config_t *p_cfg)
 {
   if(p_cfg)
-  {
+  { 
 
     p_cfg->help     = 0;
     p_cfg->rows     = 32;
@@ -106,10 +106,10 @@ int default_config(test_config_t *p_cfg)
     p_cfg->out_multiplier = 0x40000000;
     p_cfg->out_shift = -8;
     p_cfg->out_zero_bias = 128;
-    p_cfg->activation[0] = '\0';
+    p_cfg->activation[0] = '\0';  
     p_cfg->membank_padding = 1;
-    p_cfg->frames   = 2;
-    p_cfg->write_file = 0;
+    p_cfg->frames   = 2;  
+    p_cfg->write_file = 0;  
     p_cfg->read_inp_file_name[0] = '\0';
     p_cfg->read_ref_file_name[0] = '\0';
     p_cfg->write_inp_file_name[0]='\0';
@@ -171,7 +171,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
     ARGTYPE_ONETIME_CONFIG("-batch",p_cfg->batch);
     ARGTYPE_ONETIME_CONFIG("-fc",p_cfg->fc);
-
+    
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
     exit(1);
@@ -193,7 +193,6 @@ void show_usage(void)
     printf("\t-inp_precision : 8, 16 or -1(single prec float); Default=16\n");
     printf("\t-out_precision : 8, 16, 32, 64 or -1(single prec float); Default=16\n");
     printf("\t-bias_precision : 16, 64 or -1(single prec float); Default=16\n");
-#ifdef NNLIB_V2
     printf("\t-mat1_zero_bias : matrix1 zero bias for asym8 -255 to 0; Default=-128\n");
     printf("\t-mat2_zero_bias : matrix2 zero bias for asym8 -255 to 0; Default=-128\n");
     printf("\t-inp1_zero_bias : input1 zero bias for asym8 -255 to 0; Default=-128\n");
@@ -201,7 +200,6 @@ void show_usage(void)
     printf("\t-out_multiplier : output multiplier for asym8 0 to 0x7fffffff; Default=0x40000000\n");
     printf("\t-out_shift : output shift for asym8 -31 to 31; Default=-8\n");
     printf("\t-out_zero_bias : output zero bias for asym8 0 to 255; Default=128\n");
-#endif /* NNLIB_V2 */
     printf("\t-membank_padding: 0, 1; Default=1\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-activation: sigmoid, tanh, relu or softmax; Default="" : bypass i.e. no activation for output.\n");
@@ -225,7 +223,6 @@ void show_usage(void)
       XTPWR_PROFILER_STOP(0);\
     }
 
-#ifdef NNLIB_V2
 #define MAT_VEC_MUL_FN_ASYM8(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
       XTPWR_PROFILER_START(0);\
@@ -235,11 +232,16 @@ void show_usage(void)
           cfg.mat1_zero_bias, cfg.mat2_zero_bias, cfg.inp1_zero_bias, cfg.inp2_zero_bias, cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias);\
       XTPWR_PROFILER_STOP(0);\
     }
-#else
-#define MAT_VEC_MUL_FN_ASYM8(MPREC, VPREC, OPREC) \
+
+#define MAT_VEC_MUL_FN_SYM8SXASYM8S(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
-     printf("unsupported multiplication\n"); return -1;}
-#endif /* NNLIB_V2 */
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_matXvec_sym8sxasym8s_asym8s ( \
+          (WORD8 *) p_out->p, (WORD8 *) p_mat1->p, (WORD8 *) p_mat2->p, (WORD8 *)p_vec1->p, (WORD8 *)p_vec2->p, (WORD32 *)p_bias->p, \
+          cfg.rows, cfg.cols1, cfg.cols2, p_mat1->row_offset, p_mat2->row_offset, \
+          cfg.inp1_zero_bias, cfg.inp2_zero_bias, cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias);\
+      XTPWR_PROFILER_STOP(0);\
+    }
 
 #define MAT_VEC_MUL_FC_FN(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
@@ -251,7 +253,6 @@ void show_usage(void)
       XTPWR_PROFILER_STOP(0);\
     }
 
-#ifdef NNLIB_V2
 #define MAT_VEC_MUL_FC_FN_ASYM8(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
       XTPWR_PROFILER_START(0);\
@@ -262,11 +263,29 @@ void show_usage(void)
           cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias);\
       XTPWR_PROFILER_STOP(0);\
     }
-#else
-#define MAT_VEC_MUL_FC_FN_ASYM8(MPREC, VPREC, OPREC) \
+
+#define MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
-     printf("unsupported multiplication\n"); return -1;}
-#endif /* NNLIB_V2 */
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_fully_connected_sym8sxasym8s_asym8s ( \
+          (WORD8 *)p_out->p, (WORD8 *) p_mat1->p, (WORD8 *)p_vec1->p, (WORD32 *)p_bias->p, \
+          cfg.cols1, cfg.rows, \
+          cfg.inp1_zero_bias, \
+          cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
+#define MAT_VEC_MUL_OUT_STRIDE_FN_SYM8SXASYM8S_16(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      memset(p_out->p, 0xca, cfg.rows*cfg.out_stride*sizeof(WORD16)); \
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_matXvec_out_stride_sym8sxasym8s_16 ( \
+          (WORD16 *)p_out->p, (WORD8 *) p_mat1->p, (WORD8 *)p_vec1->p, (WORD32 *)p_bias->p, \
+          cfg.rows, cfg.cols1, p_mat1->row_offset, cfg.out_stride, \
+          cfg.inp1_zero_bias, \
+          cfg.out_multiplier, cfg.out_shift);\
+      XTPWR_PROFILER_STOP(0);\
+    }
 
 #define MAT_VEC_MUL_FC_FN_F32(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
@@ -323,7 +342,7 @@ void show_usage(void)
 #else
 #define MAT_VEC_MUL_FN_ASYM8_BATCH(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
-     printf("unsupported multiplication\n"); return -1;}
+     printf("unsupported multiplication\n"); return -1;} 
 #endif /* NNLIB_V2 */
 
 #define MAT_VEC_MUL_ACTIVATION_FN(MPREC, VPREC, OPREC, ACTIVATION) \
@@ -377,7 +396,7 @@ void show_usage(void)
       XTPWR_PROFILER_STOP(0);\
     }
 
-#if HIFI_VFPU
+#if HIFI_VFPU 
 #define PROCESS_MATXVEC \
     MAT_VEC_MUL_ACTIVATION_FN(16, 16, 16, sigmoid) \
     else MAT_VEC_MUL_ACTIVATION_FN(16, 16, 16, tanh) \
@@ -395,10 +414,11 @@ void show_usage(void)
     else MAT_VEC_MUL_FN(8, 8, 16) \
     else MAT_VEC_MUL_FN(8, 8, 32) \
     else MAT_VEC_MUL_FN_ASYM8(-3, -3, -3) \
+    else MAT_VEC_MUL_FN_SYM8SXASYM8S(-5, -4, -4) \
     else MAT_VEC_MUL_ACTIVATION_FN_F32(-1, -1, -1, sigmoid) \
     else MAT_VEC_MUL_ACTIVATION_FN_F32(-1, -1, -1, tanh) \
     else MAT_VEC_MUL_FN_F32(-1, -1, -1) \
-    else {  printf("unsupported multiplication\n"); return -1;}
+    else {  printf("unsupported multiplication\n"); return -1;} 
 #else
 #define PROCESS_MATXVEC \
     MAT_VEC_MUL_ACTIVATION_FN(16, 16, 16, sigmoid) \
@@ -417,41 +437,44 @@ void show_usage(void)
     else MAT_VEC_MUL_FN(8, 8, 16) \
     else MAT_VEC_MUL_FN(8, 8, 32) \
     else MAT_VEC_MUL_FN_ASYM8(-3, -3, -3) \
-    else {  printf("unsupported multiplication\n"); return -1;}
+    else MAT_VEC_MUL_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else {  printf("unsupported multiplication\n"); return -1;} 
 #endif
 
-#if HIFI_VFPU
+#if HIFI_VFPU 
 #define PROCESS_MATXVEC_FC \
     MAT_VEC_MUL_FC_FN(16, 16, 16) \
     else MAT_VEC_MUL_FC_FN(8, 16, 16) \
     else MAT_VEC_MUL_FC_FN(8, 8, 8) \
     else MAT_VEC_MUL_FC_FN_ASYM8(-3, -3, -3) \
+    else MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(-5, -4, -4) \
     else MAT_VEC_MUL_FC_FN_F32(-1, -1, -1) \
-    else {  printf("unsupported multiplication\n"); return -1;}
+    else {  printf("unsupported multiplication\n"); return -1;} 
 #else
 #define PROCESS_MATXVEC_FC \
     MAT_VEC_MUL_FC_FN(16, 16, 16) \
     else MAT_VEC_MUL_FC_FN(8, 16, 16) \
     else MAT_VEC_MUL_FC_FN(8, 8, 8) \
     else MAT_VEC_MUL_FC_FN_ASYM8(-3, -3, -3) \
-    else {  printf("unsupported multiplication\n"); return -1;}
+    else MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else {  printf("unsupported multiplication\n"); return -1;} 
 #endif
 
-#if HIFI_VFPU
+#if HIFI_VFPU 
 #define PROCESS_MATXVEC_BATCH \
     MAT_VEC_MUL_FN_BATCH(16, 16, 64) \
     else MAT_VEC_MUL_FN_BATCH(8, 16, 64) \
     else MAT_VEC_MUL_FN_BATCH(8, 8, 32) \
     else MAT_VEC_MUL_FN_ASYM8_BATCH(-3, -3, -3) \
     else MAT_VEC_MUL_FN_F32_BATCH(-1, -1, -1) \
-    else {  printf("unsupported multiplication\n"); return -1;}
+    else {  printf("unsupported multiplication\n"); return -1;} 
 #else
 #define PROCESS_MATXVEC_BATCH \
     MAT_VEC_MUL_FN_BATCH(16, 16, 64) \
     else MAT_VEC_MUL_FN_BATCH(8, 16, 64) \
     else MAT_VEC_MUL_FN_BATCH(8, 8, 32) \
     else MAT_VEC_MUL_FN_ASYM8_BATCH(-3, -3, -3) \
-    else {  printf("unsupported multiplication\n"); return -1;}
+    else {  printf("unsupported multiplication\n"); return -1;} 
 #endif
 int xa_nn_main_process(int argc, char *argv[])
 {
@@ -460,8 +483,8 @@ int xa_nn_main_process(int argc, char *argv[])
   int err = 0;
   //int i;
   int pass_count=0;
-  char profiler_name[MAX_PROFILER_NAME_LENGTH];
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
+  char profiler_name[MAX_PROFILER_NAME_LENGTH]; 
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
 
   test_config_t cfg;
 
@@ -483,7 +506,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-
+  
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -499,9 +522,11 @@ int xa_nn_main_process(int argc, char *argv[])
     /* In fully connected apis, row_stride is equal to cols, thus setting
      * membank_padding to 0. */
     cfg.membank_padding = 0;
+    cfg.row_stride1 = cfg.cols1;
+    cfg.row_stride2 = cfg.cols2;
   }
 
-  // Set profiler name
+  // Set profiler name 
   if((cfg.mat_precision == -1) || (cfg.inp_precision == -1) || (cfg.out_precision == -1))
   {
     if(cfg.fc == 1){
@@ -517,7 +542,6 @@ int xa_nn_main_process(int argc, char *argv[])
       return 0;
     }
   }
-#ifdef NNLIB_V2
   else if((cfg.mat_precision == -3) || (cfg.inp_precision == -3) || (cfg.out_precision == -3))
   {
     if(cfg.fc == 1){
@@ -527,28 +551,36 @@ int xa_nn_main_process(int argc, char *argv[])
       sprintf(profiler_name,"matXvec%s_asym8xasym8_asym8",(cfg.batch)? "_batch": "");
     }
   }
-#endif /* NNLIB_V2 */
+  else if((cfg.mat_precision == -5) && (cfg.inp_precision == -4) && (cfg.out_precision == -4))
+  {
+    if(cfg.fc == 1){
+      sprintf(profiler_name,"fully_connected_sym8sxasym8s_asym8s");
+    }
+    else{
+      sprintf(profiler_name,"matXvec%s_sym8sxasym8s_asym8s",(cfg.batch)? "_batch": "");
+    }
+  }
   else
   {
     if(cfg.fc == 1){
-      sprintf(profiler_name, "fully_connected_%dx%d_%d",cfg.mat_precision, cfg.inp_precision, cfg.out_precision);
+      sprintf(profiler_name, "fully_connected_%dx%d_%d",cfg.mat_precision, cfg.inp_precision, cfg.out_precision); 
     }
     else{
-      sprintf(profiler_name, "matXvec%s_%dx%d_%d",(cfg.batch)? "_batch" : "",cfg.mat_precision, cfg.inp_precision, cfg.out_precision);
+      sprintf(profiler_name, "matXvec%s_%dx%d_%d",(cfg.batch)? "_batch" : "",cfg.mat_precision, cfg.inp_precision, cfg.out_precision); 
     }
   }
   if(cfg.activation[0])
   {
     sprintf(profiler_name,"%s_%s",profiler_name,cfg.activation);
   }
-
+  
   // Set profiler parameters
   if(cfg.batch == 1){
-    sprintf(profiler_params, "rows=%d, cols1=%d, bias_prec=%d, vec_count=%d",
+    sprintf(profiler_params, "rows=%d, cols1=%d, bias_prec=%d, vec_count=%d", 
       cfg.rows, cfg.cols1, cfg.bias_precision,cfg.vec_count);
   }
   else{
-    sprintf(profiler_params, "rows=%d, cols1=%d, cols2=%d, bias_prec=%d",
+    sprintf(profiler_params, "rows=%d, cols1=%d, cols2=%d, bias_prec=%d", 
       cfg.rows, cfg.cols1, cfg.cols2, cfg.bias_precision);
   }
 
@@ -556,7 +588,7 @@ int xa_nn_main_process(int argc, char *argv[])
   if(cfg.write_file)
   {
     /* If write_file (generate test vectors) is enabled, random data would be generated and
-       used; the input data and output data generated would be written into files.
+       used; the input data and output data generated would be written into files. 
      */
     fptr_inp = file_open(pb_input_file_path, cfg.write_inp_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
   }
@@ -574,8 +606,8 @@ int xa_nn_main_process(int argc, char *argv[])
   // Open reference file if verify flag is enabled
   if(cfg.verify)
   {
-    ptr_ref =  create_buf1D(cfg.rows*cfg.vec_count, cfg.out_precision);
-
+    ptr_ref =  create_buf1D(cfg.rows*cfg.vec_count, cfg.out_precision); 
+    
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
 
@@ -633,7 +665,7 @@ int xa_nn_main_process(int argc, char *argv[])
     XTPWR_PROFILER_PRINT(0);
 
     // Write output into file
-
+    
     write_buf1D_to_file(fptr_out, p_out);
 
     // If verify flag enabled, compare output against reference
@@ -668,7 +700,7 @@ int xa_nn_main_process(int argc, char *argv[])
     fclose(fptr_ref);
     free_buf1D(ptr_ref);
   }
-
+  
   return 0;
 }
 
@@ -747,7 +779,7 @@ int main (int argc, char *argv[])
                 else strcpy((char *)pb_ref_file_path, "");
                 continue;
             }
-
+            
             if(strcmp(fargv[0], "@Start") == 0)
             {
                 processcmd = 1;

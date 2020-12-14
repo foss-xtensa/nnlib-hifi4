@@ -32,19 +32,19 @@
 /*----------------------------Main function---------------------------------*/
 
 WORD32 xa_nn_matmul_8x8_8(
-         WORD8 * __restrict__ p_out,
-         const WORD8 *  __restrict__ p_mat1,
-         const WORD8 * __restrict__ p_vec1,
-         const WORD8 *  __restrict__ p_bias,
+         WORD8 * __restrict__ p_out,          
+         const WORD8 *  __restrict__ p_mat1,  
+         const WORD8 * __restrict__ p_vec1,   
+         const WORD8 *  __restrict__ p_bias,  
          WORD32 rows,
          WORD32 cols1,
-         WORD32 row_stride1,
-         WORD32 acc_shift,
-         WORD32 bias_shift,
-         WORD32 vec_count,
+         WORD32 row_stride1,                  
+         WORD32 acc_shift,                    
+         WORD32 bias_shift,                   
+         WORD32 vec_count,                    
          WORD32 vec_offset,
          WORD32 out_offset,
-         WORD32 out_stride)
+         WORD32 out_stride)                      
 {
     /* NULL pointer checks */
     XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -62,7 +62,7 @@ WORD32 xa_nn_matmul_8x8_8(
     XA_NNLIB_ARG_CHK_COND((vec_offset == 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_offset == 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_stride == 0), -1);
-
+    
     /* Iterators used in for loops */
     int m_itr, c_itr, vec_itr;
     /* Assign initial value so this value will be used in trailing loop */
@@ -308,13 +308,13 @@ WORD32 xa_nn_matmul_8x8_8(
                         LOAD_ROW_MAT1_8b_SINGLE_UNALIGNED(1);
                         KERNEL_MAT1_VEC_BATCH_8b_8b_SINGLE_UNALIGNED(0,0);
                         KERNEL_MAT1_VEC_BATCH_8b_8b_SINGLE_UNALIGNED(1,0);
-                    }
+                    }  
 
-                    LOAD_BIAS;
+                    LOAD_BIAS; 
                     UNROLL_ADD_BIAS_ACC_BATCH(0,0);
-                    LOAD_BIAS;
+                    LOAD_BIAS; 
                     UNROLL_ADD_BIAS_ACC_BATCH(1,0);
-
+                
                     STORE_STRIDE_ACC_BATCH_8bx8b_AT_OUT_8b(0,0);
                     STORE_STRIDE_ACC_BATCH_8bx8b_AT_OUT_8b(1,0);
                 }
@@ -350,7 +350,7 @@ WORD32 xa_nn_matmul_8x8_8(
     {
         return -1;
     }
-
+    
     #undef UNROLL_ROW_SETUP_ACC_BATCH
     #undef UNROLL_SETUP_ACC_BATCH
     #undef UNROLL_SETUP_MAT1

@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -189,7 +189,7 @@ void xa_nn_circ_buf_nchw_add_rows_with_pad_val(
     pVOID p_pad_val);
 
 /***********************************************************************************************/
-/* Below macros and functions are for circular buffer for depth first input, here circular buffer 
+/* Below macros and functions are for circular buffer for depth first input, here circular buffer
 size is kernel_width*input_height*input_channels*channels_multiplier and buffer moves over input
 in horizontal direction */
 

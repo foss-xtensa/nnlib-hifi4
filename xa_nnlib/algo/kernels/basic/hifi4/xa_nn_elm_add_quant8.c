@@ -256,4 +256,22 @@ WORD32 xa_nn_elm_add_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
     return 0;
 }
 
-
+WORD32 xa_nn_elm_add_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+                            WORD32  out_zero_bias,
+                            WORD32  out_left_shift,
+                            WORD32  out_multiplier,
+                            WORD32  out_activation_min,
+                            WORD32  out_activation_max,
+                    const    WORD8 * __restrict__ p_inp1,
+                            WORD32  inp1_zero_bias,
+                            WORD32  inp1_left_shift,
+                            WORD32  inp1_multiplier,
+                    const    WORD8 * __restrict__ p_inp2,
+                            WORD32  inp2_zero_bias,
+                            WORD32  inp2_left_shift,
+                            WORD32  inp2_multiplier,
+                            WORD32  left_shift,
+                            WORD32  num_elm)
+{
+    return -1;
+}

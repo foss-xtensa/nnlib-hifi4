@@ -570,14 +570,14 @@ TfLiteStatus MaxEval(TfLiteContext* context, TfLiteNode* node) {
   int out_size = out_height * out_width * input_channels;
   int num_ops = out_size * kernel_height * kernel_width;
 
-  char profiler_name_0[MAX_PROFILER_NAME_LENGTH];
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
+  char profiler_name_0[MAX_PROFILER_NAME_LENGTH]; 
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
   strcpy(profiler_name_0,"pooling");
-  sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_height=%d, out_width=%d",
+  sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_height=%d, out_width=%d", 
       input_height, input_width, input_channels, kernel_height, kernel_width, out_height, out_width);
   XTPWR_PROFILER_OPEN(0, profiler_name_0, profiler_params, num_ops, "OPs/cyc", 1);
 #endif
-
+  
   XTPWR_PROFILER_START(0);
   TF_LITE_ENSURE_STATUS(CalculateOpData(context, params, input, output, &data));
 

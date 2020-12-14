@@ -19,12 +19,9 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
-#include "xtensa/tie/xt_hifi2.h"
-#include <xa_nnlib_kernels_api.h>
+#include "xa_nnlib_common.h"
 #include "xa_nnlib_common_macros.h"
 
-#include "xa_nnlib_common.h"
 
 WORD32 xa_nn_matXvec_16x8_16(
          WORD16 * __restrict__ p_out,  /* output */

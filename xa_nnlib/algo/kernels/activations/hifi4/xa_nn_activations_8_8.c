@@ -20,7 +20,7 @@
 
 ******************************************************************************/
 #include "xa_type_def.h"
-#include "common.h"
+#include "xa_nnlib_common.h"
 #include "xa_nnlib_err_chk.h"
 
 #define ALIGNMENT   8   /* 8 bytes alignment */
@@ -105,7 +105,7 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
     {
         for(i=0; i<(vec_length >> 2); i++)
         {
-            AE_L8X4F_IP(x, (WORD8 *)p_v, 4*sizeof(WORD8));
+            AE_L8X4F_IP(x, p_v, 4*sizeof(WORD8));
             y = AE_SRAI16(x, 8);
 
             STORE_8X4_FROM_16X4(p_o, y)
@@ -124,7 +124,7 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
     {
         for(i=0; i<(vec_length >> 2); i++)
         {
-            AE_L8X4F_IP(x, (WORD8 *)p_v, 4*sizeof(WORD8));
+            AE_L8X4F_IP(x, p_v, 4*sizeof(WORD8));
             y = AE_SRAI16(x, 8);
 
             b0 = AE_LT16(y, max);
@@ -149,7 +149,7 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
     {
         for(i=0; i<(vec_length >> 2); i++)
         {
-            AE_L8X4F_IP(x, (WORD8 *)p_v, 4*sizeof(WORD8));
+            AE_L8X4F_IP(x, p_v, 4*sizeof(WORD8));
             y = AE_SRAI16(x, 8);
 
             b0 = AE_LT16(y, min);
@@ -174,7 +174,7 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
     {
         for(i=0; i<(vec_length >> 2); i++)
         {
-            AE_L8X4F_IP(x, (WORD8 *)p_v, 4*sizeof(WORD8));
+            AE_L8X4F_IP(x, p_v, 4*sizeof(WORD8));
             x = AE_SRAI16(x, 8);
             LIMIT(y, x, min, max)
             STORE_8X4_FROM_16X4(p_o, y)

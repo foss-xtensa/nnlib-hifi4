@@ -19,12 +19,11 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include <string.h>
-#include "xa_type_def.h"
 #include "common_fpu.h"
-#include "xa_nnlib_kernels_api.h"
+#include "xa_nnlib_common.h"
+#include "xa_nnlib_common_macros.h"
 #include "xa_nn_conv2d_std_state.h"
-#include "xa_nnlib_err_chk.h"
+#include <string.h>
 
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_conv2d_std_f32,(

@@ -91,38 +91,38 @@ int xa_tf_micro_lite_main_process(int argc, char **argv)
   short *input=NULL;
   short *output=NULL;
   FILE *fp, *fout;
-
+ 
   if(argc<3)
   {
     printf("Usage: %s <input-wav-file.wav> <test_result.txt>\n", argv[0]);
     return -1;
   }
 
-  strncpy(pb_input_file_name, argv[1],MAX_CMD_LINE_LENGTH);
+  strncpy(pb_input_file_name, argv[1],MAX_CMD_LINE_LENGTH); 
   prefix_inpdir_name(pb_input_file_name);
   fp = fopen(pb_input_file_name, "rb");
   if (fp==NULL) {
       printf("Unable to open file '%s'\n", pb_input_file_name);
       return -1;
-  }
+  }         
 
-  strncpy(pb_output_file_name, argv[2],MAX_CMD_LINE_LENGTH);
+  strncpy(pb_output_file_name, argv[2],MAX_CMD_LINE_LENGTH); 
   prefix_outdir_name(pb_output_file_name);
   fout = fopen(pb_output_file_name, "w");
   if (fout==NULL) {
       printf("Unable to open file '%s'\n", pb_output_file_name);
       return -1;
-  }
+  }         
 
-  fseek(fp, 0, SEEK_SET);
-  input = (short *)malloc(SAMPLE_RATE*sizeof(short));
+  fseek(fp, 0, SEEK_SET);       
+  input = (short *)malloc(SAMPLE_RATE*sizeof(short)); 
   output = (short *)malloc(SAMPLE_RATE*sizeof(short));
   if(input==NULL || output==NULL)
-  {
+  { 
       printf("memory allocation failed\n");
       return -1;
   }
-  fread(input, SAMPLE_RATE, sizeof(short), fp);
+  fread(input, SAMPLE_RATE, sizeof(short), fp); 
 
   printf("frontend inference running\n");
   frontendprocess_inference(input, output);
@@ -140,7 +140,7 @@ int xa_tf_micro_lite_main_process(int argc, char **argv)
   const int kOffIndex = 9;
   const int kStopIndex = 10;
   const int kGoIndex = 11;
-
+  
   fprintf(fout, "silence %d\n", output[kSilenceIndex]);
   fprintf(fout, "unknown %d\n", output[kUnknownIndex]);
   fprintf(fout, "yes %d\n", output[kYesIndex]);

@@ -54,7 +54,7 @@ namespace nn {
 
 bool l2normFloat32(const float* inputData, const Shape& inputShape,
                    float* outputData, const Shape& outputShape) {
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     tflite::reference_ops::L2Normalization<tflite::FusedActivationFunctionType::kNone>(
             inputData, convertShapeToDims(inputShape),
             outputData, convertShapeToDims(outputShape));

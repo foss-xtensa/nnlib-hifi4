@@ -27,6 +27,8 @@
 #include "xa_type_def.h"
 
 #define ASYM8_TYPE -3
+#define ASYM8S_TYPE -4
+#define SYM8S_TYPE -5
 #define FLOAT_TYPE -1
 
 typedef struct _buf1D_t{

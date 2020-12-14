@@ -43,7 +43,7 @@
 
 #include "CpuOperationUtils.h"
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
 #include "tensorflow/contrib/lite/kernels/internal/reference/reference_ops.h"
 #endif
 
@@ -51,7 +51,7 @@ namespace android {
 namespace nn {
 
 // If possible we will use this static buffer for the tensor.
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
 static constexpr size_t kStaticBufferSize = 1605632;
 static char static_scratch_buffer[kStaticBufferSize];
 #endif
@@ -109,7 +109,7 @@ static std::mutex executionMutex;
         im2colGuard.reset(im2colData);                                          \
     }
 #else /* without LOG prints */
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
 #define ANDROID_NN_CONV_PARAMETERS(Type)                                        \
     uint32_t height       = getSizeOfDimension(inputShape, 1);                  \
     uint32_t width        = getSizeOfDimension(inputShape, 2);                  \
@@ -160,7 +160,7 @@ static std::mutex executionMutex;
     int32_t filterWidth  = (int32_t)getSizeOfDimension(filterShape, 2);         \
     int32_t outHeight    = (int32_t)getSizeOfDimension(outputShape, 1);         \
     int32_t outWidth     = (int32_t)getSizeOfDimension(outputShape, 2);         \
-    int32_t inDepth      = (int32_t)getSizeOfDimension(inputShape, 3);
+    int32_t inDepth      = (int32_t)getSizeOfDimension(inputShape, 3);          
 #endif // HIFI_NNLIB_OPT
 
 #ifndef HIFI_NNLIB_OPT
@@ -214,7 +214,7 @@ static std::mutex executionMutex;
     int32_t filterWidth  = (int32_t)getSizeOfDimension(filterShape, 2);         \
     int32_t outHeight    = (int32_t)getSizeOfDimension(outputShape, 1);         \
     int32_t outWidth     = (int32_t)getSizeOfDimension(outputShape, 2);         \
-    int32_t inDepth      = (int32_t)getSizeOfDimension(inputShape, 3);
+    int32_t inDepth      = (int32_t)getSizeOfDimension(inputShape, 3);          
 #endif
 #endif //HIFI_BUILD
 
@@ -241,7 +241,7 @@ bool convFloat32(const float* inputData, const Shape& inputShape,
     // Prevent concurrent executions that may access the scratch buffer.
     std::unique_lock<std::mutex> lock(executionMutex);
 #endif //HIFI_BUILD
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     (void) height;
     (void) width;
     (void) outWidth;

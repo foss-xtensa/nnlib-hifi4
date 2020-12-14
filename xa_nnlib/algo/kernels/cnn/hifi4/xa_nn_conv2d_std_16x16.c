@@ -19,11 +19,9 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
-#include "common.h"
-#include "xa_nnlib_kernels_api.h"
+#include "xa_nnlib_common.h"
+#include "xa_nnlib_common_macros.h"
 #include "xa_nn_conv2d_std_state.h"
-#include "xa_nnlib_err_chk.h"
 
 static WORD32 conv_x_left_pad(
     WORD32 x_padding,

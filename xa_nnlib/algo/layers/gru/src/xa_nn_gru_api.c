@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -20,18 +20,17 @@
 
 ******************************************************************************/
 #include <string.h>
-#include <xtensa/tie/xt_hifi2.h>
+#include "xa_nnlib_common.h"
 #include "xa_nnlib_gru_api.h"
-#include "xa_nnlib_api.h"
 
 
 #ifdef hifi4
-#define XA_PAD_BYTES   8 
+#define XA_PAD_BYTES   8
 #define ALIGN_MEM(_sptr) (((unsigned)((_sptr)+7))&(~7))
 #define ALIGN_SIZE(n) (((n)+7)&(~7))
 #endif
 #ifdef hifi5
-#define XA_PAD_BYTES   16 
+#define XA_PAD_BYTES   16
 #define ALIGN_MEM(_sptr) (((unsigned)((_sptr)+15))&(~15))
 #define ALIGN_SIZE(n) (((n)+15)&(~15))
 #endif
@@ -92,7 +91,7 @@ typedef struct _gru_state_t
   int tanh_lsh;
 } gru_state_t;
 
-typedef struct _temp_mem_t 
+typedef struct _temp_mem_t
 {
   Int32 *vec;
 } temp_mem_t;
@@ -177,7 +176,7 @@ Int32 xa_nnlib_gru_get_scratch_fast(
 {
   int scratch_size, ret;
   CHECK_PTR(config, XA_NNLIB_FATAL_MEM_ALLOC);
-  
+
   ret = validate_config(config);
   if(ret != XA_NNLIB_NO_ERROR)
     return ret;
@@ -185,7 +184,7 @@ Int32 xa_nnlib_gru_get_scratch_fast(
   scratch_size = ALIGN_SIZE(sizeof(scratch_mem_t));
   scratch_size += 3 * ALIGN_SIZE(config->out_feats * sizeof(vect_t));
 #ifdef MODEL_FLT64
-  scratch_size += 0; 
+  scratch_size += 0;
 #elif MODEL_INT16
   scratch_size += ALIGN_SIZE(1 * config->out_feats * sizeof(Int32));    //vect scratch
 #endif
@@ -194,7 +193,7 @@ Int32 xa_nnlib_gru_get_scratch_fast(
 }
 
 int xa_nnlib_gru_init(
-    xa_nnlib_handle_t handle, 
+    xa_nnlib_handle_t handle,
     xa_nnlib_gru_init_config_t *config )
 {
   gru_state_t *gru;
@@ -227,7 +226,7 @@ int xa_nnlib_gru_init(
 
 int xa_nnlib_gru_set_config(
   xa_nnlib_handle_t handle,
-  xa_nnlib_gru_param_id_t param_id, 
+  xa_nnlib_gru_param_id_t param_id,
   void *params )
 {
   gru_state_t *gru;
@@ -287,7 +286,7 @@ int xa_nnlib_gru_set_config(
     {
       xa_nnlib_gru_biases_t *p_biases;
       p_biases = (xa_nnlib_gru_biases_t *)params;
-  
+
       CHECK_VEC_SHAPE(p_biases->shape_b_z, gru->out_feats)
       CHECK_VEC_SHAPE(p_biases->shape_b_r, gru->out_feats)
       CHECK_VEC_SHAPE(p_biases->shape_b_h, gru->out_feats)
@@ -297,7 +296,7 @@ int xa_nnlib_gru_set_config(
       gru->biases.b_h = p_biases->b_h;
     }
     break;
-    
+
     case XA_NNLIB_GRU_RESTORE_CONTEXT:
     {
       vect_t *prev_h;
@@ -306,7 +305,7 @@ int xa_nnlib_gru_set_config(
       memcpy(gru->prev_h,prev_h,gru->out_feats * sizeof(vect_t));
     }
     break;
-    
+
     default:
     return XA_NNLIB_GRU_CONFIG_FATAL_INVALID_PARAM_ID;
   }
@@ -315,8 +314,8 @@ int xa_nnlib_gru_set_config(
 }
 
 int xa_nnlib_gru_get_config(
-  xa_nnlib_handle_t handle, 
-  xa_nnlib_gru_param_id_t param_id, 
+  xa_nnlib_handle_t handle,
+  xa_nnlib_gru_param_id_t param_id,
   void *params )
 {
   gru_state_t *gru;
@@ -407,7 +406,7 @@ int xa_nnlib_gru_get_config(
       out_shape->shape_offset = -1;
     }
     break;
-    
+
     case XA_NNLIB_GRU_RESTORE_CONTEXT:
     {
       vect_t *prev_h;
@@ -422,9 +421,9 @@ int xa_nnlib_gru_get_config(
   }
 
   return XA_NNLIB_NO_ERROR;
-}  
+}
 
-int xa_nnlib_gru_process(xa_nnlib_handle_t handle, 
+int xa_nnlib_gru_process(xa_nnlib_handle_t handle,
     void *scratch,
     void *input,
     void *output,
@@ -457,7 +456,7 @@ int xa_nnlib_gru_process(xa_nnlib_handle_t handle,
   {
     return XA_NNLIB_GRU_EXECUTE_FATAL_INSUFFICIENT_OUTPUT_BUFFER_SPACE;
   }
-  
+
   if(p_in_shape->dim.vector.length < gru->in_feats)
   {
     return XA_NNLIB_GRU_EXECUTE_FATAL_INSUFFICIENT_DATA;
@@ -471,7 +470,7 @@ int xa_nnlib_gru_process(xa_nnlib_handle_t handle,
     char *sptr = (char *)scratch;
 
     scratch_alloc(sptr, scratch_mem,   scratch_mem_t,  1 );
-    
+
     scratch_alloc(sptr, scratch_mem->z_or_r, vect_t, gru->out_feats);
     scratch_alloc(sptr, scratch_mem->r_x_prev_h, vect_t, gru->out_feats);
     scratch_alloc(sptr, scratch_mem->h, vect_t, gru->out_feats);
@@ -481,7 +480,7 @@ int xa_nnlib_gru_process(xa_nnlib_handle_t handle,
 
 #elif MODEL_INT16
     scratch_alloc(sptr, scratch_mem->temp_mem.vec, Int32, gru->out_feats);
-  
+
 #endif
   }
 
@@ -616,6 +615,6 @@ int xa_nnlib_gru_process(xa_nnlib_handle_t handle,
         gru->out_feats);
   }
 #endif
-  
+
   return XA_NNLIB_NO_ERROR;
 }

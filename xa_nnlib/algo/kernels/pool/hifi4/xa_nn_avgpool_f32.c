@@ -47,21 +47,21 @@ const FLOAT32* __restrict__ p_inp,
     VOID *handle))
 #else /* #if !HAVE_VFPU */
 static void avgpool_f32_hw(
-    FLOAT32* __restrict__ p_out,
-    FLOAT32* __restrict__ p_inp,
-    WORD32  input_height,
-    WORD32  input_width,
-    WORD32  kernel_height,
-    WORD32  kernel_width,
-    WORD32  x_stride,
-    WORD32  y_stride,
-    WORD32  x_padding,
-    WORD32  y_padding,
-    WORD32  out_height,
-    WORD32  out_width,
-    WORD32  out_plane_size,
-    WORD32  not_last_channel,
-    pVOID   p_scratch_in)
+      FLOAT32* __restrict__ p_out,
+const FLOAT32* __restrict__ p_inp,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
+      WORD32  out_plane_size,
+      WORD32  not_last_channel,
+      pVOID   p_scratch_in)
 {
     FLOAT32 *p_scratch = (FLOAT32 *)(p_scratch_in);
 
@@ -277,24 +277,24 @@ static void avgpool_f32_hw(
 }
 
 WORD32 xa_nn_avgpool_f32(
-        FLOAT32* __restrict__ p_out,
-const   FLOAT32* __restrict__ p_inp,
-        WORD32  input_height,
-        WORD32  input_width,
-        WORD32  input_channels,
-        WORD32  kernel_height,
-        WORD32  kernel_width,
-        WORD32  x_stride,
-        WORD32  y_stride,
-        WORD32  x_padding,
-        WORD32  y_padding,
-        WORD32  out_height,
-        WORD32  out_width,
+      FLOAT32* __restrict__ p_out,
+const FLOAT32* __restrict__ p_inp,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  input_channels,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
 #ifdef NNLIB_V2
-        WORD32  inp_data_format,
+      WORD32  inp_data_format,
 #endif
-        WORD32  out_data_format,
-        VOID *p_scratch)
+      WORD32  out_data_format,
+      VOID *p_scratch)
 {
     /* NULL pointer checks */
     XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -334,7 +334,8 @@ const   FLOAT32* __restrict__ p_inp,
         xa_nn_avgpool_state_t *p_state = (xa_nn_avgpool_state_t *)p_scratch;
         FLOAT32 *p_tmp_out = (FLOAT32 *)(p_state->p_tmp_out);
         int itr_ic, itr_oh, itr_ow;
-        FLOAT32 *pt_inp, *pt_out;
+        const FLOAT32 *pt_inp; 
+        FLOAT32 *pt_out;
 
         /* Calculate denominators for division */
         for(itr_oh = 0; itr_oh < out_height; itr_oh++)
@@ -357,7 +358,7 @@ const   FLOAT32* __restrict__ p_inp,
 
         for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
         {
-            pt_inp = (FLOAT32 *)&p_inp[itr_ic * input_height * input_width];
+            pt_inp = &p_inp[itr_ic * input_height * input_width];
             pt_out = &p_out[itr_ic * out_height * out_width];
 
             avgpool_f32_hw(pt_out

@@ -1,15 +1,15 @@
 #
 # Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
-# "Software"), to use this Software with Cadence processor cores only and 
+# "Software"), to use this Software with Cadence processor cores only and
 # not with any other processors and platforms, subject to
 # the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -26,6 +26,37 @@ Cadence HiFi4 Neural Network (NN) Library
 ======================================================================
 Revision History
 ======================================================================
+
+Version 2.3.0 API 1.0: Dec 14, 2020
+
++ Intermediate Release of HiFi 4 NN Library
++ Tested using RI.5 tools, xt-xcc/xt-xc++ and xt-clang/xt-clang++ compiler
++ Added support for asymmetric quantized 8 bit (int8) variants of 
+  following TFLM operators
+    Conv2D (Standard convolution)
+    Depthwise convolution
+    Fully connected
+    Softmax
+    Average Pool (using existing 8x8 variant)
+    Max Pool (using existing 8x8 variant)
++ Enabled cross compilation for HiFi 3. 
++ Removed kernel padding requirement for depthwise convolution kernels.
+
+Limitations
+> The ANN test bench, TFLite Micro example application and the supporting libraries
+  need support for C++11 standard. This is supported only with Xtensa C library. 
+> For configurations without VFPU, the floating point  variants of the kernels 
+  are not supported and should not be used. 
+
+Known issues
+> Compiler optimizations are disabled for C++ source files 
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+ 
+----------------------------------------------------------------------
 
 Version 2.2.0 API 1.0: April 22, 2020
 

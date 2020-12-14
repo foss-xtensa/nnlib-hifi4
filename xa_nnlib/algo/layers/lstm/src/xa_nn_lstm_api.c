@@ -20,11 +20,8 @@
 
 ******************************************************************************/
 #include <string.h>
-#include <xtensa/tie/xt_hifi2.h>
-#include "xa_nnlib_lstm_api.h"
-#include "xa_nnlib_api.h"
-
 #include "xa_nnlib_common.h"
+#include "xa_nnlib_lstm_api.h"
 
 #ifdef hifi4
 #define XA_PAD_BYTES   8
@@ -107,7 +104,7 @@ typedef struct _scratch_mem_t
   temp_mem_t temp_mem;
 } scratch_mem_t;
 
-void vec_elem_mul_16x32plus16x16_16(Int32 * __restrict__ output, Int16 * __restrict__ input_1, Int32 * __restrict__ input_2, Int16 * __restrict__ input_3, Int16 * __restrict__ input_4, int fXprev_c_lsh, int iXc_hat_lsh, int num_elm)
+static void vec_elem_mul_16x32plus16x16_16(Int32 * __restrict__ output, Int16 * __restrict__ input_1, Int32 * __restrict__ input_2, Int16 * __restrict__ input_3, Int16 * __restrict__ input_4, int fXprev_c_lsh, int iXc_hat_lsh, int num_elm)
 {
 #pragma aligned(output, 8)
 #pragma aligned(input_1, 8)
@@ -132,7 +129,7 @@ void vec_elem_mul_16x32plus16x16_16(Int32 * __restrict__ output, Int16 * __restr
 
 }
 
-void lstm_output_kernel_16x16_16(Int16 * __restrict__ output, Int16 * __restrict__ prev_output, Int16 * __restrict__ input_1, Int16 * __restrict__ input_2, int lsh, int num_elm)
+static void lstm_output_kernel_16x16_16(Int16 * __restrict__ output, Int16 * __restrict__ prev_output, Int16 * __restrict__ input_1, Int16 * __restrict__ input_2, int lsh, int num_elm)
 {
 #pragma aligned(output, 8)
 #pragma aligned(prev_output, 8)

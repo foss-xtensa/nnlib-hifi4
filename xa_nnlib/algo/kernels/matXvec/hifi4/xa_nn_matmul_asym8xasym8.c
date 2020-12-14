@@ -19,10 +19,6 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
-#include "xtensa/tie/xt_hifi2.h"
-#include <xa_nnlib_kernels_api.h>
-
 #include "xa_nnlib_common.h"
 
 #ifdef ROW_UNROLL
@@ -32,9 +28,7 @@
 
 #define GET_SUM_BY_MULTIPLY
 
-#include "xa_nnlib_common.h"
 #include "xa_nnlib_common_macros.h"
-#include "xa_nnlib_err_chk.h"
 
 /*----------------------------Main function---------------------------------*/
 
@@ -49,7 +43,7 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
     WORD32 vec_count,
     WORD32 vec_offset,
     WORD32 out_offset,
-    WORD32 out_stride,
+    WORD32 out_stride,                      
     WORD32 mat1_zero_bias,
     WORD32 vec1_zero_bias,
     WORD32 out_multiplier,
@@ -101,9 +95,9 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
 
     left_shift = out_shift<0?0:out_shift;
     right_shift = out_shift>0?0:-out_shift;
-
+  
     CHK_MATMUL_ALIGN(p_mat1, 1, p_vec1, 1, cols1, row_stride1, vec_offset, 4);
-
+    
     if(chk_align)
     {
         for(vec_itr = 0; vec_itr < (vec_count & ~(VEC_UNROLL-1)); vec_itr+=VEC_UNROLL)
@@ -114,32 +108,32 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
                 SETUP_ACC_BATCH;
                 SETUP_VEC_BATCH;
                 SETUP_MAT1;
-
+        
                 for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
                 {
                     LOAD_VEC_BATCH;
                     LOAD_MAT1;
                     KERNEL_MAT1_VEC_BATCH;
                 }
-
+        
                 ADD_BIAS_ACC_BATCH;
                 ADJUST_ACC_BATCH;
                 STORE_ACC_BATCH;
             }
-
+        
             for(; m_itr < rows; m_itr++)
             {
                 UNROLL_ROW_SETUP_ACC_BATCH(0);
                 SETUP_VEC_BATCH;
                 UNROLL_SETUP_MAT1(0);
-
+        
                 for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
                 {
                     LOAD_VEC_BATCH;
                     UNROLL_LOAD_ROW_MAT1(0);
                     UNROLL_ROW_KERNEL_MAT1_VEC_BATCH(0);
                 }
-
+        
                 UNROLL_ROW_ADD_BIAS_ACC(0);
                 UNROLL_ROW_ADJUST_ACC(0);
                 UNROLL_ROW_STORE_ACC(0);
@@ -154,39 +148,39 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
                 SETUP_ACC_BATCH_TAIL;
                 UNROLL_SETUP_VEC_BATCH(0);
                 SETUP_MAT1;
-
+        
                 for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
                 {
                     UNROLL_LOAD_VEC_BATCH(0);
                     LOAD_MAT1;
                     KERNEL_MAT1_VEC_BATCH_TAIL;
                 }
-
+        
                 ADD_BIAS_ACC_BATCH_TAIL;
                 ADJUST_ACC_BATCH_TAIL;
                 STORE_ACC_BATCH_TAIL;
             }
-
+      
             for(; m_itr < rows; m_itr++)
             {
                 UNROLL_SETUP_ACC_BATCH(0,0);
                 UNROLL_SETUP_VEC_BATCH(0);
                 UNROLL_SETUP_MAT1(0);
-
+        
                 for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
                 {
                     UNROLL_LOAD_VEC_BATCH(0);
                     UNROLL_LOAD_ROW_MAT1(0);
                     UNROLL_KERNEL_MAT1_VEC_BATCH(0,0);
                 }
-
+        
                 LOAD_BIAS;
                 UNROLL_ADD_BIAS_ACC_BATCH(0,0);
                 UNROLL_ADJUST_ACC_BATCH(0,0);
                 UNROLL_STORE_ACC_BATCH(0,0);
               }
         }
-
+      
     /* Undefining the defined macro to make them available for reuse */
     #undef UNROLL_ROW_SETUP_ACC_BATCH
     #undef UNROLL_SETUP_ACC_BATCH
@@ -328,15 +322,15 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
                         LOAD_ROW_MAT1_ASYM8b_SINGLE_UNALIGNED(1);
                         KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b_SINGLE_UNALIGNED(0,0);
                         KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b_SINGLE_UNALIGNED(1,0);
-                    }
+                    }  
 
-                    LOAD_BIAS;
+                    LOAD_BIAS; 
                     UNROLL_ADD_BIAS_ACC_BATCH(0,0);
                     UNROLL_ADJUST_ACC_BATCH(0,0);
-                    LOAD_BIAS;
+                    LOAD_BIAS; 
                     UNROLL_ADD_BIAS_ACC_BATCH(1,0);
                     UNROLL_ADJUST_ACC_BATCH(1,0);
-
+                
                     STORE_STRIDE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b(0,0);
                     STORE_STRIDE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b(1,0);
                 }

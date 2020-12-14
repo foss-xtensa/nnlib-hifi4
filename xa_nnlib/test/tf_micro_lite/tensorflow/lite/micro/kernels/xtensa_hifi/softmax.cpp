@@ -200,14 +200,14 @@ TfLiteStatus SoftmaxEval(TfLiteContext* context, TfLiteNode* node) {
     MatchingFlatSizeSkipDim(input_shape, trailing_dim, output_shape);
   const int input_size =
     MatchingDim(input_shape, trailing_dim, output_shape, trailing_dim);
-  char profiler_name_0[MAX_PROFILER_NAME_LENGTH];
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
+  char profiler_name_0[MAX_PROFILER_NAME_LENGTH]; 
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
   strcpy(profiler_name_0,"softmax");
-  sprintf(profiler_params, "batch size=%d, input_size=%d",
+  sprintf(profiler_params, "batch size=%d, input_size=%d", 
   batch_size, input_size);
   XTPWR_PROFILER_OPEN(0, profiler_name_0, profiler_params, input_size, "cyc/point", 0);
 #endif
-
+  
   XTPWR_PROFILER_START(0);
   SoftmaxParams op_data;
   TF_LITE_ENSURE_STATUS(

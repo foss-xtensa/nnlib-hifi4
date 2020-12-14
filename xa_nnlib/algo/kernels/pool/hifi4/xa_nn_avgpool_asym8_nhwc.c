@@ -71,23 +71,23 @@
  */
 
 void xa_nn_avgpool_asym8_hwc_16(
-        UWORD8* __restrict__ p_out,
-const   UWORD8* __restrict__ p_inp,
-        WORD32   input_height,
-        WORD32   input_width,
-        WORD32   input_channels,
-        WORD32   kernel_height,
-        WORD32   kernel_width,
-        WORD32   x_stride,
-        WORD32   y_stride,
-        WORD32   x_padding,
-        WORD32   y_padding,
-        WORD32   out_height,
-        WORD32   out_width,
-        pVOID    p_scratch_in,
-        pVOID    p_zeros_mem,
-        WORD32   *p_den_height,
-        WORD32   *p_den_width)
+      UWORD8* __restrict__ p_out,
+const UWORD8* __restrict__ p_inp,
+      WORD32   input_height,
+      WORD32   input_width,
+      WORD32   input_channels,
+      WORD32   kernel_height,
+      WORD32   kernel_width,
+      WORD32   x_stride,
+      WORD32   y_stride,
+      WORD32   x_padding,
+      WORD32   y_padding,
+      WORD32   out_height,
+      WORD32   out_width,
+      pVOID    p_scratch_in,
+      pVOID    p_zeros_mem,
+      WORD32   *p_den_height,
+      WORD32   *p_den_width)
 {
     WORD16 *p_scratch = (WORD16 *)(p_scratch_in);
 
@@ -441,23 +441,23 @@ const   UWORD8* __restrict__ p_inp,
 }
 
 void xa_nn_avgpool_asym8_hwc_32(
-        UWORD8* __restrict__ p_out,
-const   UWORD8* __restrict__ p_inp,
-        WORD32   input_height,
-        WORD32   input_width,
-        WORD32   input_channels,
-        WORD32   kernel_height,
-        WORD32   kernel_width,
-        WORD32   x_stride,
-        WORD32   y_stride,
-        WORD32   x_padding,
-        WORD32   y_padding,
-        WORD32   out_height,
-        WORD32   out_width,
-        pVOID    p_scratch_in,
-        pVOID    p_zeros_mem,
-        WORD32   *p_den_height,
-        WORD32   *p_den_width)
+      UWORD8* __restrict__ p_out,
+const UWORD8* __restrict__ p_inp,
+      WORD32   input_height,
+      WORD32   input_width,
+      WORD32   input_channels,
+      WORD32   kernel_height,
+      WORD32   kernel_width,
+      WORD32   x_stride,
+      WORD32   y_stride,
+      WORD32   x_padding,
+      WORD32   y_padding,
+      WORD32   out_height,
+      WORD32   out_width,
+      pVOID    p_scratch_in,
+      pVOID    p_zeros_mem,
+      WORD32   *p_den_height,
+      WORD32   *p_den_width)
 {
     WORD16 *p_scratch = (WORD16 *)(p_scratch_in);
 

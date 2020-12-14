@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -28,22 +28,22 @@
 
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(void, xa_nn_avgpool_f32_hwc,(
-        FLOAT32* __restrict__ p_out,
-const   FLOAT32* __restrict__ p_inp,
-        WORD32   input_height,
-        WORD32   input_width,
-        WORD32   input_channels,
-        WORD32   kernel_height,
-        WORD32   kernel_width,
-        WORD32   x_stride,
-        WORD32   y_stride,
-        WORD32   x_padding,
-        WORD32   y_padding,
-        WORD32   out_height,
-        WORD32   out_width,
-        pVOID    p_scratch_in,
-        FLOAT32  *p_zeros_mem,
-        FLOAT32  *p_den))
+      FLOAT32* __restrict__ p_out,
+const FLOAT32* __restrict__ p_inp,
+      WORD32   input_height,
+      WORD32   input_width,
+      WORD32   input_channels,
+      WORD32   kernel_height,
+      WORD32   kernel_width,
+      WORD32   x_stride,
+      WORD32   y_stride,
+      WORD32   x_padding,
+      WORD32   y_padding,
+      WORD32   out_height,
+      WORD32   out_width,
+      pVOID    p_scratch_in,
+      FLOAT32  *p_zeros_mem,
+      FLOAT32  *p_den))
 #else /* #if !HAVE_VFPU */
 
 #define INCR_N_PLANE(ptr, n, plane_size) \
@@ -76,34 +76,34 @@ const   FLOAT32* __restrict__ p_inp,
 
 
 
-/* Max pooling without using extra copy of input data 
+/* Max pooling without using extra copy of input data
  * Works with unaligned input, output.
  */
 
 void xa_nn_avgpool_f32_hwc(
-        FLOAT32* __restrict__ p_out,
-const   FLOAT32* __restrict__ p_inp,
-        WORD32   input_height,
-        WORD32   input_width,
-        WORD32   input_channels,
-        WORD32   kernel_height,
-        WORD32   kernel_width,
-        WORD32   x_stride,
-        WORD32   y_stride,
-        WORD32   x_padding,
-        WORD32   y_padding,
-        WORD32   out_height,
-        WORD32   out_width,
-        pVOID    p_scratch_in,
-        FLOAT32  *p_zeros_mem,
-        FLOAT32  *p_den)
+      FLOAT32* __restrict__ p_out,
+const FLOAT32* __restrict__ p_inp,
+      WORD32   input_height,
+      WORD32   input_width,
+      WORD32   input_channels,
+      WORD32   kernel_height,
+      WORD32   kernel_width,
+      WORD32   x_stride,
+      WORD32   y_stride,
+      WORD32   x_padding,
+      WORD32   y_padding,
+      WORD32   out_height,
+      WORD32   out_width,
+      pVOID    p_scratch_in,
+      FLOAT32  *p_zeros_mem,
+      FLOAT32  *p_den)
 {
     FLOAT32 *p_scratch = (FLOAT32 *)(p_scratch_in);
 
     int itr_oh, itr_ow;
     int plane_size;
-    xtfloatx2 * p_src1, * p_src2, * p_src3; 
-    xtfloatx2 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp; 
+    xtfloatx2 * p_src1, * p_src2, * p_src3;
+    xtfloatx2 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp;
     xtfloatx2 *p_dst, *p_dst_temp;
     ae_valign align_src1, align_src2, align_src3, align_dst;
     int i;
@@ -113,7 +113,7 @@ const   FLOAT32* __restrict__ p_inp,
 
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)
     {
-        int pool_height, pool_width; 
+        int pool_height, pool_width;
         int start_row, end_row;
         int start_plane, end_plane;
         FLOAT32 *p_scratch_zeros = p_zeros_mem;
@@ -129,19 +129,19 @@ const   FLOAT32* __restrict__ p_inp,
         LIMIT(end_plane , 0, input_height);
         pool_height = end_plane - start_plane;
         p_dst = (xtfloatx2 *)(FLOAT32 *)p_scratch ;
-        
+
 
         if(pool_height)
         {
             p_src1 = (xtfloatx2 *)p_inp;
-            INCR_N_PLANE(p_src1, start_plane, plane_size); 
+            INCR_N_PLANE(p_src1, start_plane, plane_size);
             pool_height--;
 
             p_src2 = p_src1;
-            INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size); 
+            INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size);
 
             p_src3 = p_src2;
-            INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size); 
+            INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size);
 
             /* Compare three rows per iteration */
             do
@@ -194,10 +194,10 @@ const   FLOAT32* __restrict__ p_inp,
                 p_src1 = p_dst;
 
                 p_src2 = p_src3;
-                INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size); 
+                INCR_PLANE_IF_HEIGHT(p_src2, pool_height, plane_size);
 
                 p_src3 = p_src2;
-                INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size); 
+                INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size);
 
             }while(1);
         }
@@ -232,14 +232,14 @@ const   FLOAT32* __restrict__ p_inp,
             if(pool_width)
             {
                 p_src1 = (xtfloatx2 *)p_scratch;
-                INCR_N_ROW(p_src1, start_row, input_channels); 
+                INCR_N_ROW(p_src1, start_row, input_channels);
                 pool_width--;
 
                 p_src2 = p_src1;
-                INCR_ROW_IF_WIDTH(p_src2, pool_width, input_channels); 
+                INCR_ROW_IF_WIDTH(p_src2, pool_width, input_channels);
 
                 p_src3 = p_src2;
-                INCR_ROW_IF_WIDTH(p_src3, pool_width, input_channels); 
+                INCR_ROW_IF_WIDTH(p_src3, pool_width, input_channels);
 
                 /* Compare three rows per iteration */
                 do
@@ -253,7 +253,7 @@ const   FLOAT32* __restrict__ p_inp,
                     align_src1 = XT_LASX2PP(p_src1_temp);
                     align_src2 = XT_LASX2PP(p_src2_temp);
                     align_src3 = XT_LASX2PP(p_src3_temp);
-                    
+
                     align_dst = AE_ZALIGN64(); // zero alignment reg
 
                     for(i = 0; i < (input_channels >> 1); i++)
@@ -280,7 +280,7 @@ const   FLOAT32* __restrict__ p_inp,
                         i1 = ((FLOAT32 *)p_src1_temp)[0];
                         i2 = ((FLOAT32 *)p_src2_temp)[0];
                         i3 = ((FLOAT32 *)p_src3_temp)[0];
-                        
+
                         out = XT_ADD_S(i1, i2);
                         out = XT_ADD_S(out, i3);
 
@@ -294,13 +294,13 @@ const   FLOAT32* __restrict__ p_inp,
                     p_src1 = p_dst;
 
                     p_src2 = p_src3;
-                    INCR_ROW_IF_WIDTH(p_src2, pool_width, input_channels); 
+                    INCR_ROW_IF_WIDTH(p_src2, pool_width, input_channels);
 
                     p_src3 = p_src2;
-                    INCR_ROW_IF_WIDTH(p_src3, pool_width, input_channels); 
+                    INCR_ROW_IF_WIDTH(p_src3, pool_width, input_channels);
 
                 }while(1);
-               
+
                 p_dst_pad = (FLOAT32 *)p_dst;
                 for(i = 0; i < input_channels; i++)
                 {

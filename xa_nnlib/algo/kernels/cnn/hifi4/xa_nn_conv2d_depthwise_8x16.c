@@ -125,10 +125,10 @@ static inline void conv2d_nchw_8x16_hf4_convmul
 
             WORD32 _WORD32_scratch_j = (j << 2);
 
-            scratch_ptr[_WORD32_scratch_j + 0] = accu_int64_0;
-            scratch_ptr[_WORD32_scratch_j + 1] = accu_int64_1;
-            scratch_ptr[_WORD32_scratch_j + 2] = accu_int64_2;
-            scratch_ptr[_WORD32_scratch_j + 3] = accu_int64_3;
+            scratch_ptr[_WORD32_scratch_j + 0] = AE_SRAI64(accu_int64_0, 8);
+            scratch_ptr[_WORD32_scratch_j + 1] = AE_SRAI64(accu_int64_1, 8);
+            scratch_ptr[_WORD32_scratch_j + 2] = AE_SRAI64(accu_int64_2, 8);
+            scratch_ptr[_WORD32_scratch_j + 3] = AE_SRAI64(accu_int64_3, 8);
 
         }
     }
@@ -148,7 +148,6 @@ static inline void conv2d_nchw_8x16_hf4_convmul
         {
             accu_int64_0 = scratch_ptr[(j * x_stride)];
 
-            accu_int64_0 = AE_SLAA64S(accu_int64_0, -8);
             accu_int64_0 = AE_ADD64S(accu_int64_0, _ae_int64_sat_bias);
             accu_int64_0 = AE_SLAA64S(accu_int64_0, acc_shift);
             out_ptr[(j * out_stride)] = AE_SAT16X4(0, AE_ROUND32F64SSYM(accu_int64_0));
@@ -201,13 +200,18 @@ static void xa_nn_conv2d_depthwise_nchw_8x16
     xa_nn_circ_buf_t *p_circ_buf = &(p_state->circ_buf);
     int itr_ic, itr_cm, itr_oh;
     int circ_out_height = (p_circ_buf->rows - kernel_height)/y_stride + 1;
+    int kernel_height_pad = ALIGNED_SIZE(kernel_height, 4);
     int kernel_width_pad = ALIGNED_SIZE(kernel_width, 4);
     int rows_to_add, top_pad, bottom_pad, rows_added;
     int input_row;
     const WORD8 *pt_ker;
     const WORD16 *pt_inp;
     pWORD16 p_inp_circ;
-    p_scratch = (pWORD64)(p_state->p_scratch);
+    int i;
+    WORD8 *p_kernel_padded = (WORD8 *)(p_state->p_scratch);
+    p_kernel_padded = (WORD8 *)ALIGN_PTR(p_kernel_padded, 8);
+    pWORD64 p_tmp_out = (pWORD64)(p_kernel_padded + kernel_height_pad * kernel_width_pad);
+    p_tmp_out = (pWORD64)ALIGN_PTR(p_tmp_out, 8);
 
     AE_SETCBEGIN0(p_circ_buf->p_begin);
     AE_SETCEND0(p_circ_buf->p_end);
@@ -216,6 +220,15 @@ static void xa_nn_conv2d_depthwise_nchw_8x16
 
     acc_shift = acc_shift + 32;
     LIMIT_ACC_LSH;
+
+    /* Initialize whole scratch for padded kernel to padding value, after this
+       we only have to copy actual kernel values, padding area should remain
+       untouched */
+    ae_int32x2 *pae_ker_pad = (ae_int32x2 *)p_kernel_padded;
+    for(i = 0; i < ((kernel_height_pad * kernel_width_pad) >> 3); i++)
+    {
+      pae_ker_pad[i] = AE_ZERO32();
+    }
 
     for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
     {
@@ -257,12 +270,13 @@ static void xa_nn_conv2d_depthwise_nchw_8x16
 
             for(itr_cm = 0; itr_cm < channels_multiplier; itr_cm++)
             {
-                pt_ker = &p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width_pad];
+                pt_ker = &p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width];
+                COPY_KERNEL_TO_SCRATCH_8b(p_kernel_padded, pt_ker, kernel_height, kernel_width, kernel_width_pad);
                 bias = p_bias[(itr_ic*channels_multiplier+itr_cm)];
 
                 conv2d_nchw_8x16_hf4_convmul
                     ((&p_out[(itr_ic*channels_multiplier+itr_cm)+itr_oh*out_width*(input_channels*channels_multiplier)])
-                     ,pt_ker
+                     ,p_kernel_padded
                      ,p_inp_circ
                      ,bias
                      ,p_circ_buf->rows
@@ -276,7 +290,7 @@ static void xa_nn_conv2d_depthwise_nchw_8x16
                      ,y_stride
                      ,acc_shift
                      ,bias_shift
-                     ,p_scratch
+                     ,p_tmp_out
                     );
             }
         }
@@ -300,12 +314,13 @@ static void xa_nn_conv2d_depthwise_nchw_8x16
 
         for(itr_cm = 0; itr_cm < channels_multiplier; itr_cm++)
         {
-            pt_ker = &p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width_pad];
+            pt_ker = &p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width];
+            COPY_KERNEL_TO_SCRATCH_8b(p_kernel_padded, pt_ker, kernel_height, kernel_width, kernel_width_pad);
             bias = p_bias[(itr_ic*channels_multiplier+itr_cm)];
 
             conv2d_nchw_8x16_hf4_convmul
                 ((&p_out[(itr_ic*channels_multiplier+itr_cm)+itr_oh*out_width*(input_channels*channels_multiplier)])
-                 ,pt_ker
+                 ,p_kernel_padded
                  ,p_inp_circ
                  ,bias
                  ,p_circ_buf->rows
@@ -319,7 +334,7 @@ static void xa_nn_conv2d_depthwise_nchw_8x16
                  ,y_stride
                  ,acc_shift
                  ,bias_shift
-                 ,p_scratch
+                 ,p_tmp_out
                 );
         }
     }
@@ -343,15 +358,15 @@ static inline void conv2d_nhwc_8x16
  ,pWORD32 __restrict__ p_scratch
  )
 {
-    WORD32 out_channels_pad;
-    WORD32 i, itr_oh, itr_ch, itr_kh, itr_kw;
+    WORD32 ker_channels_pad, inp_channels_pad;
+    WORD32 i, itr_oh, itr_ch, itr_kw;
     ae_int16x4 *pt_inp0, *pt_inp1;
     const WORD8 *pt_ker;
+    WORD8 *p_ker_scr;
     pWORD16 out_ptr0, out_ptr1;
     ae_int16x4 d_inp0, d_inp1, d_ker;
     ae_int32x2 d32_ker0, d32_ker1;
     const ae_int16 *pt_bias;
-    ae_valign bias_a;
     ae_int32x2 d_acc0, d_acc1;
     ae_int32x2 d_acc2, d_acc3;
     ae_int64 d64_bias0, d64_bias1, d64_bias2, d64_bias3;
@@ -359,185 +374,113 @@ static inline void conv2d_nhwc_8x16
     ae_int64 d64_acc4, d64_acc5, d64_acc6, d64_acc7;
     ae_int16x4 d_acc16x4;
 
-    out_channels_pad = (out_channels + 3)&(~3);
+    ker_channels_pad = out_channels;
+    inp_channels_pad = (out_channels + 3)&(~3);
 
-    for(itr_oh = 0; itr_oh < (out_height-1); itr_oh+=2)
+    for(itr_ch = 0; itr_ch < out_channels; itr_ch+=4)
     {
+      pt_ker = (const WORD8 *)(&p_ker[itr_ch]);
+      p_ker_scr = (WORD8 *)p_scratch;
+      COPY_KERNEL_TO_SCRATCH_NHWC_4_8b(p_ker_scr, pt_ker, kernel_height, kernel_width, ker_channels_pad);
+      for(itr_oh = 0; itr_oh < out_height; itr_oh+=2)
+      {
         out_ptr0 = (WORD16 *)(&p_out[itr_oh*out_channels*out_width]);
         out_ptr1 = (WORD16 *)(&p_out[(itr_oh+1)*out_channels*out_width]);
         pt_bias = (const ae_int16 *)p_bias;
-        for(itr_ch = 0; itr_ch < out_channels; itr_ch+=4)
+
+        pt_inp0 = (ae_int16x4 *)p_inp;
+        pt_inp1 = (ae_int16x4 *)p_inp;
+        AE_ADDCIRC16X4_XC(pt_inp0, (itr_ch + itr_oh*y_stride*kernel_width*inp_channels_pad)*sizeof(WORD16));
+        AE_ADDCIRC16X4_XC(pt_inp1, (itr_ch + (itr_oh+1)*y_stride*kernel_width*inp_channels_pad)*sizeof(WORD16));
+        p_ker_scr = (WORD8 *)p_scratch;
+        d64_acc0 = AE_ZERO64();
+        d64_acc1 = AE_ZERO64();
+        d64_acc2 = AE_ZERO64();
+        d64_acc3 = AE_ZERO64();
+        d64_acc4 = AE_ZERO64();
+        d64_acc5 = AE_ZERO64();
+        d64_acc6 = AE_ZERO64();
+        d64_acc7 = AE_ZERO64();
+#pragma loop_count min=1
+#pragma no_unroll
+        for(itr_kw = 0; itr_kw < kernel_height * kernel_width; itr_kw++)
         {
-            pt_inp0 = (ae_int16x4 *)p_inp;
-            pt_inp1 = (ae_int16x4 *)p_inp;
-            AE_ADDCIRC16X4_XC(pt_inp0, (itr_ch + itr_oh*y_stride*kernel_width*out_channels_pad)*sizeof(WORD16));
-            AE_ADDCIRC16X4_XC(pt_inp1, (itr_ch + (itr_oh+1)*y_stride*kernel_width*out_channels_pad)*sizeof(WORD16));
-            pt_ker = (const WORD8 *)(&p_ker[itr_ch]);
-            d64_acc0 = AE_ZERO64();
-            d64_acc1 = AE_ZERO64();
-            d64_acc2 = AE_ZERO64();
-            d64_acc3 = AE_ZERO64();
-            d64_acc4 = AE_ZERO64();
-            d64_acc5 = AE_ZERO64();
-            d64_acc6 = AE_ZERO64();
-            d64_acc7 = AE_ZERO64();
-            for(itr_kh = 0; itr_kh < kernel_height; itr_kh++)
-            {
-                ae_int16x4 *ptt_inp0, *ptt_inp1;
-                ptt_inp0 = pt_inp0;
-                ptt_inp1 = pt_inp1;
-                AE_ADDCIRC16X4_XC(ptt_inp0, itr_kh*kernel_width*out_channels_pad*sizeof(WORD16));
-                AE_ADDCIRC16X4_XC(ptt_inp1, itr_kh*kernel_width*out_channels_pad*sizeof(WORD16));
-#pragma no_unroll
-                for(itr_kw = 0; itr_kw < kernel_width; itr_kw++)
-                {
-                    d_inp0 = AE_L16X4_I(ptt_inp0, 0);
-                    d_inp1 = AE_L16X4_I(ptt_inp1, 0);
-                    d_ker = AE_L8X4F_I(pt_ker, 0);
-                    pt_ker += out_channels_pad;
-                    /* Need to accumulate in 64 bit accumulator so converting
-                    muls 32x16 muls, so that mul and accumulation can be combined */
-                    d32_ker0 = AE_SEXT32X2D16_32(d_ker);
-                    d32_ker1 = AE_SEXT32X2D16_10(d_ker);
-                    AE_MULA32X16_H3(d64_acc0, d32_ker0, d_inp0);
-                    AE_MULA32X16_L2(d64_acc1, d32_ker0, d_inp0);
-                    AE_MULA32X16_H1(d64_acc2, d32_ker1, d_inp0);
-                    AE_MULA32X16_L0(d64_acc3, d32_ker1, d_inp0);
-                    AE_MULA32X16_H3(d64_acc4, d32_ker0, d_inp1);
-                    AE_MULA32X16_L2(d64_acc5, d32_ker0, d_inp1);
-                    AE_MULA32X16_H1(d64_acc6, d32_ker1, d_inp1);
-                    AE_MULA32X16_L0(d64_acc7, d32_ker1, d_inp1);
-                    AE_ADDCIRC16X4_XC(ptt_inp0, out_channels_pad*sizeof(WORD16));
-                    AE_ADDCIRC16X4_XC(ptt_inp1, out_channels_pad*sizeof(WORD16));
-                }
-            }
-            d64_bias0 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch]);
-            d64_bias1 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch+1]);
-            d64_bias2 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch+2]);
-            d64_bias3 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch+3]);
-            d64_bias0 = AE_SLAA64S(AE_SRAI64(d64_bias0, 48), bias_shift);
-            d64_bias1 = AE_SLAA64S(AE_SRAI64(d64_bias1, 48), bias_shift);
-            d64_bias2 = AE_SLAA64S(AE_SRAI64(d64_bias2, 48), bias_shift);
-            d64_bias3 = AE_SLAA64S(AE_SRAI64(d64_bias3, 48), bias_shift);
-
-            d64_acc0 = AE_SRAI64(d64_acc0, 8);
-            d64_acc1 = AE_SRAI64(d64_acc1, 8);
-            d64_acc2 = AE_SRAI64(d64_acc2, 8);
-            d64_acc3 = AE_SRAI64(d64_acc3, 8);
-            d64_acc0 = AE_ADD64S(d64_acc0, d64_bias0);
-            d64_acc1 = AE_ADD64S(d64_acc1, d64_bias1);
-            d64_acc2 = AE_ADD64S(d64_acc2, d64_bias2);
-            d64_acc3 = AE_ADD64S(d64_acc3, d64_bias3);
-
-            d64_acc0 = AE_SLAA64S(d64_acc0, acc_shift+32);
-            d64_acc1 = AE_SLAA64S(d64_acc1, acc_shift+32);
-            d64_acc2 = AE_SLAA64S(d64_acc2, acc_shift+32);
-            d64_acc3 = AE_SLAA64S(d64_acc3, acc_shift+32);
-
-            d_acc0 = AE_ROUND32X2F64SSYM(d64_acc0, d64_acc1);
-            d_acc1 = AE_ROUND32X2F64SSYM(d64_acc2, d64_acc3);
-            d_acc16x4 = AE_SAT16X4(d_acc0, d_acc1);
-#pragma no_unroll
-            for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
-            {
-                d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
-                *(ae_int16 *)(&out_ptr0[itr_ch+i]) = d_acc16x4;
-            }
-
-            d64_acc4 = AE_SRAI64(d64_acc4, 8);
-            d64_acc5 = AE_SRAI64(d64_acc5, 8);
-            d64_acc6 = AE_SRAI64(d64_acc6, 8);
-            d64_acc7 = AE_SRAI64(d64_acc7, 8);
-            d64_acc4 = AE_ADD64S(d64_acc4, d64_bias0);
-            d64_acc5 = AE_ADD64S(d64_acc5, d64_bias1);
-            d64_acc6 = AE_ADD64S(d64_acc6, d64_bias2);
-            d64_acc7 = AE_ADD64S(d64_acc7, d64_bias3);
-
-            d64_acc4 = AE_SLAA64S(d64_acc4, acc_shift+32);
-            d64_acc5 = AE_SLAA64S(d64_acc5, acc_shift+32);
-            d64_acc6 = AE_SLAA64S(d64_acc6, acc_shift+32);
-            d64_acc7 = AE_SLAA64S(d64_acc7, acc_shift+32);
-
-            d_acc2 = AE_ROUND32X2F64SSYM(d64_acc4, d64_acc5);
-            d_acc3 = AE_ROUND32X2F64SSYM(d64_acc6, d64_acc7);
-            d_acc16x4 = AE_SAT16X4(d_acc2, d_acc3);
-#pragma no_unroll
-            for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
-            {
-                d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
-                *(ae_int16 *)(&out_ptr1[itr_ch+i]) = d_acc16x4;
-            }
+          AE_L16X4_XC(d_inp0, pt_inp0, inp_channels_pad*sizeof(WORD16));
+          AE_L16X4_XC(d_inp1, pt_inp1, inp_channels_pad*sizeof(WORD16));
+          AE_L8X4F_IP(d_ker, p_ker_scr, 4);
+          /* Need to accumulate in 64 bit accumulator so converting
+          muls 32x16 muls, so that mul and accumulation can be combined */
+          d32_ker0 = AE_SEXT32X2D16_32(d_ker);
+          d32_ker1 = AE_SEXT32X2D16_10(d_ker);
+          AE_MULA32X16_H3(d64_acc0, d32_ker0, d_inp0);
+          AE_MULA32X16_L2(d64_acc1, d32_ker0, d_inp0);
+          AE_MULA32X16_H1(d64_acc2, d32_ker1, d_inp0);
+          AE_MULA32X16_L0(d64_acc3, d32_ker1, d_inp0);
+          AE_MULA32X16_H3(d64_acc4, d32_ker0, d_inp1);
+          AE_MULA32X16_L2(d64_acc5, d32_ker0, d_inp1);
+          AE_MULA32X16_H1(d64_acc6, d32_ker1, d_inp1);
+          AE_MULA32X16_L0(d64_acc7, d32_ker1, d_inp1);
         }
-    }
-    if(itr_oh < out_height)
-    {
-        out_ptr0 = (WORD16 *)(&p_out[itr_oh*out_channels*out_width]);
-        pt_bias = (const ae_int16 *)p_bias;
-        bias_a = AE_LA64_PP(pt_bias);
-        for(itr_ch = 0; itr_ch < out_channels; itr_ch+=4)
+        d64_bias0 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch]);
+        d64_bias1 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch+1]);
+        d64_bias2 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch+2]);
+        d64_bias3 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch+3]);
+        d64_bias0 = AE_SLAA64S(AE_SRAI64(d64_bias0, 48), bias_shift);
+        d64_bias1 = AE_SLAA64S(AE_SRAI64(d64_bias1, 48), bias_shift);
+        d64_bias2 = AE_SLAA64S(AE_SRAI64(d64_bias2, 48), bias_shift);
+        d64_bias3 = AE_SLAA64S(AE_SRAI64(d64_bias3, 48), bias_shift);
+
+        d64_acc0 = AE_SRAI64(d64_acc0, 8);
+        d64_acc1 = AE_SRAI64(d64_acc1, 8);
+        d64_acc2 = AE_SRAI64(d64_acc2, 8);
+        d64_acc3 = AE_SRAI64(d64_acc3, 8);
+        d64_acc0 = AE_ADD64S(d64_acc0, d64_bias0);
+        d64_acc1 = AE_ADD64S(d64_acc1, d64_bias1);
+        d64_acc2 = AE_ADD64S(d64_acc2, d64_bias2);
+        d64_acc3 = AE_ADD64S(d64_acc3, d64_bias3);
+
+        d64_acc0 = AE_SLAA64S(d64_acc0, acc_shift+32);
+        d64_acc1 = AE_SLAA64S(d64_acc1, acc_shift+32);
+        d64_acc2 = AE_SLAA64S(d64_acc2, acc_shift+32);
+        d64_acc3 = AE_SLAA64S(d64_acc3, acc_shift+32);
+
+        d_acc0 = AE_ROUND32X2F64SSYM(d64_acc0, d64_acc1);
+        d_acc1 = AE_ROUND32X2F64SSYM(d64_acc2, d64_acc3);
+        d_acc16x4 = AE_SAT16X4(d_acc0, d_acc1);
+#pragma no_unroll
+        for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
         {
-            pt_inp0 = (ae_int16x4 *)p_inp;
-            AE_ADDCIRC16X4_XC(pt_inp0, (itr_ch + itr_oh*y_stride*kernel_width*out_channels_pad)*sizeof(WORD16));
-            pt_ker = (const WORD8 *)(&p_ker[itr_ch]);
-            d64_acc0 = AE_ZERO64();
-            d64_acc1 = AE_ZERO64();
-            d64_acc2 = AE_ZERO64();
-            d64_acc3 = AE_ZERO64();
-            for(itr_kh = 0; itr_kh < kernel_height; itr_kh++)
-            {
-                ae_int16x4 *ptt_inp0 = pt_inp0;
-                AE_ADDCIRC16X4_XC(ptt_inp0, itr_kh*kernel_width*out_channels_pad*sizeof(WORD16));
-#pragma no_unroll
-                for(itr_kw = 0; itr_kw < kernel_width; itr_kw++)
-                {
-                    d_inp0 = AE_L16X4_I(ptt_inp0, 0);
-                    d_ker = AE_L8X4F_I(pt_ker, 0);
-                    pt_ker += out_channels_pad;
-                    /* Need to accumulate in 64 bit accumulator so converting
-                    muls 32x16 muls, so that mul and accumulation can be combined */
-                    d32_ker0 = AE_SEXT32X2D16_32(d_ker);
-                    d32_ker1 = AE_SEXT32X2D16_10(d_ker);
-                    AE_MULA32X16_H3(d64_acc0, d32_ker0, d_inp0);
-                    AE_MULA32X16_L2(d64_acc1, d32_ker0, d_inp0);
-                    AE_MULA32X16_H1(d64_acc2, d32_ker1, d_inp0);
-                    AE_MULA32X16_L0(d64_acc3, d32_ker1, d_inp0);
-                    AE_MULA32X16_H3(d64_acc4, d32_ker0, d_inp1);
-                    AE_ADDCIRC16X4_XC(ptt_inp0, out_channels_pad*sizeof(WORD16));
-                }
-            }
-            d64_bias0 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch]);
-            d64_bias1 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch+1]);
-            d64_bias2 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch+2]);
-            d64_bias3 = AE_MOVINT64_FROMINT16(pt_bias[itr_ch+3]);
-            d64_bias0 = AE_SLAA64S(AE_SRAI64(d64_bias0, 48), bias_shift);
-            d64_bias1 = AE_SLAA64S(AE_SRAI64(d64_bias1, 48), bias_shift);
-            d64_bias2 = AE_SLAA64S(AE_SRAI64(d64_bias2, 48), bias_shift);
-            d64_bias3 = AE_SLAA64S(AE_SRAI64(d64_bias3, 48), bias_shift);
-
-            d64_acc0 = AE_SRAI64(d64_acc0, 8);
-            d64_acc1 = AE_SRAI64(d64_acc1, 8);
-            d64_acc2 = AE_SRAI64(d64_acc2, 8);
-            d64_acc3 = AE_SRAI64(d64_acc3, 8);
-            d64_acc0 = AE_ADD64S(d64_acc0, d64_bias0);
-            d64_acc1 = AE_ADD64S(d64_acc1, d64_bias1);
-            d64_acc2 = AE_ADD64S(d64_acc2, d64_bias2);
-            d64_acc3 = AE_ADD64S(d64_acc3, d64_bias3);
-
-            d64_acc0 = AE_SLAA64S(d64_acc0, acc_shift+32);
-            d64_acc1 = AE_SLAA64S(d64_acc1, acc_shift+32);
-            d64_acc2 = AE_SLAA64S(d64_acc2, acc_shift+32);
-            d64_acc3 = AE_SLAA64S(d64_acc3, acc_shift+32);
-
-            d_acc0 = AE_ROUND32X2F64SSYM(d64_acc0, d64_acc1);
-            d_acc1 = AE_ROUND32X2F64SSYM(d64_acc2, d64_acc3);
-            d_acc16x4 = AE_SAT16X4(d_acc0, d_acc1);
-#pragma no_unroll
-            for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
-            {
-                d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
-                *(ae_int16 *)(&out_ptr0[itr_ch+i]) = d_acc16x4;
-            }
+          d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
+          *(ae_int16 *)(&out_ptr0[itr_ch+i]) = d_acc16x4;
         }
+
+        if(out_height-itr_oh >= 2)
+        {
+          d64_acc4 = AE_SRAI64(d64_acc4, 8);
+          d64_acc5 = AE_SRAI64(d64_acc5, 8);
+          d64_acc6 = AE_SRAI64(d64_acc6, 8);
+          d64_acc7 = AE_SRAI64(d64_acc7, 8);
+          d64_acc4 = AE_ADD64S(d64_acc4, d64_bias0);
+          d64_acc5 = AE_ADD64S(d64_acc5, d64_bias1);
+          d64_acc6 = AE_ADD64S(d64_acc6, d64_bias2);
+          d64_acc7 = AE_ADD64S(d64_acc7, d64_bias3);
+
+          d64_acc4 = AE_SLAA64S(d64_acc4, acc_shift+32);
+          d64_acc5 = AE_SLAA64S(d64_acc5, acc_shift+32);
+          d64_acc6 = AE_SLAA64S(d64_acc6, acc_shift+32);
+          d64_acc7 = AE_SLAA64S(d64_acc7, acc_shift+32);
+
+          d_acc2 = AE_ROUND32X2F64SSYM(d64_acc4, d64_acc5);
+          d_acc3 = AE_ROUND32X2F64SSYM(d64_acc6, d64_acc7);
+          d_acc16x4 = AE_SAT16X4(d_acc2, d_acc3);
+#pragma no_unroll
+          for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
+          {
+            d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
+            *(ae_int16 *)(&out_ptr1[itr_ch+i]) = d_acc16x4;
+          }
+        }
+      }
     }
 }
 
@@ -582,8 +525,8 @@ static void xa_nn_conv2d_depthwise_nhwc_8x16
          ,0
         );
 
-    xa_nn_circ_buf_t *p_state = (xa_nn_circ_buf_t *)p_scratch;
-    xa_nn_circ_buf_t *p_circ_buf = p_state;
+    xa_nn_conv2d_dw_state_t *p_state = (xa_nn_conv2d_dw_state_t *)p_scratch;
+    xa_nn_circ_buf_t *p_circ_buf = &(p_state->circ_buf);
     int itr_ow;
     int cols_to_add, left_pad, right_pad, cols_added;
     int input_col;
@@ -649,7 +592,7 @@ static void xa_nn_conv2d_depthwise_nhwc_8x16
              ,y_stride
              ,acc_shift
              ,bias_shift
-             ,p_scratch
+             ,p_state->p_scratch
             );
     }
 }
@@ -685,8 +628,7 @@ WORD32 xa_nn_conv2d_depthwise_8x16
     XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
     /* Pointer alignment checks */
     XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD16), -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_kernel, (ALIGNMENT>>1), -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_inp, ALIGNMENT, -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD16), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD16), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
     /* Basic Parameter checks */

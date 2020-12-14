@@ -26,21 +26,21 @@
 #include "xa_nnlib_err_chk.h"
 
 static void avgpool_16(
-    WORD16 *__restrict__ p_out,
-    WORD16 *__restrict__ p_inp,
-    WORD32 *p_den_height,
-    WORD32 *p_den_width,
-    WORD32  input_height,
-    WORD32   input_width,
-    WORD32   kernel_height,
-    WORD32   kernel_width,
-    WORD32   x_stride,
-    WORD32   y_stride,
-    WORD32  x_padding,
-    WORD32  y_padding,
-    WORD32   out_height,
-    WORD32   out_width,
-    pVOID    p_scratch_in)
+      WORD16 *__restrict__ p_out,
+const WORD16 *__restrict__ p_inp,
+      WORD32 *p_den_height,
+      WORD32 *p_den_width,
+      WORD32  input_height,
+      WORD32   input_width,
+      WORD32   kernel_height,
+      WORD32   kernel_width,
+      WORD32   x_stride,
+      WORD32   y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32   out_height,
+      WORD32   out_width,
+      pVOID    p_scratch_in)
 {
     WORD32 *p_scratch = (WORD32 *)(p_scratch_in);
 
@@ -260,24 +260,24 @@ static void avgpool_16(
 }
 
 WORD32 xa_nn_avgpool_16(
-    WORD16* __restrict__ p_out,
-    WORD16* __restrict__ p_inp,
-    WORD32  input_height,
-    WORD32  input_width,
-    WORD32  input_channels,
-    WORD32  kernel_height,
-    WORD32  kernel_width,
-    WORD32  x_stride,
-    WORD32  y_stride,
-    WORD32  x_padding,
-    WORD32  y_padding,
-    WORD32  out_height,
-    WORD32  out_width,
+      WORD16* __restrict__ p_out,
+const WORD16* __restrict__ p_inp,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  input_channels,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
 #ifdef NNLIB_V2
-    WORD32  inp_data_format,
+      WORD32  inp_data_format,
 #endif
-    WORD32  out_data_format,
-    VOID *p_scratch)
+      WORD32  out_data_format,
+      VOID *p_scratch)
 {
     /* NULL pointer checks */
     XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -326,7 +326,8 @@ WORD32 xa_nn_avgpool_16(
 
         xa_nn_avgpool_state_t *p_state = (xa_nn_avgpool_state_t *)p_scratch;
         int itr_ic, itr_oh, itr_ow;
-        WORD16 *pt_inp, *pt_out;
+        const WORD16 *pt_inp; 
+        WORD16 *pt_out;
         WORD32 *p_tmp_out = (WORD32 *)(p_state->p_tmp_out);
 
         /* Calculate denominators for division */

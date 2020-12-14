@@ -46,7 +46,7 @@ limitations under the License.
 #include "tensorflow/lite/kernels/padding.h"
 
 #ifdef PROFILE
-#define PROF_ALLOCATE
+#define PROF_ALLOCATE  
 #endif
 #include "xt_profiler.h"
 #include "xtensa_tf_micro_common.h"
@@ -255,7 +255,7 @@ TfLiteStatus EvalQuantized(TfLiteContext* context, TfLiteNode* node,
                                                      output_activation_min,
                                                      output_activation_max,
                                                      out_length
-                                                     );
+                                                     ); 
       CHECK_ERR_HIFI_NNLIB_KER(
           err, "xa_nn_vec_activation_min_max_asym8_asym8 failed");
     }
@@ -422,13 +422,13 @@ TfLiteStatus EvalFloat(TfLiteContext* context, TfLiteNode* node,
           output_activation_min,
           output_activation_max,
           out_length
-          );
+          ); 
 
       CHECK_ERR_HIFI_NNLIB_KER(
           err, "xa_nn_vec_activation_min_max_f32_f32 failed");
     }
-  }
-  else
+  } 
+  else 
 #endif /* HIFI_VFPU */
   {
     ConvParams op_params;
@@ -474,10 +474,10 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   int output_depth = output->dims->data[3];
   int input_depth = input->dims->data[3];
   int total_macs = output_height*output_width*output_depth*filter_height*filter_width*input_depth;
-  char profiler_name_0[MAX_PROFILER_NAME_LENGTH];
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
+  char profiler_name_0[MAX_PROFILER_NAME_LENGTH]; 
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
   strcpy(profiler_name_0,"conv2d_std");
-  sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d",
+  sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d", 
           input_height, input_width, input_depth, filter_height, filter_width, output_depth, output_height, output_width);
   XTPWR_PROFILER_OPEN(0, profiler_name_0, profiler_params, total_macs, "MACs/cyc", 1);
 #endif

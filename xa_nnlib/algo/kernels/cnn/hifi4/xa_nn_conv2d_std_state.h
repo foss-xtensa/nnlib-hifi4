@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -23,8 +23,6 @@
 #define  __XA_NN_CONV2D_STD_STATE_H__
 
 #include "xa_type_def.h"
-
-#define ALIGNMENT (8)
 
 #define ALIGNED_SIZE( size, align ) \
   ( (size_t)(size) + (align) - 1 )
@@ -86,11 +84,11 @@ WORD32 xa_nn_matXvec_8x8_8_circ(
     WORD8  * __restrict__ p_mat,
     WORD8  * __restrict__ p_vec,
     WORD8  * __restrict__ p_bias,
-    WORD32 rows, 
-    WORD32 cols, 
+    WORD32 rows,
+    WORD32 cols,
     WORD32 row_offset,
-    WORD32 vec_count, 
-    WORD32 vec_offset, 
+    WORD32 vec_count,
+    WORD32 vec_offset,
     WORD32 out_col_offset,
     WORD32 out_row_offset,
     WORD32 bias_shift,
@@ -101,11 +99,11 @@ WORD32 xa_nn_matXvec_16x16_16_circ(
     WORD16 * __restrict__ p_mat,
     WORD16 * __restrict__ p_vec,
     WORD16 * __restrict__ p_bias,
-    WORD32 rows, 
-    WORD32 cols, 
+    WORD32 rows,
+    WORD32 cols,
     WORD32 row_offset,
-    WORD32 vec_count, 
-    WORD32 vec_offset, 
+    WORD32 vec_count,
+    WORD32 vec_offset,
     WORD32 out_col_offset,
     WORD32 out_row_offset,
     WORD32 bias_shift,
@@ -116,10 +114,10 @@ WORD32 xa_nn_matXvec_f32_circ(
     FLOAT32 * __restrict__ p_mat,
     const FLOAT32 * __restrict__ p_vec,
     const FLOAT32 * __restrict__ p_bias,
-    WORD32 rows, 
-    WORD32 cols, 
+    WORD32 rows,
+    WORD32 cols,
     WORD32 row_offset,
-    WORD32 vec_count, 
+    WORD32 vec_count,
     WORD32 vec_offset,
     WORD32 out_col_offset,
     WORD32 out_row_offset);
@@ -140,6 +138,23 @@ WORD32 xa_nn_matXvec_asym8xasym8_asym8_circ(
     WORD32 vec1_offset,
     WORD32 out_multiplier,
     WORD32 out_shift,
+    WORD32 out_offset);
+
+WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
+    WORD8 * __restrict__ p_out,
+    WORD8 * __restrict__ p_mat1,
+    const WORD8 * __restrict__ p_vec1,
+    const WORD32 * __restrict__ p_bias,
+    WORD32 rows,
+    WORD32 cols1,
+    WORD32 row_stride1,
+    WORD32 vec_count,
+    WORD32 vec_stride,
+    WORD32 out_col_offset,
+    WORD32 out_row_offset,
+    WORD32 mat1_offset,
+    WORD32 * p_out_multiplier,
+    WORD32 * p_out_shift,
     WORD32 out_offset);
 
 VOID conv2d_std_init_cir_buf(
