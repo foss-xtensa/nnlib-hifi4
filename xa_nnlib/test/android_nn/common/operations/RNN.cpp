@@ -129,7 +129,7 @@ bool RNN::Eval() {
   const uint32_t batch_size = input_->shape().dimensions[0];
   const uint32_t num_units = weights_->shape().dimensions[0];
   const uint32_t input_size = input_->shape().dimensions[1];
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
   const uint32_t input_weights_stride = weights_->shape().dimensions[1];
   const uint32_t recurrent_weights_stride =
       recurrent_weights_->shape().dimensions[1];
@@ -152,7 +152,7 @@ bool RNN::Eval() {
     const float* recurrent_weights_ptr =
         reinterpret_cast<float*>(recurrent_weights_->buffer);
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     // Output = bias
     for (uint32_t o = 0; o < num_units; o++) {
       output_ptr_batch[o] = bias_ptr[o];
@@ -186,7 +186,7 @@ bool RNN::Eval() {
     ret = xa_nn_matXvec_f32xf32_f32(output_ptr_batch,
         input_weights_ptr, recurrent_weights_ptr, input_ptr_batch, hidden_state_in_ptr_batch,
         bias_ptr, num_units, input_size, num_units, input_size, num_units);
-
+    
     switch(activation_) {
       case kActivationNone:
         ret = 0;

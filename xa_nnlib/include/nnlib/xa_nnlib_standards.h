@@ -33,6 +33,8 @@ extern "C"
 #define HIFI_VFPU 1
 #elif ( (XCHAL_HAVE_HIFI3Z_VFPU) )
 #define HIFI_VFPU 1
+#elif ( (XCHAL_HAVE_HIFI3_VFPU) )
+#define HIFI_VFPU 1
 #else
 #define HIFI_VFPU 0
 #endif
@@ -65,14 +67,20 @@ typedef struct xa_nnlib_opaque { Int32 _; } *xa_nnlib_handle_t;
 
 typedef enum _xa_nnlib_prec_t
 {
-  PREC_8     =  8,
-  PREC_16    = 16,
-  PREC_32    = 32,
-  PREC_F32   = -1,
-  PREC_F16   = -2,
-  PREC_ASYM8 = -3
-
+  PREC_8      =  8,
+  PREC_16     = 16,
+  PREC_32     = 32,
+  PREC_F32    = -1,
+  PREC_F16    = -2,
+  PREC_ASYM8U = -3,
+  PREC_ASYM8S = -4,
+  PREC_SYM8S  = -5,
+  PREC_ASYM16U = -6,
+  PREC_ASYM16S = -7,
+  PREC_SYM16S  = -8,
 } xa_nnlib_prec_t;
+
+#define PREC_ASYM8 PREC_ASYM8U
 
 typedef enum _xa_nnlib_shape_type_t
 {

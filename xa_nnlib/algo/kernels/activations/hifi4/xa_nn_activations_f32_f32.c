@@ -53,7 +53,7 @@ WORD32 xa_nn_vec_activation_min_max_f32_f32(FLOAT32 * __restrict__ p_out,
     int i;
     xtfloatx2 x, y, min, max;
     xtfloatx2 *pi, *po;
-    ae_valign align_inp, align_out;
+    ae_valign align_inp, align_out; 
 
     /* NULL pointer checks */
     XA_NNLIB_ARG_CHK_PTR(p_out, -1);

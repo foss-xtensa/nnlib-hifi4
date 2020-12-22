@@ -20,9 +20,6 @@
 
 ******************************************************************************/
 #include <stddef.h>
-#include "xa_type_def.h"
-#include "xtensa/tie/xt_hifi2.h"
-
 #include "xa_nnlib_common.h"
 
 #define ZERO64   AE_MOVINT64_FROMINT32X2(AE_MOVDA32(0))

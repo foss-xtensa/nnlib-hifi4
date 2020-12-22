@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -27,6 +27,8 @@
   {                                                \
     case -1: size = sizeof(float);       break;    \
     case ASYM8_TYPE: size = sizeof(char);       break;    \
+    case ASYM8S_TYPE: size = sizeof(char);       break;    \
+    case SYM8S_TYPE: size = sizeof(char);       break;    \
     case 8: size = sizeof(char);        break;     \
     case 16: size = sizeof(short int);   break;    \
     case 32: size = sizeof(int);         break;    \
@@ -46,7 +48,7 @@ int read_buf1D_from_file(FILE *fptr_read_data, buf1D_t *ptr_buf1D)
   return 0;
 }
 
-int read_buf2D_from_file(FILE *fptr_read_data, buf2D_t *ptr_buf2D) 
+int read_buf2D_from_file(FILE *fptr_read_data, buf2D_t *ptr_buf2D, int pad_val) 
 {    
   int size, row;                                         
   char *ptr_mat = (char *)ptr_buf2D->p;                  
@@ -57,7 +59,17 @@ int read_buf2D_from_file(FILE *fptr_read_data, buf2D_t *ptr_buf2D)
     {                                                                                        
       printf("Error reading input/reference matrix from file\n");                       
       return -1;                                                                             
-    }                                                                                        
+    }
+    if(ptr_buf2D->precision == ASYM8_TYPE)
+    {
+      int pad_size = ptr_buf2D->row_offset - ptr_buf2D->cols;
+      memset((ptr_mat + (row * ptr_buf2D->row_offset * size) + ptr_buf2D->cols * size), (UWORD8)pad_val, pad_size);
+    }
+    else
+    {
+      int pad_size = ptr_buf2D->row_offset - ptr_buf2D->cols;
+      memset((ptr_mat + (row * ptr_buf2D->row_offset * size) + ptr_buf2D->cols * size), 0, size * pad_size);
+    }
   }
   return 0;  
 }
@@ -69,7 +81,7 @@ int write_buf1D_to_file(FILE *fptr_write_data, buf1D_t *ptr_buf1D)
   if(ptr_buf1D->length != fwrite(ptr_buf1D->p, size, ptr_buf1D->length, fptr_write_data))
   {                                                                                      
     printf("Error writing vector to file\n");                       
-    return -1;                                                                           
+    return -1;                                                                            
   }                                                                                      
   return 0;
 }
@@ -112,9 +124,9 @@ int load_matXvec_input_data(int write_file, FILE *fptr_inp, buf2D_t *p_mat1, buf
   else                                                        
   {                                                           
     /* Read input data from file */                           
-    read_buf2D_from_file(fptr_inp, p_mat1);                  
+    read_buf2D_from_file(fptr_inp, p_mat1, 0);                  
     read_buf1D_from_file(fptr_inp, p_vec1);                  
-    read_buf2D_from_file(fptr_inp, p_mat2);                  
+    read_buf2D_from_file(fptr_inp, p_mat2, 0);                  
     read_buf1D_from_file(fptr_inp, p_vec2);                  
     read_buf1D_from_file(fptr_inp, p_bias);                  
   }                                                                                  
@@ -139,14 +151,14 @@ int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp)
   return 0;
 }
 
-int load_conv2d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_kernel, 
-    buf1D_t *p_bias, int input_channels, int input_channels_pad) 
+int load_conv2d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel, 
+    buf1D_t *p_bias, int input_channels, int input_channels_pad, int kernel_pad_val) 
 {  
   if(write_file)                                                                     
   {                                                                                  
     /* Set random input data */                                                      
     set_rand_inp_buf1D(p_inp);                                                      
-    set_rand_inp_buf1D(p_kernel);                                                      
+    set_rand_inp_buf2D(p_kernel);                                                      
     set_rand_inp_buf1D(p_bias);                                                      
     
     /* If input_channels has been padded, zero-out the padded channels in kernel */     
@@ -155,7 +167,7 @@ int load_conv2d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, b
       int i;
       char *p = (char *) p_kernel->p + input_channels*p_kernel->bytes_per_element;
       int padded_bytes = (input_channels_pad-input_channels)*p_kernel->bytes_per_element;
-      for (i = 0; i < p_kernel->length; i+=input_channels_pad)
+      for (i = 0; i < p_kernel->rows * p_kernel->row_offset; i+=input_channels_pad)
       {
         memset((p + i*p_kernel->bytes_per_element), 0, padded_bytes);
       }
@@ -163,36 +175,37 @@ int load_conv2d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, b
 
     /* Write input data into file */                                                 
     write_buf1D_to_file(fptr_inp, p_inp);                  
-    write_buf1D_to_file(fptr_inp, p_kernel);                  
+    write_buf2D_to_file(fptr_inp, p_kernel);                  
     write_buf1D_to_file(fptr_inp, p_bias);                  
   }                                                           
   else                                                        
   {                                                           
     /* Read input data from file */                           
     read_buf1D_from_file(fptr_inp, p_inp);                  
-    read_buf1D_from_file(fptr_inp, p_kernel);                  
+    read_buf2D_from_file(fptr_inp, p_kernel, kernel_pad_val);                  
     read_buf1D_from_file(fptr_inp, p_bias);                  
   }                                                                                  
   return 0;
 }
 
-int load_conv1d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_kernel, 
-    buf1D_t *p_bias, int input_channels, int input_width, int input_channelsXwidth_pad) 
+int load_conv1d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel, 
+    buf1D_t *p_bias, int input_channels, int input_width, int input_channelsXwidth_pad,
+    int kernel_pad_val) 
 {  
   if(write_file)                                                                     
   {                                                                                  
     /* Set random input data */                                                      
     set_rand_inp_buf1D(p_inp);                                                      
-    set_rand_inp_buf1D(p_kernel);                                                      
+    set_rand_inp_buf2D(p_kernel);                                                      
     set_rand_inp_buf1D(p_bias);                                                      
-    
-    /* If input channels X width plane has been padded, zero-out the padded planes in kernel */     
+
+    /* If input channels X width plane has been padded, zero-out the padded planes in kernel */
     if(input_channels * input_width != input_channelsXwidth_pad)
     {
       int i;
       char *p = (char *) p_kernel->p + input_channels*input_width*p_kernel->bytes_per_element;
       int padded_bytes = (input_channelsXwidth_pad-input_channels*input_width)*p_kernel->bytes_per_element;
-      for (i = 0; i < p_kernel->length; i+=input_channelsXwidth_pad)
+      for (i = 0; i < p_kernel->rows * p_kernel->row_offset; i+=input_channelsXwidth_pad)
       {
         memset((p + i*p_kernel->bytes_per_element), 0, padded_bytes);
       }
@@ -200,33 +213,33 @@ int load_conv1d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, b
 
     /* Write input data into file */                                                 
     write_buf1D_to_file(fptr_inp, p_inp);                  
-    write_buf1D_to_file(fptr_inp, p_kernel);                  
+    write_buf2D_to_file(fptr_inp, p_kernel);                  
     write_buf1D_to_file(fptr_inp, p_bias);                  
   }                                                           
   else                                                        
   {                                                           
     /* Read input data from file */                           
     read_buf1D_from_file(fptr_inp, p_inp);                  
-    read_buf1D_from_file(fptr_inp, p_kernel);                  
+    read_buf2D_from_file(fptr_inp, p_kernel, kernel_pad_val);                  
     read_buf1D_from_file(fptr_inp, p_bias);                  
   }                                                                                  
   return 0;
 }
-int load_conv2d_ds_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_kernel, 
-    buf1D_t *p_bias, buf1D_t *p_kernel_point, buf1D_t *p_bias_point) 
+int load_conv2d_ds_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel, 
+    buf1D_t *p_bias, buf1D_t *p_kernel_point, buf1D_t *p_bias_point, int kernel_pad_val)
 {  
   if(write_file)                                                                     
   {                                                                                  
     /* Set random input data */                                                      
     set_rand_inp_buf1D(p_inp);                                                      
-    set_rand_inp_buf1D(p_kernel);                                                      
+    set_rand_inp_buf2D(p_kernel);                                                      
     set_rand_inp_buf1D(p_bias);                                                      
     set_rand_inp_buf1D(p_kernel_point);                                                      
     set_rand_inp_buf1D(p_bias_point);                                                      
                                                                                      
     /* Write input data into file */                                                 
     write_buf1D_to_file(fptr_inp, p_inp);                  
-    write_buf1D_to_file(fptr_inp, p_kernel);                  
+    write_buf2D_to_file(fptr_inp, p_kernel);                  
     write_buf1D_to_file(fptr_inp, p_bias);                  
     write_buf1D_to_file(fptr_inp, p_kernel_point);                  
     write_buf1D_to_file(fptr_inp, p_bias_point);                  
@@ -235,7 +248,7 @@ int load_conv2d_ds_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, bu
   {                                                           
     /* Read input data from file */                           
     read_buf1D_from_file(fptr_inp, p_inp);                  
-    read_buf1D_from_file(fptr_inp, p_kernel);                  
+    read_buf2D_from_file(fptr_inp, p_kernel, kernel_pad_val);                  
     read_buf1D_from_file(fptr_inp, p_bias);                  
     read_buf1D_from_file(fptr_inp, p_kernel_point);                  
     read_buf1D_from_file(fptr_inp, p_bias_point);                  
@@ -311,23 +324,23 @@ FILE* file_open(char *file_path, char *file_name, char *mode, int max_file_name_
 
 
 int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, buf1D_t *p_inp1, buf1D_t *p_inp2) 
-{  
-  if(write_file)                                                                     
-  {                                                                                  
-    /* Set random input data */                                                      
-    set_rand_inp_buf1D(p_inp1);                                                      
-    set_rand_inp_buf1D(p_inp2);                                                      
-                                                                                     
-    /* Write input data into file */                                                 
-    write_buf1D_to_file(fptr_inp1, p_inp1);                  
-    write_buf1D_to_file(fptr_inp2, p_inp2);                  
-  }                                                           
-  else                                                        
-  {                                                           
-    /* Read input data from file */                           
-    read_buf1D_from_file(fptr_inp1, p_inp1);                  
-    read_buf1D_from_file(fptr_inp2, p_inp2);                  
-  }                                                                                  
+{
+  if(write_file)
+  {
+    /* Set random input data */
+    set_rand_inp_buf1D(p_inp1);
+    set_rand_inp_buf1D(p_inp2);
+
+    /* Write input data into file */
+    write_buf1D_to_file(fptr_inp1, p_inp1);
+    write_buf1D_to_file(fptr_inp2, p_inp2);
+  }
+  else
+  {
+    /* Read input data from file */
+    read_buf1D_from_file(fptr_inp1, p_inp1);
+    read_buf1D_from_file(fptr_inp2, p_inp2);
+  }
   return 0;
 }
 

@@ -27,8 +27,8 @@
 #include "xa_api_defs.h"
 
 /* Identification Strings */
-#define LIBNAME "HiFi Neural Network Library"
-#define LIBVERSION "2.2.0"
+#define LIBNAME "HiFi 4 Neural Network Library"
+#define LIBVERSION "2.3.0"
 
 #define LIB_APIVERSION_MAJOR 1
 #define LIB_APIVERSION_MINOR 0

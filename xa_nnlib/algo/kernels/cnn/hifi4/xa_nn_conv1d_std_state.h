@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -90,8 +90,8 @@ WORD32 xa_nn_matXvec_8x16_16_circ_nb(
     WORD8  *p_mat,
     WORD16 *p_vec,
     WORD16 *p_bias,
-    WORD32 rows, 
-    WORD32 cols, 
+    WORD32 rows,
+    WORD32 cols,
     WORD32 out_offset,
     WORD32 bias_shift,
     WORD32 acc_shift);
@@ -101,8 +101,8 @@ WORD32 xa_nn_matXvec_8x8_8_circ_nb(
     WORD8 *p_mat,
     WORD8 *p_vec,
     WORD8 *p_bias,
-    WORD32 rows, 
-    WORD32 cols, 
+    WORD32 rows,
+    WORD32 cols,
     WORD32 out_offset,
     WORD32 bias_shift,
     WORD32 acc_shift);
@@ -112,8 +112,8 @@ WORD32 xa_nn_matXvec_16x16_16_circ_nb(
     WORD16 *p_mat,
     WORD16 *p_vec,
     WORD16 *p_bias,
-    WORD32 rows, 
-    WORD32 cols, 
+    WORD32 rows,
+    WORD32 cols,
     WORD32 out_offset,
     WORD32 bias_shift,
     WORD32 acc_shift);
@@ -123,7 +123,7 @@ WORD32 xa_nn_matXvec_f32_circ_nb(
     FLOAT32 *p_mat,
     FLOAT32 *p_vec,
     FLOAT32 *p_bias,
-    WORD32 rows, 
+    WORD32 rows,
     WORD32 cols,
     WORD32 out_offset);
 

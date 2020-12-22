@@ -46,7 +46,7 @@ limitations under the License.
 #include "tensorflow/lite/kernels/padding.h"
 
 #ifdef PROFILE
-#define PROF_ALLOCATE
+#define PROF_ALLOCATE  
 #endif
 #include "xt_profiler.h"
 #include "xtensa_tf_micro_common.h"
@@ -186,21 +186,15 @@ TfLiteStatus EvalQuantized(TfLiteContext* context, TfLiteNode* node,
     const int filter_width = filter_shape.Dims(2);
     const int output_height = output_shape.Dims(1);
     const int output_width = output_shape.Dims(2);
-    const int filter_depth = filter_shape.Dims(3);
 
     int err, output_data_format = 0;
     char* p_scratch;
-    uint8 *p_filter;
-    // Calculate filter_depth_padded as next near multiple of 4
-    int filter_depth_padded = (filter_depth + 3) & (~3);
     int out_length = output_height * output_width * output_depth;
-    int filter_size_padded = filter_height * filter_width * filter_depth_padded;
     int required_scratch, input_precision = PREC_ASYM8;
-    int h, c;
 
     required_scratch = xa_nn_conv2d_std_getsize(
         input_height, input_depth, filter_height, filter_width, stride_height,
-        pad_height, output_height, input_precision);
+        pad_height, output_height, output_depth, input_precision);
 
     if (required_scratch <= 0) {
       TF_LITE_KERNEL_LOG(context,
@@ -211,26 +205,10 @@ TfLiteStatus EvalQuantized(TfLiteContext* context, TfLiteNode* node,
     ALLOCATE_XTENSA_NNLIB_SCRATCH_MEM;
     p_scratch = (char*)xtensa_nnlib_scratch_buf;
 
-    p_filter = (uint8*)p_scratch;
-    required_scratch += ALIGNED_SIZE((sizeof(uint8_t) * filter_size_padded * output_depth), 8);
-    p_scratch += ALIGNED_SIZE(sizeof(uint8_t) * filter_size_padded * output_depth, 8);
-
     if (required_scratch > (int)XTENSA_NNLIB_MAX_SCRATCH_SIZE) {
       TF_LITE_KERNEL_LOG(context,
                          "conv2d_std_asym8: insufficient scratch memory");
       return kTfLiteError;
-    }
-
-    // Padding filter coefficients depthwise
-    for (h = 0; h < filter_height * filter_width * output_depth; h++) {
-      for (c = 0; c < filter_depth; c++) {
-        p_filter[h * filter_depth_padded + c] =
-            filter_data[h * filter_depth + c];
-      }
-      for (c = input_depth; c < filter_depth_padded; c++) {
-        p_filter[h * filter_depth_padded + c] =
-            -filter_offset;  // filter_depth[h*input_depth + c];
-      }
     }
 
     for (int batch = 0; batch < batches; ++batch) {
@@ -240,7 +218,7 @@ TfLiteStatus EvalQuantized(TfLiteContext* context, TfLiteNode* node,
       err = xa_nn_conv2d_std_asym8xasym8(
                 p_out_temp,
                 &input_data[batch * input_height * input_width * input_depth],
-                p_filter,  // filter_data,
+                filter_data,
                 bias_data, input_height, input_width, input_depth, filter_height,
                 filter_width, output_depth, stride_width, stride_height, pad_width,
                 pad_height, output_height, output_width, input_offset, filter_offset,
@@ -255,7 +233,7 @@ TfLiteStatus EvalQuantized(TfLiteContext* context, TfLiteNode* node,
                                                      output_activation_min,
                                                      output_activation_max,
                                                      out_length
-                                                     );
+                                                     ); 
       CHECK_ERR_HIFI_NNLIB_KER(
           err, "xa_nn_vec_activation_min_max_asym8_asym8 failed");
     }
@@ -370,7 +348,7 @@ TfLiteStatus EvalFloat(TfLiteContext* context, TfLiteNode* node,
 
     required_scratch = xa_nn_conv2d_std_getsize(
         input_height, input_depth, filter_height, filter_width, stride_height,
-        pad_height, output_height, input_precision);
+        pad_height, output_height, output_depth, input_precision);
 
     if (required_scratch <= 0) {
       TF_LITE_KERNEL_LOG(context,
@@ -422,13 +400,13 @@ TfLiteStatus EvalFloat(TfLiteContext* context, TfLiteNode* node,
           output_activation_min,
           output_activation_max,
           out_length
-          );
+          ); 
 
       CHECK_ERR_HIFI_NNLIB_KER(
           err, "xa_nn_vec_activation_min_max_f32_f32 failed");
     }
-  }
-  else
+  } 
+  else 
 #endif /* HIFI_VFPU */
   {
     ConvParams op_params;
@@ -474,10 +452,10 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   int output_depth = output->dims->data[3];
   int input_depth = input->dims->data[3];
   int total_macs = output_height*output_width*output_depth*filter_height*filter_width*input_depth;
-  char profiler_name_0[MAX_PROFILER_NAME_LENGTH];
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
+  char profiler_name_0[MAX_PROFILER_NAME_LENGTH]; 
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
   strcpy(profiler_name_0,"conv2d_std");
-  sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d",
+  sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d", 
           input_height, input_width, input_depth, filter_height, filter_width, output_depth, output_height, output_width);
   XTPWR_PROFILER_OPEN(0, profiler_name_0, profiler_params, total_macs, "MACs/cyc", 1);
 #endif

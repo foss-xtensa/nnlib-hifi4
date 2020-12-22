@@ -54,7 +54,7 @@ static void convolve_nchw_f32(
         FLOAT32*  __restrict__ p_out,
         const FLOAT32* __restrict__ p_ker,
         const FLOAT32* __restrict__ p_inp,
-        const FLOAT32* __restrict__ p_bias,
+        FLOAT32 bias,
         WORD32  input_width,
         WORD32  kernel_height,
         WORD32  kernel_width,
@@ -97,7 +97,6 @@ static void convolve_nchw_f32(
 #pragma loop_count min=1
             for(itr_kh=0; itr_kh<kernel_height; itr_kh++)
             {
-                //ptr_inp = (xtfloatx2 *)(p_inp + (itr_kh)*input_width + 4*itr_ow);
                 ptr_inp = (xtfloatx2 *)p_inp;
                 AE_ADDCIRC16X4_XC((ae_int16x4 *)ptr_inp, ((itr_kh+itr_oh*y_stride)*input_width+4*itr_ow)*sizeof(FLOAT32));
 #pragma loop_count min=1
@@ -145,7 +144,7 @@ static void convolve_nchw_f32(
         float *ptr_out1 = (float *)p_scratch;
         for(itr_ow = 0; itr_ow < out_width; itr_ow++)
         {
-            p_out[itr_oh*out_width*out_stride+itr_ow*out_stride] = ptr_out1[itr_ow*x_stride] + p_bias[0];
+            p_out[itr_oh*out_width*out_stride+itr_ow*out_stride] = ptr_out1[itr_ow*x_stride] + bias;
         }
     }
 }
@@ -189,17 +188,32 @@ static void xa_nn_conv2d_depthwise_nchw_f32(
 
     xa_nn_conv2d_dw_state_t *p_state = (xa_nn_conv2d_dw_state_t *)p_scratch;
     xa_nn_circ_buf_t *p_circ_buf = &(p_state->circ_buf);
-    int itr_ic, itr_cm, itr_oh;
+    int itr_ic, itr_cm, itr_oh, i;
     int circ_out_height = (p_circ_buf->rows - kernel_height)/y_stride + 1;
+    int kernel_height_pad = ALIGNED_SIZE(kernel_height, 4);
     int kernel_width_pad = ALIGNED_SIZE(kernel_width, 4);
     int rows_to_add, top_pad, bottom_pad, rows_added;
     int input_row;
-    FLOAT32 *pt_inp, *pt_ker;
+    FLOAT32 *pt_inp;
+    const FLOAT32 *pt_ker;
     FLOAT32 *p_inp_circ;
-    p_scratch = (FLOAT32 *)(p_state->p_scratch);
+
+    FLOAT32 *p_kernel_padded = (FLOAT32 *)(p_state->p_scratch);
+    p_kernel_padded = (FLOAT32 *)ALIGN_PTR(p_kernel_padded, 8);
+    FLOAT32 *p_tmp_out = (FLOAT32 *)(p_kernel_padded + kernel_height_pad * kernel_width_pad);
+    p_tmp_out = (FLOAT32 *)ALIGN_PTR(p_tmp_out, 8);
 
     AE_SETCBEGIN0(p_circ_buf->p_begin);
     AE_SETCEND0(p_circ_buf->p_end);
+
+    /* Initialize whole scratch for padded kernel to padding value, after this
+       we only have to copy actual kernel values, padding area should remain
+       untouched */
+    xtfloatx2 *pae_ker_pad = (xtfloatx2 *)p_kernel_padded;
+    for(i = 0; i < ((kernel_height_pad * kernel_width_pad) >> 1); i++)
+    {
+      pae_ker_pad[i] = XT_CONST_S(0);
+    }
 
     for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
     {
@@ -219,43 +233,44 @@ static void xa_nn_conv2d_depthwise_nchw_f32(
                 y_padding,
                 p_circ_buf,
                 pt_inp);
-            for(itr_oh = 0; itr_oh < out_height - (circ_out_height - 1); itr_oh += circ_out_height)
+        for(itr_oh = 0; itr_oh < out_height - (circ_out_height - 1); itr_oh += circ_out_height)
+        {
+            CIRC_BUF_ADD_ROWS(
+                    rows_added,
+                    rows_to_add,
+                    top_pad,
+                    bottom_pad,
+                    input_row,
+                    input_height,
+                    input_width,
+                    circ_out_height,
+                    y_stride,
+                    x_padding,
+                    y_padding,
+                    p_circ_buf,
+                    pt_inp);
+            p_inp_circ = (FLOAT32 *)p_circ_buf->p_curr;
+            for(itr_cm = 0; itr_cm < channels_multiplier; itr_cm++)
             {
-                CIRC_BUF_ADD_ROWS(
-                        rows_added,
-                        rows_to_add,
-                        top_pad,
-                        bottom_pad,
-                        input_row,
-                        input_height,
-                        input_width,
-                        circ_out_height,
-                        y_stride,
-                        x_padding,
-                        y_padding,
-                        p_circ_buf,
-                        pt_inp);
-                    p_inp_circ = (FLOAT32 *)p_circ_buf->p_curr;
-                for(itr_cm = 0; itr_cm < channels_multiplier; itr_cm++)
-                {
-                    pt_ker = (FLOAT32 *)&p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width_pad];
+                pt_ker = &p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width];
+                COPY_KERNEL_TO_SCRATCH_F32(p_kernel_padded, pt_ker, kernel_height, kernel_width, kernel_width_pad);
 
-                    convolve_nchw_f32(
-                            &p_out[(itr_ic*channels_multiplier+itr_cm)+itr_oh*out_width*(input_channels*channels_multiplier)],
-                            pt_ker,
-                            p_inp_circ,
-                            &p_bias[itr_ic*channels_multiplier+itr_cm],
-                            p_circ_buf->row_offset,
-                            kernel_height,
-                            kernel_width,
-                            x_stride,
-                            y_stride,
-                            circ_out_height,
-                            out_width,
-                            input_channels*channels_multiplier,
-                            p_scratch);
-                }
+                convolve_nchw_f32(
+                        &p_out[(itr_ic*channels_multiplier+itr_cm)+itr_oh*out_width*(input_channels*channels_multiplier)],
+                        p_kernel_padded,
+                        p_inp_circ,
+                        p_bias[itr_ic*channels_multiplier+itr_cm],
+                        p_circ_buf->row_offset,
+                        kernel_height,
+                        kernel_width,
+                        x_stride,
+                        y_stride,
+                        circ_out_height,
+                        out_width,
+                        input_channels*channels_multiplier,
+                        p_tmp_out);
             }
+        }
         CIRC_BUF_ADD_ROWS(
                 rows_added,
                 rows_to_add,
@@ -270,16 +285,17 @@ static void xa_nn_conv2d_depthwise_nchw_f32(
                 y_padding,
                 p_circ_buf,
                 pt_inp);
-            p_inp_circ = (FLOAT32 *)p_circ_buf->p_curr;
+        p_inp_circ = (FLOAT32 *)p_circ_buf->p_curr;
         for(itr_cm = 0; itr_cm < channels_multiplier; itr_cm++)
         {
-            pt_ker = (FLOAT32 *)&p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width_pad];
+            pt_ker = &p_kernel[(itr_ic*channels_multiplier+itr_cm)*kernel_height*kernel_width];
+            COPY_KERNEL_TO_SCRATCH_F32(p_kernel_padded, pt_ker, kernel_height, kernel_width, kernel_width_pad);
 
             convolve_nchw_f32(
                     &p_out[(itr_ic*channels_multiplier+itr_cm)+itr_oh*out_width*(input_channels*channels_multiplier)],
-                    pt_ker,
+                    p_kernel_padded,
                     p_inp_circ,
-                    &p_bias[itr_ic*channels_multiplier+itr_cm],
+                    p_bias[itr_ic*channels_multiplier+itr_cm],
                     p_circ_buf->row_offset,
                     kernel_height,
                     kernel_width,
@@ -288,7 +304,7 @@ static void xa_nn_conv2d_depthwise_nchw_f32(
                     (out_height-itr_oh),
                     out_width,
                     input_channels*channels_multiplier,
-                    p_scratch);
+                    p_tmp_out);
         }
     }
 }
@@ -308,19 +324,20 @@ static inline void conv2d_nhwc_f32(
         int y_stride)
 {
     WORD32 out_channels_pad;
-    WORD32 i, itr_oh, itr_ch, itr_kh, itr_kw;
+    WORD32 i, itr_oh, itr_ch, itr_kw;
     xtfloatx2 *pt_inp0, *pt_inp1, *pt_ker;
     FLOAT32 *out_ptr0, *out_ptr1;
     xtfloatx2 d_inp0, d_inp1, d_ker0;
     xtfloatx2 d_inp2, d_inp3, d_ker1;
     const xtfloatx2 *pt_bias;
     ae_valign bias_a;
+    ae_valign ker_a;
     xtfloatx2 d_acc0, d_acc1, d_bias0;
     xtfloatx2 d_acc2, d_acc3, d_bias1;
 
     out_channels_pad = (out_channels + 1)&(~1);
 
-    for(itr_oh = 0; itr_oh < (out_height-1); itr_oh+=2)
+    for(itr_oh = 0; itr_oh < out_height; itr_oh+=2)
     {
         out_ptr0 = (FLOAT32 *)(&p_out[itr_oh*out_channels*out_width]);
         out_ptr1 = (FLOAT32 *)(&p_out[(itr_oh+1)*out_channels*out_width]);
@@ -337,33 +354,27 @@ static inline void conv2d_nhwc_f32(
             d_acc1 = XT_CONST_S(0);
             d_acc2 = XT_CONST_S(0);
             d_acc3 = XT_CONST_S(0);
-            for(itr_kh = 0; itr_kh < kernel_height; itr_kh++)
+            ker_a = XT_LASX2PP(pt_ker);
+#pragma loop_count min=1
+            for(itr_kw = 0; itr_kw < kernel_height * kernel_width; itr_kw++)
             {
-                xtfloatx2 *ptt_inp0, *ptt_inp1;
-                ptt_inp0 = pt_inp0;
-                ptt_inp1 = pt_inp1;
-                AE_ADDCIRC16X4_XC((ae_int16x4 *)ptt_inp0, itr_kh*kernel_width*out_channels_pad*sizeof(FLOAT32));
-                AE_ADDCIRC16X4_XC((ae_int16x4 *)ptt_inp1, itr_kh*kernel_width*out_channels_pad*sizeof(FLOAT32));
-                for(itr_kw = 0; itr_kw < kernel_width; itr_kw++)
-                {
-                    XT_LSX2IP(d_inp0, ptt_inp0, 8);
-                    XT_LSX2IP(d_inp1, ptt_inp1, 8);
-                    XT_LSX2IP(d_ker0, pt_ker, 8);
-                    XT_LSX2XC(d_inp2, ptt_inp0, (out_channels_pad-2)*sizeof(FLOAT32));
-                    XT_LSX2XC(d_inp3, ptt_inp1, (out_channels_pad-2)*sizeof(FLOAT32));
-                    XT_LSX2XP(d_ker1, pt_ker, (out_channels_pad-2)*sizeof(FLOAT32));
-                    XT_MADD_SX2(d_acc0, d_inp0, d_ker0);
-                    XT_MADD_SX2(d_acc1, d_inp1, d_ker0);
-                    XT_MADD_SX2(d_acc2, d_inp2, d_ker1);
-                    XT_MADD_SX2(d_acc3, d_inp3, d_ker1);
-                }
+                XT_LSX2XC(d_inp0, pt_inp0, 8);
+                XT_LSX2XC(d_inp1, pt_inp1, 8);
+                XT_LASX2IP(d_ker0, ker_a, pt_ker);
+                XT_LSX2XC(d_inp2, pt_inp0, (out_channels_pad-2)*sizeof(FLOAT32));
+                XT_LSX2XC(d_inp3, pt_inp1, (out_channels_pad-2)*sizeof(FLOAT32));
+                XT_LASX2IP(d_ker1, ker_a, pt_ker);
+                pt_ker = (xtfloatx2 *)((FLOAT32 *)pt_ker + (out_channels - 4));
+                ker_a = XT_LASX2PP(pt_ker);
+                XT_MADD_SX2(d_acc0, d_inp0, d_ker0);
+                XT_MADD_SX2(d_acc1, d_inp1, d_ker0);
+                XT_MADD_SX2(d_acc2, d_inp2, d_ker1);
+                XT_MADD_SX2(d_acc3, d_inp3, d_ker1);
             }
             XT_LASX2IP(d_bias0, bias_a, pt_bias);
-            d_acc0 = XT_ADD_SX2(d_acc0, d_bias0);
-            d_acc1 = XT_ADD_SX2(d_acc1, d_bias0);
             XT_LASX2IP(d_bias1, bias_a, pt_bias);
+            d_acc0 = XT_ADD_SX2(d_acc0, d_bias0);
             d_acc2 = XT_ADD_SX2(d_acc2, d_bias1);
-            d_acc3 = XT_ADD_SX2(d_acc3, d_bias1);
 
 #pragma no_unroll
             for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
@@ -371,44 +382,19 @@ static inline void conv2d_nhwc_f32(
                 out_ptr0[itr_ch+i] = XT_HIGH_S(d_acc0);
                 d_acc0 = XT_SEL32_LH_SX2(d_acc0, d_acc2);
                 d_acc2 = XT_SEL32_LH_SX2(d_acc2, d_acc2);
-                out_ptr1[itr_ch+i] = XT_HIGH_S(d_acc1);
-                d_acc1 = XT_SEL32_LH_SX2(d_acc1, d_acc3);
-                d_acc3 = XT_SEL32_LH_SX2(d_acc3, d_acc3);
             }
-        }
-    }
-    if(itr_oh < out_height)
-    {
-        out_ptr0 = (FLOAT32 *)(&p_out[itr_oh*out_channels*out_width]);
-        pt_bias = (const xtfloatx2 *)p_bias;
-        bias_a = AE_LA64_PP(pt_bias);
-        for(itr_ch = 0; itr_ch < out_channels; itr_ch+=2)
-        {
-            pt_inp0 = (xtfloatx2 *)p_inp;
-            AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp0, (itr_ch + itr_oh*y_stride*kernel_width*out_channels_pad)*sizeof(FLOAT32));
-            pt_ker = (xtfloatx2 *)(&p_ker[itr_ch]);
-            d_acc0 = XT_CONST_S(0);
-            for(itr_kh = 0; itr_kh < kernel_height; itr_kh++)
+            if(out_height - itr_oh >= 2)
             {
-                xtfloatx2 *ptt_inp0;
-                ptt_inp0 = pt_inp0;
-                AE_ADDCIRC16X4_XC((ae_int16x4 *)ptt_inp0, itr_kh*kernel_width*out_channels_pad*sizeof(FLOAT32));
-#pragma no_unroll
-                for(itr_kw = 0; itr_kw < kernel_width; itr_kw++)
-                {
-                    XT_LSX2XC(d_inp0, ptt_inp0, out_channels_pad*sizeof(FLOAT32));
-                    XT_LSX2XP(d_ker0, pt_ker, out_channels_pad*sizeof(FLOAT32));
-                    XT_MADD_SX2(d_acc0, d_inp0, d_ker0);
-                }
-            }
-            XT_LASX2IP(d_bias0, bias_a, pt_bias);
-            d_acc0 = XT_ADD_SX2(d_acc0, d_bias0);
+                d_acc1 = XT_ADD_SX2(d_acc1, d_bias0);
+                d_acc3 = XT_ADD_SX2(d_acc3, d_bias1);
 
 #pragma no_unroll
-            for(i = 0; i < XT_MIN(out_channels-itr_ch, 2); i++)
-            {
-                out_ptr0[itr_ch+i] = XT_HIGH_S(d_acc0);
-                d_acc0 = XT_SEL32_LH_SX2(d_acc0, d_acc0);
+                for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
+                {
+                    out_ptr1[itr_ch+i] = XT_HIGH_S(d_acc1);
+                    d_acc1 = XT_SEL32_LH_SX2(d_acc1, d_acc3);
+                    d_acc3 = XT_SEL32_LH_SX2(d_acc3, d_acc3);
+                }
             }
         }
     }
@@ -451,8 +437,8 @@ static void xa_nn_conv2d_depthwise_nhwc_f32(
             -1,
             0);
 
-    xa_nn_circ_buf_t *p_state = (xa_nn_circ_buf_t *)p_scratch;
-    xa_nn_circ_buf_t *p_circ_buf = p_state;
+    xa_nn_conv2d_dw_state_t *p_state = (xa_nn_conv2d_dw_state_t *)p_scratch;
+    xa_nn_circ_buf_t *p_circ_buf = &(p_state->circ_buf);
     int itr_ow;
     int cols_to_add, left_pad, right_pad, cols_added;
     int input_col;
@@ -548,8 +534,8 @@ WORD32 xa_nn_conv2d_depthwise_f32(
     XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
     /* Pointer alignment checks */
     XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(FLOAT32), -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_kernel, ALIGNMENT, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_inp, ALIGNMENT, -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_kernel, sizeof(FLOAT32), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(FLOAT32), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(FLOAT32), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
     /* Basic Parameter checks */

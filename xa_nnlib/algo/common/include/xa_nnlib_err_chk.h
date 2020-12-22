@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -45,9 +45,9 @@ do {                                                                    \
 
 #else /* DISABLE_ARG_CHK */
 
-#define XA_NNLIB_ARG_CHK_PTR(_ptr, _err)                                
-#define XA_NNLIB_ARG_CHK_ALIGN(_ptr, _align, _err)                      
-#define XA_NNLIB_ARG_CHK_COND(_cond, _err)                              
+#define XA_NNLIB_ARG_CHK_PTR(_ptr, _err)
+#define XA_NNLIB_ARG_CHK_ALIGN(_ptr, _align, _err)
+#define XA_NNLIB_ARG_CHK_COND(_cond, _err)
 
 #endif /* DISABLE_ARG_CHK */
 

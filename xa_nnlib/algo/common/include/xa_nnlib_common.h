@@ -23,10 +23,10 @@
 #define __XA_NNLIB_LEGACY_COMPAT_H__
 
 #include "xtensa/tie/xt_hifi2.h"
-#include "xa_type_def.h"
-#include "common.h"
+#include "xa_nnlib_api.h"
+#include "xa_nnlib_standards.h"
 #include "xa_nnlib_err_chk.h"
 #include "xa_nnlib_hifi_isa_compat.h"
-#include "xa_nnlib_kernels_api.h"
+#include "common.h"
 
 #endif /* __XA_NNLIB_LEGACY_COMPAT_H__ */

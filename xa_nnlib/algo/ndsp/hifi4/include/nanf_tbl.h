@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -19,15 +19,6 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-/* ------------------------------------------------------------------------ */
-/* Copyright (c) 2018 by Cadence Design Systems, Inc. ALL RIGHTS RESERVED.  */
-/* These coded instructions, statements, and computer programs ("Cadence    */
-/* Libraries") are the copyrighted works of Cadence Design Systems Inc.	    */
-/* Cadence IP is licensed for use with Cadence processor cores only and     */
-/* must not be used for any other processors and platforms. Your use of the */
-/* Cadence Libraries is subject to the terms of the license agreement you   */
-/* have entered into with Cadence Design Systems, or a sublicense granted   */
-/* to you by a direct Cadence licensee.                                     */
 /* ------------------------------------------------------------------------ */
 /*  IntegrIT, Ltd.   www.integrIT.com, info@integrIT.com                    */
 /*                                                                          */
@@ -54,6 +45,12 @@
 #include "NatureDSP_types.h"
 /* Common utility macros. */
 #include "common.h"
+
+/* Renaming the symbols to avoid multiple definitions */
+#define minus_qNaNf xa_ndsp_minus_qNaNf
+#define minus_sNaNf xa_ndsp_minus_sNaNf
+#define qNaNf       xa_ndsp_qNaNf
+#define sNaNf       xa_ndsp_sNaNf
 
 externC const union ufloat32uint32 sNaNf;       /* Signalling NaN          */
 externC const union ufloat32uint32 qNaNf;       /* Quiet NaN               */

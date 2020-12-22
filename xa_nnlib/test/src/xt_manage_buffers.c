@@ -22,7 +22,7 @@
 #include <xtensa/config/core-isa.h>
 #include "xt_manage_buffers.h"
 #include <math.h>
-#define COLS_PER_ROW 32
+#define COLS_PER_ROW 32  
 #define DBG_PRINT printf
 //#define DBG_PRINT(...) //printf
 
@@ -35,18 +35,18 @@ int  RAND(void)
   {
     srand(1);
     flag=0;
-  }
+  } 
 
   signed_random = 2*(rand() - ((long long)RAND_MAX + 1)/2);
   last_bit = rand() & 1;
 
   if(signed_random > 0)
   {
-     return signed_random - last_bit;
+     return signed_random - last_bit; 
   }
   else
   {
-     return signed_random + last_bit;
+     return signed_random + last_bit; 
   }
 }
 
@@ -55,7 +55,7 @@ buf1D_t *create_buf1D(int len, int precision)
   int size_in_bytes;
   buf1D_t *pbuf = malloc(sizeof(buf1D_t));
   if(NULL == pbuf)
-  {
+  { 
     DBG_PRINT("unable to allocate structure pbuf size(%d )\n", (int) sizeof(buf2D_t));
     return NULL;
   }
@@ -65,6 +65,8 @@ buf1D_t *create_buf1D(int len, int precision)
   {
     case -1: pbuf->bytes_per_element = 4; break;
     case ASYM8_TYPE: pbuf->bytes_per_element = 1; break;
+    case ASYM8S_TYPE: pbuf->bytes_per_element = 1; break;
+    case SYM8S_TYPE: pbuf->bytes_per_element = 1; break;
     case  8: pbuf->bytes_per_element = 1; break;
     case 16: pbuf->bytes_per_element = 2; break;
     case 32: pbuf->bytes_per_element = 4; break;
@@ -92,7 +94,7 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
   int size_in_bytes;
 
   buf2D_t *pbuf = malloc(sizeof(buf2D_t));
-  if(NULL == pbuf)
+  if(NULL == pbuf) 
   {
     DBG_PRINT("unable to allocate structure pbuf size(%d )\n", (int)sizeof(buf2D_t));
     return NULL;
@@ -109,6 +111,8 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
   {
     case -1:pbuf->bytes_per_element = 4; break;
     case ASYM8_TYPE: pbuf->bytes_per_element = 1;break;
+    case ASYM8S_TYPE: pbuf->bytes_per_element = 1; break;
+    case SYM8S_TYPE: pbuf->bytes_per_element = 1; break;
     case 8: pbuf->bytes_per_element = 1;break;
     case 16:pbuf->bytes_per_element = 2; break;
     case 32:pbuf->bytes_per_element = 4; break;
@@ -122,8 +126,8 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
   // We need to ensure the adjacent rows fall in different banks!
   {
     int width_in_bytes = (pbuf->bytes_per_element * cols);
-    int bank_offset = width_in_bytes & XCHAL_DATA_WIDTH;
-    if(  (1 == pad ) &&
+    int bank_offset = width_in_bytes & XCHAL_DATA_WIDTH; 
+    if(  (1 == pad ) && 
         (rows > 1)  &&
         (0== bank_offset))
     {
@@ -131,15 +135,8 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
       int pad_elements  = (XCHAL_DATA_WIDTH / pbuf->bytes_per_element);
       pbuf->row_offset = cols + pad_elements;
       DBG_PRINT("Offset adjusted to %d\n", pbuf->row_offset);
-
-    }
-    else
-    {
-      pbuf->row_offset = cols;
     }
   }
-#else
-  pbuf->row_offset = cols;
 #endif
 
   size_in_bytes = (pbuf->bytes_per_element * pbuf->row_offset * pbuf->rows);
@@ -178,10 +175,12 @@ int interleave_buf1D(buf1D_t *pbuf, buf1D_t *pbuf_interleaved, int length)
     {
       case -1: numbytes = sizeof(float);       break;
       case ASYM8_TYPE: numbytes = sizeof(char);        break;
+      case ASYM8S_TYPE: numbytes = sizeof(char); break;
+      case SYM8S_TYPE: numbytes = sizeof(char); break;
        case 8: numbytes = sizeof(char);        break;
       case 16: numbytes = sizeof(short int);   break;
       case 32: numbytes = sizeof(int);         break;
-      case 64: numbytes = sizeof(double);     break;
+      case 64: numbytes = sizeof(double);     break;    
     }
 
     ptr2 = pbuf->p+numbytes * length * 2;
@@ -190,7 +189,7 @@ int interleave_buf1D(buf1D_t *pbuf, buf1D_t *pbuf_interleaved, int length)
     {
       ptr3[j] = ptr1[i]; j++;
       ptr3[j] = ptr1[i+1]; j++;
-
+      
       ptr3[j] = ptr2[i]; j++;
       ptr3[j] = ptr2[i+1]; j++;
 
@@ -206,17 +205,19 @@ int deinterleave_buf1D(buf1D_t *pbuf, buf1D_t *pbuf_deinterleaved, int length)
     int * ptr3 = pbuf->p;
     int j=0;
     int i=0;
-
+    
     switch(pbuf->precision)
     {
       case -1: numbytes = sizeof(float);       break;
       case ASYM8_TYPE: numbytes = sizeof(char);        break;
+      case ASYM8S_TYPE: numbytes = sizeof(char); break;
+      case SYM8S_TYPE: numbytes = sizeof(char); break;
        case 8: numbytes = sizeof(char);        break;
       case 16: numbytes = sizeof(short int);   break;
       case 32: numbytes = sizeof(int);         break;
-      case 64: numbytes = sizeof(double);     break;
+      case 64: numbytes = sizeof(double);     break;    
     }
-
+    
     ptr2 = pbuf_deinterleaved->p + numbytes*length*2;
 
     for (i=0;i< 2*length ;i+=2)
@@ -243,10 +244,12 @@ int interleave_buf1D_real(buf1D_t *pbuf, buf1D_t *pbuf_interleaved, int length)
     {
       case -1: numbytes = sizeof(float);       break;
       case ASYM8_TYPE: numbytes = sizeof(char);        break;
+      case ASYM8S_TYPE: numbytes = sizeof(char); break;
+      case SYM8S_TYPE: numbytes = sizeof(char); break;
        case 8: numbytes = sizeof(char);        break;
       case 16: numbytes = sizeof(short int);   break;
       case 32: numbytes = sizeof(int);         break;
-      case 64: numbytes = sizeof(double);     break;
+      case 64: numbytes = sizeof(double);     break;    
     }
 
     ptr2 = pbuf->p+numbytes * length;
@@ -267,17 +270,19 @@ int deinterleave_buf1D_real(buf1D_t *pbuf, buf1D_t *pbuf_deinterleaved, int leng
     int * ptr3 = pbuf->p;
     int j=0;
     int i=0;
-
+    
     switch(pbuf->precision)
     {
       case -1: numbytes = sizeof(float);       break;
       case ASYM8_TYPE: numbytes = sizeof(char);        break;
+      case ASYM8S_TYPE: numbytes = sizeof(char); break;
+      case SYM8S_TYPE: numbytes = sizeof(char); break;
       case  8: numbytes = sizeof(char);        break;
       case 16: numbytes = sizeof(short int);   break;
       case 32: numbytes = sizeof(int);         break;
-      case 64: numbytes = sizeof(double);      break;
+      case 64: numbytes = sizeof(double);      break;    
     }
-
+    
     ptr2 = pbuf_deinterleaved->p + numbytes*length;
 
     for (i=0;i< length ;i++)
@@ -304,7 +309,9 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
         }
       }
       break;
-    case ASYM8_TYPE:
+    case ASYM8_TYPE: 
+    case ASYM8S_TYPE: 
+    case SYM8S_TYPE: 
       {
         char *p = (char *) ptr_buf1D->p;
         for (i = 0; i < ptr_buf1D->length; i++)
@@ -313,7 +320,7 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
         }
       }
       break;
-    case 8:
+    case 8: 
       {
         char *p = (char *) ptr_buf1D->p;
         for (i = 0; i < ptr_buf1D->length; i++)
@@ -340,7 +347,7 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
         }
       }
       break;
-    case 64:
+    case 64: 
       {
         long long *p = (long long *) ptr_buf1D->p;
         for (i = 0; i < ptr_buf1D->length; i++)
@@ -349,7 +356,7 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
         }
       }
       break;
-    default:
+    default: 
       printf("Error in setting random input for vector - Unknown precision %d\n",ptr_buf1D->precision);
       return -1;
   }
@@ -373,7 +380,9 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
-    case ASYM8_TYPE:
+    case ASYM8_TYPE: 
+    case ASYM8S_TYPE: 
+    case SYM8S_TYPE: 
       {
         char *p = (char *) ptr_buf2D->p;
         for (i = 0; i < ptr_buf2D->rows * ptr_buf2D->row_offset; i++)
@@ -382,7 +391,7 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
-    case 8:
+    case 8: 
       {
         char *p = (char *) ptr_buf2D->p;
         for (i = 0; i < ptr_buf2D->rows * ptr_buf2D->row_offset; i++)
@@ -409,7 +418,7 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
-    case 64:
+    case 64: 
       {
         long long *p = (long long *) ptr_buf2D->p;
         for (i = 0; i < ptr_buf2D->rows * ptr_buf2D->row_offset; i++)
@@ -418,7 +427,7 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
-    default:
+    default: 
       printf("Error in setting random input for matrix - Unknown precision %d\n",ptr_buf2D->precision);
       return -1;
   }
@@ -467,6 +476,8 @@ void write_buf1D(buf1D_t *pbuf, FILE *file,int extensionIndicator, char * var_na
     {
       case -1: length = sizeof(float) * pbuf->length;   break;
       case ASYM8_TYPE:  length = sizeof(char)  * pbuf->length;   break;
+      case ASYM8S_TYPE:  length = sizeof(char)  * pbuf->length;   break;
+      case SYM8S_TYPE:  length = sizeof(char)  * pbuf->length;   break;
       case 8:  length = sizeof(char)  * pbuf->length;   break;
       case 16: length = sizeof(short) * pbuf->length;   break;
       case 32: length = sizeof(int) * pbuf->length;   break;
@@ -488,6 +499,8 @@ void write_buf2D(buf2D_t *pbuf, FILE *file,int extensionIndicator, char * var_na
     {
       case -1: length = sizeof(float) * pbuf->rows * pbuf->row_offset;   break;
       case ASYM8_TYPE: length = sizeof(char)  * pbuf->rows * pbuf->row_offset;   break;
+      case ASYM8S_TYPE:  length = sizeof(char)  * pbuf->rows * pbuf->row_offset;   break;
+      case SYM8S_TYPE:  length = sizeof(char)  * pbuf->rows * pbuf->row_offset;   break;
       case 8:  length = sizeof(char)  * pbuf->rows * pbuf->row_offset;   break;
       case 16: length = sizeof(short) * pbuf->rows * pbuf->row_offset;   break;
       case 32: length = sizeof(int) * pbuf->rows * pbuf->row_offset;   break;
@@ -570,7 +583,7 @@ int compare_buf1D(buf1D_t *pbuf_ref, buf1D_t *pbuf_out, int method, int precisio
            return 1;
        }
 
-   }
+   } 
   if(method == 1 && (precision != -1)) /* Bitexact match */
    {
        int size_in_bytes = (pbuf_ref->bytes_per_element * pbuf_ref->length);
@@ -583,7 +596,7 @@ int compare_buf1D(buf1D_t *pbuf_ref, buf1D_t *pbuf_out, int method, int precisio
            return 1;
        }
    }
-
+      
    return 1;
 }
 
@@ -608,7 +621,7 @@ int compare_buf2D(buf2D_t *pbuf_ref, buf2D_t *pbuf_out, int method)
            return 1;
        }
    }
-
+      
    return 0;
 }
 

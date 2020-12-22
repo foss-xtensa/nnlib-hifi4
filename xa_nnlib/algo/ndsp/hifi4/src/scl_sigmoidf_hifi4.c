@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -19,15 +19,6 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-/* ------------------------------------------------------------------------ */
-/* Copyright (c) 2018 by Cadence Design Systems, Inc. ALL RIGHTS RESERVED.  */
-/* These coded instructions, statements, and computer programs ("Cadence    */
-/* Libraries") are the copyrighted works of Cadence Design Systems Inc.	    */
-/* Cadence IP is licensed for use with Cadence processor cores only and     */
-/* must not be used for any other processors and platforms. Your use of the */
-/* Cadence Libraries is subject to the terms of the license agreement you   */
-/* have entered into with Cadence Design Systems, or a sublicense granted   */
-/* to you by a direct Cadence licensee.                                     */
 /* ------------------------------------------------------------------------ */
 /*  IntegrIT, Ltd.   www.integrIT.com, info@integrIT.com                    */
 /*                                                                          */
@@ -40,7 +31,7 @@
 /* Cadence, Inc. under Terms and Condition of a Software License Agreement  */
 /* between Cadence, Inc. and IntegrIT, Ltd.                                 */
 /* ------------------------------------------------------------------------ */
-/*          Copyright (C) 2015-2018 IntegrIT, Limited.                      */ 
+/*          Copyright (C) 2015-2018 IntegrIT, Limited.                      */
 /*                      All Rights Reserved.                                */
 /* ------------------------------------------------------------------------ */
 /*
@@ -57,7 +48,7 @@
 
 /*-------------------------------------------------------------------------
   Sigmoid
-  The functions compute the sigmoid of input argument. 32-bit fixed-point 
+  The functions compute the sigmoid of input argument. 32-bit fixed-point
   functions accept inputs in Q6.25 and form outputs in Q16.15 format.
 
   Precision:
@@ -81,7 +72,7 @@ DISCARD_FUN_FOR_NONVOID_RETURN(float32_t,scl_sigmoidf,(float32_t x))
 #else
 float32_t scl_sigmoidf(float32_t x)
 {
-    static const union ufloat32uint32 c[]={{0x3fb8aa3b},{0x32a57060}}; 
+    static const union ufloat32uint32 c[]={{0x3fb8aa3b},{0x32a57060}};
     static const union ufloat32uint32 p[]={{0x39222a75},{0x3aaf9334},{0x3c1d94fc},{0x3d63578b},{0x3e75fdf0},{0x3f317218},{0x3f800000}};
 
     int s;
@@ -112,7 +103,7 @@ float32_t scl_sigmoidf(float32_t x)
         z0=p[0].f;
         t =p[2].f; XT_MADDN_S(t,d2,z0); z0=t;
         t =p[4].f; XT_MADDN_S(t,d2,z0); z0=t;
-        z1=p[1].f; 
+        z1=p[1].f;
         t =p[3].f; XT_MADDN_S(t,d2,z1); z1=t;
         t =p[5].f; XT_MADDN_S(t,d2,z1); z1=t;
         XT_MADDN_S(z1,z0,d);

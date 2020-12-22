@@ -168,7 +168,7 @@ TfLiteStatus EvalQuantized(TfLiteContext* context, TfLiteNode* node,
                                                      data->output_activation_min,
                                                      data->output_activation_max,
                                                      batches*out_depth
-                                                     );
+                                                     ); 
       CHECK_ERR_HIFI_NNLIB_KER(
           ret, "xa_nn_vec_activation_min_max_asym8_asym8 failed");
       break;
@@ -219,7 +219,7 @@ TfLiteStatus EvalFloat(TfLiteContext* context, TfLiteNode* node,
                                              data->output_activation_min,
                                              data->output_activation_max,
                                              batches*out_depth
-                                             );
+                                             ); 
   CHECK_ERR_HIFI_NNLIB_KER(
       ret, "xa_nn_vec_activation_min_max_f32_f32 failed");
 #else
@@ -245,18 +245,18 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
   OpData local_data_object;
   OpData* data = &local_data_object;
 #ifdef PROFILE
-  int weight_depth = GetTensorShape(filter).Dims(GetTensorShape(filter).DimensionsCount()-1);
-  int out_depth = GetTensorShape(output).Dims(GetTensorShape(output).DimensionsCount()-1);
+  int weight_depth = GetTensorShape(filter).Dims(GetTensorShape(filter).DimensionsCount()-1);           
+  int out_depth = GetTensorShape(output).Dims(GetTensorShape(output).DimensionsCount()-1);              
   int total_macs = weight_depth*out_depth;
-  char profiler_name_0[MAX_PROFILER_NAME_LENGTH];
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
+  char profiler_name_0[MAX_PROFILER_NAME_LENGTH]; 
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
   strcpy(profiler_name_0,"fully_connected");
-  sprintf(profiler_params, "weight_depth=%d, out_depth=%d",
+  sprintf(profiler_params, "weight_depth=%d, out_depth=%d", 
   weight_depth, out_depth);
   XTPWR_PROFILER_OPEN(0, profiler_name_0, profiler_params, total_macs, "MACs/cyc", 1);
 #endif
-
-  XTPWR_PROFILER_START(0);
+  
+  XTPWR_PROFILER_START(0);  
   TF_LITE_ENSURE_STATUS(CalculateOpData(context, params, data_type, input,
                                         filter, bias, output, data));
 
@@ -280,10 +280,10 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
                          filter->type);
       return kTfLiteError;
   }
-  XTPWR_PROFILER_STOP(0);
-  XTPWR_PROFILER_UPDATE(0);
-  XTPWR_PROFILER_PRINT(0);
-  XTPWR_PROFILER_CLOSE(0,1);
+  XTPWR_PROFILER_STOP(0);  
+  XTPWR_PROFILER_UPDATE(0);  
+  XTPWR_PROFILER_PRINT(0);  
+  XTPWR_PROFILER_CLOSE(0,1);  
   return kTfLiteOk;
 }
 

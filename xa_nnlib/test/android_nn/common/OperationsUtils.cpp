@@ -335,6 +335,7 @@ bool convPrepare(const Shape& input,
                                             stride_height,
                                             padding_top,
                                             outHeight,
+                                            channels_out,
                                             input_precision);
 #endif
     return true;
@@ -348,7 +349,7 @@ bool depthwiseConvPrepare(const Shape& input,
                           int32_t stride_width, int32_t stride_height,
 #ifndef HIFI_NNLIB_OPT
                           Shape* output) {
-#else
+#else                      
                           Shape* output, int32_t& scratch_size) {
 #endif
     NN_OPS_CHECK(input.type == filter.type);
@@ -521,7 +522,7 @@ bool genericActivationPrepare(const Shape& input,
 
     if(operation.type == OperationType::SOFTMAX)
     {
-        if (getNumberOfDimensions(input) == 2)
+        if (getNumberOfDimensions(input) == 2) 
         {
             batch_size = getSizeOfDimension(input, 0);
             io_length = getNumberOfElements(input) / batch_size;
@@ -773,7 +774,7 @@ bool embeddingLookupPrepare(const Shape &valueShape,
     }
     outputShape->offset = valueShape.offset;
     outputShape->scale = valueShape.scale;
-#ifndef HIFI_WARNINGS
+#ifndef HIFI_WARNINGS 
     (void)rows;
 #endif
     return true;
@@ -813,7 +814,7 @@ bool hashtableLookupPrepare(const Shape &lookupShape,
 #endif
     hitShape->offset = 0;
     hitShape->scale = 1.f;
-#ifndef HIFI_WARNINGS
+#ifndef HIFI_WARNINGS 
     (void)rows;
     (void)keys;
 #endif

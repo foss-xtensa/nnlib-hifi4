@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -23,17 +23,18 @@
 #include "xt_manage_buffers.h"
 
 int read_buf1D_from_file(FILE *fptr_read_data, buf1D_t *ptr_buf1D); 
-int read_buf2D_from_file(FILE *fptr_read_data, buf2D_t *ptr_buf2D); 
+int read_buf2D_from_file(FILE *fptr_read_data, buf2D_t *ptr_buf2D, int pad_val); 
 int write_buf1D_to_file(FILE *fptr_write_data, buf1D_t *ptr_buf1D); 
 int write_buf2D_to_file(FILE *fptr_write_data, buf2D_t *ptr_buf2D); 
 int load_matXvec_input_data(int write_file, FILE *fptr_inp, buf2D_t *p_mat1, buf1D_t *p_vec1, 
     buf2D_t *p_mat2, buf1D_t *p_vec2, buf1D_t *p_bias); 
-int load_conv2d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_kernel,
-    buf1D_t *p_bias, int input_channels, int input_channels_pad);
-int load_conv1d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_kernel, 
-    buf1D_t *p_bias, int input_channels, int input_width, int input_channelsXwidth_pad);
-int load_conv2d_ds_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_kernel,
-    buf1D_t *p_bias, buf1D_t *p_kernel_point, buf1D_t *p_bias_point);
+int load_conv2d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel,
+    buf1D_t *p_bias, int input_channels, int input_channels_pad, int kernel_pad_val);
+int load_conv1d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel, 
+    buf1D_t *p_bias, int input_channels, int input_width, int input_channelsXwidth_pad,
+    int kernel_pad_val);
+int load_conv2d_ds_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel,
+    buf1D_t *p_bias, buf1D_t *p_kernel_point, buf1D_t *p_bias_point, int kernel_pad_val);
 int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp); 
 int load_pool_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);
 int load_norm_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);

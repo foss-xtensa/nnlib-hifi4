@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -19,15 +19,6 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-/* ------------------------------------------------------------------------ */
-/* Copyright (c) 2018 by Cadence Design Systems, Inc. ALL RIGHTS RESERVED.  */
-/* These coded instructions, statements, and computer programs ("Cadence    */
-/* Libraries") are the copyrighted works of Cadence Design Systems Inc.	    */
-/* Cadence IP is licensed for use with Cadence processor cores only and     */
-/* must not be used for any other processors and platforms. Your use of the */
-/* Cadence Libraries is subject to the terms of the license agreement you   */
-/* have entered into with Cadence Design Systems, or a sublicense granted   */
-/* to you by a direct Cadence licensee.                                     */
 /* ------------------------------------------------------------------------ */
 /*  IntegrIT, Ltd.   www.integrIT.com, info@integrIT.com                    */
 /*                                                                          */
@@ -57,7 +48,7 @@
   #define COMPILER_INTEL /* Intel C/C++ */
   #undef ___UNKNOWN_COMPILER_YET
 #endif
- 
+
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef _MSC_VER
 
@@ -69,29 +60,29 @@
 
   #undef ___UNKNOWN_COMPILER_YET
  #endif
-#endif 
- 
+#endif
+
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef _QC
   #define COMPILER_MSQC /* Microsoft Quick C */
   #undef ___UNKNOWN_COMPILER_YET
  #endif
-#endif 
- 
+#endif
+
 
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef __BORLANDC__
   #define COMPILER_BORLAND /* Some Borland compiler */
   #undef ___UNKNOWN_COMPILER_YET
  #endif
-#endif 
+#endif
 
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef __IBMC__
   #define COMPILER_IBM	/* IBM Visual Age for C++ */
   #undef ___UNKNOWN_COMPILER_YET
  #endif
-#endif 
+#endif
 
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef __SC__
@@ -100,28 +91,28 @@
    #undef ___UNKNOWN_COMPILER_YET
   #endif
  #endif
-#endif 
+#endif
 
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef __ZTC__
   #define COMPILER_ZORTECH	/* Zortech C/C++ 3.x */
   #undef ___UNKNOWN_COMPILER_YET
  #endif
-#endif 
+#endif
 
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef __WATCOMC__
   #define COMPILER_WATCOM	/* Watcom C/C++ */
   #undef ___UNKNOWN_COMPILER_YET
  #endif
-#endif 
+#endif
 
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef __CC_ARM
   #define COMPILER_ARM	/* ARM C/C++ */
   #undef ___UNKNOWN_COMPILER_YET
  #endif
-#endif 
+#endif
 
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef _TMS320C6X
@@ -134,7 +125,7 @@
    #undef ___UNKNOWN_COMPILER_YET
    #endif
  #endif
-#endif 
+#endif
 
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef __TMS320C55X__
@@ -162,7 +153,7 @@
    #ifdef __arm__
      #ifndef COMPILER_GNU_ARM
      #endif
-     #define COMPILER_GNUARM /* GNU C/C++ compiler*/  
+     #define COMPILER_GNUARM /* GNU C/C++ compiler*/
    #else
      // GNU GCC x86 compiler
      #ifndef COMPILER_GNU
@@ -174,7 +165,7 @@
 #endif
 
 #ifdef ___UNKNOWN_COMPILER_YET
-  #error  Unknown compiler 
+  #error  Unknown compiler
 #endif
 
 
@@ -205,7 +196,7 @@
   typedef long long          int64_t;
   typedef unsigned long long uint64_t;
   typedef uint32_t  uintptr_t;
-#else 
+#else
   typedef signed char   int8_t;
   typedef unsigned char uint8_t;
   typedef unsigned long  uint32_t;
@@ -261,7 +252,7 @@ typedef struct tagComplex32_t
 #endif
 
 /*    Assertion support                   */
-#if !defined(_ASSERT) 
+#if !defined(_ASSERT)
   #include <assert.h>
   #if defined(_DEBUG) && defined(COMPILER_MSVC)
     #define ASSERT(x)  assert(x)
@@ -289,7 +280,7 @@ typedef struct tagComplex32_t
 #elif defined (COMPILER_ADSP_BLACKFIN)
   #define inline_ inline
 #elif defined(COMPILER_ANSI)
-  #define inline_ 
+  #define inline_
 #elif (defined COMPILER_GNU)||(defined COMPILER_GNUARM)||(defined COMPILER_ARM)
   #define inline_ static inline
 #else
@@ -317,7 +308,7 @@ typedef struct tagComplex32_t
 #endif
 
 // size of variables in bytes
-#ifdef COMPILER_C55 
+#ifdef COMPILER_C55
   #define SIZEOF_BYTE(x)  (sizeof(x)<<1)
 #else
   #define SIZEOF_BYTE(x)  sizeof(x)
@@ -325,11 +316,11 @@ typedef struct tagComplex32_t
 
 //---------------------------------------
 // special keywords definition
-// restrict  keyword means that the memory 
-//           is addressed exclusively via 
+// restrict  keyword means that the memory
+//           is addressed exclusively via
 //	     this pointer
-// onchip    keyword means that the memory 
-//           is on-chip and can not be 
+// onchip    keyword means that the memory
+//           is on-chip and can not be
 //           accessed via external bus
 //---------------------------------------
 #if   defined (COMPILER_C55)
@@ -344,14 +335,14 @@ typedef struct tagComplex32_t
   #define onchip
   #define NASSERT(x) {(void)__builtin_expect((x)!=0,1);}
   #define restrict __restrict
-#elif defined (COMPILER_GNU) 
+#elif defined (COMPILER_GNU)
   #define onchip
-  #define NASSERT(x) 
+  #define NASSERT(x)
   #define restrict __restrict
-#elif defined (COMPILER_CEARM9E) 
+#elif defined (COMPILER_CEARM9E)
   #define onchip
-  #define NASSERT(x) 
-  #define restrict 
+  #define NASSERT(x)
+  #define restrict
 #elif defined (COMPILER_XTENSA)
   #define restrict __restrict
   #define onchip
@@ -376,7 +367,7 @@ typedef struct tagComplex32_t
  ----------------------------------------------------------*/
 #if defined (COMPILER_GNU) | defined (COMPILER_GNUARM) | defined (COMPILER_XTENSA)
   #include <inttypes.h>
-#else 
+#else
   typedef signed char        int8_t;
   typedef unsigned char      uint8_t;
   typedef unsigned long      uint32_t;
@@ -426,7 +417,7 @@ complex_fract32;
 /* Note: Visual Studio does not support C99 compatible complex types yet */
 typedef union tag_complex_float
 {
-    struct 
+    struct
     {
         float32_t re, im;
     }s;
@@ -457,7 +448,7 @@ inline_ float64_t cimag (complex_double x) { return x.s.im; }
 /* complex half-precision datatype */
 typedef union tag_complex_half
 {
-    struct 
+    struct
     {
         float16_t re, im;
     }s;
@@ -487,8 +478,8 @@ inline_ float16_t cimagh(complex_half x) { return x.s.im; }
 #endif
 
 #if 1
-#define STDLIB_MATH(fxn) fxn 
-#define LIBDSP_MATH(fxn) fxn 
+#define STDLIB_MATH(fxn) fxn
+#define LIBDSP_MATH(fxn) fxn
 #else
 /*
  LIBDSP redefines a number of functions from the standard math.h needed by
@@ -498,119 +489,119 @@ inline_ float16_t cimagh(complex_half x) { return x.s.im; }
 */
 
 /* support of xclib */
-#ifdef acosf        
-#undef acosf          
+#ifdef acosf
+#undef acosf
 #endif
-#ifdef acos         
-#undef acos           
+#ifdef acos
+#undef acos
 #endif
-#ifdef asinf        
-#undef asinf          
+#ifdef asinf
+#undef asinf
 #endif
-#ifdef asin         
-#undef asin           
+#ifdef asin
+#undef asin
 #endif
-#ifdef atanf        
-#undef atanf          
+#ifdef atanf
+#undef atanf
 #endif
-#ifdef atan         
-#undef atan           
+#ifdef atan
+#undef atan
 #endif
-#ifdef atan2f       
-#undef atan2f         
+#ifdef atan2f
+#undef atan2f
 #endif
-#ifdef atan2        
-#undef atan2          
+#ifdef atan2
+#undef atan2
 #endif
-#ifdef cosf         
-#undef cosf           
+#ifdef cosf
+#undef cosf
 #endif
-#ifdef cos          
-#undef cos            
+#ifdef cos
+#undef cos
 #endif
-#ifdef sinf         
-#undef sinf           
+#ifdef sinf
+#undef sinf
 #endif
-#ifdef sin          
-#undef sin            
+#ifdef sin
+#undef sin
 #endif
-#ifdef tanf         
-#undef tanf           
+#ifdef tanf
+#undef tanf
 #endif
-#ifdef tan          
-#undef tan            
+#ifdef tan
+#undef tan
 #endif
-#ifdef coshf        
-#undef coshf          
+#ifdef coshf
+#undef coshf
 #endif
-#ifdef cosh         
-#undef cosh           
+#ifdef cosh
+#undef cosh
 #endif
-#ifdef sinhf        
-#undef sinhf          
+#ifdef sinhf
+#undef sinhf
 #endif
-#ifdef sinh         
-#undef sinh           
+#ifdef sinh
+#undef sinh
 #endif
-#ifdef tanhf        
-#undef tanhf          
+#ifdef tanhf
+#undef tanhf
 #endif
-#ifdef tanh         
-#undef tanh           
+#ifdef tanh
+#undef tanh
 #endif
-#ifdef floorf       
-#undef floorf         
+#ifdef floorf
+#undef floorf
 #endif
-#ifdef floor        
-#undef floor          
+#ifdef floor
+#undef floor
 #endif
-#ifdef ceilf        
-#undef ceilf          
+#ifdef ceilf
+#undef ceilf
 #endif
-#ifdef ceil         
-#undef ceil           
+#ifdef ceil
+#undef ceil
 #endif
-#ifdef fmodf        
-#undef fmodf          
+#ifdef fmodf
+#undef fmodf
 #endif
-#ifdef fmod         
-#undef fmod           
+#ifdef fmod
+#undef fmod
 #endif
-#ifdef ldexpf       
-#undef ldexpf         
+#ifdef ldexpf
+#undef ldexpf
 #endif
-#ifdef ldexp        
-#undef ldexp          
+#ifdef ldexp
+#undef ldexp
 #endif
-#ifdef logf         
-#undef logf           
+#ifdef logf
+#undef logf
 #endif
-#ifdef log          
-#undef log            
+#ifdef log
+#undef log
 #endif
-#ifdef log10f       
-#undef log10f         
+#ifdef log10f
+#undef log10f
 #endif
-#ifdef log10        
-#undef log10          
+#ifdef log10
+#undef log10
 #endif
-#ifdef expf         
-#undef expf           
+#ifdef expf
+#undef expf
 #endif
-#ifdef exp          
-#undef exp            
+#ifdef exp
+#undef exp
 #endif
-#ifdef powf         
-#undef powf           
+#ifdef powf
+#undef powf
 #endif
-#ifdef pow          
-#undef pow            
+#ifdef pow
+#undef pow
 #endif
-#ifdef copysignf    
-#undef copysignf      
+#ifdef copysignf
+#undef copysignf
 #endif
-#ifdef conjf        
-#undef conjf          
+#ifdef conjf
+#undef conjf
 #endif
 
 #define STDLIB_MATH(fxn) fxn ## _stdlib

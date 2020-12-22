@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -20,27 +20,27 @@
 
 ******************************************************************************/
 #include "xa_type_def.h"
-#include "common.h"
+#include "xa_nnlib_common.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_avgpool_state.h"
 #include "xa_nnlib_err_chk.h"
 
 static void avgpool_asym8_hw(
-    UWORD8 *__restrict__ p_out,
-    UWORD8 *__restrict__ p_inp,
-    WORD32 *p_den_height,
-    WORD32 *p_den_width,
-    WORD32  input_height,
-    WORD32  input_width,
-    WORD32  kernel_height,
-    WORD32  kernel_width,
-    WORD32  x_stride,
-    WORD32  y_stride,
-    WORD32  x_padding,
-    WORD32  y_padding,
-    WORD32  out_height,
-    WORD32  out_width,
-    pVOID   p_scratch_in)
+      UWORD8 *__restrict__ p_out,
+const UWORD8 *__restrict__ p_inp,
+      WORD32 *p_den_height,
+      WORD32 *p_den_width,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
+      pVOID   p_scratch_in)
 {
     WORD32 *p_scratch = (WORD32 *)(p_scratch_in);
 
@@ -50,7 +50,7 @@ static void avgpool_asym8_hw(
     WORD8 * p_src1, * p_src2;
     WORD8 * __restrict p_src1_temp, * __restrict p_src2_temp;
     ae_int32x2 * p_wsrc1, * p_wsrc2;
-    ae_int32x2 * __restrict p_wsrc1_temp, * __restrict p_wsrc2_temp; 
+    ae_int32x2 * __restrict p_wsrc1_temp, * __restrict p_wsrc2_temp;
     ae_int32x2 *p_dst, *p_dst_temp;
     ae_valign align_wsrc1, align_wsrc2;
     ae_valign align_dst;
@@ -66,7 +66,7 @@ static void avgpool_asym8_hw(
         p_dst_pad[i] = 0;
     }
 
-    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width); 
+    total_out_width = XT_MAX(input_width + x_padding, (out_width - 1) * x_stride + kernel_width);
     right_pad = total_out_width - (x_padding + input_width);
 
     /* Right padding of temporary output with min_value,
@@ -79,7 +79,7 @@ static void avgpool_asym8_hw(
 
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)
     {
-        int pool_height, pool_width; 
+        int pool_height, pool_width;
         int start_row, end_row;
 
         /* Pool height processing */
@@ -291,8 +291,8 @@ static void avgpool_asym8_hw(
             den_w = *(ae_int32 *)(&p_den_width[itr_ow]);
             d_out1 = *(ae_int32 *)(&ptr_out1[itr_ow*x_stride]);
             d_tmp = AE_MUL32U_LL(den_h, den_w);
-            
-            /* Max value of den_h or den_w is 0x80000000 
+
+            /* Max value of den_h or den_w is 0x80000000
             so 1 left shift is possible without overflow */
             d_tmp32 = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
             d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
@@ -302,22 +302,22 @@ static void avgpool_asym8_hw(
 }
 
 WORD32 xa_nn_avgpool_asym8(
-        UWORD8* __restrict__ p_out,
-const   UWORD8* __restrict__ p_inp,
-        WORD32  input_height,
-        WORD32  input_width,
-        WORD32  input_channels,
-        WORD32  kernel_height,
-        WORD32  kernel_width,
-        WORD32  x_stride,
-        WORD32  y_stride,
-        WORD32  x_padding,
-        WORD32  y_padding,
-        WORD32  out_height,
-        WORD32  out_width,
-        WORD32  inp_data_format,
-        WORD32  out_data_format,
-        VOID    *p_scratch)
+      UWORD8* __restrict__ p_out,
+const UWORD8* __restrict__ p_inp,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  input_channels,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
+      WORD32  inp_data_format,
+      WORD32  out_data_format,
+      VOID    *p_scratch)
 {
     /* NULL pointer checks */
     XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -336,7 +336,7 @@ const   UWORD8* __restrict__ p_inp,
     /* Implementation dependent checks */
     XA_NNLIB_ARG_CHK_COND((kernel_height > 256), -1);
     XA_NNLIB_ARG_CHK_COND((kernel_width > 256), -1);
-    
+
     XA_NNLIB_ARG_CHK_COND((out_data_format != 0) && (out_data_format != 1), -1);
     XA_NNLIB_ARG_CHK_COND((inp_data_format != 0) && (inp_data_format != 1), -1);
 
@@ -358,7 +358,8 @@ const   UWORD8* __restrict__ p_inp,
 
         xa_nn_avgpool_state_t *p_state = (xa_nn_avgpool_state_t *)p_scratch;
         int itr_ic, itr_oh, itr_ow;
-        UWORD8 *pt_inp, *pt_out;
+        const UWORD8 *pt_inp; 
+        UWORD8 *pt_out;
         WORD32 *p_tmp_out = (WORD32 *)(p_state->p_tmp_out);
 
         /* Calculate denominators for division */
@@ -382,7 +383,7 @@ const   UWORD8* __restrict__ p_inp,
 
         for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
         {
-            pt_inp = (UWORD8 *)&p_inp[itr_ic * input_height * input_width];
+            pt_inp = &p_inp[itr_ic * input_height * input_width];
             pt_out = &p_out[itr_ic * out_height * out_width];
 
             avgpool_asym8_hw(pt_out
@@ -439,7 +440,7 @@ const   UWORD8* __restrict__ p_inp,
             LIMIT(kernel_x_end, 0, input_width)
             *p_rec_den++ = inv_256_tbl[(kernel_x_end - kernel_x_start)];
         }
-        
+
         p_s = (WORD32 *)((WORD8 *)p_den_width + ALIGNED_SIZE(sizeof(WORD32)*out_width, ALIGNMENT));
         p_rec_den = p_s;
 
@@ -463,7 +464,7 @@ const   UWORD8* __restrict__ p_inp,
             *p_zeros++ = 0;
         }
 
-        if(kernel_height <= (int)MAX_HEIGHT_16_BIT_ACC)                    
+        if(kernel_height <= (int)MAX_HEIGHT_16_BIT_ACC)
         {
             xa_nn_avgpool_asym8_hwc_16(p_out
                     ,p_inp

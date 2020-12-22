@@ -20,8 +20,9 @@
 
 ******************************************************************************/
 #include "xa_type_def.h"
-#include "common.h"
+#include "xa_nnlib_common.h"
 #include "xa_nnlib_err_chk.h"
+#include "xa_nnlib_kernels_api.h"
 
 
 #define ALIGNMENT   8   /* 8 bytes alignment */
@@ -254,6 +255,7 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
     ae_int16x4 x;
     ae_int32x2 x32, x10, y32, y10, z32, z10;
     ae_int32x2 z, mul, zero;
+    ae_int32x2 q31 = AE_MOVDA32(Q31);
     ae_int32x2 mask_6fs = AE_MOVDA32(MASK);
     ae_int32x2 q_1_by_4 = AE_MOVDA32(ONE_QUATER_Q26);
     ae_int32x2 CT_1_BY_8 = AE_MOVDA32(CONSTANT_1_OVER_8);
@@ -307,6 +309,8 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         c32 = AE_LE32(x32, radius);
         MultiplyByQuantizedMultiplierGreaterThanOne(y32, x32, mul, input_left_shift)
 
+        d32 = AE_LT32(y32, zero);
+
         // Computing Absolute value
         x32 = AE_ABS32(y32);
         y32 = AE_NEG32(x32);
@@ -316,6 +320,9 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         x10 = x32;
 
         ONE_OVER_ONE_PLUS_X_FOR_X_IN_0_1_32X2(y32, y10, x32, x10)
+
+        // if (dequantized_input < 0) output = 1 - sigmoid(abs(dequantized_input))
+        AE_MOVT32X2(y32, AE_SUB32S(q31, y32), d32);
 
         // Downscale to 8 bit
         z32 = AE_SRAA32RS(y32, 23);
@@ -334,9 +341,10 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         *p_o++ = (UWORD8)inp;
     }
 
+    WORD8 *p_in_t = (WORD8 *)p_in;
     for(i=0; i < main_loop_count; i++)
     {
-        AE_L8X4F_IP(x, (WORD8 *)p_in, 4*sizeof(WORD8));
+        AE_L8X4F_IP(x, p_in_t, 4*sizeof(WORD8));
         x = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(x), 8));
         x32 = AE_SEXT32X2D16_32(x);
         x10 = AE_SEXT32X2D16_10(x);
@@ -355,6 +363,9 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         MultiplyByQuantizedMultiplierGreaterThanOne(y32, x32, mul, input_left_shift)
         MultiplyByQuantizedMultiplierGreaterThanOne(y10, x10, mul, input_left_shift)
 
+        d32 = AE_LT32(y32, zero);
+        d10 = AE_LT32(y10, zero);
+
         // Computing Absolute value
         x32 = AE_ABS32(y32);
         x10 = AE_ABS32(y10);
@@ -367,6 +378,10 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         EXP_Q26(x10, y10)
 
         ONE_OVER_ONE_PLUS_X_FOR_X_IN_0_1_32X2(y32, y10, x32, x10)
+
+        // if (dequantized_input < 0) output = 1 - sigmoid(abs(dequantized_input))
+        AE_MOVT32X2(y32, AE_SUB32S(q31, y32), d32);
+        AE_MOVT32X2(y10, AE_SUB32S(q31, y10), d10);
 
         // Downscale to 8 bit
         z32 = AE_SRAA32RS(y32, 23);
@@ -388,6 +403,7 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
 
         STORE_8X4_FROM_32X4(p_o, z32, z10)
     }
+    p_in = (UWORD8 *)p_in_t;
 
     __Pragma("no_unroll");
     for(i=0; i<post_loop_count; i++)
@@ -406,6 +422,8 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         c32 = AE_LE32(x32, radius);
         MultiplyByQuantizedMultiplierGreaterThanOne(y32, x32, mul, input_left_shift)
 
+        d32 = AE_LT32(y32, zero);
+
         // Computing Absolute value
         x32 = AE_ABS32(y32);
         y32 = AE_NEG32(x32);
@@ -415,6 +433,9 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         x10 = x32;
 
         ONE_OVER_ONE_PLUS_X_FOR_X_IN_0_1_32X2(y32, y10, x32, x10)
+
+        // if (dequantized_input < 0) output = 1 - sigmoid(abs(dequantized_input))
+        AE_MOVT32X2(y32, AE_SUB32S(q31, y32), d32);
 
         // Downscale to 8 bit
         z32 = AE_SRAA32RS(y32, 23);
@@ -434,6 +455,17 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
     }
 
     return 0;
+}
+
+WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
+                      const WORD8 *p_vec,
+                            WORD32 zero_point,
+                            WORD32 input_range_radius,
+                            WORD32 input_multiplier,
+                            WORD32 input_left_shift,
+                            WORD32 vec_length)
+{
+  return -1;
 }
 
 /*
@@ -483,15 +515,17 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
         *p_o++ = (UWORD8)i1;
     }
 
+    WORD8 *p_v_t = (WORD8 *)p_v;
     if((activation_max >= (int)255) && (activation_min <= (int)0))
     {
         for(i=0; i<(vec_length >> 2); i++)
         {
-            AE_L8X4F_IP(x, (WORD8 *)p_v, 4*sizeof(WORD8));
+            AE_L8X4F_IP(x, p_v_t, 4*sizeof(WORD8));
             y = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(x), 8));
 
             STORE_8X4_FROM_16X4(p_o, y)
         }
+        p_v = (UWORD8 *)p_v_t;
         for(i=0; i < (vec_length & 3); i++)
         {
             int i1;
@@ -506,7 +540,7 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
     {
         for(i=0; i<(vec_length >> 2); i++)
         {
-            AE_L8X4F_IP(x, (WORD8 *)p_v, 4*sizeof(WORD8));
+            AE_L8X4F_IP(x, p_v_t, 4*sizeof(WORD8));
             y = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(x), 8));
 
             b0 = AE_LT16(y, max);
@@ -514,6 +548,7 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
 
             STORE_8X4_FROM_16X4(p_o, y)
         }
+        p_v = (UWORD8 *)p_v_t;
         for(i=0; i < (vec_length & 3); i++)
         {
             int i1;
@@ -531,7 +566,7 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
     {
         for(i=0; i<(vec_length >> 2); i++)
         {
-            AE_L8X4F_IP(x, (WORD8 *)p_v, 4*sizeof(WORD8));
+            AE_L8X4F_IP(x, p_v_t, 4*sizeof(WORD8));
             y = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(x), 8));
 
             b0 = AE_LT16(y, min);
@@ -539,6 +574,7 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
 
             STORE_8X4_FROM_16X4(p_o, y)
         }
+        p_v = (UWORD8 *)p_v_t;
         for(i=0; i < (vec_length & 3); i++)
         {
             int i1;
@@ -556,11 +592,12 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
     {
         for(i=0; i<(vec_length >> 2); i++)
         {
-            AE_L8X4F_IP(x, (WORD8 *)p_v, 4*sizeof(WORD8));
+            AE_L8X4F_IP(x, p_v_t, 4*sizeof(WORD8));
             x = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(x), 8));
             LIMIT(y, x, min, max)
             STORE_8X4_FROM_16X4(p_o, y)
         }
+        p_v = (UWORD8 *)p_v_t;
         for(i=0; i < (vec_length & 3); i++)
         {
             int i1;
@@ -575,6 +612,19 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
     return 0;
 }
 
+WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
+                    const   WORD8 * __restrict__ p_vec,
+                            WORD32 inp_zero_bias,
+                            WORD32 alpha_zero_bias,
+                            WORD32 alpha_multiplier,
+                            WORD32 alpha_shift,
+                            WORD32 out_multiplier,
+                            WORD32 out_shift,
+                            WORD32 out_zero_bias,
+                            WORD32 vec_length)
+{
+  return -1;
+}
 #if 0
 enum ActivationFn {
     kActivationNone = 0,

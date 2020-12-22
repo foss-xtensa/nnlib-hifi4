@@ -84,16 +84,19 @@
 }
 
 /* FOR HIFI4 NN LIB CROSS-COMPILATION ON HIFI3Z */
-#ifndef AE_ADD32S_HL_LH
-#define AE_ADD32S_HL_LH(sum_exp,sum_exp_) AE_ADD32S(sum_exp, AE_SEL32_LH(sum_exp_, sum_exp_));
+#ifndef AE_ADD32S_HL_LH                                                                                                                                                                                                                       
+#define AE_ADD32S_HL_LH(sum_exp,sum_exp_) AE_ADD32S(sum_exp, AE_SEL32_LH(sum_exp_, sum_exp_)); 
 #endif
 
 #ifndef AE_ADDCIRC16X4_XC
+/* Alignment requirement of 2 bytes */
 #define AE_ADDCIRC16X4_XC(ptr, inc) \
 { \
   ae_int16x4 dummy; \
   AE_L16_XC(dummy, (ae_int16*)ptr, inc); \
 }
+#else
+#define HW_AE_ADDCIRC16X4_XC
 #endif
 
 #ifndef AE_MULA16_00
@@ -127,6 +130,45 @@
 
 #ifndef  AE_MULFP32X16X2RS_L_S2
 #define  AE_MULFP32X16X2RS_L_S2 AE_MULFP32X16X2RS_L
+#endif
+
+/* FOR HIFI4 NN LIB CROSS-COMPILATION ON HIFI3 */
+#ifndef AE_L8X4F_IP
+#define AE_L8X4F_IP(d, p, inc) \
+{ \
+  ae_int32 *p32; \
+  ae_int32x2 d32x2; \
+  ae_int16x4 d16x4_0, d16x4_1; \
+  p32 = (ae_int32 *)p; \
+  AE_L32_IP(d32x2, p32, inc); \
+  p = (WORD8 *)p32; \
+  d16x4_0 = AE_MOVINT16X4_FROMINT32X2(d32x2); \
+  d16x4_1 = AE_MOVINT16X4_FROMINT32X2(AE_SLAI32(d32x2, 8)); \
+  d = AE_SEL16_7362(d16x4_0, d16x4_1); \
+  d = AE_SHORTSWAP(d); \
+  d = AE_AND16(d, AE_MOVDA16(0xff00)); \
+}
+#endif
+
+#ifndef AE_L8X4F_I
+static inline ae_int16x4 AE_L8X4F_I(const WORD8 *p, int inc)
+{
+  ae_int16x4 d;
+  ae_int32 d32x2;
+  ae_int16x4 d16x4_0, d16x4_1;
+  d32x2 = AE_L32_X((const ae_int32 *)p, inc);
+  d16x4_0 = AE_MOVINT16X4_FROMINT32X2(d32x2);
+  d16x4_1 = AE_MOVINT16X4_FROMINT32X2(AE_SLAI32(d32x2, 8));
+  d = AE_SEL16_7362(d16x4_0, d16x4_1);
+  d = AE_SHORTSWAP(d);
+  d = AE_AND16(d, AE_MOVDA16(0xff00));
+  return d;
+}
+#endif
+
+#ifndef AE_SEL16_7531
+#define AE_SEL16_7531(d0, d1) \
+  AE_TRUNC16X4F32(AE_MOVINT32X2_FROMINT16X4(d0), AE_MOVINT32X2_FROMINT16X4(d1))
 #endif
 
 #endif /* __XA_NNLIB_COMMON_H__ */

@@ -58,7 +58,7 @@ static WORD32 xa_nn_conv2d_pointwise_nhwc_8x8
                              vec_offset,
                              out_offset,
                              1
-                            );
+                            ); 
     if(ret<0)
         return ret;
     return 0;
@@ -97,7 +97,7 @@ static WORD32 xa_nn_conv2d_pointwise_nchw_8x8
                              vec_offset,
                              out_offset,
                              out_plane_size
-                             );
+                             ); 
     if(ret<0)
         return ret;
     return 0;
@@ -143,9 +143,9 @@ WORD32 xa_nn_conv2d_pointwise_8x8
                 p_kernel,
                 p_inp,
                 p_bias,
-                input_height,
-                input_width,
-                input_channels,
+                input_height, 
+                input_width, 
+                input_channels, 
                 out_channels,
                 acc_shift,
                 bias_shift);
@@ -156,9 +156,9 @@ WORD32 xa_nn_conv2d_pointwise_8x8
                 p_kernel,
                 p_inp,
                 p_bias,
-                input_height,
-                input_width,
-                input_channels,
+                input_height, 
+                input_width, 
+                input_channels, 
                 out_channels,
                 acc_shift,
                 bias_shift);

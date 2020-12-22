@@ -69,7 +69,7 @@ bool depthwiseConvFloat32(const float* inputData, const Shape& inputShape,
                           int32_t depth_multiplier, int32_t activation,
 #ifndef HIFI_NNLIB_OPT
                           float* outputData, const Shape& outputShape) {
-#else
+#else                      
                           float* outputData, const Shape& outputShape, void* p_scratch) {
 #endif
 
@@ -79,7 +79,7 @@ bool depthwiseConvFloat32(const float* inputData, const Shape& inputShape,
     CalculateActivationRangeFloat(activation, &output_activation_min,
                                   &output_activation_max);
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     (void) height;
     (void) width;
     (void) outWidth;

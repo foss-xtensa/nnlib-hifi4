@@ -1,15 +1,15 @@
 /*******************************************************************************
 * Copyright (c) 2018-2020 Cadence Design Systems, Inc.
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
-* "Software"), to use this Software with Cadence processor cores only and 
+* "Software"), to use this Software with Cadence processor cores only and
 * not with any other processors and platforms, subject to
 * the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -140,7 +140,7 @@ typedef struct _xa_nnlib_lstm_biases_t
   coeff_t *b_i; xa_nnlib_shape_t shape_b_i;
   coeff_t *b_c; xa_nnlib_shape_t shape_b_c;
   coeff_t *b_o; xa_nnlib_shape_t shape_b_o;
-} xa_nnlib_lstm_biases_t; 
+} xa_nnlib_lstm_biases_t;
 
 #if defined(__cplusplus)
 extern "C" {
@@ -163,9 +163,9 @@ Int32 xa_nnlib_lstm_init(xa_nnlib_handle_t handle, xa_nnlib_lstm_init_config_t *
 /************************************************************/
 Int32 xa_nnlib_lstm_set_config(xa_nnlib_handle_t handle, xa_nnlib_lstm_param_id_t param_id, void *params);
 
-Int32 xa_nnlib_lstm_get_config(xa_nnlib_handle_t handle, xa_nnlib_lstm_param_id_t param_id, void *params); 			
+Int32 xa_nnlib_lstm_get_config(xa_nnlib_handle_t handle, xa_nnlib_lstm_param_id_t param_id, void *params);
 
-Int32 xa_nnlib_lstm_process(xa_nnlib_handle_t handle, 
+Int32 xa_nnlib_lstm_process(xa_nnlib_handle_t handle,
     void *scratch,
     void *input,
     void *output,

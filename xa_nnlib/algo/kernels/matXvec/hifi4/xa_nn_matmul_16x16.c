@@ -33,19 +33,19 @@
 /*----------------------------Main function---------------------------------*/
 
 WORD32 xa_nn_matmul_16x16_16(
-         WORD16 * __restrict__ p_out,
-         const WORD16 * __restrict__ p_mat1,
-         const WORD16 * __restrict__ p_vec1,
-         const WORD16 * __restrict__ p_bias,
+         WORD16 * __restrict__ p_out,          
+         const WORD16 * __restrict__ p_mat1,   
+         const WORD16 * __restrict__ p_vec1,   
+         const WORD16 * __restrict__ p_bias,   
          WORD32 rows,
          WORD32 cols1,
-         WORD32 row_stride1,
-         WORD32 acc_shift,
-         WORD32 bias_shift,
+         WORD32 row_stride1,                   
+         WORD32 acc_shift,                     
+         WORD32 bias_shift,                    
          WORD32 vec_count,
          WORD32 vec_offset,
          WORD32 out_offset,
-         WORD32 out_stride)
+         WORD32 out_stride)                      
 {
     /* NULL pointer checks */
     XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -63,7 +63,7 @@ WORD32 xa_nn_matmul_16x16_16(
     XA_NNLIB_ARG_CHK_COND((vec_offset == 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_offset == 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_stride == 0), -1);
-
+  
     /* Iterators used in for loops */
     int m_itr, c_itr, vec_itr;
     /* Assign initial value so this value will be used in trailing loop */
@@ -87,7 +87,7 @@ WORD32 xa_nn_matmul_16x16_16(
     #define UNROLL_STORE_ACC_BATCH              STORE_STRIDE_ACC_BATCH_16bx16b_AT_OUT_16b
 
     ADJUST_ACC_LSH_AND_BIAS_LSH_AxB_C(WORD16, WORD16, WORD16);
-
+    
     CHK_MATMUL_ALIGN(p_mat1, ALIGNMENT, p_vec1, ALIGNMENT, cols1, row_stride1, vec_offset, 4);
 
     if(chk_align)
@@ -309,13 +309,13 @@ WORD32 xa_nn_matmul_16x16_16(
                         LOAD_ROW_MAT1_16b_SINGLE_UNALIGNED(1);
                         KERNEL_MAT1_VEC_BATCH_16b_16b_SINGLE_UNALIGNED(0,0);
                         KERNEL_MAT1_VEC_BATCH_16b_16b_SINGLE_UNALIGNED(1,0);
-                    }
+                    }  
 
-                    LOAD_BIAS;
+                    LOAD_BIAS; 
                     UNROLL_ADD_BIAS_ACC_BATCH(0,0);
-                    LOAD_BIAS;
+                    LOAD_BIAS; 
                     UNROLL_ADD_BIAS_ACC_BATCH(1,0);
-
+                
                     STORE_STRIDE_ACC_BATCH_16bx16b_AT_OUT_16b(0,0);
                     STORE_STRIDE_ACC_BATCH_16bx16b_AT_OUT_16b(1,0);
                 }
@@ -351,7 +351,7 @@ WORD32 xa_nn_matmul_16x16_16(
     {
         return -1;
     }
-
+    
     #undef UNROLL_ROW_SETUP_ACC_BATCH
     #undef UNROLL_SETUP_ACC_BATCH
     #undef UNROLL_SETUP_MAT1
@@ -368,6 +368,6 @@ WORD32 xa_nn_matmul_16x16_16(
     #undef UNROLL_STORE_ACC_BATCH
     #undef VEC_UNROLL
     #undef ROW_UNROLL
-
+   
     return 0;
 }

@@ -19,10 +19,7 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
 #include "common_fpu.h"
-#include <xtensa/tie/xt_hifi2.h>
-
 #include "xa_nnlib_common.h"
 
 #if !HAVE_VFPU

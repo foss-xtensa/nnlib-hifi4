@@ -56,7 +56,7 @@ using ::android::hidl::allocator::V1_0::IAllocator;
 namespace android {
 namespace nn {
 
-#ifndef HIFI_BUILD  // Library part
+#ifndef HIFI_BUILD  // Library part 
 const char kVLogPropKey[] = "debug.nn.vlog";
 int vLogMask = ~0;
 

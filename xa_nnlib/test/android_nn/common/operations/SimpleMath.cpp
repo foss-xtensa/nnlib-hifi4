@@ -123,7 +123,7 @@ bool addFloat32(const float* in1, const Shape& shape1,
         CalculateActivationRangeFloat(activation, &output_activation_min,
                                       &output_activation_max);
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
         tflite::reference_ops::Add(
                 in1, convertShapeToDims(shape1),
                 in2, convertShapeToDims(shape2),
@@ -269,7 +269,7 @@ bool mulFloat32(const float* in1, const Shape& shape1,
         CalculateActivationRangeFloat(activation, &output_activation_min,
                                       &output_activation_max);
 
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
         tflite::reference_ops::Mul(
                 in1, convertShapeToDims(shape1),
                 in2, convertShapeToDims(shape2),
@@ -349,7 +349,7 @@ bool mulQuant8(const uint8_t* in1, const Shape& shape1,
 bool floorFloat32(const float* inputData,
                   float* outputData,
                   const Shape& shape) {
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
     tflite::Dims<4> dim = convertShapeToDims(shape);
     tflite::reference_ops::Floor(inputData, dim, outputData, dim);
 #else
@@ -402,7 +402,7 @@ bool subFloat32(const float* in1, const Shape& shape1,
                 out, convertShapeToDims(shapeOut));
 #endif //HiFi_BUILD
     } else {
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
         tflite::reference_ops::Sub(
                 in1, convertShapeToDims(shape1),
                 in2, convertShapeToDims(shape2),
@@ -446,7 +446,7 @@ bool divFloat32(const float* in1, const Shape& shape1,
                 out, convertShapeToDims(shapeOut));
 #endif //HiFi_BUILD
     } else {
-#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT
+#if !HIFI_VFPU || !defined HIFI_NNLIB_OPT 
         tflite::reference_ops::Div(
                 in1, convertShapeToDims(shape1),
                 in2, convertShapeToDims(shape2),

@@ -82,19 +82,19 @@ const FLOAT32* __restrict__ p_inp,
  */
 
 static void maxpool_f32_hw(
-    FLOAT32* __restrict__ p_out,
-    FLOAT32* __restrict__ p_inp,
-    WORD32  input_height,
-    WORD32   input_width,
-    WORD32   kernel_height,
-    WORD32   kernel_width,
-    WORD32   x_stride,
-    WORD32   y_stride,
-    WORD32  x_padding,
-    WORD32  y_padding,
-    WORD32   out_height,
-    WORD32   out_width,
-    pVOID    p_scratch_in)
+      FLOAT32* __restrict__ p_out,
+const FLOAT32* __restrict__ p_inp,
+      WORD32  input_height,
+      WORD32   input_width,
+      WORD32   kernel_height,
+      WORD32   kernel_width,
+      WORD32   x_stride,
+      WORD32   y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32   out_height,
+      WORD32   out_width,
+      pVOID    p_scratch_in)
 {
     FLOAT32 *p_scratch = (FLOAT32 *)(p_scratch_in);
 
@@ -298,24 +298,24 @@ static void maxpool_f32_hw(
 }
 
 WORD32 xa_nn_maxpool_f32(
-        FLOAT32* __restrict__ p_out,
-const   FLOAT32* __restrict__ p_inp,
-        WORD32  input_height,
-        WORD32  input_width,
-        WORD32  input_channels,
-        WORD32  kernel_height,
-        WORD32  kernel_width,
-        WORD32  x_stride,
-        WORD32  y_stride,
-        WORD32  x_padding,
-        WORD32  y_padding,
-        WORD32  out_height,
-        WORD32  out_width,
+      FLOAT32* __restrict__ p_out,
+const FLOAT32* __restrict__ p_inp,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  input_channels,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
 #ifdef NNLIB_V2
-        WORD32  inp_data_format,
+      WORD32  inp_data_format,
 #endif
-        WORD32  out_data_format,
-        VOID   *p_scratch)
+      WORD32  out_data_format,
+      VOID   *p_scratch)
 {
     WORD32 err = 0;
 
@@ -361,11 +361,12 @@ const   FLOAT32* __restrict__ p_inp,
         xa_nn_maxpool_state_t *p_state = (xa_nn_maxpool_state_t *)p_scratch;
         FLOAT32 *p_scratch_in = (FLOAT32 *)(p_state->p_scratch);
         int itr_ic;
-        FLOAT32 *pt_inp, *pt_out;
+        const FLOAT32 *pt_inp; 
+        FLOAT32 *pt_out;
 
         for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
         {
-            pt_inp = (FLOAT32 *)&p_inp[itr_ic * input_height * input_width];
+            pt_inp = &p_inp[itr_ic * input_height * input_width];
             pt_out = &p_out[itr_ic * out_height * out_width];
 
             maxpool_f32_hw(pt_out
