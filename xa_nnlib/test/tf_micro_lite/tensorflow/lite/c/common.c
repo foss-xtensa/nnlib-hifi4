@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -100,7 +100,8 @@ TfLiteFloatArray* TfLiteFloatArrayCreate(int size) {
 void TfLiteFloatArrayFree(TfLiteFloatArray* a) { free(a); }
 
 void TfLiteTensorDataFree(TfLiteTensor* t) {
-  if (t->allocation_type == kTfLiteDynamic) {
+  if (t->allocation_type == kTfLiteDynamic ||
+      t->allocation_type == kTfLitePersistentRo) {
     free(t->data.raw);
   }
   t->data.raw = NULL;
@@ -193,7 +194,8 @@ void TfLiteTensorReset(TfLiteType type, const char* name, TfLiteIntArray* dims,
 }
 
 void TfLiteTensorRealloc(size_t num_bytes, TfLiteTensor* tensor) {
-  if (tensor->allocation_type != kTfLiteDynamic) {
+  if (tensor->allocation_type != kTfLiteDynamic &&
+      tensor->allocation_type != kTfLitePersistentRo) {
     return;
   }
   // TODO(b/145340303): Tensor data should be aligned.
@@ -226,6 +228,8 @@ const char* TfLiteTypeGetName(TfLiteType type) {
       return "BOOL";
     case kTfLiteComplex64:
       return "COMPLEX64";
+    case kTfLiteComplex128:
+      return "COMPLEX128";
     case kTfLiteString:
       return "STRING";
     case kTfLiteFloat16:

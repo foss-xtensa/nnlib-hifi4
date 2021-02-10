@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -36,15 +36,16 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_MICRO_MICRO_ERROR_REPORTER_H_
 #define TENSORFLOW_LITE_MICRO_MICRO_ERROR_REPORTER_H_
 
+#include <cstdarg>
+
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/micro/compatibility.h"
-#include "tensorflow/lite/micro/debug_log.h"
 
 namespace tflite {
 
 class MicroErrorReporter : public ErrorReporter {
  public:
-  ~MicroErrorReporter() {}
+  ~MicroErrorReporter() override {}
   int Report(const char* format, va_list args) override;
 
  private:

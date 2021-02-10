@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -42,11 +42,19 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_UTIL_H_
 #define TENSORFLOW_LITE_UTIL_H_
 
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "tensorflow/lite/c/common.h"
 
 namespace tflite {
+
+// Memory allocation parameter used by ArenaPlanner.
+// Clients (such as delegates) might look at this to ensure interop between
+// TFLite memory & hardware buffers.
+// NOTE: This only holds for tensors allocated on the arena.
+constexpr int kDefaultTensorAlignment = 64;
 
 // The prefix of Flex op custom code.
 // This will be matched agains the `custom_code` field in `OperatorCode`
@@ -64,7 +72,7 @@ TfLiteIntArray* ConvertVectorToTfLiteIntArray(const std::vector<int>& input);
 
 // Converts an array (of the given size) to a `TfLiteIntArray`. The caller
 // takes ownership of the returned pointer, and must make sure 'dims' has at
-// least 'rank' elemnts.
+// least 'rank' elements.
 TfLiteIntArray* ConvertArrayToTfLiteIntArray(const int rank, const int* dims);
 
 // Checks whether a `TfLiteIntArray` and an int array have matching elements.
@@ -76,9 +84,16 @@ size_t CombineHashes(std::initializer_list<size_t> hashes);
 
 struct TfLiteIntArrayDeleter {
   void operator()(TfLiteIntArray* a) {
+#ifndef TF_LITE_STATIC_MEMORY
     if (a) TfLiteIntArrayFree(a);
+#endif
   }
 };
+
+// Helper for Building TfLiteIntArray that is wrapped in a unique_ptr,
+// So that it is automatically freed when it goes out of the scope.
+std::unique_ptr<TfLiteIntArray, TfLiteIntArrayDeleter> BuildTfLiteIntArray(
+    const std::vector<int>& data);
 
 // Populates the size in bytes of a type into `bytes`. Returns kTfLiteOk for
 // valid types, and kTfLiteError otherwise.
@@ -86,14 +101,16 @@ TfLiteStatus GetSizeOfType(TfLiteContext* context, const TfLiteType type,
                            size_t* bytes);
 
 // Creates a stub TfLiteRegistration instance with the provided
-// `custom_op_name`. The op will fail if invoked, and is useful as a placeholde
-// to defer op resolution.
+// `custom_op_name`. The op will fail if invoked, and is useful as a
+// placeholder to defer op resolution.
 // Note that `custom_op_name` must remain valid for the returned op's lifetime..
 TfLiteRegistration CreateUnresolvedCustomOp(const char* custom_op_name);
 
 // Checks whether the provided op is an unresolved custom op.
 bool IsUnresolvedCustomOp(const TfLiteRegistration& registration);
 
+// Returns a descriptive name with the given op TfLiteRegistration.
+std::string GetOpNameByRegistration(const TfLiteRegistration& registration);
 }  // namespace tflite
 
 #endif  // TENSORFLOW_LITE_UTIL_H_

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -85,7 +85,7 @@ WORD32 xa_nn_conv2d_std_getsize(
 
   WORD32 input_channels_pad;
 
-#ifdef HW_AE_ADDCIRC16X4_XC 
+#ifdef HW_AE_ADDCIRC16X4_XC
   if(input_precision == PREC_ASYM8S)
   {
     input_channels_pad = input_channels;
@@ -106,17 +106,17 @@ WORD32 xa_nn_conv2d_std_getsize(
   mem_req += ALIGNED_SIZE(cir_buf_size_bytes, ALIGNMENT);
   mem_req += BUS_WIDTH;
 
-#ifdef HW_AE_ADDCIRC16X4_XC 
-  if( 
+#ifdef HW_AE_ADDCIRC16X4_XC
+  if(
       (input_precision != PREC_ASYM8S) &&
       (input_precision != PREC_F32) &&
       (input_precision != PREC_16) &&
       (input_channels_pad != input_channels)
     )
 #else
-  if( 
+  if(
       (input_precision != PREC_F32) &&
-      (input_precision != PREC_16) && 
+      (input_precision != PREC_16) &&
       (input_channels_pad != input_channels)
     )
 #endif
@@ -126,6 +126,21 @@ WORD32 xa_nn_conv2d_std_getsize(
   }
 
   return mem_req;
+}
+
+WORD32 xa_nn_dilated_conv2d_std_getsize(
+    WORD32 input_height,
+    WORD32 input_channels,
+    WORD32 kernel_height,
+    WORD32 kernel_width,
+    WORD32 y_stride,
+    WORD32 y_padding,
+    WORD32 out_height,
+    WORD32 input_precision,
+    WORD32 dilation_height
+    )
+{
+	return -1;//presently supported for hifi5 dummy created to avoid compile error
 }
 
 VOID xa_nn_conv2d_std_init_state(
@@ -194,7 +209,7 @@ VOID xa_nn_conv2d_std_init_state(
 
   WORD32 input_channels_pad;
 
-#ifdef HW_AE_ADDCIRC16X4_XC 
+#ifdef HW_AE_ADDCIRC16X4_XC
   if(input_precision == PREC_ASYM8S)
   {
     input_channels_pad = input_channels;
@@ -221,15 +236,15 @@ VOID xa_nn_conv2d_std_init_state(
 
   p_state->p_kernel_padded = (void *)p_kernel;
 
-#ifdef HW_AE_ADDCIRC16X4_XC 
-  if( 
+#ifdef HW_AE_ADDCIRC16X4_XC
+  if(
       (input_precision != PREC_ASYM8S) &&
       (input_precision != PREC_F32) &&
       (input_precision != PREC_16) &&
       (input_channels_pad != input_channels)
     )
 #else
-  if( 
+  if(
       (input_precision != PREC_F32) &&
       (input_precision != PREC_16) &&
       (input_channels_pad != input_channels)

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,7 +40,7 @@ limitations under the License.
 // non-portable function.
 #ifdef TF_LITE_MCU_DEBUG_LOG
 
-#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "tensorflow/lite/micro/debug_log.h"
 
 #define DEBUG_LOG(x) \
   do {               \
@@ -57,13 +57,21 @@ inline void InfiniteLoop() {
 
 #else  // TF_LITE_MCU_DEBUG_LOG
 
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 
 #define DEBUG_LOG(x)            \
   do {                          \
     fprintf(stderr, "%s", (x)); \
+  } while (0)
+
+// Report Error for unsupported type by op 'op_name' and returns kTfLiteError.
+#define TF_LITE_UNSUPPORTED_TYPE(context, type, op_name)                    \
+  do {                                                                      \
+    TF_LITE_KERNEL_LOG((context), "%s:%d Type %s is unsupported by op %s.", \
+                       __FILE__, __LINE__, TfLiteTypeGetName(type),         \
+                       (op_name));                                          \
+    return kTfLiteError;                                                    \
   } while (0)
 
 #define TFLITE_ABORT abort()

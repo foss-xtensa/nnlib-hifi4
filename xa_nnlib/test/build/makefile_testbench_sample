@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -77,8 +77,8 @@ CFLAGS += \
     -D__ANDROID_API__=28 \
     -DHIFI_BUILD \
     -fpermissive \
-    -DGEMMLOWP_USE_MEMALIGN \
-    -DXTENSA_NNLIB_MAX_SCRATCH_SIZE=716800 \
+		-DTF_LITE_STATIC_MEMORY \
+		-DTF_LITE_DISABLE_X86_NEON
 
 
 CPPFLAGS += \
@@ -119,7 +119,10 @@ TFULITE_SRCDIRS = \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/examples/micro_speech \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/examples/micro_speech/micro_features \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/xtensa_hifi \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/kernels/xtensa_hifi \
+		$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/benchmarks \
+		$(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/testing \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/micro/memory_planner \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite \
 
@@ -133,9 +136,10 @@ TFULITE_SRCDIRS += \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/core/api \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/c \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/kernels \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/schema \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/kernels/internal \
     $(ROOTDIR)/$(TFDIR)/tensorflow/compiler/mlir/lite \
-    $(ROOTDIR)/$(TFDIR)/tensorflow/lite/core/api \
+    $(ROOTDIR)/$(TFDIR)/tensorflow/compiler/mlir/tfr/ir \
     $(ROOTDIR)/$(TFDIR)/tensorflow/lite/core/api \
 
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -63,7 +63,6 @@ extern "C" {
 
 #ifdef FIXED_POINT
 #include <stdint.h> /* Patched. */
-#include <sys/types.h>	
 # if (FIXED_POINT == 32)
 #  define kiss_fft_scalar int32_t
 # else	

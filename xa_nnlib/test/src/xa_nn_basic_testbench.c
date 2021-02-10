@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -39,9 +39,14 @@
 
 #define XA_MAX_CMD_LINE_LENGTH 1024
 #define XA_MAX_ARGS 100
+#define SHAPE_ARGS_LENGTH 80
+#define MAX_DIMS 8
 #define PARAMFILE "paramfilesimple_basic.txt"
 
 #define VALIDATE_PTR(ptr) if(NULL == ptr) { printf("%s: allocation failed\n", #ptr); return -1;}
+
+#define PRINT_VAR(var)  // printf("%d: %s = %d\n", __LINE__, #var, (int) var); fflush(stdout); fflush(stderr);
+#define PRINT_PTR(ptr)  // printf("%d: %s = %p\n", __LINE__, #ptr, (void *) ptr); fflush(stdout); fflush(stderr);
 
 char pb_input_file_path[XA_MAX_CMD_LINE_LENGTH] = "";
 char pb_output_file_path[XA_MAX_CMD_LINE_LENGTH] = "";
@@ -66,14 +71,23 @@ typedef struct _test_config_t
 #endif
   int  io_length;
   int  vec_count;
+  int  num_inp_dims;
+  int  num_axis_dims;
+  int  num_out_dims;
   int  frames;
   int  inp_precision;
   int  out_precision;
   int  write_file;
+  int  input_shape[MAX_DIMS];  
+  int  output_shape[MAX_DIMS];  
+  int  axis_data[MAX_DIMS];  
   char kernel_name[MAX_KERNEL_NAME_LENGTH];
   char read_inp1_file_name[XA_MAX_CMD_LINE_LENGTH];
   char read_inp2_file_name[XA_MAX_CMD_LINE_LENGTH];
   char read_ref_file_name[XA_MAX_CMD_LINE_LENGTH];
+  char read_inp_shape_str[SHAPE_ARGS_LENGTH];
+  char read_out_shape_str[SHAPE_ARGS_LENGTH];
+  char read_axis_data_str[SHAPE_ARGS_LENGTH];
   char write_inp1_file_name[XA_MAX_CMD_LINE_LENGTH];
   char write_inp2_file_name[XA_MAX_CMD_LINE_LENGTH];
   char write_out_file_name[XA_MAX_CMD_LINE_LENGTH];
@@ -99,6 +113,9 @@ int default_config(test_config_t *p_cfg)
     p_cfg->left_shift = 0;
     p_cfg->io_length  = 1024;
     p_cfg->vec_count  = 1;
+    p_cfg->num_inp_dims  = 4;
+    p_cfg->num_axis_dims  = 1;
+    p_cfg->num_out_dims  = 4;
     p_cfg->frames   = 2;  
     p_cfg->inp_precision = -1;
     p_cfg->out_precision = -1;
@@ -107,10 +124,21 @@ int default_config(test_config_t *p_cfg)
     p_cfg->read_inp1_file_name[0] = '\0';
     p_cfg->read_inp2_file_name[0] = '\0';
     p_cfg->read_ref_file_name[0] = '\0';
+    p_cfg->read_inp_shape_str[0] = '\0';
+    p_cfg->read_out_shape_str[0] = '\0';
+    p_cfg->read_axis_data_str[0] = '\0';
     p_cfg->write_inp1_file_name[0]='\0';
     p_cfg->write_inp2_file_name[0]='\0';
     p_cfg->write_out_file_name[0] = '\0';
     p_cfg->verify = 1;
+
+    int itr;
+    for(itr = 0; itr < MAX_DIMS; itr++)
+    {
+      p_cfg->input_shape[itr] = 1;
+      p_cfg->output_shape[itr] = 1;
+      p_cfg->axis_data[itr] = 1;
+    }
 
     return 0;
   }
@@ -148,6 +176,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-input2_multiplier", p_cfg->input2_multiplier);                
     ARGTYPE_ONETIME_CONFIG("-left_shift", p_cfg->left_shift);                           
     ARGTYPE_ONETIME_CONFIG("-io_length", p_cfg->io_length);                           
+    ARGTYPE_ONETIME_CONFIG("-num_inp_dims", p_cfg->num_inp_dims);                           
+    ARGTYPE_ONETIME_CONFIG("-num_axis_dims", p_cfg->num_axis_dims);                           
+    ARGTYPE_ONETIME_CONFIG("-num_out_dims", p_cfg->num_out_dims);                           
     ARGTYPE_ONETIME_CONFIG("-inp_precision", p_cfg->inp_precision);                        
     ARGTYPE_ONETIME_CONFIG("-out_precision", p_cfg->out_precision);                        
     ARGTYPE_ONETIME_CONFIG("-vec_count", p_cfg->vec_count);                           
@@ -157,6 +188,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_STRING("-read_inp1_file_name", p_cfg->read_inp1_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-read_inp2_file_name", p_cfg->read_inp2_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-read_ref_file_name", p_cfg->read_ref_file_name, XA_MAX_CMD_LINE_LENGTH);
+    ARGTYPE_STRING_TO_ARRAY("-read_inp_shape_str", p_cfg->read_inp_shape_str, SHAPE_ARGS_LENGTH, p_cfg->input_shape);
+    ARGTYPE_STRING_TO_ARRAY("-read_out_shape_str", p_cfg->read_out_shape_str, SHAPE_ARGS_LENGTH, p_cfg->output_shape);
+    ARGTYPE_STRING_TO_ARRAY("-read_axis_data_str", p_cfg->read_axis_data_str, SHAPE_ARGS_LENGTH, p_cfg->axis_data);
     ARGTYPE_STRING("-write_inp1_file_name", p_cfg->write_inp1_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_inp2_file_name", p_cfg->write_inp2_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_out_file_name", p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
@@ -172,11 +206,14 @@ void show_usage(void)
 {
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-io_length: input/output vector length; Default=1024\n");
+    printf("\t-num_inp_dims: number of input dimensions; Default=4\n");
+    printf("\t-num_axis_dims: number of axis dimensions; Default=4\n");
+    printf("\t-num_out_dims: number of output dimensions; Default=4\n");
     printf("\t-inp_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float); Default=-1\n");
     printf("\t-out_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float); Default=-1\n");
     printf("\t-vec_count: number of input vectors; Default=1\n");
     printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, dot_prod; Default=""elem_add""\n");
+    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, elm_min, elm_max, dot_prod, elm_equal, elm_notequal, elm_greater, elm_greaterequal, elm_less, elm_lessequal; Default=""elm_add""\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp1_file_name: Full filename for reading inputs (order - inp) \n");
     printf("\t-read_inp2_file_name: Full filename for reading inputs (order - inp) \n");
@@ -185,6 +222,9 @@ void show_usage(void)
     printf("\t-write_inp2_file_name: Full filename for writing inputs (order - inp) \n");
     printf("\t-write_out_file_name: Full filename for writing output \n");
     printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+    printf("\t-read_inp_shape_str: Takes the input  shape dimensions(space ' ' separated) as a string \n");
+    printf("\t-read_out_shape_str: Takes the output shape dimensions(space ' ' separated) as a string \n");
+    printf("\t-read_axis_data_str: Takes the axis data(space ' ' separated) as a string \n");
     printf("\t =====================================\n ");
     printf("\t ===== ASYM8 specific parameters =====\n ");
     printf("\t =====================================\n ");
@@ -201,6 +241,25 @@ void show_usage(void)
     printf ("\t-input2_multiplier: input2_multiplier(Only needed in add_asym8); Default=0x7fff\n");   
     printf ("\t-left_shift: global left_shift(Only needed in add_asym8); Default=0\n");
 }
+
+#define REDUCE_MAX_ASYM8S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym8s_asym8s\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD32 *) p_out_shape,\
+                    (WORD8 *) p_inp1->p,\
+                    (WORD32 *) p_inp_shape,\
+                    (WORD32 *) p_axis,\
+                    cfg.num_out_dims,\
+                    cfg.num_inp_dims,\
+                    cfg.num_axis_dims,\
+                    p_scratch\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
 
 #define DOT_PROD_OUT_ASYM8S(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
@@ -393,6 +452,159 @@ void show_usage(void)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define MIN_8(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_8x8_8\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp1->p,\
+                    (WORD8 *) p_inp2->p,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define MAX_8(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_8x8_8\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp1->p,\
+                    (WORD8 *) p_inp2->p,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define EQUAL_ASYM8S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym8sxasym8s\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp1->p,\
+                    cfg.input1_zero_bias,\
+                    cfg.input1_left_shift,\
+                    cfg.input1_multiplier,\
+                    (WORD8 *) p_inp2->p,\
+                    cfg.input2_zero_bias,\
+                    cfg.input2_left_shift,\
+                    cfg.input2_multiplier,\
+                    cfg.left_shift,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define NOTEQUAL_ASYM8S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym8sxasym8s\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp1->p,\
+                    cfg.input1_zero_bias,\
+                    cfg.input1_left_shift,\
+                    cfg.input1_multiplier,\
+                    (WORD8 *) p_inp2->p,\
+                    cfg.input2_zero_bias,\
+                    cfg.input2_left_shift,\
+                    cfg.input2_multiplier,\
+                    cfg.left_shift,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define GREATER_ASYM8S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym8sxasym8s\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp1->p,\
+                    cfg.input1_zero_bias,\
+                    cfg.input1_left_shift,\
+                    cfg.input1_multiplier,\
+                    (WORD8 *) p_inp2->p,\
+                    cfg.input2_zero_bias,\
+                    cfg.input2_left_shift,\
+                    cfg.input2_multiplier,\
+                    cfg.left_shift,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define GREATEREQUAL_ASYM8S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym8sxasym8s\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp1->p,\
+                    cfg.input1_zero_bias,\
+                    cfg.input1_left_shift,\
+                    cfg.input1_multiplier,\
+                    (WORD8 *) p_inp2->p,\
+                    cfg.input2_zero_bias,\
+                    cfg.input2_left_shift,\
+                    cfg.input2_multiplier,\
+                    cfg.left_shift,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define LESS_ASYM8S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym8sxasym8s\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp1->p,\
+                    cfg.input1_zero_bias,\
+                    cfg.input1_left_shift,\
+                    cfg.input1_multiplier,\
+                    (WORD8 *) p_inp2->p,\
+                    cfg.input2_zero_bias,\
+                    cfg.input2_left_shift,\
+                    cfg.input2_multiplier,\
+                    cfg.left_shift,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define LESSEQUAL_ASYM8S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym8sxasym8s\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp1->p,\
+                    cfg.input1_zero_bias,\
+                    cfg.input1_left_shift,\
+                    cfg.input1_multiplier,\
+                    (WORD8 *) p_inp2->p,\
+                    cfg.input2_zero_bias,\
+                    cfg.input2_left_shift,\
+                    cfg.input2_multiplier,\
+                    cfg.left_shift,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
 
 #if HIFI_VFPU
 #define PROCESS_BASIC_FUNC \
@@ -409,7 +621,16 @@ void show_usage(void)
     else ADD_ASYM8S(elm_add, -4, -4) \
     else SUB_ASYM8(elm_sub, -3, -3) \
     else SUB_ASYM8S(elm_sub, -4, -4) \
+    else MIN_8(elm_min, -4, -4)\
+    else MAX_8(elm_max, -4, -4)\
     else DOT_PROD_OUT_ASYM8S(dot_prod, 16, -4) \
+    else EQUAL_ASYM8S(elm_equal, -4, -4) \
+    else NOTEQUAL_ASYM8S(elm_notequal, -4, -4) \
+    else GREATER_ASYM8S(elm_greater, -4, -4) \
+    else GREATEREQUAL_ASYM8S(elm_greaterequal, -4, -4) \
+    else LESS_ASYM8S(elm_less, -4, -4) \
+    else LESSEQUAL_ASYM8S(elm_lessequal, -4, -4) \
+    else REDUCE_MAX_ASYM8S(reduce_max_4D, -4, -4) \
     else {  printf("unsupported basic operation\n"); return -1;}
 #else
 #define PROCESS_BASIC_FUNC \
@@ -419,7 +640,16 @@ void show_usage(void)
     else ADD_ASYM8S(elm_add, -4, -4) \
     else SUB_ASYM8(elm_sub, -3, -3) \
     else SUB_ASYM8S(elm_sub, -4, -4) \
+    else MIN_8(elm_min, -4, -4)\
+    else MAX_8(elm_max, -4, -4)\
     else DOT_PROD_OUT_ASYM8S(dot_prod, 16, -4) \
+    else EQUAL_ASYM8S(elm_equal, -4, -4) \
+    else NOTEQUAL_ASYM8S(elm_notequal, -4, -4) \
+    else GREATER_ASYM8S(elm_greater, -4, -4) \
+    else GREATEREQUAL_ASYM8S(elm_greaterequal, -4, -4) \
+    else LESS_ASYM8S(elm_less, -4, -4) \
+    else LESSEQUAL_ASYM8S(elm_lessequal, -4, -4) \
+    else REDUCE_MAX_ASYM8S(reduce_max_4D, -4, -4) \
     else {  printf("unsupported basic operation\n"); return -1;}
 #endif
 
@@ -444,6 +674,10 @@ int xa_nn_main_process(int argc, char *argv[])
   FILE *fptr_out;
   FILE *fptr_ref;
 
+  // Axis and shape pointers for reduce max kernel
+  WORD32 *p_inp_shape, *p_out_shape, *p_axis;
+  pVOID p_scratch;
+
   if(default_config(&cfg))
   {
     return -1;
@@ -460,6 +694,18 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
+  /*Calculating input and output lengths from respective shapes for Reduce ops*/
+  int inp_length = 1, out_length = 1;
+  int itr;
+  for(itr = 0; itr < cfg.num_inp_dims; itr++)
+  {
+    inp_length *= cfg.input_shape[itr]; 
+
+  }
+  for(itr = 0; itr < cfg.num_out_dims; itr++)
+  {
+    out_length *= cfg.output_shape[itr]; 
+  }
 
   // Set profiler name 
   if(cfg.inp_precision == -1)
@@ -492,7 +738,14 @@ int xa_nn_main_process(int argc, char *argv[])
   }
 
   // Set profiler parameters
-  sprintf(profiler_params, "N=%d\n", cfg.io_length);
+  if(!strcmp(cfg.kernel_name,"reduce_max_4D"))
+  {
+    sprintf(profiler_params, "input_shape= %s output_shape= %s axis_data= %s\n", cfg.read_inp_shape_str, cfg.read_out_shape_str, cfg.read_axis_data_str);
+  }
+  else
+  {
+    sprintf(profiler_params, "N=%d\n", cfg.io_length);
+  }
 
   // Open input file
   if(cfg.write_file)
@@ -522,6 +775,10 @@ int xa_nn_main_process(int argc, char *argv[])
     {
       ptr_ref =  create_buf1D(cfg.vec_count, cfg.out_precision); 
     }
+    else if(strcmp(cfg.kernel_name, "reduce_max_4D") == 0)
+    {
+      ptr_ref =  create_buf1D(out_length, cfg.out_precision); 
+    }
     else
     {
       ptr_ref =  create_buf1D(cfg.io_length * cfg.vec_count, cfg.out_precision); 
@@ -531,19 +788,50 @@ int xa_nn_main_process(int argc, char *argv[])
   }
 
   // Allocate Memory
-  p_inp1 = create_buf1D(cfg.io_length * cfg.vec_count, cfg.inp_precision); VALIDATE_PTR(p_inp1);
-  p_inp2 = create_buf1D(cfg.io_length * cfg.vec_count, cfg.inp_precision); VALIDATE_PTR(p_inp2);
+  if(strcmp(cfg.kernel_name, "reduce_max_4D") == 0)
+  {
+    p_inp1 =  create_buf1D(inp_length, cfg.inp_precision);
+    p_inp2 =  create_buf1D(inp_length, cfg.inp_precision);
+    p_inp_shape = cfg.input_shape;
+    p_axis = cfg.axis_data;
+    p_out_shape = cfg.output_shape;
+
+    // Get required scratch size and allocate.
+    WORD32 scratch_size=0;
+
+    scratch_size = xa_nn_reduce_max_getsize_nhwc(cfg.inp_precision, p_inp_shape);PRINT_VAR(scratch_size);
+    p_scratch = (xa_nnlib_handle_t)malloc(scratch_size); PRINT_PTR(p_scratch);
+
+    fprintf(stdout, "\nScratch size: %d bytes\n", scratch_size);
+  }
+  else
+  {
+    p_inp1 = create_buf1D(cfg.io_length * cfg.vec_count, cfg.inp_precision); VALIDATE_PTR(p_inp1);
+    p_inp2 = create_buf1D(cfg.io_length * cfg.vec_count, cfg.inp_precision); VALIDATE_PTR(p_inp2);
+  }
   if(strcmp(cfg.kernel_name, "dot_prod") == 0)
   {
     p_out = create_buf1D(cfg.vec_count, cfg.out_precision); VALIDATE_PTR(p_out);
+  }
+  else if(strcmp(cfg.kernel_name, "reduce_max_4D") == 0)
+  {
+    p_out =  create_buf1D(out_length, cfg.out_precision); VALIDATE_PTR(p_out);
+
   }
   else
   {
     p_out = create_buf1D(cfg.io_length * cfg.vec_count, cfg.out_precision); VALIDATE_PTR(p_out);
   }
 
-  XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, cfg.io_length * cfg.vec_count, "cyc/point", 0);
-
+  if(strcmp(cfg.kernel_name, "reduce_max_4D") == 0)
+  {
+    //#TODO: Figure out proper params for measuring performance
+    XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, inp_length*cfg.num_axis_dims, "cyc/point", 0);
+  }
+  else
+  {
+    XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, cfg.io_length * cfg.vec_count, "cyc/point", 0);
+  }
   // Frame processing loop
   for(frame = 0; frame < cfg.frames; frame++)
   {

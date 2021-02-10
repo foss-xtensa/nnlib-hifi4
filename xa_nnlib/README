@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -27,6 +27,33 @@ Cadence HiFi4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
+Version 2.4.0 API 1.0: Feb 10, 2021
+
++ Intermediate Release of HiFi 4 NN Library
++ Tested using RI.5 tools, xt-xcc/xt-xc++ and xt-clang/xt-clang++ compiler
++ Added support for asymmetric quantized 8 bit (int8) variants of 
+  following TFLM operators
+    Quantize
+    SVDF
++ Updated TFLM example testbench to newer version of TFLM framework
++ Improved optimization for reminder loop in xa_nn_vec_softmax_asym8s_16 
++ Reduced memory banking conflicts in FC kernel xa_nn_fully_connected_sym8sxasym8s_asym8s
+
+Limitations
+> The ANN test bench, TFLite Micro example application and the supporting libraries
+  need support for C++11 standard. This is supported only with Xtensa C library. 
+> For configurations without VFPU, the floating point  variants of the kernels 
+  are not supported and should not be used. 
+
+Known issues
+> Compiler optimizations are disabled for C++ source files 
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+ 
+----------------------------------------------------------------------
 Version 2.3.0 API 1.0: Dec 22, 2020
 
 + Intermediate Release of HiFi 4 NN Library
