@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -46,7 +46,7 @@ namespace tflite {
 // This is the base class for TF Lite internal backend contexts (like a
 // RUY-based cpu backend context class). A derived internal backend context is
 // generally a collection of utilities (i.e. a thread pool etc.) for TF Lite to
-// use certain keneral libraries, such as Gemmlowp, RUY, etc., to implement TF
+// use certain kernel libraries, such as Gemmlowp, RUY, etc., to implement TF
 // Lite operators.
 class TfLiteInternalBackendContext {
  public:
@@ -55,6 +55,10 @@ class TfLiteInternalBackendContext {
   // Set the maximum number of threads that could be used for parallelizing
   // TfLite computation.
   virtual void SetMaxNumThreads(int max_num_threads) = 0;
+
+  // A context may internally cache prepacked versions of constant tensors for
+  // faster computation. This function will clear any caches on the context.
+  virtual void ClearCaches() = 0;
 };
 
 // This TfLiteExternalContext-derived class is the default
@@ -87,8 +91,14 @@ class TfLiteInternalBackendContext {
 // the #thread info in the global cpu backend context (i.e. 'global_ctxt' above)
 // that affects how much parallelism an interpreter invocation will use.
 // Therefore, if different number of threads are used among different
-// interpreters, don't call 'SetNumThreads' consectutively but call it
+// interpreters, don't call 'SetNumThreads' consecutively but call it
 // separately between each interpreter's invocation as illustrated above.
+//
+// Note: it is the responsibility of the user of this context (i.e. a
+// TFLiteInterpreter) to clear any state from the internal backend
+// context if/when the interpreter no longer needs the shared context.
+// See, e.g., TFLiteInterpreter destructor clears caches in the case of a
+// shared ExternalCpuBackendContext.
 class ExternalCpuBackendContext : public TfLiteExternalContext {
  public:
   ExternalCpuBackendContext();

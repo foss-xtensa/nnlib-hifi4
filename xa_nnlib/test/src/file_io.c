@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -29,6 +29,7 @@
     case ASYM8_TYPE: size = sizeof(char);       break;    \
     case ASYM8S_TYPE: size = sizeof(char);       break;    \
     case SYM8S_TYPE: size = sizeof(char);       break;    \
+	case 1: size = sizeof(char);        break;     \
     case 8: size = sizeof(char);        break;     \
     case 16: size = sizeof(short int);   break;    \
     case 32: size = sizeof(int);         break;    \
@@ -329,17 +330,20 @@ int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, buf1D
   {
     /* Set random input data */
     set_rand_inp_buf1D(p_inp1);
-    set_rand_inp_buf1D(p_inp2);
+	if(p_inp2)
+      set_rand_inp_buf1D(p_inp2);
 
     /* Write input data into file */
     write_buf1D_to_file(fptr_inp1, p_inp1);
-    write_buf1D_to_file(fptr_inp2, p_inp2);
+	if(p_inp2 && fptr_inp2)
+      write_buf1D_to_file(fptr_inp2, p_inp2);
   }
   else
   {
     /* Read input data from file */
     read_buf1D_from_file(fptr_inp1, p_inp1);
-    read_buf1D_from_file(fptr_inp2, p_inp2);
+	if(p_inp2 && fptr_inp2)
+      read_buf1D_from_file(fptr_inp2, p_inp2);
   }
   return 0;
 }

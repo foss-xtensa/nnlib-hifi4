@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -126,8 +126,8 @@ int8_t FloatToSymmetricQuantizedInt8(const float value, const float scale) {
 
 int32_t FloatToSymmetricQuantizedInt32(const float value, const float scale) {
   float quantized = round(value / scale);
-  if (quantized > INT_MAX) {
-    quantized = INT_MAX;
+  if (quantized > (float)INT_MAX) {
+    quantized = (float)INT_MAX;
   } else if (quantized < INT_MIN) {
     quantized = INT_MIN;
   }
@@ -270,13 +270,13 @@ void SignedSymmetricQuantize(const float* values, TfLiteIntArray* dims,
     max = fmaxf(max, values[i]);
   }
 
-  *scaling_factor = fmaxf(fabs(min), fabs(max)) / kSymmetricInt32Scale;
+  *scaling_factor = fmaxf(fabs(min), fabs(max)) / (float)kSymmetricInt32Scale;
   for (int i = 0; i < input_size; i++) {
     const int32_t quantized_value =
         static_cast<int32_t>(roundf(values[i] / *scaling_factor));
     // Clamp: just in case some odd numeric offset.
-    quantized_values[i] = fminf(kSymmetricInt32Scale,
-                                fmaxf(-kSymmetricInt32Scale, quantized_value));
+    quantized_values[i] = fminf((float)kSymmetricInt32Scale,
+                                fmaxf((float)(-kSymmetricInt32Scale), quantized_value));
   }
 }
 

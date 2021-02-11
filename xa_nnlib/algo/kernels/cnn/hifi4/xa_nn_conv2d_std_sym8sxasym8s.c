@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -52,7 +52,7 @@ static WORD32 conv_x_left_pad(
 
   ae_int32x2 max_int8 = AE_MOVDA32(127);
   ae_int32x2 min_int8 = AE_MOVDA32(-128);
-  
+
   /* When kernel convolves over x-left pad region only, output is just bias */
   for(i = 0; i < out_height; i++)
   {
@@ -65,7 +65,7 @@ static WORD32 conv_x_left_pad(
         ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
         MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc, p_out_multiplier[k], left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
-#if 0        
+#if 0
         AE_MINMAX32(acc, min_int8, max_int8);
 #else
         acc = AE_MAX32(acc, min_int8);
@@ -101,7 +101,7 @@ static WORD32 conv_x_right_pad(
 
   ae_int32x2 max_int8 = AE_MOVDA32(127);
   ae_int32x2 min_int8 = AE_MOVDA32(-128);
-  
+
   /* When kernel convolves over x-right pad region only, output is just bias */
   for(i = 0; i < out_height; i++)
   {
@@ -127,6 +127,35 @@ static WORD32 conv_x_right_pad(
   return out_width_over_x_r_pad;
 }
 #endif
+
+WORD32 xa_nn_dilated_conv2d_std_per_chan_sym8sxasym8s(
+    WORD8* __restrict__ p_out,
+    const WORD8* __restrict__ p_inp,
+    const WORD8* __restrict__ p_kernel,
+    const WORD32* __restrict__ p_bias,
+    WORD32 input_height,
+    WORD32 input_width,
+    WORD32 input_channels,
+    WORD32 kernel_height,
+    WORD32 kernel_width,
+    WORD32 out_channels,
+    WORD32 x_stride,
+    WORD32 y_stride,
+    WORD32 x_padding,
+    WORD32 y_padding,
+    WORD32 out_height,
+    WORD32 out_width,
+    WORD32 input_zero_bias,
+    WORD32 * p_out_multiplier,
+    WORD32 * p_out_shift,
+    WORD32 out_zero_bias,
+    WORD32 out_data_format,
+    VOID *p_scratch,
+    WORD32 dilation_height,
+    WORD32 dilation_width)
+{
+	return -1;//presently supported for hifi5 dummy call to avoid compilation error
+}
 
 WORD32 xa_nn_conv2d_std_per_chan_sym8sxasym8s(
     WORD8* __restrict__ p_out,
@@ -177,7 +206,7 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxasym8s(
   XA_NNLIB_ARG_CHK_COND((input_zero_bias < -127 || input_zero_bias > 128), -1);
   XA_NNLIB_ARG_CHK_COND((out_zero_bias < -128 || out_zero_bias > 127), -1);
   XA_NNLIB_ARG_CHK_COND((out_data_format != 0 && out_data_format != 1), -1);
-  
+
   int itr;
   for(itr=0;itr<out_channels;itr++){
     XA_NNLIB_ARG_CHK_COND((p_out_shift[itr] < -31 || p_out_shift[itr] > 31), -1);

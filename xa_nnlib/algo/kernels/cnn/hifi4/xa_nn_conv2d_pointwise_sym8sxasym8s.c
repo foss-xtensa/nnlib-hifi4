@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -141,10 +141,13 @@ WORD32 xa_nn_conv2d_pointwise_per_chan_sym8sxasym8s(
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
-  XA_NNLIB_ARG_CHK_COND((input_zero_bias < -255 || input_zero_bias > 0), -1);
-  XA_NNLIB_ARG_CHK_COND((out_zero_bias > 255 || out_zero_bias < 0), -1);
+  //XA_NNLIB_ARG_CHK_COND((input_zero_bias < -255 || input_zero_bias > 0), -1);
+  //XA_NNLIB_ARG_CHK_COND((out_zero_bias > 255 || out_zero_bias < 0), -1);
+  XA_NNLIB_ARG_CHK_COND((input_zero_bias < -127 || input_zero_bias > 128), -1);
+  XA_NNLIB_ARG_CHK_COND((out_zero_bias < -128 || out_zero_bias > 127), -1);
   XA_NNLIB_ARG_CHK_COND((out_channels <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((out_data_format != 0 && out_data_format != 1), -1);
+
 
   int i = 0;
   for(i=0; i<out_channels; i++)

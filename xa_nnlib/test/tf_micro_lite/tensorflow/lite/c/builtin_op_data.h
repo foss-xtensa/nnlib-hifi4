@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -88,8 +88,9 @@ typedef struct {
 typedef enum {
   kTfLiteActNone = 0,
   kTfLiteActRelu,
-  kTfLiteActRelu1,  // min(max(-1, x), 1)
-  kTfLiteActRelu6,  // min(max(0, x), 6)
+  kTfLiteActReluN1To1,                    // min(max(-1, x), 1)
+  kTfLiteActRelu1 = kTfLiteActReluN1To1,  // kTfLiteActRelu1 will be deprecated.
+  kTfLiteActRelu6,                        // min(max(0, x), 6)
   kTfLiteActTanh,
   kTfLiteActSignBit,
   kTfLiteActSigmoid,
@@ -219,6 +220,8 @@ typedef struct {
 
 typedef struct {
   TfLiteFusedActivation activation;
+  // Parameter added for the version 4.
+  bool pot_scale_int16;
 } TfLiteAddParams;
 
 typedef struct {
@@ -230,11 +233,18 @@ typedef struct {
 } TfLiteBatchToSpaceNDParams;
 
 typedef struct {
+  bool adj_x;
+  bool adj_y;
+} TfLiteBatchMatMulParams;
+
+typedef struct {
   TfLiteFusedActivation activation;
 } TfLiteMulParams;
 
 typedef struct {
   TfLiteFusedActivation activation;
+  // Parameter added for the version 5.
+  bool pot_scale_int16;
 } TfLiteSubParams;
 
 typedef struct {
@@ -313,6 +323,7 @@ typedef struct {
 
 typedef struct {
   bool align_corners;
+  bool half_pixel_centers;
 } TfLiteResizeNearestNeighborParams;
 
 typedef struct {
@@ -474,6 +485,15 @@ typedef struct {
   int cond_subgraph_index;
   int body_subgraph_index;
 } TfLiteWhileParams;
+
+typedef struct {
+  bool exclusive;
+  bool reverse;
+} TfLiteCumsumParams;
+
+typedef struct {
+  int init_subgraph_index;
+} TfLiteCallOnceParams;
 
 #ifdef __cplusplus
 }  // extern "C"

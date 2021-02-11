@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -45,7 +45,8 @@ extern "C" {
 #endif  // __cplusplus
 
 // The enum for builtin operators.
-// Note: CUSTOM and DELEGATE are 2 special ops which are not real built-in ops.
+// Note: CUSTOM, DELEGATE, and PLACEHOLDER_FOR_GREATER_OP_CODES are 3 special
+// ops which are not real built-in ops.
 typedef enum {
   kTfLiteBuiltinAdd = 0,
   kTfLiteBuiltinAveragePool2d = 1,
@@ -174,6 +175,10 @@ typedef enum {
   kTfLiteBuiltinDensify = 124,
   kTfLiteBuiltinSegmentSum = 125,
   kTfLiteBuiltinBatchMatmul = 126,
+  kTfLiteBuiltinPlaceholderForGreaterOpCodes = 127,
+  kTfLiteBuiltinCumsum = 128,
+  kTfLiteBuiltinCallOnce = 129,
+  kTfLiteBuiltinBroadcastTo = 130,
 } TfLiteBuiltinOperator;
 
 #ifdef __cplusplus

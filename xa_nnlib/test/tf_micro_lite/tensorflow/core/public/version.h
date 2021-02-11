@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -42,7 +42,7 @@ limitations under the License.
 // Also update tensorflow/tensorflow.bzl and
 // tensorflow/tools/pip_package/setup.py
 #define TF_MAJOR_VERSION 2
-#define TF_MINOR_VERSION 1
+#define TF_MINOR_VERSION 5
 #define TF_PATCH_VERSION 0
 
 // TF_VERSION_SUFFIX is non-empty for pre-releases (e.g. "-alpha", "-alpha.1",
@@ -129,7 +129,7 @@ limitations under the License.
 
 #define TF_GRAPH_DEF_VERSION_MIN_PRODUCER 0
 #define TF_GRAPH_DEF_VERSION_MIN_CONSUMER 0
-#define TF_GRAPH_DEF_VERSION 175  // Updated: 2019/10/1
+#define TF_GRAPH_DEF_VERSION 580  // Updated: 2020/11/9
 
 // Checkpoint compatibility versions (the versions field in SavedSliceMeta).
 //

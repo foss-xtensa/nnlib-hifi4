@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -48,7 +48,7 @@ void FftCompute(struct FftState* state, const int16_t* input,
 
   int16_t* fft_input = state->input;
   // First, scale the input by the given shift.
-  int i;
+  size_t i;
   for (i = 0; i < input_size; ++i) {
     fft_input[i] = static_cast<int16_t>(static_cast<uint16_t>(input[i])
                                         << input_scale_shift);
@@ -59,10 +59,9 @@ void FftCompute(struct FftState* state, const int16_t* input,
   }
 
   // Apply the FFT.
-  kiss_fftr(
-      reinterpret_cast<const kiss_fftr_cfg>(state->scratch),
-      state->input,
-      reinterpret_cast<kiss_fft_cpx*>(state->output));
+  kiss_fftr(reinterpret_cast<kiss_fftr_cfg>(state->scratch),
+            state->input,
+            reinterpret_cast<kiss_fft_cpx*>(state->output));
 }
 
 void FftInit(struct FftState* state) {

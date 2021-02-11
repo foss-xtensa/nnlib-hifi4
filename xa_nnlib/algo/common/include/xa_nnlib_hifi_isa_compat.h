@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -169,6 +169,33 @@ static inline ae_int16x4 AE_L8X4F_I(const WORD8 *p, int inc)
 #ifndef AE_SEL16_7531
 #define AE_SEL16_7531(d0, d1) \
   AE_TRUNC16X4F32(AE_MOVINT32X2_FROMINT16X4(d0), AE_MOVINT32X2_FROMINT16X4(d1))
+#endif
+
+/* FOR HIFI5-RI6 NN LIB CROSS-COMPILATION ON HIFI5-RI5 */
+#ifndef AE_S8X4U_XP
+#define STORE_16x4x2_8x4x2(outbuf_0, outbuf_1, pOut, out_offset) \
+{ \
+  ae_int8x8 out32; \
+  out32 = AE_SEL8X8(AE_MOVINT8X8_FROMINT16X4(outbuf_0), AE_MOVINT8X8_FROMINT16X4(outbuf_1), AE_MOVINT8X8_FROMINT32X2(AE_MOVDA32X2(0x080a0c0e, 0x00020406))); \
+  AE_S32_H_XP(AE_MOVINT32X2_FROMINT8X8(out32), (ae_int32 *)pOut, out_offset); \
+  AE_S32_L_XP(AE_MOVINT32X2_FROMINT8X8(out32), (ae_int32 *)pOut, out_offset); \
+}
+#define STORE_16x4_8x4(outbuf, pOut, out_offset) \
+{ \
+  ae_int8x8 out32; \
+  out32 = AE_SEL8X8(AE_MOVINT8X8_FROMINT16X4(outbuf), AE_MOVINT8X8_FROMINT16X4(outbuf), AE_MOVINT8X8_FROMINT32X2(AE_MOVDA32X2(0x080a0c0e, 0x00020406))); \
+  AE_S32_H_XP(AE_MOVINT32X2_FROMINT8X8(out32), (ae_int32 *)pOut, out_offset); \
+}
+#else
+#define STORE_16x4x2_8x4x2(outbuf_0, outbuf_1, pOut, out_offset) \
+{ \
+  AE_S8X4U_XP(outbuf_0, (ae_int32 *)pOut, out_offset); \
+  AE_S8X4U_XP(outbuf_1, (ae_int32 *)pOut, out_offset); \
+}
+#define STORE_16x4_8x4(outbuf, pOut, out_offset) \
+{ \
+  AE_S8X4U_XP(outbuf, (ae_int32 *)pOut, out_offset); \
+}
 #endif
 
 #endif /* __XA_NNLIB_COMMON_H__ */

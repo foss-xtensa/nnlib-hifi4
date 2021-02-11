@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -33,9 +33,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-/// Deserialization infrastructure for tflite. Provides functionality
-/// to go from a serialized tflite model in flatbuffer format to an
-/// interpreter.
+/// \file
+/// Provides functionality to construct an interpreter for a model.
 ///
 #ifndef TENSORFLOW_LITE_INTERPRETER_BUILDER_H_
 #define TENSORFLOW_LITE_INTERPRETER_BUILDER_H_
@@ -52,26 +51,23 @@ limitations under the License.
 
 namespace tflite {
 
-namespace impl {
-
 /// Build an interpreter capable of interpreting `model`.
 ///
-/// model: A model whose lifetime must be at least as long as any
+/// `model`: A model whose lifetime must be at least as long as any
 ///   interpreter(s) created by the builder. In principle multiple interpreters
 ///   can be made from a single model.
-/// op_resolver: An instance that implements the OpResolver interface, which
-/// maps
-///   custom op names and builtin op codes to op registrations. The lifetime
-///   of the provided `op_resolver` object must be at least as long as the
-///   InterpreterBuilder; unlike `model` and `error_reporter`, the `op_resolver`
-///   does not need to exist for the duration of any created Interpreter
-///   objects.
-/// error_reporter: a functor that is called to report errors that handles
+/// `op_resolver`: An instance that implements the `OpResolver` interface, which
+///   maps custom op names and builtin op codes to op registrations. The
+///   lifetime of the provided `op_resolver` object must be at least as long as
+///   the `InterpreterBuilder`; unlike `model` and `error_reporter`, the
+///   `op_resolver` does not need to exist for the duration of any created
+///   `Interpreter` objects.
+/// `error_reporter`: a functor that is called to report errors that handles
 ///   printf var arg semantics. The lifetime of the `error_reporter` object must
-///   be greater than or equal to the Interpreter created by operator().
+///   be greater than or equal to the `Interpreter` created by `operator()`.
 ///
 /// Returns a kTfLiteOk when successful and sets interpreter to a valid
-/// Interpreter. Note: The user must ensure the model lifetime (and error
+/// Interpreter. Note: The user must ensure the lifetime of the model (and error
 /// reporter, if provided) is at least as long as interpreter's lifetime.
 class InterpreterBuilder {
  public:
@@ -82,7 +78,7 @@ class InterpreterBuilder {
   /// If `error_reporter` is null, then DefaultErrorReporter() is used.
   InterpreterBuilder(const ::tflite::Model* model,
                      const OpResolver& op_resolver,
-                     const ErrorReporter* error_reporter = DefaultErrorReporter());
+                     ErrorReporter* error_reporter = DefaultErrorReporter());
   ~InterpreterBuilder();
   InterpreterBuilder(const InterpreterBuilder&) = delete;
   InterpreterBuilder& operator=(const InterpreterBuilder&) = delete;
@@ -105,6 +101,10 @@ class InterpreterBuilder {
                                  const std::vector<int>& dims);
   TfLiteStatus ParseSparsity(const SparsityParameters* src_sparsity,
                              TfLiteSparsity** sparsity);
+  TfLiteStatus ParseSignatureDefs(
+      const flatbuffers::Vector<flatbuffers::Offset<SignatureDef>>*
+          signature_def_list,
+      Interpreter* interpreter);
 
   const ::tflite::Model* model_;
   const OpResolver& op_resolver_;
@@ -118,8 +118,6 @@ class InterpreterBuilder {
   bool has_flex_op_ = false;
   int num_fp32_tensors_ = 0;
 };
-
-}  // namespace impl
 
 }  // namespace tflite
 

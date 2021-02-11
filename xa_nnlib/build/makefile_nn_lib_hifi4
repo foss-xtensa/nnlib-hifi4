@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -183,16 +183,22 @@ BASICOBJS = \
     xa_nn_elm_add_quant8.o\
     xa_nn_elm_mul_quant8.o\
     xa_nn_elm_sub_quant8.o\
+    xa_nn_elm_minmax_8.o\
     xa_nn_elm_quantize.o\
     xa_nn_elm_add_f32.o \
     xa_nn_elm_sub_f32.o \
     xa_nn_elm_div_f32.o \
     xa_nn_elm_mul_acc_f32.o \
     xa_nn_floor_f32.o \
-		xa_nn_dot_prod_16x16.o
+		xa_nn_dot_prod_16x16.o \
+    xa_nn_elm_compare_quant8.o \
+		xa_nn_memmove_16.o \
+		xa_nn_reduce_asym8s_asym8s.o \
+    xa_nn_elm_logical_bool.o
 
 NORMO2OBJS = \
-	xa_nn_l2_norm_f32.o
+	xa_nn_l2_norm_f32.o \
+	xa_nn_l2_norm_asym8s.o
 
 
 LIBO2OBJS = $(MATXVECO2OBJS) $(ACTIVATIONSO2OBJS) $(NDSPO2OBJS) $(CONVO2OBJS) $(FCO2OBJS) $(POOLO2OBJS) $(GRUO2OBJS) $(LSTMO2OBJS) $(CNNO2OBJS) $(BASICOBJS)   $(NORMO2OBJS)

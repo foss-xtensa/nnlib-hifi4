@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -19,13 +19,6 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "xa_type_def.h"
-#include "common.h"
-#include "xa_nnlib_err_chk.h"
-//#include "xa_nn_basic_state.h"
-#include "xa_type_def.h"
-#include "xa_nnlib_err_chk.h"
-
 #include "xa_nnlib_common.h"
 
 #define ALIGNMENT   8   /* 8 bytes alignment */
@@ -729,6 +722,7 @@ WORD32 xa_nn_vec_softmax_asym8s_16( WORD16 * __restrict__ p_out,
 
     a_min = AE_ZERO32();
     a_max = AE_MOVDA32(65535);
+
     // Calculating Max
     {
         m0 = AE_MOVDA16(0x8000);
@@ -746,12 +740,17 @@ WORD32 xa_nn_vec_softmax_asym8s_16( WORD16 * __restrict__ p_out,
             x = AE_SRAI16(x,8);
             MAX_16X4(m0, x)
         }
-        __Pragma("no_unroll");
-        for(i=0; i < post_loop_count; i++)
+
+        if(post_loop_count & 0x2)
         {
-            int i1;
-            i1 = (WORD16) p_in[i];
-            temp16X4 = AE_MOVDA16(i1);
+            temp16X4 = AE_MOVDA16X2(p_in[0], p_in[1]);
+            p_in += 2;
+            MAX_16X4(m0, temp16X4)
+        }
+
+        if(post_loop_count & 0x1)
+        {
+            temp16X4 = AE_MOVDA16(*p_in++);
             MAX_16X4(m0, temp16X4)
         }
 
@@ -823,28 +822,48 @@ WORD32 xa_nn_vec_softmax_asym8s_16( WORD16 * __restrict__ p_out,
         sum_exp = AE_ADD32S(sum_exp, exp_y10);
 
     }
-    sum_exp = AE_ADD32S_HL_LH(sum_exp, sum_exp);
-    AE_SA64POS_FP(align_dst, p_exp); // finalize the stream
 
    // remainder loop
-   __Pragma("no_unroll");
-    for(i=0; i < post_loop_count; i++)
-    {
-        int rem_x;
+   if(post_loop_count & 0x2)
+   {
+     ae_int16x4 rem_x;
 
-        rem_x = (WORD32) *p_in++;
-        rem_x = rem_x - AE_MOVAD16_0(max);
-        y32 = AE_MOVDA32(rem_x);
-        f32 = AE_LE32(diff_min, y32);
+     rem_x = AE_MOVDA16X2(p_in[0],p_in[1]);
+     p_in += 2;
+     rem_x = AE_SUB16S(rem_x, max);
 
-        MultiplyByQuantizedMultiplierGreaterThanOne(dequantized_y32, y32, multiplier, input_beta_left_shift)
-        EXP_Q26(exp_y32, dequantized_y32);
-        AE_MOVF32X2(exp_y32, a_min, f32);
-        AE_S32_L_IP(exp_y32, (ae_int32 *)p_exp, sizeof(WORD32));
+     y32 = AE_SEXT32X2D16_10(rem_x);
+     f32 = AE_LE32(diff_min, y32);
 
-        exp_y32 = AE_SRAA32RS(exp_y32, (int)12);
-        sum_exp = AE_ADD32S(sum_exp, exp_y32);
-    }
+     MultiplyByQuantizedMultiplierGreaterThanOne(dequantized_y32, y32, multiplier, input_beta_left_shift)
+       EXP_Q26(exp_y32, dequantized_y32);
+     AE_MOVF32X2(exp_y32, a_min, f32);
+     AE_SA32X2_IP(exp_y32, align_dst, (ae_int32x2 *)p_exp);
+
+     exp_y32 = AE_SRAA32RS(exp_y32, (int)12);
+     sum_exp = AE_ADD32S(sum_exp, exp_y32);
+   }
+
+   sum_exp = AE_ADD32S_HL_LH(sum_exp, sum_exp);
+   AE_SA64POS_FP(align_dst, p_exp); // finalize the stream
+
+   if(post_loop_count & 0x1)
+   {
+     ae_int16x4 rem_x;
+
+     rem_x = AE_MOVDA16(*p_in++);
+     rem_x = AE_SUB16S(rem_x, max);
+     y32 = AE_SEXT32X2D16_10(rem_x);
+     f32 = AE_LE32(diff_min, y32);
+
+     MultiplyByQuantizedMultiplierGreaterThanOne(dequantized_y32, y32, multiplier, input_beta_left_shift)
+       EXP_Q26(exp_y32, dequantized_y32);
+     AE_MOVF32X2(exp_y32, a_min, f32);
+     AE_S32_L_IP(exp_y32, (ae_int32 *)p_exp, sizeof(WORD32));
+
+     exp_y32 = AE_SRAA32RS(exp_y32, (int)12);
+     sum_exp = AE_ADD32S(sum_exp, exp_y32);
+   }
 
     sum_exp_64 = AE_SRAI64(AE_MOVINT64_FROMINT32X2(sum_exp), 32);
     recip_sum_exp = GetReciprocal(sum_exp_64, 12, &shift_bits_reciprocal);
@@ -871,8 +890,21 @@ WORD32 xa_nn_vec_softmax_asym8s_16( WORD16 * __restrict__ p_out,
     AE_SA64POS_FP(align_dst, p_out); // finalize the stream
 
     // remainder loop
-    __Pragma("no_unroll");
-    for(i=0; i < (vec_length & 3); i++)
+    if(vec_length & 0x2)
+    {
+        AE_L32X2_IP(exp_y32, (ae_int32x2 *)p_exp, 2*sizeof(WORD32));
+
+        unsat_out32 = AE_MULFP32X2RAS(exp_y32, recip_sum_exp);
+        unsat_out32 = AE_SRAA32RS(unsat_out32, shift_bits_reciprocal + 31 - 16);
+        CLAMP_VAL(out32, unsat_out32, a_min, a_max);
+        out32 = AE_SUB32(out32, AE_MOVDA32(32768));
+        m0 = AE_CVT16X4(out32, out32);
+
+        AE_S16_0_IP(AE_SEL16I(m0, m0, 4) , (ae_int16 *)p_out, 2);
+        AE_S16_0_IP(m0, (ae_int16 *)p_out, 2);
+    }
+
+    if(vec_length & 0x1)
     {
         AE_L32_IP(exp_y32, (ae_int32 *)p_exp, sizeof(WORD32));
 
