@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -51,7 +51,6 @@ char pb_ref_file_path[XA_MAX_CMD_LINE_LENGTH] = "";
 
 typedef struct _test_config_t
 {
-
   int help;
   int num_elms;
   int inp_precision;
@@ -64,6 +63,8 @@ typedef struct _test_config_t
   char write_inp_file_name[XA_MAX_CMD_LINE_LENGTH];
   char write_out_file_name[XA_MAX_CMD_LINE_LENGTH];
   int verify;
+  // quant8 specific parameters
+  int zero_point;
 }test_config_t;
 
 int default_config(test_config_t *p_cfg)
@@ -83,7 +84,7 @@ int default_config(test_config_t *p_cfg)
     p_cfg->write_inp_file_name[0]='\0';
     p_cfg->write_out_file_name[0] = '\0';
     p_cfg->verify = 1;
-
+    p_cfg->zero_point = 0;
     return 0;
   }
   else
@@ -118,7 +119,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_STRING("-write_inp_file_name",p_cfg->write_inp_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_out_file_name",p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
-    
+    ARGTYPE_ONETIME_CONFIG("-zero_point",p_cfg->zero_point);
+
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
     exit(1);
@@ -129,8 +131,8 @@ void show_usage(void)
 {
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-num_elms: Number of elements; Default=256\n");
-    printf("\t-inp_precision: 8, 16, -1(single prec float); Default=16\n");
-    printf("\t-out_precision: 8, 16, -1(single prec float); Default=16\n");
+    printf("\t-inp_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
+    printf("\t-out_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-kernel_name: l2_norm; Default=""l2_norm""\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
@@ -139,8 +141,10 @@ void show_usage(void)
     printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp) \n");
     printf("\t-write_out_file_name: Full filename for writing output \n");
     printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+    printf("\t-zero_point: l2_norm_asym8s input parameter; Default=0\n");
 }
 
+#if HIFI_VFPU
 #define L2_NORM_KERNEL_F_FN(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -149,15 +153,26 @@ void show_usage(void)
         cfg.num_elms); \
     XTPWR_PROFILER_STOP(0);\
   }
+#else
+#define L2_NORM_KERNEL_F_FN(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    printf("unsupported normalization operation\n"); return -1;}
+#endif
 
-#if HIFI_VFPU
+#define L2_NORM_KERNEL_ASYM8S_FN(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_asym8s_asym8s ( \
+        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, \
+        cfg.zero_point,\
+        cfg.num_elms); \
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define PROCESS_NORM \
     L2_NORM_KERNEL_F_FN(l2_norm, -1, -1) \
-    else {  printf("unsupported pooling operation\n"); return -1;}
-#else
-#define PROCESS_NORM \
-    {  printf("unsupported pooling operation\n"); return -1;}
-#endif
+    else L2_NORM_KERNEL_ASYM8S_FN(l2_norm, -4, -4) \
+    else {  printf("unsupported normalization operation\n"); return -1;}
 
 int xa_nn_main_process(int argc, char *argv[])
 {
@@ -215,6 +230,11 @@ int xa_nn_main_process(int argc, char *argv[])
       printf("%s: NOT TESTED\n", profiler_name);
       return 0;
     }
+  }
+  else if(cfg.inp_precision == -4)
+  {
+    sprintf(profiler_params, "_asym8s");
+    strcat(profiler_name, profiler_params);
   }
   else
   {
@@ -442,5 +462,3 @@ int main (int argc, char *argv[])
     return 0;
 
 }
-
-

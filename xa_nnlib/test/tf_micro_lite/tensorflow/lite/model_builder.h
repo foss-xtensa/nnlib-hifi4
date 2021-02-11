@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -33,9 +33,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+/// \file
 /// Deserialization infrastructure for tflite. Provides functionality
 /// to go from a serialized tflite model in flatbuffer format to an
-/// interpreter.
+/// in-memory representation of the model.
 ///
 #ifndef TENSORFLOW_LITE_MODEL_BUILDER_H_
 #define TENSORFLOW_LITE_MODEL_BUILDER_H_
@@ -46,22 +47,12 @@ limitations under the License.
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/core/api/op_resolver.h"
+#include "tensorflow/lite/core/api/verifier.h"
 #include "tensorflow/lite/mutable_op_resolver.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/stderr_reporter.h"
 
 namespace tflite {
-
-/// Abstract interface that verifies whether a given model is legit.
-/// It facilitates the use-case to verify and build a model without loading it
-/// twice.
-class TfLiteVerifier {
- public:
-  /// Returns true if the model is legit.
-  virtual bool Verify(const char* data, int length,
-                      ErrorReporter* reporter) = 0;
-  virtual ~TfLiteVerifier() {}
-};
 
 /// An RAII object that represents a read-only tflite model, copied from disk,
 /// or mmapped. This uses flatbuffers as the serialization format.
@@ -94,7 +85,7 @@ class FlatBufferModel {
   /// Returns a nullptr in case of failure.
   static std::unique_ptr<FlatBufferModel> BuildFromFile(
       const char* filename,
-      const ErrorReporter* error_reporter = DefaultErrorReporter());
+      ErrorReporter* error_reporter = DefaultErrorReporter());
 
   /// Verifies whether the content of the file is legit, then builds a model
   /// based on the file.
@@ -107,7 +98,7 @@ class FlatBufferModel {
   /// Returns a nullptr in case of failure.
   static std::unique_ptr<FlatBufferModel> VerifyAndBuildFromFile(
       const char* filename, TfLiteVerifier* extra_verifier = nullptr,
-      const ErrorReporter* error_reporter = DefaultErrorReporter());
+      ErrorReporter* error_reporter = DefaultErrorReporter());
 
   /// Builds a model based on a pre-loaded flatbuffer.
   /// Caller retains ownership of the buffer and should keep it alive until
@@ -119,7 +110,7 @@ class FlatBufferModel {
   /// invalid/untrusted input. Use VerifyAndBuildFromBuffer in that case
   static std::unique_ptr<FlatBufferModel> BuildFromBuffer(
       const char* caller_owned_buffer, size_t buffer_size,
-      const ErrorReporter* error_reporter = DefaultErrorReporter());
+      ErrorReporter* error_reporter = DefaultErrorReporter());
 
   /// Verifies whether the content of the buffer is legit, then builds a model
   /// based on the pre-loaded flatbuffer.
@@ -134,7 +125,7 @@ class FlatBufferModel {
   static std::unique_ptr<FlatBufferModel> VerifyAndBuildFromBuffer(
       const char* caller_owned_buffer, size_t buffer_size,
       TfLiteVerifier* extra_verifier = nullptr,
-      const ErrorReporter* error_reporter = DefaultErrorReporter());
+      ErrorReporter* error_reporter = DefaultErrorReporter());
 
   /// Builds a model directly from a flatbuffer pointer
   /// Caller retains ownership of the buffer and should keep it alive until the
@@ -143,7 +134,7 @@ class FlatBufferModel {
   /// Returns a nullptr in case of failure.
   static std::unique_ptr<FlatBufferModel> BuildFromModel(
       const tflite::Model* caller_owned_model_spec,
-      const ErrorReporter* error_reporter = DefaultErrorReporter());
+      ErrorReporter* error_reporter = DefaultErrorReporter());
 
   // Releases memory or unmaps mmaped memory.
   ~FlatBufferModel();
@@ -166,7 +157,7 @@ class FlatBufferModel {
   // lower-bound; ops in the graph may not have an associated runtime version,
   // in which case the actual required runtime might be greater than the
   // reported minimum.
-  string GetMinimumRuntime() const;
+  std::string GetMinimumRuntime() const;
 
   /// Returns true if the model identifier is correct (otherwise false and
   /// reports an error).
@@ -179,7 +170,7 @@ class FlatBufferModel {
   /// as much as FlatBufferModel. This is to allow multiple models to use the
   /// same ErrorReporter instance.
   FlatBufferModel(std::unique_ptr<Allocation> allocation,
-                  const ErrorReporter* error_reporter = DefaultErrorReporter());
+                  ErrorReporter* error_reporter = DefaultErrorReporter());
 
   /// Loads a model from Model flatbuffer. The `model` has to remain alive and
   /// unchanged until the end of this flatbuffermodel's lifetime.

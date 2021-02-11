@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -67,6 +67,7 @@ typedef struct xa_nnlib_opaque { Int32 _; } *xa_nnlib_handle_t;
 
 typedef enum _xa_nnlib_prec_t
 {
+  PREC_BOOL   =  1,
   PREC_8      =  8,
   PREC_16     = 16,
   PREC_32     = 32,

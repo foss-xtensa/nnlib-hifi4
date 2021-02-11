@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -302,11 +302,11 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         x32 = AE_MOVDA32(inp);
         x32 = AE_SUB32S(x32, z);
 
-        // set flag if x < minus_radius
-        b32 = AE_LT32(x32, minus_radius);
+        // set flag if x <= minus_radius
+        b32 = AE_LE32(x32, minus_radius);
 
-        // set flag if x <= radius
-        c32 = AE_LE32(x32, radius);
+        // set flag if x < radius
+        c32 = AE_LT32(x32, radius);
         MultiplyByQuantizedMultiplierGreaterThanOne(y32, x32, mul, input_left_shift)
 
         d32 = AE_LT32(y32, zero);
@@ -331,10 +331,10 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         d32 = AE_EQ32(z32, CONST_256);
         AE_MOVT32X2(z32, CONST_255, d32);
 
-        // if(inp_centered < -radius) output = 0
+        // if(inp_centered <= -radius) output = 0
         AE_MOVT32X2(z32, AE_ZERO32(), b32);
 
-        // if(inp_centered > radius) output = 255
+        // if(inp_centered >= radius) output = 255
         AE_MOVF32X2(z32, CONST_255, c32);
 
         inp = AE_MOVAD32_H(z32);
@@ -352,13 +352,13 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         x32 = AE_SUB32S(x32, z);
         x10 = AE_SUB32S(x10, z);
 
-        // set flag if x < minus_radius
-        b32 = AE_LT32(x32, minus_radius);
-        b10 = AE_LT32(x10, minus_radius);
+        // set flag if x <= minus_radius
+        b32 = AE_LE32(x32, minus_radius);
+        b10 = AE_LE32(x10, minus_radius);
 
-        // set flag if x <= radius
-        c32 = AE_LE32(x32, radius);
-        c10 = AE_LE32(x10, radius);
+        // set flag if x < radius
+        c32 = AE_LT32(x32, radius);
+        c10 = AE_LT32(x10, radius);
 
         MultiplyByQuantizedMultiplierGreaterThanOne(y32, x32, mul, input_left_shift)
         MultiplyByQuantizedMultiplierGreaterThanOne(y10, x10, mul, input_left_shift)
@@ -393,11 +393,11 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         AE_MOVT32X2(z32, CONST_255, d32);
         AE_MOVT32X2(z10, CONST_255, d10);
 
-        // if(inp_centered < -radius) output = 0
+        // if(inp_centered <= -radius) output = 0
         AE_MOVT32X2(z32, AE_ZERO32(), b32);
         AE_MOVT32X2(z10, AE_ZERO32(), b10);
 
-        // if(inp_centered > radius) output = 255
+        // if(inp_centered >= radius) output = 255
         AE_MOVF32X2(z32, CONST_255, c32);
         AE_MOVF32X2(z10, CONST_255, c10);
 
@@ -415,11 +415,11 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         x32 = AE_MOVDA32(inp);
         x32 = AE_SUB32S(x32, z);
 
-        // set flag if x < minus_radius
-        b32 = AE_LT32(x32, minus_radius);
+        // set flag if x <= minus_radius
+        b32 = AE_LE32(x32, minus_radius);
 
-        // set flag if x <= radius
-        c32 = AE_LE32(x32, radius);
+        // set flag if x < radius
+        c32 = AE_LT32(x32, radius);
         MultiplyByQuantizedMultiplierGreaterThanOne(y32, x32, mul, input_left_shift)
 
         d32 = AE_LT32(y32, zero);
@@ -444,10 +444,10 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         d32 = AE_EQ32(z32, CONST_256);
         AE_MOVT32X2(z32, CONST_255, d32);
 
-        // if(inp_centered < -radius) output = 0
+        // if(inp_centered <= -radius) output = 0
         AE_MOVT32X2(z32, AE_ZERO32(), b32);
 
-        // if(inp_centered > radius) output = 255
+        // if(inp_centered >= radius) output = 255
         AE_MOVF32X2(z32, CONST_255, c32);
 
         inp = AE_MOVAD32_H(z32);
@@ -612,8 +612,35 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
     return 0;
 }
 
+WORD32 xa_nn_vec_relu_asym8u_asym8u( UWORD8 * __restrict__ p_out,
+                    const   UWORD8 * __restrict__ p_vec,
+                            WORD32 inp_zero_bias,
+                            WORD32 out_multiplier,
+                            WORD32 out_shift,
+                            WORD32 out_zero_bias,
+                            WORD32 quantized_activation_min,
+                            WORD32 quantized_activation_max,
+                            WORD32 vec_length)
+{
+  return -1;
+}
+
+WORD32 xa_nn_vec_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
+                    const   WORD8 * __restrict__ p_vec,
+                            WORD32 inp_zero_bias,
+                            WORD32 out_multiplier,
+                            WORD32 out_shift,
+                            WORD32 out_zero_bias,
+                            WORD32 quantized_activation_min,
+                            WORD32 quantized_activation_max,
+                            WORD32 vec_length)
+{
+  return -1;
+}
+
 WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
                     const   WORD8 * __restrict__ p_vec,
+                    const   WORD8 * __restrict__ p_vec_alpha,
                             WORD32 inp_zero_bias,
                             WORD32 alpha_zero_bias,
                             WORD32 alpha_multiplier,
@@ -625,6 +652,31 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
 {
   return -1;
 }
+
+WORD32 xa_nn_vec_hard_swish_asym8s_asym8s( WORD8 * __restrict__ p_out,
+                            const   WORD8 * __restrict__ p_vec,
+                            WORD32 inp_zero_bias,
+                            WORD16 reluish_multiplier,
+                            WORD32 reluish_shift,
+                            WORD16 out_multiplier,
+                            WORD32 out_shift,
+                            WORD32 out_zero_bias,
+                            WORD32 vec_length)
+{
+  return -1;
+}
+
+WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
+                      const WORD8 *p_vec,
+                            WORD32 zero_point,
+                            WORD32 input_range_radius,
+                            WORD32 input_multiplier,
+                            WORD32 input_left_shift,
+                            WORD32 vec_length)
+{
+  return -1;
+}
+
 #if 0
 enum ActivationFn {
     kActivationNone = 0,

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -90,6 +90,8 @@ typedef struct _test_config_t
   char write_inp_file_name[XA_MAX_CMD_LINE_LENGTH];
   char write_out_file_name[XA_MAX_CMD_LINE_LENGTH];
   int verify;
+  int dilation_height;
+  int dilation_width;
 }test_config_t;
 
 int default_config(test_config_t *p_cfg)
@@ -134,6 +136,8 @@ int default_config(test_config_t *p_cfg)
     p_cfg->write_inp_file_name[0]='\0';
     p_cfg->write_out_file_name[0] = '\0';
     p_cfg->verify = 1;
+    p_cfg->dilation_height = 1;
+    p_cfg->dilation_width = 1;
 
     return 0;
   }
@@ -192,7 +196,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_STRING("-write_inp_file_name",p_cfg->write_inp_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_out_file_name",p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
-    
+    ARGTYPE_ONETIME_CONFIG("-dilation_height",p_cfg->dilation_height);
+    ARGTYPE_ONETIME_CONFIG("-dilation_width",p_cfg->dilation_width);
+
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
     exit(1);
@@ -213,6 +219,8 @@ void show_usage(void)
     printf("\t-y_stride: stride in height dimension; Default=2\n");
     printf("\t-x_padding: left padding in width dimension; Default=2\n");
     printf("\t-y_padding: top padding in height dimension; Default=2\n");
+    printf("\t-dilation_height: dilation in height dimension; Default=1\n");
+    printf("\t-dilation_width: dilation in width dimension; Default=1\n");
     printf("\t-out_height: output height; Default=16\n");
     printf("\t-out_width: output width; Default=16\n");
     printf("\t-bias_shift: bias left shift; Default=7\n");
@@ -229,7 +237,7 @@ void show_usage(void)
     printf("\t-out_shift: output shift for asym8, 31 to -31; Default=-8\n");
     printf("\t-out_zero_bias: output zero bias for asym8, 0 to 255; Default=128\n");
     printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: conv2d_std, conv2d_depth, conv1d_std; Default="" : conv2d_std\n");
+    printf("\t-kernel_name: conv2d_std, dilated_conv2d_std, conv2d_depth, conv1d_std; Default="" : conv2d_std\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp_file_name: Full filename for reading inputs (order - input, kernel, bias, (pointwise kernel, pointwise bias for depth separable)) \n");
     printf("\t-read_ref_file_name: Full filename for reading reference output \n");
@@ -270,6 +278,18 @@ void show_usage(void)
         cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
         cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
         cfg.out_data_format, p_scratch);\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
+        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
+        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+        cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+        cfg.out_data_format, p_scratch, cfg.dilation_height, cfg.dilation_width);\
     XTPWR_PROFILER_STOP(0);\
   }
 
@@ -423,6 +443,7 @@ void show_usage(void)
     else if CONV_KERNEL_FN(conv2d_std, 16, 16, 16, 16) \
     else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
     else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
+    else if CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(dilated_conv2d_std,-5,-4,-4, 32) \
     else if CONV_KERNEL_F_FN(conv2d_std, -1, -1, -1, -1) \
     else if CONV_DS_KERNEL_F_FN(conv2d_depth, -1, -1, -1, -1) \
     else if CONV_DS_KERNEL_FN(conv2d_depth,8,16,16,16) \
@@ -503,7 +524,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  if(!strcmp(cfg.kernel_name,"conv2d_std"))
+  if( (!strcmp(cfg.kernel_name,"conv2d_std")) || (!strcmp(cfg.kernel_name,"dilated_conv2d_std")))
   {
     inp_size = cfg.input_height * cfg.input_width * cfg.input_channels;
     kernel_size = cfg.kernel_height * cfg.kernel_width * cfg.input_channels;
@@ -675,7 +696,7 @@ int xa_nn_main_process(int argc, char *argv[])
   // Allocate Memory
   p_inp = create_buf1D(inp_size, cfg.inp_precision);                              VALIDATE_PTR(p_inp);
   p_out = create_buf1D(out_size, cfg.out_precision);                              VALIDATE_PTR(p_out);
-  if(!strcmp(cfg.kernel_name,"conv2d_std"))
+  if( (!strcmp(cfg.kernel_name,"conv2d_std")) || (!strcmp(cfg.kernel_name,"dilated_conv2d_std")) )
   {
     p_kernel = create_buf2D(cfg.out_channels * cfg.kernel_height * cfg.kernel_width, cfg.input_channels, input_channels_pad, cfg.kernel_precision, 0);    VALIDATE_PTR(p_kernel);
     p_bias = create_buf1D(bias_size, cfg.bias_precision);                            VALIDATE_PTR(p_bias);
@@ -723,6 +744,10 @@ int xa_nn_main_process(int argc, char *argv[])
     scratch_size = xa_nn_conv2d_std_getsize(cfg.input_height,cfg.input_channels,cfg.kernel_height,cfg.kernel_width,cfg.y_stride,cfg.y_padding,
         cfg.out_height, cfg.out_channels, cfg.inp_precision); PRINT_VAR(scratch_size)
   }
+  else if(!strcmp(cfg.kernel_name,"dilated_conv2d_std"))
+  {
+    scratch_size = xa_nn_dilated_conv2d_std_getsize(cfg.input_height,cfg.input_channels,cfg.kernel_height,cfg.kernel_width,cfg.y_stride,cfg.y_padding,cfg.out_height,cfg.inp_precision,cfg.dilation_height); PRINT_VAR(scratch_size)
+  }
   else if(!strcmp(cfg.kernel_name,"conv2d_depth"))
   {
     scratch_size =
@@ -757,7 +782,7 @@ int xa_nn_main_process(int argc, char *argv[])
   for(frame = 0; frame < cfg.frames; frame++)
   {
     // If write_file enabled, generate random data for input, else read from file
-    if(!strcmp(cfg.kernel_name,"conv2d_std"))
+    if( (!strcmp(cfg.kernel_name,"conv2d_std")) || (!strcmp(cfg.kernel_name,"dilated_conv2d_std")) )
       load_conv2d_std_input_data(cfg.write_file, fptr_inp, p_inp, p_kernel, p_bias, cfg.input_channels, input_channels_pad, -cfg.kernel_zero_bias);
     else if(!strcmp(cfg.kernel_name,"conv2d_depth"))
       load_conv2d_ds_input_data(cfg.write_file, fptr_inp, p_inp, p_kernel, p_bias, p_kernel_point, p_bias_point, -cfg.kernel_zero_bias);
@@ -908,7 +933,7 @@ int main (int argc, char *argv[])
                 else strcpy((char *)pb_ref_file_path, "");
                 continue;
             }
-            
+
             if(strcmp(fargv[0], "@Start") == 0)
             {
                 processcmd = 1;

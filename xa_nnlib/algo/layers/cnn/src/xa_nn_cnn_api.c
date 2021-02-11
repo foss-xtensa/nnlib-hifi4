@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -347,9 +347,7 @@ Int32 xa_nnlib_cnn_get_scratch_fast(
                                              config->y_stride,
                                              config->y_padding,
                                              config->output_height,
-#ifdef hifi4
                                              config->output_channels,
-#endif
                                              inp_precision);
   }
   else if(config->algo == XA_NNLIB_CNN_CONV2D_DS)

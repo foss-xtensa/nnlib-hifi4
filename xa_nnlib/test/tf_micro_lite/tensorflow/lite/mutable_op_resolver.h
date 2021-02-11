@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -44,7 +44,7 @@ limitations under the License.
 
 namespace tflite {
 
-// Some versions of gcc doesn't support partial specialization in class scope,
+// Some versions of gcc don't support partial specialization in class scope,
 // so these are defined in a namescope.
 namespace op_resolver_hasher {
 template <typename V>
@@ -81,10 +81,14 @@ class MutableOpResolver : public OpResolver {
                                    int version) const override;
   const TfLiteRegistration* FindOp(const char* op, int version) const override;
   void AddBuiltin(tflite::BuiltinOperator op,
-                  const TfLiteRegistration* registration, int min_version = 1,
-                  int max_version = 1);
+                  const TfLiteRegistration* registration, int version = 1);
+  void AddBuiltin(tflite::BuiltinOperator op,
+                  const TfLiteRegistration* registration, int min_version,
+                  int max_version);
   void AddCustom(const char* name, const TfLiteRegistration* registration,
-                 int min_version = 1, int max_version = 1);
+                 int version = 1);
+  void AddCustom(const char* name, const TfLiteRegistration* registration,
+                 int min_version, int max_version);
   void AddAll(const MutableOpResolver& other);
 
  private:

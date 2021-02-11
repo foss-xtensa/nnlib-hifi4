@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -69,9 +69,9 @@ class ErrorReporter {
 // reduce binary size, define TF_LITE_STRIP_ERROR_STRINGS when compiling and
 // every call will be stubbed out, taking no memory.
 #ifndef TF_LITE_STRIP_ERROR_STRINGS
-#define TF_LITE_REPORT_ERROR(reporter, ...) \
-  do {                                      \
-    reporter->Report(__VA_ARGS__);          \
+#define TF_LITE_REPORT_ERROR(reporter, ...)                             \
+  do {                                                                  \
+    static_cast<tflite::ErrorReporter*>(reporter)->Report(__VA_ARGS__); \
   } while (false)
 #else  // TF_LITE_STRIP_ERROR_STRINGS
 #define TF_LITE_REPORT_ERROR(reporter, ...)

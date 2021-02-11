@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -36,6 +36,9 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_MICRO_MEMORY_HELPERS_H_
 #define TENSORFLOW_LITE_MICRO_MEMORY_HELPERS_H_
 
+#include <cstddef>
+#include <cstdint>
+
 #include "tensorflow/lite/c/common.h"
 #include "tensorflow/lite/core/api/error_reporter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
@@ -52,13 +55,25 @@ uint8_t* AlignPointerDown(uint8_t* data, size_t alignment);
 size_t AlignSizeUp(size_t size, size_t alignment);
 
 // Returns size in bytes for a given TfLiteType.
-TfLiteStatus TfLiteTypeSizeOf(TfLiteType type, size_t* size,
-                              ErrorReporter* reporter);
+TfLiteStatus TfLiteTypeSizeOf(TfLiteType type, size_t* size);
 
 // How many bytes are needed to hold a tensor's contents.
 TfLiteStatus BytesRequiredForTensor(const tflite::Tensor& flatbuffer_tensor,
                                     size_t* bytes, size_t* type_size,
                                     ErrorReporter* error_reporter);
+
+// How many bytes are used in a TfLiteEvalTensor instance. The byte length is
+// returned in out_bytes.
+TfLiteStatus TfLiteEvalTensorByteLength(const TfLiteEvalTensor* eval_tensor,
+                                        size_t* out_bytes);
+
+// Deduce output dimensions from input and allocate given size.
+// Useful for operators with two inputs where the largest input should equal the
+// output dimension.
+TfLiteStatus AllocateOutputDimensionsFromInput(TfLiteContext* context,
+                                               const TfLiteTensor* input1,
+                                               const TfLiteTensor* input2,
+                                               TfLiteTensor* output);
 
 }  // namespace tflite
 

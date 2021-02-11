@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2020 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -46,6 +46,7 @@ limitations under the License.
 extern "C" {
 #endif
 
+// Details at https://research.google/pubs/pub45911.pdf
 struct PcanGainControlState {
   int enable_pcan;
   uint32_t* noise_estimate;
