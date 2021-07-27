@@ -27,6 +27,32 @@ Cadence HiFi4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
+Version 2.4.1 API 1.0: Jul 27, 2021
+
++ Patch Release of HiFi 4 NN Library
++ Tested using RI.5 tools, xt-xcc/xt-xc++ and xt-clang/xt-clang++ compiler
++ [J2938]: Fixed the issue related to special case handling.
+    Moved the special cases handling for vec_length=8/32 to the start 
+    of the function in xa_nn_dot_prod_16x16_asym8s.
++ [J2976]: Removed legacy condition checks for depthwise_conv.
++ [J2994]: Fixed the issue related to xa_nn_conv2d_std_per_chan_sym8sxasym8s.
+    updated to select correct vec values in case of vec_align_val is 1 and 3.
+
+Limitations
+> The ANN test bench, TFLite Micro example application and the supporting libraries
+  need support for C++11 standard. This is supported only with Xtensa C library. 
+> For configurations without VFPU, the floating point  variants of the kernels 
+  are not supported and should not be used. 
+
+Known issues
+> Compiler optimizations are disabled for C++ source files 
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
 Version 2.4.0 API 1.0: Feb 10, 2021
 
 + Intermediate Release of HiFi 4 NN Library

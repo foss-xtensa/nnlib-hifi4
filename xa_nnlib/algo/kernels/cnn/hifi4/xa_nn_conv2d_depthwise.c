@@ -249,8 +249,8 @@ WORD32 xa_nn_conv2d_depthwise_getsize
     XA_NNLIB_CHK_COND((kernel_height <= 0), -1);
     XA_NNLIB_CHK_COND((kernel_width <= 0), -1);
     XA_NNLIB_CHK_COND((channels_multiplier <= 0), -1);
-    XA_NNLIB_CHK_COND((x_stride <= 0 || x_stride > kernel_width), -1);
-    XA_NNLIB_CHK_COND((y_stride <= 0 || y_stride > kernel_height), -1);
+    XA_NNLIB_CHK_COND((x_stride <= 0), -1);
+    XA_NNLIB_CHK_COND((y_stride <= 0), -1);
     XA_NNLIB_CHK_COND((x_padding < 0), -1);
     XA_NNLIB_CHK_COND((y_padding < 0), -1);
     XA_NNLIB_CHK_COND((output_height <= 0), -1);

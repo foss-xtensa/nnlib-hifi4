@@ -90,40 +90,8 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
   ae_int32x2 d_bias;
   int i;
 
-  /* inp1 and inp2 8-byte aligned case */
-  if(((vec_length & 3) == 0) && (((int)p_inp1_start & 7) == 0) && (((int)p_inp2_start & 7) == 0))
-  {
-    /* Assumption: 
-     * p_inp1_start - memory is continuous => vec_count1 end and vect_count2 start are continuous 
-     * p_inp2_start - memory is continuous => vec_count1 end and vect_count2 start are continuous 
-     * */
-    pt_inp1 = (const ae_int16x4 *)((WORD16 *)p_inp1_start);
-    pt_inp2 = (const ae_int16x4 *)((WORD16 *)p_inp2_start);
-
-    /* TBD: multiple vec_count processing in a single loop can be done */
-    for(loopcnt = 0; loopcnt < vec_count; loopcnt++)
-    {
-      AE_L32_XP(d_bias, (ae_int32 *)p_bias_load, bias_address_increment);
-
-      d_out64_0 = ZERO64;
-
-      for(i = 0; i < (vec_length >> 2); i++)
-      {
-        AE_L16X4_IP(d_inp1_0, pt_inp1, 8);
-        AE_L16X4_IP(d_inp2_0, pt_inp2, 8);
-        AE_MULAAAAQ16(d_out64_0, d_inp1_0, d_inp2_0);
-      }
-      AE_SAT32X2_HIFI4(d_out32, d_out64_0);
-      d_out32 = AE_ADD32S(d_out32, d_bias);
-
-      MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_out32, out_multiplier, left_shift, right_shift)
-      d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
-      AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
-      *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
-    }
-  }
-  /* handle cases where vec_length is multiple of 8 */
-  else if(vec_length == 8)
+ /* handle cases where vec_length is multiple of 8 */
+  if(vec_length == 8)
   {
     /* Assumption: 
      * p_inp1_start - memory is continuous => vec_count1 end and vect_count2 start are continuous 
@@ -189,7 +157,39 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
     }
   }
-  else if(((vec_length & 3) == 0) && (((int)p_inp1_start & 7) == 0))
+  /* inp1 and inp2 8-byte aligned case */
+  else if(((vec_length & 3) == 0) && (((int)p_inp1_start & 7) == 0) && (((int)p_inp2_start & 7) == 0))
+  {
+    /* Assumption: 
+     * p_inp1_start - memory is continuous => vec_count1 end and vect_count2 start are continuous 
+     * p_inp2_start - memory is continuous => vec_count1 end and vect_count2 start are continuous 
+     * */
+    pt_inp1 = (const ae_int16x4 *)((WORD16 *)p_inp1_start);
+    pt_inp2 = (const ae_int16x4 *)((WORD16 *)p_inp2_start);
+
+    /* TBD: multiple vec_count processing in a single loop can be done */
+    for(loopcnt = 0; loopcnt < vec_count; loopcnt++)
+    {
+      AE_L32_XP(d_bias, (ae_int32 *)p_bias_load, bias_address_increment);
+
+      d_out64_0 = ZERO64;
+
+      for(i = 0; i < (vec_length >> 2); i++)
+      {
+        AE_L16X4_IP(d_inp1_0, pt_inp1, 8);
+        AE_L16X4_IP(d_inp2_0, pt_inp2, 8);
+        AE_MULAAAAQ16(d_out64_0, d_inp1_0, d_inp2_0);
+      }
+      AE_SAT32X2_HIFI4(d_out32, d_out64_0);
+      d_out32 = AE_ADD32S(d_out32, d_bias);
+
+      MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_out32, out_multiplier, left_shift, right_shift)
+      d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
+      AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
+      *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
+    }
+  }
+   else if(((vec_length & 3) == 0) && (((int)p_inp1_start & 7) == 0))
   {
     /* Assumption: 
      * p_inp1_start - memory is continuous => vec_count1 end and vect_count2 start are continuous 

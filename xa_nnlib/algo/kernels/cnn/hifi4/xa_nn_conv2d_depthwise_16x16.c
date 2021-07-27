@@ -628,8 +628,6 @@ WORD32 xa_nn_conv2d_depthwise_16x16
     XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((kernel_height <= 0 || kernel_width <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND((kernel_height > input_height), -1);
-    XA_NNLIB_ARG_CHK_COND((kernel_width > input_width), -1);
     XA_NNLIB_ARG_CHK_COND((channels_multiplier <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
@@ -638,9 +636,6 @@ WORD32 xa_nn_conv2d_depthwise_16x16
     XA_NNLIB_ARG_CHK_COND((bias_shift < -31 || bias_shift > 31), -1);
     XA_NNLIB_ARG_CHK_COND((inp_data_format != 0 && inp_data_format != 1), -1);
     XA_NNLIB_ARG_CHK_COND((out_data_format != 0), -1);
-    /* Implementation dependent checks */
-    XA_NNLIB_ARG_CHK_COND((y_stride > kernel_height), -1);
-    XA_NNLIB_ARG_CHK_COND((x_stride > kernel_width), -1);
 
     if(inp_data_format == 0)
     {
