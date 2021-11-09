@@ -122,10 +122,17 @@ const UWORD8 *__restrict__ p_inp,
             {
                 ae_int16x4 i1;
                 ae_int32x2 wi1, wi2;
+#if XCHAL_HAVE_HIFI1
+                AE_L8X4U_IP(i1, p_src1_temp, 4);
+                wi1 = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_7362(AE_ZERO16(), i1));
+                //wi1 = AE_SEXT32X2D16_32(i1);
+                wi2 = AE_SEXT32X2D16_10(i1);
+#else
                 AE_L8X4F_IP(i1, p_src1_temp, 4);
                 i1 = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(i1), 8));
                 wi1 = AE_SEXT32X2D16_32(i1);
                 wi2 = AE_SEXT32X2D16_10(i1);
+#endif
                 AE_SA32X2_IP(wi1, align_dst, p_dst_temp);
                 AE_SA32X2_IP(wi2, align_dst, p_dst_temp);
             }
@@ -182,8 +189,12 @@ const UWORD8 *__restrict__ p_inp,
 
                     AE_LA32X2_IP(wi1, align_wsrc1, p_wsrc1_temp);
                     AE_LA32X2_IP(wi2, align_wsrc1, p_wsrc1_temp);
+#if XCHAL_HAVE_HIFI1
+                    AE_L8X4U_IP(i1, p_src2_temp, 4);
+#else
                     AE_L8X4F_IP(i1, p_src2_temp, 4);
                     i1 = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(i1), 8));
+#endif
                     AE_MULA16X4(wi1, wi2, i1, one);
                     AE_SA32X2_IP(wi1, align_dst, p_dst_temp);
                     AE_SA32X2_IP(wi2, align_dst, p_dst_temp);
@@ -294,9 +305,15 @@ const UWORD8 *__restrict__ p_inp,
 
             /* Max value of den_h or den_w is 0x80000000
             so 1 left shift is possible without overflow */
+#if XCHAL_HAVE_HIFI1
+            d_tmp32 = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
+            d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
+            AE_S8_0_I(AE_MOVINT16X4_FROMINT32X2(d_tmp32), (WORD8*)(p_out+(itr_oh*out_width)+itr_ow), 0);
+#else
             d_tmp32 = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
             d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
             p_out[itr_oh*out_width+itr_ow] = (UWORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
+#endif
         }
     }
 }

@@ -30,6 +30,7 @@
 #include "xt_manage_buffers.h"
 #include "cmdline_parser.h"
 #include "file_io.h"
+#include "stdbool.h"
 
 #define PROF_ALLOCATE
 #include "xt_profiler.h"
@@ -68,6 +69,7 @@ typedef struct _test_config_t
   int out_multiplier;
   int out_shift;
   int out_zero_bias;
+  int out_stride;
   char activation[MAX_ACTIVATION_NAME_LENGTH];
   int membank_padding;
   int frames;
@@ -106,6 +108,7 @@ int default_config(test_config_t *p_cfg)
     p_cfg->out_multiplier = 0x40000000;
     p_cfg->out_shift = -8;
     p_cfg->out_zero_bias = 128;
+    p_cfg->out_stride = 1;
     p_cfg->activation[0] = '\0';  
     p_cfg->membank_padding = 1;
     p_cfg->frames   = 2;  
@@ -160,6 +163,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-out_multiplier",p_cfg->out_multiplier);
     ARGTYPE_ONETIME_CONFIG("-out_shift",p_cfg->out_shift);
     ARGTYPE_ONETIME_CONFIG("-out_zero_bias",p_cfg->out_zero_bias);
+    ARGTYPE_ONETIME_CONFIG("-out_stride",p_cfg->out_stride);
     ARGTYPE_STRING("-activation",p_cfg->activation, MAX_ACTIVATION_NAME_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-membank_padding",p_cfg->membank_padding);
     ARGTYPE_ONETIME_CONFIG("-frames",p_cfg->frames);
@@ -189,17 +193,18 @@ void show_usage(void)
     printf("\t-vec_count : vec count for time batching; Default=1\n");
     printf("\t-acc_shift : Accumulator left shift; Default=0\n");
     printf("\t-bias_shift : Bias left shift; Default=0\n");
-    printf("\t-mat_precision : 8, 16 or -1(single prec float); Default=16\n");
-    printf("\t-inp_precision : 8, 16 or -1(single prec float); Default=16\n");
-    printf("\t-out_precision : 8, 16, 32, 64 or -1(single prec float); Default=16\n");
-    printf("\t-bias_precision : 16, 64 or -1(single prec float); Default=16\n");
-    printf("\t-mat1_zero_bias : matrix1 zero bias for asym8 -255 to 0; Default=-128\n");
-    printf("\t-mat2_zero_bias : matrix2 zero bias for asym8 -255 to 0; Default=-128\n");
-    printf("\t-inp1_zero_bias : input1 zero bias for asym8 -255 to 0; Default=-128\n");
-    printf("\t-inp2_zero_bias : input2 zero bias for asym8 -255 to 0; Default=-128\n");
-    printf("\t-out_multiplier : output multiplier for asym8 0 to 0x7fffffff; Default=0x40000000\n");
-    printf("\t-out_shift : output shift for asym8 -31 to 31; Default=-8\n");
-    printf("\t-out_zero_bias : output zero bias for asym8 0 to 255; Default=128\n");
+    printf("\t-mat_precision : 8, 16, -1(single prec float), -3(asym8u) or -5(sym8s); Default=16\n");
+    printf("\t-inp_precision : 8, 16, -1(single prec float), -3(asym8u) or -4(asym8s); Default=16\n");
+    printf("\t-out_precision : 8, 16, 32, 64 or -1(single prec float), -3(asym8u), -4(asym8s) or -7(asym16s); Default=16\n");
+    printf("\t-bias_precision : 8, 16, 64 or -1(single prec float); Default=16\n");
+    printf("\t-mat1_zero_bias : Matrix1 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
+    printf("\t-mat2_zero_bias : Matrix2 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
+    printf("\t-inp1_zero_bias : Input1 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s; Default=-128\n");
+    printf("\t-inp2_zero_bias : Input2 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s; Default=-128\n");
+    printf("\t-out_multiplier : Output multiplier in Q31 format for quantized 8-bit, 0x0 to 0x7fffffff; Default=0x40000000\n");
+    printf("\t-out_shift : Output shift for quantized 8-bit(asym8u and asym8s), 31 to -31; Default=-8\n");
+    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s; Default=128\n");
+    printf("\t-out_stride : Stride for storing the output; Default=1\n");
     printf("\t-membank_padding: 0, 1; Default=1\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-activation: sigmoid, tanh, relu or softmax; Default="" : bypass i.e. no activation for output.\n");
@@ -345,6 +350,17 @@ void show_usage(void)
      printf("unsupported multiplication\n"); return -1;} 
 #endif /* NNLIB_V2 */
 
+#define MAT_VEC_MUL_FN_8X8_ASYM16S_BATCH(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      /*memset(p_out->p, 0xe8, p_out->length*p_out->bytes_per_element);*/ \
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_matXvec_acc_batch_sym8sx8_asym16s ( \
+          (WORD16 *)p_out->p, (WORD8 *) p_mat1->p, (WORD8 *)p_vec1->p, (WORD32 *)p_bias->p, \
+          cfg.rows, cfg.cols1, p_mat1->row_offset, \
+          cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias, cfg.vec_count);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define MAT_VEC_MUL_ACTIVATION_FN(MPREC, VPREC, OPREC, ACTIVATION) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
@@ -415,6 +431,7 @@ void show_usage(void)
     else MAT_VEC_MUL_FN(8, 8, 32) \
     else MAT_VEC_MUL_FN_ASYM8(-3, -3, -3) \
     else MAT_VEC_MUL_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else MAT_VEC_MUL_OUT_STRIDE_FN_SYM8SXASYM8S_16(-5, -4, 16)  \
     else MAT_VEC_MUL_ACTIVATION_FN_F32(-1, -1, -1, sigmoid) \
     else MAT_VEC_MUL_ACTIVATION_FN_F32(-1, -1, -1, tanh) \
     else MAT_VEC_MUL_FN_F32(-1, -1, -1) \
@@ -438,6 +455,7 @@ void show_usage(void)
     else MAT_VEC_MUL_FN(8, 8, 32) \
     else MAT_VEC_MUL_FN_ASYM8(-3, -3, -3) \
     else MAT_VEC_MUL_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else MAT_VEC_MUL_OUT_STRIDE_FN_SYM8SXASYM8S_16(-5, -4, 16)  \
     else {  printf("unsupported multiplication\n"); return -1;} 
 #endif
 
@@ -466,6 +484,7 @@ void show_usage(void)
     else MAT_VEC_MUL_FN_BATCH(8, 16, 64) \
     else MAT_VEC_MUL_FN_BATCH(8, 8, 32) \
     else MAT_VEC_MUL_FN_ASYM8_BATCH(-3, -3, -3) \
+    else MAT_VEC_MUL_FN_8X8_ASYM16S_BATCH(-5, 8, -7) \
     else MAT_VEC_MUL_FN_F32_BATCH(-1, -1, -1) \
     else {  printf("unsupported multiplication\n"); return -1;} 
 #else
@@ -474,6 +493,7 @@ void show_usage(void)
     else MAT_VEC_MUL_FN_BATCH(8, 16, 64) \
     else MAT_VEC_MUL_FN_BATCH(8, 8, 32) \
     else MAT_VEC_MUL_FN_ASYM8_BATCH(-3, -3, -3) \
+    else MAT_VEC_MUL_FN_8X8_ASYM16S_BATCH(-5, 8, -7) \
     else {  printf("unsupported multiplication\n"); return -1;} 
 #endif
 int xa_nn_main_process(int argc, char *argv[])
@@ -497,6 +517,14 @@ int xa_nn_main_process(int argc, char *argv[])
   buf1D_t *p_scratch;
   buf1D_t *ptr_ref;
   int scratch_size = 0;
+
+  /* Some kernels like the *_acc_batch_* require (a one time) initialization
+   * of the p_out buffer as they do a p_out = SOME_OP(p_out, SOME_DATA).
+   * This flag is used to memset the initial contents of this p_out buffer. 
+   */
+  bool initialize_p_out_memory = false;
+
+  size_t out_buffer_size = 0;
 
   FILE *fptr_inp;
   FILE *fptr_out;
@@ -560,6 +588,15 @@ int xa_nn_main_process(int argc, char *argv[])
       sprintf(profiler_name,"matXvec%s_sym8sxasym8s_asym8s",(cfg.batch)? "_batch": "");
     }
   }
+  else if((cfg.mat_precision == -5) && (cfg.inp_precision == -4) && (cfg.out_precision == 16))
+  {
+      sprintf(profiler_name,"matXvec%s_sym8sxasym8s_16",(cfg.batch)? "_batch": "");
+  }
+  else if((cfg.mat_precision == -5) && (cfg.inp_precision == 8) && (cfg.out_precision == -7))
+  {
+      sprintf(profiler_name,"matXvec%s_sym8sx8_asym16s",(cfg.batch)? "_acc_batch": "");
+      initialize_p_out_memory = true;
+  }
   else
   {
     if(cfg.fc == 1){
@@ -569,6 +606,7 @@ int xa_nn_main_process(int argc, char *argv[])
       sprintf(profiler_name, "matXvec%s_%dx%d_%d",(cfg.batch)? "_batch" : "",cfg.mat_precision, cfg.inp_precision, cfg.out_precision); 
     }
   }
+  
   if(cfg.activation[0])
   {
     sprintf(profiler_name,"%s_%s",profiler_name,cfg.activation);
@@ -602,11 +640,14 @@ int xa_nn_main_process(int argc, char *argv[])
 
   // Open output file
   fptr_out = file_open(pb_output_file_path, cfg.write_out_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
+  
+  // The total size of the output buffer (which will be greater than just rows*columns in case of out_stride kernels)
+  out_buffer_size = cfg.rows*cfg.vec_count*cfg.out_stride;
 
   // Open reference file if verify flag is enabled
   if(cfg.verify)
   {
-    ptr_ref =  create_buf1D(cfg.rows*cfg.vec_count, cfg.out_precision); 
+    ptr_ref =  create_buf1D(out_buffer_size, cfg.out_precision); 
     
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
@@ -620,8 +661,12 @@ int xa_nn_main_process(int argc, char *argv[])
   p_mat2 = create_buf2D(cfg.rows, cfg.cols2, cfg.row_stride2, cfg.mat_precision, cfg.membank_padding);    VALIDATE_PTR(p_mat2);
   p_vec2 = create_buf1D(cfg.cols2, cfg.inp_precision);                                                    VALIDATE_PTR(p_vec2);
   p_bias = create_buf1D(cfg.rows, cfg.bias_precision);                                                    VALIDATE_PTR(p_bias);
-  p_out = create_buf1D(cfg.rows*cfg.vec_count, cfg.out_precision);                                        VALIDATE_PTR(p_out);
+  p_out  = create_buf1D(out_buffer_size, cfg.out_precision);                                              VALIDATE_PTR(p_out);
   p_scratch = create_buf1D(scratch_size, 8);                                                              VALIDATE_PTR(p_scratch);
+
+  if(initialize_p_out_memory){
+    memset(p_out->p, 0xE8, p_out->length * p_out->bytes_per_element);
+  }
 
   if(cfg.inp_precision == cfg.out_precision && (!strcmp(cfg.activation, "sigmoid") || !strcmp(cfg.activation, "tanh"))){
     fprintf(stdout, "\nScratch size: %d bytes\n", scratch_size);

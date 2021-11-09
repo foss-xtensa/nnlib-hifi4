@@ -41,6 +41,16 @@
   ae_int16x4 _ae_int16x4_mat1_ ## idx_row = AE_ZERO16(); \
   WORD8 *_WORD8_p_mat1_ ## idx_row = (WORD8 *) (&p_mat1[(m_itr+idx_row)*cols]); \
 
+#if XCHAL_HAVE_HIFI1
+#define LOAD_VEC_ASYM8b \
+  _ae_int16x4_vec = AE_L8X4U_I(_WORD8_p_vec, 0); \
+  AE_ADDCIRC16X4_XC((ae_int16x4 *)_WORD8_p_vec, 4*sizeof(WORD8)); \
+  _ae_int16x4_vec = AE_ADD16(_ae_int16x4_vec, AE_MOVDA16(vec1_offset));
+
+#define LOAD_ROW_MAT1_ASYM8b(idx_row) \
+  AE_L8X4U_IP(_ae_int16x4_mat1_ ##idx_row, _WORD8_p_mat1_ ##idx_row, 4*sizeof(WORD8)); \
+  _ae_int16x4_mat1_ ##idx_row = AE_ADD16(_ae_int16x4_mat1_ ##idx_row, AE_MOVDA16(mat1_offset));
+#else
 #define LOAD_VEC_ASYM8b \
   _ae_int16x4_vec = AE_L8X4F_I(_WORD8_p_vec, 0); \
   AE_ADDCIRC16X4_XC((ae_int16x4 *)_WORD8_p_vec, 4*sizeof(WORD8)); \
@@ -51,6 +61,7 @@
   AE_L8X4F_IP(_ae_int16x4_mat1_ ##idx_row, _WORD8_p_mat1_ ##idx_row, 4*sizeof(WORD8)); \
   _ae_int16x4_mat1_ ##idx_row = AE_MOVF16X4_FROMF64(AE_SRLI64(AE_MOVF64_FROMF16X4(_ae_int16x4_mat1_ ##idx_row), 8)); \
   _ae_int16x4_mat1_ ##idx_row = AE_ADD16(_ae_int16x4_mat1_ ##idx_row, AE_MOVDA16(mat1_offset));
+#endif
 
 #define KERNEL_MAT1_VEC_ASYM8b_ASYM8b(idx_row) \
   LOAD_ROW_MAT1_ASYM8b(idx_row); \
@@ -66,6 +77,21 @@
     with asymmetric rounding and saturation
     3. If right_shift is to be done, do it with symmetric rounding
     4. Add out_offset */
+#if XCHAL_HAVE_HIFI1
+#define ADJUST_ACC_ASYM8b(idx_row) \
+  ae_int32x2 _ae_int32x2_acc_ ##idx_row = AE_SLAA32(AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ##idx_row), left_shift); \
+  _ae_int32x2_acc_ ##idx_row = AE_MULFP32X2RAS_L(_ae_int32x2_acc_ ##idx_row, AE_MOVDA32(out_multiplier)); \
+  _ae_int64_acc_ ##idx_row = AE_SLAI64(AE_MOVINT64_FROMINT32X2(_ae_int32x2_acc_ ##idx_row), 32); \
+  _ae_int64_acc_ ##idx_row = AE_SRAA64(_ae_int64_acc_ ##idx_row, right_shift); \
+  _ae_int32x2_acc_ ##idx_row = AE_ROUND32F64SSYM(_ae_int64_acc_ ##idx_row); \
+  (_ae_int32x2_acc_ ##idx_row) = AE_ADD32S(_ae_int32x2_acc_ ##idx_row, AE_MOVDA32(out_offset)); \
+
+/* Saturate result to unsigned 8 bit (0-255) and store */
+#define STORE_ACC_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row) \
+  _ae_int32x2_acc_ ##idx_row = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row, AE_MOVDA32(0)), AE_MOVDA32(255)); \
+  AE_S8_0_I(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ##idx_row), ((WORD8 *)p_out + (m_itr + idx_row)*out_stride), 0); \
+
+#else
 #define ADJUST_ACC_ASYM8b(idx_row) \
   ae_int32x2 _ae_int32x2_acc_ ##idx_row = AE_SLAA32(AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ##idx_row), left_shift); \
   _ae_int32x2_acc_ ##idx_row = AE_MULFP32X2RAS(_ae_int32x2_acc_ ##idx_row, AE_MOVDA32(out_multiplier)); \
@@ -78,6 +104,8 @@
 #define STORE_ACC_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row) \
   _ae_int32x2_acc_ ##idx_row = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row, AE_MOVDA32(0)), AE_MOVDA32(255)); \
   (*((UWORD8 *) (&p_out[(m_itr + idx_row)*out_stride]))) = (UWORD8)AE_MOVAD32_L(_ae_int32x2_acc_ ##idx_row); \
+
+#endif
 
 #if (ROW_UNROLL == 1)
 #define SETUP_ACC            UNROLL_SETUP_ACC(0)

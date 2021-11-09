@@ -29,7 +29,9 @@
 #define ASYM8_TYPE -3
 #define ASYM8S_TYPE -4
 #define SYM8S_TYPE -5
+#define ASYM16S_TYPE -7
 #define FLOAT_TYPE -1
+#define ASYM32S_TYPE -10
 
 typedef struct _buf1D_t{
   void *p;

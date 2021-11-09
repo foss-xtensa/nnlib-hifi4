@@ -66,6 +66,7 @@ typedef struct _test_config_t
   int out_multiplier;
   int out_shift;
   int out_zero_bias;
+  int integer_bits;
   int help;
   int num_elements;
   int relu_threshold;
@@ -108,6 +109,7 @@ int default_config(test_config_t *p_cfg)
     p_cfg->relu_threshold = (1<<15); // threshold=1, Q16.15
     p_cfg->inp_precision = 32;
     p_cfg->out_precision = 32;
+    p_cfg->integer_bits = 3;
     p_cfg->activation_min = 0; 
     p_cfg->activation_max = 127; 
     p_cfg->activation_min_f32 = 0.0; 
@@ -158,14 +160,15 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-out_multiplier",p_cfg->out_multiplier);
     ARGTYPE_ONETIME_CONFIG("-out_shift",p_cfg->out_shift);
     ARGTYPE_ONETIME_CONFIG("-out_zero_bias",p_cfg->out_zero_bias);
+    ARGTYPE_ONETIME_CONFIG("-integer_bits",p_cfg->integer_bits);
     ARGTYPE_ONETIME_CONFIG("-num_elements",p_cfg->num_elements);
     ARGTYPE_ONETIME_CONFIG("-relu_threshold",p_cfg->relu_threshold);
     ARGTYPE_ONETIME_CONFIG("-inp_precision",p_cfg->inp_precision);
     ARGTYPE_ONETIME_CONFIG("-out_precision",p_cfg->out_precision);
     ARGTYPE_ONETIME_CONFIG("-activation_min",p_cfg->activation_min);
     ARGTYPE_ONETIME_CONFIG("-activation_max",p_cfg->activation_max);
-    ARGTYPE_ONETIME_CONFIG("-activation_min_f32",p_cfg->activation_min_f32);
-    ARGTYPE_ONETIME_CONFIG("-activation_max_f32",p_cfg->activation_max_f32);
+    ARGTYPE_ONETIME_CONFIG_F32("-activation_min_f32",p_cfg->activation_min_f32);
+    ARGTYPE_ONETIME_CONFIG_F32("-activation_max_f32",p_cfg->activation_max_f32);
     ARGTYPE_STRING("-activation",p_cfg->activation, MAX_ACTIVATION_NAME_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-frames",p_cfg->frames);
     ARGTYPE_ONETIME_CONFIG("-write_file",p_cfg->write_file);
@@ -188,8 +191,9 @@ void show_usage(void)
     printf("\t-relu_threshold : threshold for relu in Q16.15; Default=32768 (=1 in Q16.15)\n");
     printf("\t-inp_precision : 16, 32 or -1(single prec float); Default=32\n");
     printf("\t-out_precision : 16, 32, or -1(single prec float); Default=32\n");
+    printf("\t-integer_bits : number of integer bits in input for tanh_16_16 (0-6); Default=3\n");
     printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-activation: sigmoid, tanh, relu, relu_std, relu1, relu6 , activation_min_max or softmax; Default=sigmoid\n");
+    printf("\t-activation: sigmoid, tanh, relu, relu_std, relu1, relu6, leaky_relu, prelu, hard_swish, activation_min_max or softmax; Default=sigmoid\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp_file_name: Full filename for reading input \n");
     printf("\t-read_ref_file_name: Full filename for reading reference output \n");
@@ -210,8 +214,8 @@ void show_usage(void)
     printf("\t-zero_point: sigmoid_asym8 input parameter; Default=0\n");
     printf("\t-inp_zero_bias: Zero bias value for input Default=0\n");
     printf("\t-alpha_zero_bias: Prelu parameter - Zero bias value for alpha Default=0\n");
-    printf("\t-alpha_multiplier: Prelu parameter - Multiplier value for alpha Default=0x40000000\n");
-    printf("\t-alpha_shift: Prelu parameter - Shift value for alpha Default=0\n");
+    printf("\t-alpha_multiplier: Leaky Relu and Prelu parameter - Multiplier value for alpha Default=0x40000000\n");
+    printf("\t-alpha_shift: Leaky Relu and Prelu parameter - Shift value for alpha Default=0\n");
     printf("\t-reluish_multiplier: Hard Swish parameter - Multiplier value for relu scale Default=0x40000000\n");
     printf("\t-reluish_shift: Hard Swish parameter - Shift value for relu scale Default=0\n");
     printf("\t-out_multiplier: Multiplier value for output Default=0x40000000\n");
@@ -270,79 +274,71 @@ void show_usage(void)
 #define ACTIVATION_MIN_MAX_ASYM8U_FN(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_activation_min_max_asym8_asym8 ( \
-          (UWORD8 *)p_out->p, (UWORD8 *)p_inp->p, \
-          cfg.activation_min, cfg.activation_max, \
-          cfg.num_elements);\
+      err = xa_nn_vec_activation_min_max_asym8_asym8 ( \
+                (UWORD8 *)p_out->p, (UWORD8 *)p_inp->p, \
+                cfg.activation_min, cfg.activation_max, \
+                cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
     }
 
-// As relu_asym8 implementation is not available for hifi4, 
-// currently calling activation_min_max_asym8
-#if hifi5
 #define RELU_ASYM8U_FN(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_relu_asym8u_asym8u ( \
-          (UWORD8 *)p_out->p, (UWORD8 *)p_inp->p, \
-          cfg.inp_zero_bias, cfg.out_multiplier, \
-          cfg.out_shift, cfg.out_zero_bias, \
-          cfg.activation_min, cfg.activation_max, \
-          cfg.num_elements);\
+      err = xa_nn_vec_relu_asym8u_asym8u ( \
+                (UWORD8 *)p_out->p, (UWORD8 *)p_inp->p, \
+                cfg.inp_zero_bias, cfg.out_multiplier, \
+                cfg.out_shift, cfg.out_zero_bias, \
+                cfg.activation_min, cfg.activation_max, \
+                cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
     }
-#else
-#define RELU_ASYM8U_FN(IPREC, OPREC, ACTIVATION) \
-    if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
-      XTPWR_PROFILER_START(0);\
-      xa_nn_vec_activation_min_max_asym8_asym8 ( \
-          (UWORD8 *)p_out->p, (UWORD8 *)p_inp->p, \
-          cfg.activation_min, cfg.activation_max, \
-          cfg.num_elements);\
-      XTPWR_PROFILER_STOP(0);\
-      err = 0;\
-    }
-#endif
 
 #define RELU_ASYM8S_FN(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_relu_asym8s_asym8s ( \
-          (WORD8 *)p_out->p, (WORD8 *)p_inp->p, \
-          cfg.inp_zero_bias, cfg.out_multiplier, \
-          cfg.out_shift, cfg.out_zero_bias, \
-          cfg.activation_min, cfg.activation_max, \
-          cfg.num_elements);\
+      err = xa_nn_vec_relu_asym8s_asym8s ( \
+                (WORD8 *)p_out->p, (WORD8 *)p_inp->p, \
+                cfg.inp_zero_bias, cfg.out_multiplier, \
+                cfg.out_shift, cfg.out_zero_bias, \
+                cfg.activation_min, cfg.activation_max, \
+                cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
     }
 
 #define PRELU_ASYM8S_FN(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_prelu_asym8s_asym8s ( \
-          (WORD8 *)p_out->p, (WORD8 *)p_inp->p, (WORD8 *)p_inp_alpha->p,\
-          cfg.inp_zero_bias, cfg.alpha_zero_bias, \
-          cfg.alpha_multiplier, cfg.alpha_shift, \
-          cfg.out_multiplier, cfg.out_shift, \
-          cfg.out_zero_bias, cfg.num_elements);\
+      err = xa_nn_vec_prelu_asym8s_asym8s ( \
+                (WORD8 *)p_out->p, (WORD8 *)p_inp->p, (WORD8 *)p_inp_alpha->p,\
+                cfg.inp_zero_bias, cfg.alpha_zero_bias, \
+                cfg.alpha_multiplier, cfg.alpha_shift, \
+                cfg.out_multiplier, cfg.out_shift, \
+                cfg.out_zero_bias, cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
+    }
+
+#define LEAKY_RELU_ASYM8S_FN(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_vec_leaky_relu_asym8s_asym8s ( \
+                (WORD8 *)p_out->p, (WORD8 *)p_inp->p,\
+                cfg.inp_zero_bias,\
+                cfg.alpha_multiplier, cfg.alpha_shift, \
+                cfg.out_multiplier, cfg.out_shift, \
+                cfg.out_zero_bias, cfg.num_elements);\
+      XTPWR_PROFILER_STOP(0);\
     }
 
 #define HSWISH_ASYM8S_FN(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_hard_swish_asym8s_asym8s ( \
-          (WORD8 *)p_out->p, (WORD8 *)p_inp->p, \
-          cfg.inp_zero_bias, \
-          cfg.reluish_multiplier, cfg.reluish_shift, \
-          cfg.out_multiplier, cfg.out_shift, \
-          cfg.out_zero_bias, cfg.num_elements);\
+      err = xa_nn_vec_hard_swish_asym8s_asym8s ( \
+                (WORD8 *)p_out->p, (WORD8 *)p_inp->p, \
+                cfg.inp_zero_bias, \
+                cfg.reluish_multiplier, cfg.reluish_shift, \
+                cfg.out_multiplier, cfg.out_shift, \
+                cfg.out_zero_bias, cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
     }
 #define SOFTMAX_ASYM8(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
@@ -396,12 +392,11 @@ void show_usage(void)
 #define ACTIVATION_MIN_MAX_FN_F32(IPREC,OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_activation_min_max_f32_f32( \
-          (FLOAT32 *)p_out->p, (FLOAT32 *)p_inp->p, \
-          cfg.activation_min_f32, cfg.activation_max_f32, \
-          cfg.num_elements);\
+      err = xa_nn_vec_activation_min_max_f32_f32( \
+                (FLOAT32 *)p_out->p, (FLOAT32 *)p_inp->p, \
+                cfg.activation_min_f32, cfg.activation_max_f32, \
+                cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
     }
 #else
 #define ACTIVATION_MIN_MAX_FN_F32(IPREC, OPREC, ACTIVATION) \
@@ -412,46 +407,51 @@ void show_usage(void)
 #define ACTIVATION_MIN_MAX_FN(IPREC,OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_##ACTIVATION##_##IPREC##_##OPREC ( \
-          (WORD##OPREC *)p_out->p, (WORD##IPREC *)p_inp->p, \
-          cfg.activation_min, \
-          cfg.activation_max, \
-          cfg.num_elements);\
+      err = xa_nn_vec_##ACTIVATION##_##IPREC##_##OPREC ( \
+                (WORD##OPREC *)p_out->p, (WORD##IPREC *)p_inp->p, \
+                cfg.activation_min, \
+                cfg.activation_max, \
+                cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
     }
 
 
 #define ACTIVATION_FN(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_##ACTIVATION##_##IPREC##_##OPREC ( \
-          (WORD##OPREC *)p_out->p, (WORD##IPREC *)p_inp->p, \
-          cfg.num_elements);\
+      err = xa_nn_vec_##ACTIVATION##_##IPREC##_##OPREC ( \
+                (WORD##OPREC *)p_out->p, (WORD##IPREC *)p_inp->p, \
+                cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
+    }
+
+#define ACTIVATION_FN_VAR_QFORMAT(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_vec_##ACTIVATION##_##IPREC##_##OPREC ( \
+                (WORD##OPREC *)p_out->p, (WORD##IPREC *)p_inp->p, \
+                cfg.integer_bits, cfg.num_elements);\
+      XTPWR_PROFILER_STOP(0);\
     }
 
 #define RELU_FN(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_##ACTIVATION##_##IPREC##_##OPREC ( \
-          (WORD##OPREC *)p_out->p, (WORD##IPREC *)p_inp->p, \
-          cfg.relu_threshold, \
-          cfg.num_elements);\
+      err = xa_nn_vec_##ACTIVATION##_##IPREC##_##OPREC ( \
+                (WORD##OPREC *)p_out->p, (WORD##IPREC *)p_inp->p, \
+                cfg.relu_threshold, \
+                cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
     }
 
 #if HIFI_VFPU
 #define ACTIVATION_FN_F32(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_##ACTIVATION##_f32_f32 ( \
-          (FLOAT32 *)p_out->p, (FLOAT32 *)p_inp->p, \
-          cfg.num_elements);\
+      err = xa_nn_vec_##ACTIVATION##_f32_f32 ( \
+                (FLOAT32 *)p_out->p, (FLOAT32 *)p_inp->p, \
+                cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
     }
 #else
 #define ACTIVATION_FN_F32(IPREC, OPREC, ACTIVATION) \
@@ -463,12 +463,11 @@ void show_usage(void)
 #define RELU_FN_F32(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
-      xa_nn_vec_##ACTIVATION##_f32_f32 ( \
-          (FLOAT32 *)p_out->p, (FLOAT32 *)p_inp->p, \
-          cfg.relu_threshold, \
-          cfg.num_elements);\
+      err = xa_nn_vec_##ACTIVATION##_f32_f32 ( \
+                (FLOAT32 *)p_out->p, (FLOAT32 *)p_inp->p, \
+                cfg.relu_threshold, \
+                cfg.num_elements);\
       XTPWR_PROFILER_STOP(0);\
-      err = 0;\
     }
 #else
 #define RELU_FN_F32(IPREC, OPREC, ACTIVATION) \
@@ -494,6 +493,8 @@ void show_usage(void)
     else ACTIVATION_FN(32, 16, tanh) \
     else ACTIVATION_FN(32, 8, sigmoid) \
     else ACTIVATION_FN(32, 8, tanh) \
+    else ACTIVATION_FN(16, 16, sigmoid) \
+    else ACTIVATION_FN_VAR_QFORMAT(16, 16, tanh) \
     else ACTIVATION_FN_F32(-1, -1, sigmoid) \
     else ACTIVATION_FN_F32(-1, -1, tanh) \
     else RELU_FN_F32(-1, -1, relu) \
@@ -506,6 +507,7 @@ void show_usage(void)
     else RELU_ASYM8U_FN(-3, -3, relu)\
     else RELU_ASYM8S_FN(-4, -4, relu)\
     else PRELU_ASYM8S_FN(-4, -4, prelu)\
+    else LEAKY_RELU_ASYM8S_FN(-4, -4, leaky_relu)\
     else HSWISH_ASYM8S_FN(-4, -4, hard_swish)\
     else SOFTMAX_ASYM8(softmax, -3, -3) \
     else SOFTMAX_ASYM8s(softmax, -4, -4) \
@@ -647,7 +649,7 @@ int xa_nn_main_process(int argc, char *argv[])
   for(frame = 0; frame < cfg.frames; frame++)
   {
     // If write_file enabled, generate random data for input, else read from file
-    load_activation_input_data(cfg.write_file, fptr_inp, p_inp);
+    load_activation_input_data(cfg.write_file, fptr_inp, p_inp, p_inp_alpha, cfg.activation);
 
     // Call the activation specified on command line
     PROCESS_ACTIVATION;

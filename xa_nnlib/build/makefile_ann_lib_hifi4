@@ -97,7 +97,7 @@ CFLAGS += \
         
 #LIBLDFLAGS = -Wl,--gc-sections -Wl,--undefined=xa_nnlib_get_lib_name_string
 
-ifneq ($(CC), xt-clang)
+ifeq ($(CC), xt-xcc)
   CFLAGS += -OPT:Olimit=12125
 endif
 

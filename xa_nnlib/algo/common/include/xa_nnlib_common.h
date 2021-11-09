@@ -21,7 +21,7 @@
 ******************************************************************************/
 #ifndef __XA_NNLIB_LEGACY_COMPAT_H__
 #define __XA_NNLIB_LEGACY_COMPAT_H__
-
+#include <xtensa/config/core-isa.h>
 #include "xtensa/tie/xt_hifi2.h"
 #include "xa_nnlib_api.h"
 #include "xa_nnlib_standards.h"

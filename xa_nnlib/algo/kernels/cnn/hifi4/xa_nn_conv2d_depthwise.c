@@ -112,6 +112,7 @@ static VOID xa_nn_conv2d_depthwise_nchw_init
  ,WORD32 x_padding
  ,WORD32 output_width
  ,WORD32 circ_buf_bytewidth
+ ,pVOID p_pad_val
  )
 
 {
@@ -133,6 +134,7 @@ static VOID xa_nn_conv2d_depthwise_nchw_init
             ,x_padding
             ,circ_buf_height
             ,output_width
+            ,p_pad_val
             );
 
     circ_buf_size = (int)((unsigned)p_state->circ_buf.p_end - (unsigned)p_state->circ_buf.p_begin);
@@ -329,6 +331,7 @@ VOID xa_nn_conv2d_depthwise_init
  ,WORD32 output_width
  ,WORD32 circ_buf_precision
  ,WORD32 inp_data_format
+ ,pVOID p_pad_val
  )
 
 {
@@ -375,6 +378,7 @@ VOID xa_nn_conv2d_depthwise_init
                 ,y_stride
                 ,x_padding
                 ,output_width
-                ,circ_buf_bytewidth);
+                ,circ_buf_bytewidth
+                ,p_pad_val);
     }
 }

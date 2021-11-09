@@ -22,7 +22,6 @@
 #include "common_fpu.h"
 #include "xa_nnlib_common.h"
 #include "xa_nn_avgpool_state.h"
-#include <math.h>
 
 #define INCR_N_PLANE(ptr, n, plane_size) \
     ptr = (ptr) + ((n) * (plane_size));
@@ -98,7 +97,7 @@ const WORD8* __restrict__ p_inp,
     WORD8 *p_out_temp;
     ae_int16x4 * p_src1_scratch;
     ae_valign align_src1, align_src2, align_src3, align_dst;
-    ae_int16x4 i1_la, i2_la, i3_la;
+    ALIGN_REGISTER_TYPE i1_la, i2_la, i3_la;
     int i;
     WORD16 *p_dst_pad;
 
@@ -428,8 +427,13 @@ const WORD8* __restrict__ p_inp,
                 for(i=0; i<input_channels; i++)
                 {
                     d_out1 = AE_MOVDA32(p_out1[i]);
+#if XCHAL_HAVE_HIFI1
+                    d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32hw);
+                    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(d_tmp32), (WORD8*)p_out_temp, 1);
+#else
                     d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
                     p_out_temp[i] = (WORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
+#endif
                 }
             }
             else
@@ -476,7 +480,7 @@ const WORD8* __restrict__ p_inp,
     ae_int32x2 * p_dst, *p_dst_temp;
     WORD8 *p_out_temp;
     ae_valign align_src1, align_src2, align_src3, align_dst;
-    ae_int16x4 i1_la, i2_la, i3_la;
+    ALIGN_REGISTER_TYPE i1_la, i2_la, i3_la;
     WORD32 *p_dst_pad;
 
     plane_size = input_width * input_channels;

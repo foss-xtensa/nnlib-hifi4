@@ -49,10 +49,21 @@ static WORD32 conv_x_left_pad(
     {
       for(k=0;k<out_channels;k++)
       {
+#if XCHAL_HAVE_HIFI1
+        ae_int16x4 acc16;
+        ae_int64 acc;
+        acc16 = AE_L16_I((ae_int16 *)&p_bias[k], 0);
+        acc = AE_SRAI64(  AE_MOVINT64_FROMINT16X4(acc16), 48);
+        acc = AE_SLAA64S(acc, bias_shift);
+        acc = AE_SLAA64S(acc, acc_shift);
+        ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
+        p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = AE_MOVINT16_FROMINT16X4(AE_SAT16X4(sat_acc, sat_acc));
+#else
         ae_int64 acc = p_bias[k];
         acc = AE_SLAA64S(acc, bias_shift);
         acc = AE_SLAA64S(acc, acc_shift);
         p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),16),-16));
+#endif
       }
     }
   }
@@ -85,10 +96,21 @@ static WORD32 conv_x_right_pad(
     {
       for(k=0;k<out_channels;k++)
       {
+#if XCHAL_HAVE_HIFI1
+        ae_int16x4 acc16;
+        ae_int64 acc;
+        acc16 = AE_L16_I((ae_int16 *)&p_bias[k], 0);
+        acc = AE_SRAI64(  AE_MOVINT64_FROMINT16X4(acc16), 48);
+        acc = AE_SLAA64S(acc, bias_shift);
+        acc = AE_SLAA64S(acc, acc_shift);
+        ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
+        p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = AE_MOVINT16_FROMINT16X4(AE_SAT16X4(sat_acc, sat_acc));
+#else
         ae_int64 acc = p_bias[k];
         acc = AE_SLAA64S(acc, bias_shift);
         acc = AE_SLAA64S(acc, acc_shift);
         p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),16),-16));
+#endif
       }
     }
   }

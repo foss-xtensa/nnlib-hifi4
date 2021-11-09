@@ -1,0 +1,21 @@
+@Start
+@Input_path ../test_inp/
+@Output_path ../test_out/
+@Ref_path ../test_ref/
+
+// depth_to_space
+-read_inp_file_name inp_depth_to_space_8_11x11x144.bin -write_out_file_name out_depth_to_space_8_inp11x11x144_out33x33x16.bin -read_ref_file_name out_depth_to_space_8_inp11x11x144_out33x33x16.bin -verify 1 -write_file 0 -kernel_name depth_to_space -inp_precision 8 -out_precision 8 -input_height 11 -input_width 11 -input_channels 144 -block_size 3 -out_height 33 -out_width 33 -out_channels 16
+
+// space_to_depth
+-read_inp_file_name inp_space_to_depth_8_33x33x16.bin -write_out_file_name out_space_to_depth_8_inp33x33x16_out11x11x144.bin -read_ref_file_name out_space_to_depth_8_inp33x33x16_out11x11x144.bin -verify 1 -write_file 0 -kernel_name space_to_depth -inp_precision 8 -out_precision 8 -input_height 33 -input_width 33 -input_channels 16 -block_size 3 -out_height 11 -out_width 11 -out_channels 144
+
+// pad
+-read_inp_file_name inp_pad_8_1x3x3x256.bin -write_out_file_name out_pad_8_inp_1x3x3x256_out_1x5x5x256.bin -read_ref_file_name out_pad_8_inp_1x3x3x256_out_1x5x5x256.bin -verify 1 -write_file 0 -kernel_name pad -inp_precision 8 -out_precision 8 -num_inp_dims 4 -num_out_dims 4 -num_pad_dims 2 -pad_value 0 -inp_shape 1 3 3 256 -out_shape 1 5 5 256 -pad_shape 2 4 -pad_values 0 0 1 1 1 1 0 0
+
+// batch_to_space_nd
+-read_inp_file_name inp_batch_to_space_nd_8_12x8x6x128.bin -write_out_file_name out_batch_to_space_nd_8_inp12x8x6x128_out2x16x18x128.bin -read_ref_file_name out_batch_to_space_nd_8_inp12x8x6x128_out2x16x18x128.bin -verify 1 -write_file 0 -kernel_name batch_to_space_nd -inp_precision 8 -out_precision 8 -num_inp_dims 4 -num_out_dims 4 -inp_shape 12 8 6 128 -block_sizes 2 3 -crop_or_pad_sizes 0 0 0 0 -out_shape 2 16 18 128
+
+// space_to_batch_nd
+-read_inp_file_name inp_space_to_batch_nd_8_2x16x18x128.bin -write_out_file_name out_space_to_batch_nd_8_inp2x16x18x128_out12x8x6x128.bin -read_ref_file_name out_space_to_batch_nd_8_inp2x16x18x128_out12x8x6x128.bin -verify 1 -write_file 0 -kernel_name space_to_batch_nd -inp_precision 8 -out_precision 8 -num_inp_dims 4 -num_out_dims 4 -inp_shape 2 16 18 128 -block_sizes 2 3 -crop_or_pad_sizes 0 0 0 0 -out_shape 12 8 6 128
+
+@Stop

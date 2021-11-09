@@ -92,6 +92,7 @@ typedef struct _test_config_t
   int verify;
   int dilation_height;
   int dilation_width;
+  int pointwise_profile_only;
 }test_config_t;
 
 int default_config(test_config_t *p_cfg)
@@ -138,6 +139,7 @@ int default_config(test_config_t *p_cfg)
     p_cfg->verify = 1;
     p_cfg->dilation_height = 1;
     p_cfg->dilation_width = 1;
+    p_cfg->pointwise_profile_only = 0;
 
     return 0;
   }
@@ -198,6 +200,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
     ARGTYPE_ONETIME_CONFIG("-dilation_height",p_cfg->dilation_height);
     ARGTYPE_ONETIME_CONFIG("-dilation_width",p_cfg->dilation_width);
+    ARGTYPE_ONETIME_CONFIG("-pointwise_profile_only",p_cfg->pointwise_profile_only);
 
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
@@ -231,13 +234,14 @@ void show_usage(void)
     printf("\t-kernel_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit), -5(Symmetric 8-bit signed); Default=8\n");
     printf("\t-out_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit), -4(Asymmetric 8-bit signed); Default=16\n");
     printf("\t-bias_precision: 8, 16, 32, -1(single prec float); Default=16\n");
-    printf("\t-input_zero_bias: input zero zero bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), -127 to 128 (for Asymmetric 8-bit signed); Default=-128\n");
-    printf("\t-kernel_zero_bias: kernel zero zero_bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), ignored for symmetric 8-bit signed ; Default=-128\n");
-    printf("\t-out_multiplier: output multiplier in Q31 format for asym8, 0x0 to 0x7fffffff; Default=0x40000000\n");
-    printf("\t-out_shift: output shift for asym8, 31 to -31; Default=-8\n");
-    printf("\t-out_zero_bias: output zero bias for asym8, 0 to 255; Default=128\n");
+    printf("\t-input_zero_bias: input zero zero bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), -127 to 128 (for Asymmetric 8-bit signed); Default=-127\n");
+    printf("\t-kernel_zero_bias: kernel zero zero_bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), ignored for symmetric 8-bit signed ; Default=-127\n");
+    printf("\t-out_multiplier : Output multiplier in Q31 format for quantized 8-bit, 0x0 to 0x7fffffff; Default=0x40000000\n");
+    printf("\t-out_shift : Output shift for quantized 8-bit(asym8u and asym8s), 31 to -31; Default=-8\n");
+    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s; Default=128\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-kernel_name: conv2d_std, dilated_conv2d_std, conv2d_depth, conv1d_std; Default="" : conv2d_std\n");
+    printf("\t-pointwise_profile_only: Applicable only when kernel_name is conv2d_depth, 0 (print conv2d depthwise and pointwise profile info), 1(print only conv2d pointwise profile info); Default=0\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp_file_name: Full filename for reading inputs (order - input, kernel, bias, (pointwise kernel, pointwise bias for depth separable)) \n");
     printf("\t-read_ref_file_name: Full filename for reading reference output \n");
@@ -347,8 +351,10 @@ void show_usage(void)
         cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
         cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
-    XTPWR_PROFILER_UPDATE(0); \
-    XTPWR_PROFILER_PRINT(0); \
+    if(!cfg.pointwise_profile_only) { \
+        XTPWR_PROFILER_UPDATE(0); \
+        XTPWR_PROFILER_PRINT(0); \
+    } \
     if(!err) { \
         XTPWR_PROFILER_START(1);\
         err = xa_nn_conv2d_pointwise_f32 ( \
@@ -370,8 +376,10 @@ void show_usage(void)
         cfg.acc_shift, cfg.bias_shift, \
         cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
-    XTPWR_PROFILER_UPDATE(0); \
-    XTPWR_PROFILER_PRINT(0); \
+    if(!cfg.pointwise_profile_only) { \
+        XTPWR_PROFILER_UPDATE(0); \
+        XTPWR_PROFILER_PRINT(0); \
+    } \
     if(!err) { \
         XTPWR_PROFILER_START(1);\
         err = xa_nn_conv2d_pointwise_##KPREC##x##IPREC ( \
@@ -395,8 +403,10 @@ void show_usage(void)
         cfg.input_zero_bias, cfg.kernel_zero_bias, cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias, \
         cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
-    XTPWR_PROFILER_UPDATE(0); \
-    XTPWR_PROFILER_PRINT(0); \
+    if(!cfg.pointwise_profile_only) { \
+        XTPWR_PROFILER_UPDATE(0); \
+        XTPWR_PROFILER_PRINT(0); \
+    } \
     if(!err) { \
         XTPWR_PROFILER_START(1);\
         err = xa_nn_conv2d_pointwise_asym8xasym8 ( \
@@ -420,8 +430,10 @@ void show_usage(void)
         cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
         cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
-    XTPWR_PROFILER_UPDATE(0); \
-    XTPWR_PROFILER_PRINT(0); \
+    if(!cfg.pointwise_profile_only) { \
+        XTPWR_PROFILER_UPDATE(0); \
+        XTPWR_PROFILER_PRINT(0); \
+    } \
     if(!err) { \
         XTPWR_PROFILER_START(1);\
         err = xa_nn_conv2d_pointwise_per_chan_sym8sxasym8s ( \
@@ -652,12 +664,25 @@ int xa_nn_main_process(int argc, char *argv[])
       strcat(profiler_name_1, profiler_params);
     }
   }
+  if(!strcmp(cfg.kernel_name,"conv2d_depth"))
+  {
+    sprintf(profiler_params, "_nhwc");
+    if(cfg.inp_data_format == 0)
+      strcat(profiler_name_0, profiler_params);
+    if(cfg.out_data_format == 0)
+      strcat(profiler_name_1, profiler_params);
+  }
   
   // Set profiler parameters
   if(!strcmp(cfg.kernel_name,"conv1d_std"))
   {
     sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, out_channels=%d, out_height=%d", 
       cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.out_channels, cfg.out_height);
+  }
+  else if(!strcmp(cfg.kernel_name,"dilated_conv2d_std"))
+  {
+    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, out_channels=%d, out_height=%d, dilation_height=%d, dilation_width=%d, x_stride=%d, y_stride=%d", 
+      cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.out_channels, cfg.out_height, cfg.dilation_height, cfg.dilation_width, cfg.x_stride, cfg.y_stride);
   }
   else
   {
@@ -746,7 +771,8 @@ int xa_nn_main_process(int argc, char *argv[])
   }
   else if(!strcmp(cfg.kernel_name,"dilated_conv2d_std"))
   {
-    scratch_size = xa_nn_dilated_conv2d_std_getsize(cfg.input_height,cfg.input_channels,cfg.kernel_height,cfg.kernel_width,cfg.y_stride,cfg.y_padding,cfg.out_height,cfg.inp_precision,cfg.dilation_height); PRINT_VAR(scratch_size)
+    scratch_size = xa_nn_dilated_conv2d_std_getsize(cfg.input_height,cfg.input_channels,cfg.kernel_height,cfg.kernel_width,cfg.y_stride,cfg.y_padding,cfg.out_height,cfg.out_channels,cfg.inp_precision,cfg.dilation_height);
+    PRINT_VAR(scratch_size)
   }
   else if(!strcmp(cfg.kernel_name,"conv2d_depth"))
   {
@@ -821,7 +847,10 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+  if(!(!strcmp(cfg.kernel_name,"conv2d_depth") && cfg.pointwise_profile_only))
+  {
+    XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+  }
   if(!strcmp(cfg.kernel_name,"conv2d_depth"))
   {
     XTPWR_PROFILER_CLOSE(1, (pass_count == cfg.frames));

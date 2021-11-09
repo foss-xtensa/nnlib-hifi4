@@ -239,6 +239,7 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
                     KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b(0,1);
                     KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b(1,1);
                 }
+                #pragma no_unroll
                 for(c_itr = cols1_count; c_itr < cols1; c_itr++)
                 {
                     LOAD_VEC_BATCH_ASYM8b_SINGLE_UNALIGNED(0);
@@ -278,6 +279,7 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
                     KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b(0,0);
                     KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b(0,1);
                 }
+                #pragma no_unroll
                 for(c_itr = cols1_count; c_itr < cols1; c_itr++)
                 {
                     LOAD_VEC_BATCH_ASYM8b_SINGLE_UNALIGNED(0);
@@ -315,6 +317,7 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
                         KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b(0,0);
                         KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b(1,0);
                     }
+                #pragma no_unroll
                     for(c_itr = cols1_count; c_itr < cols1; c_itr++)
                     {
                         LOAD_VEC_BATCH_ASYM8b_SINGLE_UNALIGNED(0);
@@ -348,6 +351,7 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
                         LOAD_ROW_MAT1_ASYM8b_UNALIGNED(0);
                         KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b(0,0);
                     }
+                #pragma no_unroll
                     for(c_itr = cols1_count; c_itr < cols1; c_itr++)
                     {
                         LOAD_VEC_BATCH_ASYM8b_SINGLE_UNALIGNED(0);

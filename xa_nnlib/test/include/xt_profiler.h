@@ -205,7 +205,7 @@ typedef struct _profiler_t
   int frame_cnt, peak_frame;
   double curr, sum, ave, peak;
   double curr_metric, ave_metric;
-  int metric_points;
+  unsigned int metric_points;
 
   char params[MAX_PROFILER_PARAMS_LENGTH];
   char metric_units[MAX_PROFILER_METRIC_UNITS_LENGTH];

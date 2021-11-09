@@ -167,7 +167,8 @@ VOID xa_nn_circ_buf_nchw_init(
     WORD32 y_stride,
     WORD32 x_padding,
     WORD32 circ_buf_height,
-    WORD32 output_width);
+    WORD32 output_width,
+    pVOID p_pad_val);
 
 void xa_nn_circ_buf_nchw_add_rows(
     xa_nn_circ_buf_t *p_circ_buf,

@@ -44,6 +44,7 @@
 #include "NatureDSP_types.h"
 #include "NatureDSP_Signal_math.h"
 #include "common.h"
+#include "xa_nnlib_common.h"
 
 /*-------------------------------------------------------------------------
   Hyperbolic Tangent

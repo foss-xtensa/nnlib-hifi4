@@ -57,11 +57,21 @@
   AE_MULAAAAQ16(accu2_ ##N, temp_src2, temp_in1); \
 }
 
+#if XCHAL_HAVE_HIFI1
 #define STORE_ROW_D(N) \
   accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
   accu2_ ##N = AE_SLAA64S(accu2_ ##N , acc_shift);\
-  p_dst1[(row+N) * out_row_offset] =AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu1_ ##N),16),-16)); \
-  p_dst2[(row+N) * out_row_offset] =AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu2_ ##N),16),-16));
+  ae_int32x2 sat_acc1_ ##N = AE_ROUND32F64SSYM(accu1_ ##N); \
+  ae_int32x2 sat_acc2_ ##N = AE_ROUND32F64SSYM(accu2_ ##N); \
+  p_dst1[(row+N) * out_row_offset] = AE_MOVINT16_FROMINT16X4(AE_SAT16X4(sat_acc1_ ##N, sat_acc1_ ##N)); \
+  p_dst2[(row+N) * out_row_offset] = AE_MOVINT16_FROMINT16X4(AE_SAT16X4(sat_acc2_ ##N, sat_acc2_ ##N));
+#else
+#define STORE_ROW_D(N) \
+  accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
+  accu2_ ##N = AE_SLAA64S(accu2_ ##N , acc_shift);\
+  p_dst1[(row+N) * out_row_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu1_ ##N),16),-16)); \
+  p_dst2[(row+N) * out_row_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu2_ ##N),16),-16));
+#endif
 
 #if (UNROLL_D == 1)
 #define SETUP_D SETUP_ROW_D(0)
@@ -112,9 +122,18 @@
   AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
 }
 
+#if XCHAL_HAVE_HIFI1
 #define STORE_ROW_S(N) \
   accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
-  p_dst1[(row+N) * out_row_offset] =AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu1_ ##N),16),-16)); \
+  ae_int32x2 sat_acc1_ ##N = AE_ROUND32F64SSYM(accu1_ ##N); \
+  p_dst1[(row+N) * out_row_offset] = AE_MOVINT16_FROMINT16X4(AE_SAT16X4(sat_acc1_ ##N, sat_acc1_ ##N)); \
+
+#else
+#define STORE_ROW_S(N) \
+  accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
+  p_dst1[(row+N) * out_row_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu1_ ##N),16),-16)); \
+
+#endif
 
 #if (UNROLL_S == 1)
 #define SETUP_S SETUP_ROW_S(0)

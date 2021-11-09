@@ -52,6 +52,18 @@ static const int constant_48_over_17 = 1515870810;
 static const int constant_neg_32_over_17 = -1010580540;
 static const int F2_ONE = 0x20000000;
 
+
+#if XCHAL_HAVE_HIFI1
+#define MAX_16X4(id1, id0)\
+    id1 = AE_MAX16(id1, id0);
+
+#define STORE_8X4_FROM_32X4(out_ptr, val12, val34){\
+    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(AE_SEL32_LH(val12, val12)), (WORD8 *)out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(val12), (WORD8 *)out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(AE_SEL32_LH(val34, val34)), (WORD8 *)out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(val34), (WORD8 *)out_ptr, sizeof(WORD8));\
+}
+#else
 #define MAX_16X4(id1, id0) \
         b0 = AE_LT16(id1, id0); \
         AE_MOVT16X4(id1, id0, b0);
@@ -67,6 +79,7 @@ static const int F2_ONE = 0x20000000;
     *out_ptr++ = (UWORD8)o3;\
     *out_ptr++ = (UWORD8)o4;\
 }
+#endif
 
 #define MultiplyByQuantizedMultiplierGreaterThanOne(y, x, multiplier, lsh) {\
     y = AE_SLAA32(x, lsh);\
@@ -232,7 +245,9 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
 
     int i;
     int shift_bits_reciprocal;
+#if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
+#endif
     xtbool2 f32, f10;
     UWORD8 *p_in = (UWORD8 *)p_vec;
     WORD32 *p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
@@ -246,7 +261,10 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
     int pre_loop_count;
     int main_loop_count;
     int post_loop_count;
-
+#if XCHAL_HAVE_HIFI1
+    ae_valign align_out = AE_ZALIGN64();
+#endif
+ 
     if(vec_length > 3)
     {
         pre_loop_count = (int)p_vec & 0x3;
@@ -288,8 +306,12 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
         WORD8 *p_in_t = (WORD8 *)p_in;
         for(i=0; i < main_loop_count; i++)
         {
+#if XCHAL_HAVE_HIFI1
+            AE_L8X4U_IP(x, p_in_t, 4*sizeof(WORD8));
+#else
             AE_L8X4F_IP(x, p_in_t, 4*sizeof(WORD8));
             x = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(x), 8));
+#endif
             MAX_16X4(m0, x)
         }
         p_in = (UWORD8 *)p_in_t;
@@ -413,8 +435,16 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
         unsat_out10 = AE_MULFP32X2RAS(exp_y10, recip_sum_exp);
         unsat_out10 = AE_SRAA32RS(unsat_out10, shift_bits_reciprocal + 31 - 8);
         CLAMP_VAL(out10, unsat_out10, a_min, a_max);
+#if XCHAL_HAVE_HIFI1
+        ae_f16x4 x_temp = AE_CVT16X4(out32, out10);
+        AE_SA8X4U_IP(x_temp, align_out, (ae_int32*)p_out);
+#else
         STORE_8X4_FROM_32X4(p_out, out32, out10)
+#endif
     }
+#if XCHAL_HAVE_HIFI1
+    AE_SA64POS_FP(align_out, p_out);
+#endif
 
     // remainder loop
     __Pragma("no_unroll");
@@ -456,7 +486,9 @@ WORD32 xa_nn_vec_softmax_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
     int i;
     int shift_bits_reciprocal;
+#if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
+#endif
     xtbool2 f32, f10;
     WORD8 *p_in = (WORD8 *)p_vec;
     WORD32 *p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
@@ -472,6 +504,9 @@ WORD32 xa_nn_vec_softmax_asym8s_asym8s( WORD8 * __restrict__ p_out,
     int pre_loop_count;
     int main_loop_count;
     int post_loop_count;
+#if XCHAL_HAVE_HIFI1
+    ae_valign align_out = AE_ZALIGN64();
+#endif
 
     if(vec_length > 3)
     {
@@ -513,8 +548,12 @@ WORD32 xa_nn_vec_softmax_asym8s_asym8s( WORD8 * __restrict__ p_out,
         }
         for(i=0; i < main_loop_count; i++)
         {
+#if XCHAL_HAVE_HIFI1
+            AE_L8X4S_IP(x, p_in, 4*sizeof(WORD8));
+#else
             AE_L8X4F_IP(x, p_in, 4*sizeof(WORD8));
             x = AE_SRAI16(x,8);
+#endif
             MAX_16X4(m0, x)
         }
         __Pragma("no_unroll");
@@ -636,8 +675,16 @@ WORD32 xa_nn_vec_softmax_asym8s_asym8s( WORD8 * __restrict__ p_out,
         unsat_out10 = AE_SRAA32RS(unsat_out10, shift_bits_reciprocal + 31 - 8);
         CLAMP_VAL(out10, unsat_out10, a_min, a_max);
         SUB_128(out10)
+#if XCHAL_HAVE_HIFI1
+        ae_f16x4 x_temp = AE_CVT16X4(out32, out10);
+        AE_SA8X4U_IP(x_temp, align_out, (ae_int32*)p_out);
+#else
         STORE_8X4_FROM_32X4(p_out, out32, out10)
+#endif
     }
+#if XCHAL_HAVE_HIFI1
+    AE_SA64POS_FP(align_out, p_out);
+#endif
 
     // remainder loop
     __Pragma("no_unroll");
@@ -680,7 +727,9 @@ WORD32 xa_nn_vec_softmax_asym8s_16( WORD16 * __restrict__ p_out,
 
     int i;
     int shift_bits_reciprocal;
+#if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
+#endif
     xtbool2 f32, f10;
     WORD8 *p_in = (WORD8 *)p_vec;
     WORD32 *p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
@@ -736,8 +785,12 @@ WORD32 xa_nn_vec_softmax_asym8s_16( WORD16 * __restrict__ p_out,
         }
         for(i=0; i < main_loop_count; i++)
         {
+#if XCHAL_HAVE_HIFI1
+            AE_L8X4S_IP(x, p_in, 4*sizeof(WORD8));
+#else
             AE_L8X4F_IP(x, p_in, 4*sizeof(WORD8));
             x = AE_SRAI16(x,8);
+#endif
             MAX_16X4(m0, x)
         }
 

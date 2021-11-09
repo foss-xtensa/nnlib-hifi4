@@ -100,7 +100,7 @@ WORD32 xa_nn_matXvec_f32_circ_nb(
 
   row = 0;
 
-  if(rows > UNROLL_S)
+  if(rows >= UNROLL_S)
   {
     for (row = 0; row < ( rows & ~(UNROLL_S-1)) ; row+=UNROLL_S)
     {

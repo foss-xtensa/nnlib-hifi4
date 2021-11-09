@@ -36,6 +36,17 @@
     out = AE_MULFP32X2RAS(inp, AE_MOVDA32(multiplier)); \
     out = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(out), right_shift), AE_SRAA64(AE_CVT64F32_L(out), right_shift));
 
+#if XCHAL_HAVE_HIFI1
+#define MultiplyByQuantizedMultiplierSmallerThanOneExp(prod, val, multiplier, lsh) {\
+    ae_int64 temp64_h, temp64_l;\
+    prod = AE_MULFP32X2RAS(val, multiplier);\
+    temp64_h = AE_CVT64F32_H(prod);\
+    temp64_l = AE_CVT64F32_L(prod);\
+    temp64_h = AE_SLAA64S(temp64_h, lsh);\
+    temp64_l = AE_SLAA64S(temp64_l, lsh);\
+    prod = AE_ROUND32X2F64SSYM(temp64_h, temp64_l);\
+}
+#else
 #define MultiplyByQuantizedMultiplierSmallerThanOneExp(prod, val, multiplier, lsh) {\
     ae_int64 temp64_h, temp64_l;\
     prod = AE_MULFP32X2RAS(val, multiplier);\
@@ -45,6 +56,7 @@
     temp64_l = AE_SLAA64S(temp64_l, lsh);\
     prod = AE_ROUND32X2F64SSYM(temp64_h, temp64_l);\
 }
+#endif
 
 // This is the another implementation (32x32--> 64 --> shift --> symm rounding
 #define MultiplyByQuantizedMultiplierSmallerThanOneExp_NEW(prod, val, multiplier, lsh) {\

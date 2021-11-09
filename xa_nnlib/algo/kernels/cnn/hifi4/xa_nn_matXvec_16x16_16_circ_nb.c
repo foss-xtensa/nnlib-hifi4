@@ -49,9 +49,18 @@
   AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
 }
 
+#if XCHAL_HAVE_HIFI1
+#define STORE_ROW_S(N) \
+  accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
+  ae_int32x2 sat_accu1_ ##N = AE_ROUND32F64SSYM(accu1_ ##N); \
+  p_out[(row+N)*out_offset] = AE_MOVINT16_FROMINT16X4(AE_SAT16X4(sat_accu1_ ##N, sat_accu1_ ##N)); \
+
+#else
 #define STORE_ROW_S(N) \
   accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
   p_out[(row+N)*out_offset] = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu1_ ##N),16),-16)); \
+
+#endif
 
 #if (UNROLL_S == 1)
 #define SETUP_S SETUP_ROW_S(0)
@@ -100,7 +109,7 @@ WORD32 xa_nn_matXvec_16x16_16_circ_nb(
 
   row = 0;
 
-  if(rows > UNROLL_S)
+  if(rows >= UNROLL_S)
   {
     for (row = 0; row < ( rows & ~(UNROLL_S-1)) ; row+=UNROLL_S)
     {

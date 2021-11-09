@@ -70,82 +70,261 @@ static void convolve_nchw_f32(
     int kernel_width_pad = ALIGNED_SIZE(kernel_width, 4);
     xtfloatx2 *ptr_inp, *ptr_ker, *ptr_out;
 
-    xtfloatx2 ker0, ker1;
+    xtfloatx2 ker0, ker1, ker2, ker3, ker4, ker5;
     xtfloatx2 accu_x2_0, accu_x2_1;
     xtfloatx2 accu_x2_0_a, accu_x2_1_a;
     xtfloatx2 accu_x2_0_b, accu_x2_1_b;
     xtfloatx2 accu_x2_0_c, accu_x2_1_c;
-    xtfloatx2 id4, id8, id12, id5, id6, id7, id16;
+    xtfloatx2 id4, id8, id12, id16, id20, id24, id28, id32;
+    xtfloatx2 id5, id6, id7, id9, id10, id11, id13;
 
-    /* No reminder loop, run extra iteration, extra output will be thrown away
-       when we pick correct outputs using x_stride */
-    for(itr_oh=0; itr_oh<out_height; itr_oh++)
+    if(kernel_width_pad == 12)
     {
-        ptr_out = (xtfloatx2 *)p_scratch;
-        for(itr_ow=0; itr_ow<((total_out_width+3)>>2); itr_ow++)
-        {
-            accu_x2_0 = XT_CONST_S(0);
-            accu_x2_1 = XT_CONST_S(0);
-            accu_x2_0_a = XT_CONST_S(0);
-            accu_x2_1_a = XT_CONST_S(0);
-            accu_x2_0_b = XT_CONST_S(0);
-            accu_x2_1_b = XT_CONST_S(0);
-            accu_x2_0_c = XT_CONST_S(0);
-            accu_x2_1_c = XT_CONST_S(0);
+      for(itr_oh=0; itr_oh<out_height; itr_oh++)
+      {
+          ptr_out = (xtfloatx2 *)p_scratch;
+          for(itr_ow=0; itr_ow<((total_out_width+3)>>2); itr_ow++)
+          {
+              accu_x2_0 = XT_CONST_S(0);
+              accu_x2_1 = XT_CONST_S(0);
+              accu_x2_0_a = XT_CONST_S(0);
+              accu_x2_1_a = XT_CONST_S(0);
+              accu_x2_0_b = XT_CONST_S(0);
+              accu_x2_1_b = XT_CONST_S(0);
+              accu_x2_0_c = XT_CONST_S(0);
+              accu_x2_1_c = XT_CONST_S(0);
 
-            ptr_ker = (xtfloatx2 *)p_ker;
-#pragma loop_count min=1
-            for(itr_kh=0; itr_kh<kernel_height; itr_kh++)
-            {
-                ptr_inp = (xtfloatx2 *)p_inp;
-                AE_ADDCIRC16X4_XC((ae_int16x4 *)ptr_inp, ((itr_kh+itr_oh*y_stride)*input_width+4*itr_ow)*sizeof(FLOAT32));
+              ptr_ker = (xtfloatx2 *)p_ker;
+              ptr_inp = (xtfloatx2 *)p_inp;
+              AE_ADDCIRC16X4_XC((ae_int16x4 *)ptr_inp, ((itr_oh*y_stride)*input_width+4*itr_ow)*sizeof(FLOAT32));
 #pragma loop_count min=1
 #pragma no_unroll
-                for(itr_kw=0; itr_kw<(kernel_width_pad>>2); itr_kw++)
-                {
-                    XT_LSX2XC(id4, ptr_inp, 8);
-                    XT_LSX2XC(id8, ptr_inp, 8);
-                    id5 = XT_SEL32_HL_SX2(id8, id4);
+              for(itr_kh=0; itr_kh<kernel_height; itr_kh++)
+              {
+                  //Input loads
+                  XT_LSX2XC(id4, ptr_inp, 8);
+                  XT_LSX2XC(id8, ptr_inp, 8);
+                  XT_LSX2XC(id12, ptr_inp, 8);
+                  XT_LSX2XC(id16, ptr_inp, 8);
+                  XT_LSX2XC(id20, ptr_inp, 8);
+                  XT_LSX2XC(id24, ptr_inp, 8);
+                  XT_LSX2XC(id28, ptr_inp, 8);
+                  XT_LSX2XC(id32, ptr_inp, sizeof(FLOAT32)*(input_width - 14));
 
-                    XT_LSX2IP(ker0, ptr_ker, 8);
+                  //Kernel Loads
+                  XT_LSX2IP(ker0, ptr_ker, sizeof(xtfloatx2));
+                  XT_LSX2IP(ker1, ptr_ker, sizeof(xtfloatx2));
+                  XT_LSX2IP(ker2, ptr_ker, sizeof(xtfloatx2));
+                  XT_LSX2IP(ker3, ptr_ker, sizeof(xtfloatx2));
+                  XT_LSX2IP(ker4, ptr_ker, sizeof(xtfloatx2));
+                  XT_LSX2IP(ker5, ptr_ker, sizeof(xtfloatx2));
 
-                    XT_MADDMUX_S(accu_x2_0, ker0, id4, 0);
-                    XT_MADDMUX_S(accu_x2_1, ker0, id8, 0);
+                  id5 = XT_SEL32_HL_SX2(id8, id4);
+                  id6 = XT_SEL32_HL_SX2(id12, id8);
+                  id7 = XT_SEL32_HL_SX2(id16, id12);
+                  id9 = XT_SEL32_HL_SX2(id20, id16);
+                  id10 = XT_SEL32_HL_SX2(id24, id20);
+                  id11 = XT_SEL32_HL_SX2(id28, id24);
+                  id13 = XT_SEL32_HL_SX2(id32, id28);
 
-                    XT_LSX2XC(id12, ptr_inp, 8);
-                    id6 = XT_SEL32_HL_SX2(id12, id8);
+                  XT_MADDMUX_S(accu_x2_0, ker0, id4, 0);
+                  XT_MADDMUX_S(accu_x2_1, ker0, id8, 0);
+                  XT_MADDMUX_S(accu_x2_0_a, ker0, id5, 5);
+                  XT_MADDMUX_S(accu_x2_1_a, ker0, id6, 5);
+                  XT_MADDMUX_S(accu_x2_0_b, ker1, id8, 0);
+                  XT_MADDMUX_S(accu_x2_1_b, ker1, id12, 0);
+                  XT_MADDMUX_S(accu_x2_0_c, ker1, id6, 5);
+                  XT_MADDMUX_S(accu_x2_1_c, ker1, id7, 5);
 
-                    XT_LSX2IP(ker1, ptr_ker, 8);
+                  XT_MADDMUX_S(accu_x2_0, ker2, id12, 0);
+                  XT_MADDMUX_S(accu_x2_1, ker2, id16, 0);
+                  XT_MADDMUX_S(accu_x2_0_a, ker2, id7, 5);
+                  XT_MADDMUX_S(accu_x2_1_a, ker2, id9, 5);
+                  XT_MADDMUX_S(accu_x2_0_b, ker3, id16, 0);
+                  XT_MADDMUX_S(accu_x2_1_b, ker3, id20, 0);
+                  XT_MADDMUX_S(accu_x2_0_c, ker3, id9, 5);
+                  XT_MADDMUX_S(accu_x2_1_c, ker3, id10, 5);
 
-                    XT_MADDMUX_S(accu_x2_0_a, ker0, id5, 5);
-                    XT_MADDMUX_S(accu_x2_1_a, ker0, id6, 5);
+                  XT_MADDMUX_S(accu_x2_0, ker4, id20, 0);
+                  XT_MADDMUX_S(accu_x2_1, ker4, id24, 0);
+                  XT_MADDMUX_S(accu_x2_0_a, ker4, id10, 5);
+                  XT_MADDMUX_S(accu_x2_1_a, ker4, id11, 5);
+                  XT_MADDMUX_S(accu_x2_0_b, ker5, id24, 0);
+                  XT_MADDMUX_S(accu_x2_1_b, ker5, id28, 0);
+                  XT_MADDMUX_S(accu_x2_0_c, ker5, id11, 5);
+                  XT_MADDMUX_S(accu_x2_1_c, ker5, id13, 5);
 
-                    XT_MADDMUX_S(accu_x2_0_b, ker1, id8, 0);
-                    XT_MADDMUX_S(accu_x2_1_b, ker1, id12, 0);
+              }
+              accu_x2_0 += accu_x2_0_a;
+              accu_x2_0_b += accu_x2_0_c;
+              accu_x2_1 += accu_x2_1_a;
+              accu_x2_1_b += accu_x2_1_c;
+              accu_x2_0 += accu_x2_0_b;
+              accu_x2_1 += accu_x2_1_b;
 
-                    XT_LSX2XC(id16, ptr_inp, -8);
-                    id7 = XT_SEL32_HL_SX2(id16, id12);
+              *ptr_out++ = accu_x2_0;
+              *ptr_out++ = accu_x2_1;
+          }
 
-                    XT_MADDMUX_S(accu_x2_0_c, ker1, id6, 5);
-                    XT_MADDMUX_S(accu_x2_1_c, ker1, id7, 5);
-                }
-            }
-            accu_x2_0 += accu_x2_0_a;
-            accu_x2_0_b += accu_x2_0_c;
-            accu_x2_1 += accu_x2_1_a;
-            accu_x2_1_b += accu_x2_1_c;
-            accu_x2_0 += accu_x2_0_b;
-            accu_x2_1 += accu_x2_1_b;
+          float *ptr_out1 = (float *)p_scratch;
+          for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+          {
+              p_out[itr_oh*out_width*out_stride+itr_ow*out_stride] = ptr_out1[itr_ow*x_stride] + bias;
+          }
+      }
+    }
+    else if(kernel_width_pad == 8)
+    {
+      for(itr_oh=0; itr_oh<out_height; itr_oh++)
+      {
+          ptr_out = (xtfloatx2 *)p_scratch;
+          for(itr_ow=0; itr_ow<((total_out_width+3)>>2); itr_ow++)
+          {
+              accu_x2_0 = XT_CONST_S(0);
+              accu_x2_1 = XT_CONST_S(0);
+              accu_x2_0_a = XT_CONST_S(0);
+              accu_x2_1_a = XT_CONST_S(0);
+              accu_x2_0_b = XT_CONST_S(0);
+              accu_x2_1_b = XT_CONST_S(0);
+              accu_x2_0_c = XT_CONST_S(0);
+              accu_x2_1_c = XT_CONST_S(0);
 
-            *ptr_out++ = accu_x2_0;
-            *ptr_out++ = accu_x2_1;
-        }
+              ptr_ker = (xtfloatx2 *)p_ker;
+              ptr_inp = (xtfloatx2 *)p_inp;
+              AE_ADDCIRC16X4_XC((ae_int16x4 *)ptr_inp, ((itr_oh*y_stride)*input_width+4*itr_ow)*sizeof(FLOAT32));
+#pragma loop_count min=1
+#pragma no_unroll
+              for(itr_kh=0; itr_kh<kernel_height; itr_kh++)
+              {
+                  //Input loads
+                  XT_LSX2XC(id4, ptr_inp, 8);
+                  XT_LSX2XC(id8, ptr_inp, 8);
+                  XT_LSX2XC(id12, ptr_inp, 8);
+                  XT_LSX2XC(id16, ptr_inp, 8);
+                  XT_LSX2XC(id20, ptr_inp, 8);
+                  XT_LSX2XC(id24, ptr_inp, sizeof(FLOAT32)*(input_width - 10));
 
-        float *ptr_out1 = (float *)p_scratch;
-        for(itr_ow = 0; itr_ow < out_width; itr_ow++)
-        {
-            p_out[itr_oh*out_width*out_stride+itr_ow*out_stride] = ptr_out1[itr_ow*x_stride] + bias;
-        }
+                  //Kernel Loads
+                  ker1 = XT_LSX2I(ptr_ker, 8);
+                  ker2 = XT_LSX2I(ptr_ker, 16);
+                  ker3 = XT_LSX2I(ptr_ker, 24);
+                  XT_LSX2IP(ker0, ptr_ker, 4*sizeof(xtfloatx2));
+
+                  id5 = XT_SEL32_HL_SX2(id8, id4);
+                  id6 = XT_SEL32_HL_SX2(id12, id8);
+                  id7 = XT_SEL32_HL_SX2(id16, id12);
+                  id9 = XT_SEL32_HL_SX2(id20, id16);
+                  id10 = XT_SEL32_HL_SX2(id24, id20);
+
+                  XT_MADDMUX_S(accu_x2_0, ker0, id4, 0);
+                  XT_MADDMUX_S(accu_x2_1, ker0, id8, 0);
+                  XT_MADDMUX_S(accu_x2_0_a, ker0, id5, 5);
+                  XT_MADDMUX_S(accu_x2_1_a, ker0, id6, 5);
+                  XT_MADDMUX_S(accu_x2_0_b, ker1, id8, 0);
+                  XT_MADDMUX_S(accu_x2_1_b, ker1, id12, 0);
+                  XT_MADDMUX_S(accu_x2_0_c, ker1, id6, 5);
+                  XT_MADDMUX_S(accu_x2_1_c, ker1, id7, 5);
+
+                  XT_MADDMUX_S(accu_x2_0, ker2, id12, 0);
+                  XT_MADDMUX_S(accu_x2_1, ker2, id16, 0);
+                  XT_MADDMUX_S(accu_x2_0_a, ker2, id7, 5);
+                  XT_MADDMUX_S(accu_x2_1_a, ker2, id9, 5);
+                  XT_MADDMUX_S(accu_x2_0_b, ker3, id16, 0);
+                  XT_MADDMUX_S(accu_x2_1_b, ker3, id20, 0);
+                  XT_MADDMUX_S(accu_x2_0_c, ker3, id9, 5);
+                  XT_MADDMUX_S(accu_x2_1_c, ker3, id10, 5);
+
+              }
+              accu_x2_0 += accu_x2_0_a;
+              accu_x2_0_b += accu_x2_0_c;
+              accu_x2_1 += accu_x2_1_a;
+              accu_x2_1_b += accu_x2_1_c;
+              accu_x2_0 += accu_x2_0_b;
+              accu_x2_1 += accu_x2_1_b;
+
+              *ptr_out++ = accu_x2_0;
+              *ptr_out++ = accu_x2_1;
+          }
+
+          float *ptr_out1 = (float *)p_scratch;
+          for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+          {
+              p_out[itr_oh*out_width*out_stride+itr_ow*out_stride] = ptr_out1[itr_ow*x_stride] + bias;
+          }
+      }
+    }
+    else
+    {
+      /* No reminder loop, run extra iteration, extra output will be thrown away
+         when we pick correct outputs using x_stride */
+      for(itr_oh=0; itr_oh<out_height; itr_oh++)
+      {
+          ptr_out = (xtfloatx2 *)p_scratch;
+          for(itr_ow=0; itr_ow<((total_out_width+3)>>2); itr_ow++)
+          {
+              accu_x2_0 = XT_CONST_S(0);
+              accu_x2_1 = XT_CONST_S(0);
+              accu_x2_0_a = XT_CONST_S(0);
+              accu_x2_1_a = XT_CONST_S(0);
+              accu_x2_0_b = XT_CONST_S(0);
+              accu_x2_1_b = XT_CONST_S(0);
+              accu_x2_0_c = XT_CONST_S(0);
+              accu_x2_1_c = XT_CONST_S(0);
+
+              ptr_ker = (xtfloatx2 *)p_ker;
+#pragma loop_count min=1
+              for(itr_kh=0; itr_kh<kernel_height; itr_kh++)
+              {
+                  ptr_inp = (xtfloatx2 *)p_inp;
+                  AE_ADDCIRC16X4_XC((ae_int16x4 *)ptr_inp, ((itr_kh+itr_oh*y_stride)*input_width+4*itr_ow)*sizeof(FLOAT32));
+#pragma loop_count min=1
+#pragma no_unroll
+                  for(itr_kw=0; itr_kw<(kernel_width_pad>>2); itr_kw++)
+                  {
+                      XT_LSX2XC(id4, ptr_inp, 8);
+                      XT_LSX2XC(id8, ptr_inp, 8);
+                      id5 = XT_SEL32_HL_SX2(id8, id4);
+
+                      XT_LSX2IP(ker0, ptr_ker, 8);
+
+                      XT_MADDMUX_S(accu_x2_0, ker0, id4, 0);
+                      XT_MADDMUX_S(accu_x2_1, ker0, id8, 0);
+
+                      XT_LSX2XC(id12, ptr_inp, 8);
+                      id6 = XT_SEL32_HL_SX2(id12, id8);
+
+                      XT_LSX2IP(ker1, ptr_ker, 8);
+
+                      XT_MADDMUX_S(accu_x2_0_a, ker0, id5, 5);
+                      XT_MADDMUX_S(accu_x2_1_a, ker0, id6, 5);
+
+                      XT_MADDMUX_S(accu_x2_0_b, ker1, id8, 0);
+                      XT_MADDMUX_S(accu_x2_1_b, ker1, id12, 0);
+
+                      XT_LSX2XC(id16, ptr_inp, -8);
+                      id7 = XT_SEL32_HL_SX2(id16, id12);
+
+                      XT_MADDMUX_S(accu_x2_0_c, ker1, id6, 5);
+                      XT_MADDMUX_S(accu_x2_1_c, ker1, id7, 5);
+                  }
+              }
+              accu_x2_0 += accu_x2_0_a;
+              accu_x2_0_b += accu_x2_0_c;
+              accu_x2_1 += accu_x2_1_a;
+              accu_x2_1_b += accu_x2_1_c;
+              accu_x2_0 += accu_x2_0_b;
+              accu_x2_1 += accu_x2_1_b;
+
+              *ptr_out++ = accu_x2_0;
+              *ptr_out++ = accu_x2_1;
+          }
+
+          float *ptr_out1 = (float *)p_scratch;
+          for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+          {
+              p_out[itr_oh*out_width*out_stride+itr_ow*out_stride] = ptr_out1[itr_ow*x_stride] + bias;
+          }
+      }
     }
 }
 
@@ -169,6 +348,7 @@ static void xa_nn_conv2d_depthwise_nchw_f32(
         WORD32  out_data_format,
         pVOID p_scratch)
 {
+    FLOAT32 pad_val = 0.0f;
     xa_nn_conv2d_depthwise_init(
             p_scratch,
             input_height,
@@ -184,13 +364,14 @@ static void xa_nn_conv2d_depthwise_nchw_f32(
             out_height,
             out_width,
             -1,
-            1);
+            1,
+            (pVOID)(&pad_val));
 
     xa_nn_conv2d_dw_state_t *p_state = (xa_nn_conv2d_dw_state_t *)p_scratch;
     xa_nn_circ_buf_t *p_circ_buf = &(p_state->circ_buf);
     int itr_ic, itr_cm, itr_oh, i;
     int circ_out_height = (p_circ_buf->rows - kernel_height)/y_stride + 1;
-    int kernel_height_pad = ALIGNED_SIZE(kernel_height, 4);
+    int kernel_height_pad = ALIGNED_SIZE(kernel_height, 2);
     int kernel_width_pad = ALIGNED_SIZE(kernel_width, 4);
     int rows_to_add, top_pad, bottom_pad, rows_added;
     int input_row;
@@ -420,6 +601,7 @@ static void xa_nn_conv2d_depthwise_nhwc_f32(
         WORD32  out_data_format,
         pVOID p_scratch)
 {
+    FLOAT32 pad_val = 0.0f;
     xa_nn_conv2d_depthwise_init(
             p_scratch,
             input_height,
@@ -435,7 +617,8 @@ static void xa_nn_conv2d_depthwise_nhwc_f32(
             out_height,
             out_width,
             -1,
-            0);
+            0,
+            (pVOID)(&pad_val));
 
     xa_nn_conv2d_dw_state_t *p_state = (xa_nn_conv2d_dw_state_t *)p_scratch;
     xa_nn_circ_buf_t *p_circ_buf = &(p_state->circ_buf);

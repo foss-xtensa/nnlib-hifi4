@@ -24,7 +24,6 @@
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_avgpool_state.h"
 #include "xa_nnlib_err_chk.h"
-#include <math.h>
 
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(void, xa_nn_avgpool_f32_hwc,(

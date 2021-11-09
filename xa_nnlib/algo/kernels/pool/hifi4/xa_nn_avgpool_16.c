@@ -253,7 +253,11 @@ const WORD16 *__restrict__ p_inp,
             /* Max value of den_h or den_w is 0x80000000
             so 1 left shift is possible without overflow */
             d_tmp32 = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
+#if XCHAL_HAVE_HIFI1
+            d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
+#else
             d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
+#endif
             p_out[itr_oh*out_width+itr_ow] = AE_SAT16X4(d_tmp32, d_tmp32);
         }
     }

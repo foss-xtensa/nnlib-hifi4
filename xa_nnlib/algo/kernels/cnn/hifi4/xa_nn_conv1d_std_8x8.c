@@ -45,6 +45,18 @@ static WORD32 conv_y_top_pad(
   {
     for(j=0;j<out_channels;j++)
     {
+#if XCHAL_HAVE_HIFI1
+      ae_int16x4 acc16, sat_acc16;
+      ae_int64 acc;
+      acc16 = AE_L8S_I(&p_bias[j], 0);
+      acc = AE_SRAI64(AE_MOVINT64_FROMINT16X4(acc16), 48);
+      acc = AE_SLAA64S(acc, bias_shift);
+      acc = AE_SLAA64S(acc, acc_shift);
+      ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
+      acc16 = AE_SAT16X4(sat_acc, sat_acc);
+      sat_acc16 = AE_SAT8S(acc16);
+      AE_S8_0_I(sat_acc16,((WORD8 *) p_out + i*out_height_offset+j*out_channels_offset), 0);
+#else
       ae_int64 acc = AE_MOVINT64_FROMINT16X4(AE_MOVDA16(p_bias[j]));
       acc = AE_SLAA64S(acc, 8);
       acc = AE_SLAA64S(acc, -56);
@@ -52,6 +64,7 @@ static WORD32 conv_y_top_pad(
       acc = AE_SLAA64S(acc, acc_shift);\
       ae_int32 temp1 = AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),24),-24);
       (*((WORD8 *) p_out + i*out_height_offset+j*out_channels_offset)) = (*((UWORD32 *)&temp1));
+#endif
     }
   }
   return out_height_over_y_pad;
@@ -79,6 +92,18 @@ static WORD32 conv_y_bottom_pad(
   {
     for(j=0;j<out_channels;j++)
     {
+#if XCHAL_HAVE_HIFI1
+      ae_int16x4 acc16, sat_acc16;
+      ae_int64 acc;
+      acc16 = AE_L8S_I(&p_bias[j], 0);
+      acc = AE_SRAI64(AE_MOVINT64_FROMINT16X4(acc16), 48);
+      acc = AE_SLAA64S(acc, bias_shift);
+      acc = AE_SLAA64S(acc, acc_shift);
+      ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
+      acc16 = AE_SAT16X4(sat_acc, sat_acc);
+      sat_acc16 = AE_SAT8S(acc16);
+      AE_S8_0_I(sat_acc16, ((WORD8 *)p_out + i*out_height_offset+j*out_channels_offset), 0);
+#else
       ae_int64 acc = AE_MOVINT64_FROMINT16X4(AE_MOVDA16(p_bias[j]));
       acc = AE_SLAA64S(acc, 8);
       acc = AE_SLAA64S(acc, -56);
@@ -86,6 +111,7 @@ static WORD32 conv_y_bottom_pad(
       acc = AE_SLAA64S(acc, acc_shift);\
       ae_int32 temp1 = AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),24),-24);
       (*((WORD8 *) p_out + i*out_height_offset+j*out_channels_offset)) = (*((UWORD32 *)&temp1));
+#endif
     }
   }
   return out_height_over_y_b_pad;

@@ -44,7 +44,7 @@
 #include "NatureDSP_types.h"
 #include "NatureDSP_Signal_math.h"
 #include "common.h"
-
+#include "xa_nnlib_common.h"
 /*-------------------------------------------------------------------------
   Sigmoid
   The functions compute the sigmoid of input argument. 32-bit fixed-point 

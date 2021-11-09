@@ -35,13 +35,41 @@
   WORD8 *p_mat1_ ##N = &p_mat[(row+N)*cols]; \
   accu1_ ##N = ZERO64;
 
+#if XCHAL_HAVE_HIFI1
+#define KERNEL_ROW_S(N) \
+{ \
+  ae_int16x4 temp_in1; \
+  AE_L8X4S_IP(temp_in1, p_mat1_ ##N, 4); \
+  AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
+}
+
+#define KERNEL_ROW_S_I(N) \
+{ \
+  ae_int16x4 temp_in1; \
+  AE_L8X4S_IP(temp_in1, p_mat1_ ##N, 4); \
+  temp_src1 = AE_L8X4S_I(p_src1, 0); \
+  AE_ADDCIRC16X4_XC((ae_int16x4 *)p_src1, 4); \
+  AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
+}
+#define STORE_ROW_S(N) \
+  ae_int64 temp1_ ##N; \
+  ae_int16x4 _ae_int16x4_temp_var_ ##N; \
+  AE_L8S_IP(_ae_int16x4_temp_var_ ##N, p_bias, 1); \
+  temp1_ ##N = AE_SRAI64(AE_MOVINT64_FROMINT16X4(_ae_int16x4_temp_var_ ##N), 48); \
+  temp1_ ##N = AE_SLAA64S(temp1_ ##N , bias_shift);\
+  accu1_ ##N = AE_ADD64(accu1_ ##N , temp1_ ##N);\
+  accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
+  ae_f32x2  _ae_f32x2_temp_var_ ##N = AE_ROUND32F64SSYM(accu1_ ##N); \
+  _ae_int16x4_temp_var_ ##N = AE_SAT16X4( _ae_f32x2_temp_var_ ##N, _ae_f32x2_temp_var_ ##N ); \
+  _ae_int16x4_temp_var_ ##N = AE_SAT8S( _ae_int16x4_temp_var_ ##N ); \
+  AE_S8_0_XP(_ae_int16x4_temp_var_ ##N, (WORD8 *)p_out, out_offset );
+#else
 #define KERNEL_ROW_S(N) \
 { \
   ae_int16x4 temp_in1; \
   AE_L8X4F_IP(temp_in1, p_mat1_ ##N, 4); \
   AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
 }
-
 #define KERNEL_ROW_S_I(N) \
 { \
   ae_int16x4 temp_in1; \
@@ -50,7 +78,6 @@
   AE_ADDCIRC16X4_XC((ae_int16x4 *)p_src1, 4); \
   AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
 }
-
 #define STORE_ROW_S(N) \
   accu1_ ##N = AE_SLAA64S(accu1_ ##N , -16);\
   ae_int64 temp1_ ##N; \
@@ -62,6 +89,7 @@
   accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
   ae_int32 temp_var_ ##N = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu1_ ##N),24),-24)); \
   (*((WORD8 *) p_out + (row+N) * out_offset )) = (*((UWORD32 *)&temp_var_ ##N));
+#endif
 
 #if (UNROLL_S == 1)
 #define SETUP_S SETUP_ROW_S(0)
@@ -110,7 +138,7 @@ WORD32 xa_nn_matXvec_8x8_8_circ_nb(
 
   row = 0;
 
-  if(rows > UNROLL_S)
+  if(rows >= UNROLL_S)
   {
     for (row = 0; row < ( rows & ~(UNROLL_S-1)) ; row+=UNROLL_S)
     {

@@ -34,6 +34,8 @@
 #define KER_PRECISION_BITS(prec) ((prec == XA_NNLIB_CNN_8bx8b   || prec == XA_NNLIB_CNN_8bx16b) ?  8 : ((prec == XA_NNLIB_CNN_16bx16b) ? 16 : -1))
 #define IO_PRECISION_BYTES(prec) ((prec == XA_NNLIB_CNN_16bx16b || prec == XA_NNLIB_CNN_8bx16b) ?  2 : ((prec == XA_NNLIB_CNN_8bx8b)   ?  1 : 4))
 
+/* HiFi_LE: clang warning - always true condition checks
+Changed type in comparisons to shape.shape_type as they are verfied to be equal on first check */
 #define CHECK_CUBE_DIMS(shape, type, err)                                               \
 do {                                                                                    \
   if((shape.shape_type != type) ||                                                      \
@@ -44,14 +46,14 @@ do {                                                                            
      shape.dim.cube.width <= 0  ||                                                      \
      shape.dim.cube.depth <= 0)                                                         \
     return err;                                                                         \
-  if(type == SHAPE_CUBE_DWH_T)                                                          \
+  if(shape.shape_type == SHAPE_CUBE_DWH_T)                                              \
   {                                                                                     \
      if(shape.dim.cube.depth_offset != 1 ||                                             \
         shape.dim.cube.width_offset != shape.dim.cube.depth ||                          \
         shape.dim.cube.height_offset != (shape.dim.cube.depth*shape.dim.cube.width))    \
        return err;                                                                      \
   }                                                                                     \
-  if(type == SHAPE_CUBE_WHD_T)                                                          \
+  if(shape.shape_type == SHAPE_CUBE_WHD_T)                                              \
   {                                                                                     \
      if(shape.dim.cube.width_offset != 1 ||                                             \
         shape.dim.cube.height_offset != shape.dim.cube.width ||                         \
@@ -68,9 +70,9 @@ do {                                                                            
      shape.dim.cube.width <= 0  ||                                                      \
      shape.dim.cube.depth <= 0)                                                         \
     return err;                                                                         \
-  if((type == SHAPE_CUBE_DWH_T) && (shape.dim.cube.depth_offset != 1))                  \
+  if((shape.shape_type == SHAPE_CUBE_DWH_T) && (shape.dim.cube.depth_offset != 1))      \
     return err;                                                                         \
-  if((type == SHAPE_CUBE_WHD_T) && (shape.dim.cube.width_offset != 1))                  \
+  if((shape.shape_type == SHAPE_CUBE_WHD_T) && (shape.dim.cube.width_offset != 1))      \
     return err;                                                                         \
 } while(0)
 
@@ -103,13 +105,13 @@ do {                                                                            
   shape.dim.cube.height = nheight;                                \
   shape.dim.cube.width = nwidth;                                  \
   shape.dim.cube.depth = ndepth;                                  \
-  if (type == SHAPE_CUBE_DWH_T)                                   \
+  if (shape.shape_type == SHAPE_CUBE_DWH_T)                       \
   {                                                               \
     shape.dim.cube.depth_offset = 1;                              \
     shape.dim.cube.height_offset = ndepth*nwidth;                 \
     shape.dim.cube.width_offset = ndepth;                         \
   }                                                               \
-  else if(type == SHAPE_CUBE_WHD_T)                               \
+  else if(shape.shape_type == SHAPE_CUBE_WHD_T)                   \
   {                                                               \
     shape.dim.cube.depth_offset = nwidth*nheight;                 \
     shape.dim.cube.height_offset = nwidth;                        \

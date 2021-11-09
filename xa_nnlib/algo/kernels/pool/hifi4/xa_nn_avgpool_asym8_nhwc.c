@@ -22,7 +22,6 @@
 #include "common_fpu.h"
 #include "xa_nnlib_common.h"
 #include "xa_nn_avgpool_state.h"
-#include <math.h>
 
 #define INCR_N_PLANE(ptr, n, plane_size) \
     ptr = (ptr) + ((n) * (plane_size));
@@ -424,8 +423,13 @@ const UWORD8* __restrict__ p_inp,
                 for(i=0; i<input_channels; i++)
                 {
                     d_out1 = AE_MOVDA32(p_out1[i]);
+#if XCHAL_HAVE_HIFI1
+                    d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32hw);
+                    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(d_tmp32),(WORD8*)p_out_temp, 1);
+#else
                     d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
                     p_out_temp[i] = (UWORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
+#endif
                 }
             }
             else

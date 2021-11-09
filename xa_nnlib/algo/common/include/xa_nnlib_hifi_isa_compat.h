@@ -23,7 +23,7 @@
 #define __XA_NNLIB_COMMON_H__
 
 /* FOR HIFI4 NN LIB CROSS-COMPILATION ON HIFI5 */
-#if XCHAL_HAVE_HIFI5
+#if XCHAL_HAVE_HIFI5 || XCHAL_HAVE_HIFI1
 #define ALIGN_REGISTER_TYPE ae_valign
 
 #define PRIME_8X4U(p_char, tmp) \
@@ -58,6 +58,15 @@
 }
 #endif
 
+#if XCHAL_HAVE_HIFI1
+#define PRIME_8X4F(p_char, tmp) \
+    tmp = AE_LA64_PP(p_char) \
+
+#define AE_LA8X4F_IP(d, a, p) \
+    AE_LA8X4S_IP(d, a, p); \
+    d = AE_SLAI16S(d, 8); \
+
+#else
 #define PRIME_8X4F(p_char, tmp) \
     int offset_##p_char = 0, ls_##p_char, rs_##p_char; \
     rs_##p_char = 0; \
@@ -82,6 +91,8 @@
     d = AE_OR16(a, d_tmp2); \
     a = AE_MOVINT16X4_FROMINT64(AE_SLAA64(AE_MOVINT64_FROMINT16X4(d_tmp), ls_##p)); \
 }
+#endif
+
 
 /* FOR HIFI4 NN LIB CROSS-COMPILATION ON HIFI3Z */
 #ifndef AE_ADD32S_HL_LH                                                                                                                                                                                                                       
@@ -96,8 +107,19 @@
   AE_L16_XC(dummy, (ae_int16*)ptr, inc); \
 }
 #else
-#define HW_AE_ADDCIRC16X4_XC
+#define HW_AE_ADDCIRC16X4_XC 1
 #endif
+
+/* For cores that do not have hardware support for AE_ADDCIRC16X4_XC will have padding enabled by default.
+ * Padding can be forcibly enabled for cores that do not have support for the above instruction by setting this to 1. 
+ */
+#if XCHAL_HAVE_HIFI4
+#define FORCE_ENABLE_PADDING_CONV2D_STD 1
+#endif
+
+/* Do not modify this macro directly. Use FORCE_ENABLE_PADDING_CONV2D_STD should you need to use padding.*/
+#define ENABLE_PADDING_CONV2D_STD ((!HW_AE_ADDCIRC16X4_XC) || FORCE_ENABLE_PADDING_CONV2D_STD)
+
 
 #ifndef AE_MULA16_00
 #define AE_MULA16_00(q0, d0, d1) \
@@ -121,6 +143,19 @@
   AE_MUL16X4(d3,d2,d0,d1); \
   d3 = AE_ADD32S(d3, d2); \
   AE_MULAAD32X16_H0_L1(q0,d3,d); \
+}
+#endif
+
+#ifndef AE_MULZAAAAQ16
+static inline ae_int64 AE_MULZAAAAQ16(ae_int16x4 d0,ae_int16x4  d1) 
+{ 
+  ae_int32x2 d2,d3; 
+  ae_int64 q0=0 ; 
+  ae_int16x4 d = 1; 
+  AE_MUL16X4(d3,d2,d0,d1);
+  d3 = AE_ADD32S(d3, d2); 
+  AE_MULAAD32X16_H0_L1(q0,d3,d);
+  return q0; 
 }
 #endif
 
@@ -148,6 +183,18 @@
   d = AE_SHORTSWAP(d); \
   d = AE_AND16(d, AE_MOVDA16(0xff00)); \
 }
+#endif
+
+/* Implement AE_L8X4S_IP using AE_L8X4F_IP and AE_SRAI16 */
+#if !defined(AE_L8X4S_IP)
+  #if defined(AE_L8X4F_IP) && defined(AE_SRAI16)
+    #define AE_L8X4S_IP(data, pointer, post_increment) {                    \
+        AE_L8X4F_IP(data, pointer, post_increment);                         \
+        data = AE_SRAI16(data, 8);                                          \
+    }
+  #else
+    #error "Cannot implement AE_L8X4S_IP."
+  #endif
 #endif
 
 #ifndef AE_L8X4F_I
@@ -196,6 +243,6 @@ static inline ae_int16x4 AE_L8X4F_I(const WORD8 *p, int inc)
 { \
   AE_S8X4U_XP(outbuf, (ae_int32 *)pOut, out_offset); \
 }
-#endif
+#endif // #ifndef AE_S8X4U_XP
 
 #endif /* __XA_NNLIB_COMMON_H__ */

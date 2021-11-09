@@ -22,19 +22,21 @@
 #include "xa_type_def.h"
 #include "xt_manage_buffers.h"
 
-#define GET_SIZE_FROM_PRECISION(precision, size) { \
-  switch(precision)                                \
-  {                                                \
-    case -1: size = sizeof(float);       break;    \
-    case ASYM8_TYPE: size = sizeof(char);       break;    \
-    case ASYM8S_TYPE: size = sizeof(char);       break;    \
-    case SYM8S_TYPE: size = sizeof(char);       break;    \
-	case 1: size = sizeof(char);        break;     \
-    case 8: size = sizeof(char);        break;     \
-    case 16: size = sizeof(short int);   break;    \
-    case 32: size = sizeof(int);         break;    \
-    case 64: size = sizeof(double);     break;     \
-  }                                                \
+#define GET_SIZE_FROM_PRECISION(precision, size) {        \
+  switch(precision)                                       \
+  {                                                       \
+    case -1: size = sizeof(float);                break;  \
+    case ASYM8_TYPE: size = sizeof(char);         break;  \
+    case ASYM8S_TYPE: size = sizeof(char);        break;  \
+    case SYM8S_TYPE: size = sizeof(char);         break;  \
+    case ASYM16S_TYPE: size = sizeof(short int);  break;  \
+    case ASYM32S_TYPE: size = sizeof(int);        break;  \
+    case 1: size = sizeof(char);                  break;  \
+    case 8: size = sizeof(char);                  break;  \
+    case 16: size = sizeof(short int);            break;  \
+    case 32: size = sizeof(int);                  break;  \
+    case 64: size = sizeof(double);               break;  \
+  }                                                       \
 }
 
 int read_buf1D_from_file(FILE *fptr_read_data, buf1D_t *ptr_buf1D) 
@@ -134,7 +136,7 @@ int load_matXvec_input_data(int write_file, FILE *fptr_inp, buf2D_t *p_mat1, buf
   return 0;
 }
 
-int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp) 
+int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_inp_alpha, char *kernel_name) 
 {  
   if(write_file)                                                                     
   {                                                                                  
@@ -143,11 +145,26 @@ int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp)
                                                                                      
     /* Write input data into file */                                                 
     write_buf1D_to_file(fptr_inp, p_inp);                  
+
+    if(!strcmp(kernel_name,"prelu"))
+    {
+      /* Set random input_alpha data */                                                      
+      set_rand_inp_buf1D(p_inp_alpha);                                                      
+                                                                                     
+      /* Write input_alpha data into file */                                                 
+      write_buf1D_to_file(fptr_inp, p_inp_alpha);
+    }
   }                                                           
   else                                                        
   {                                                           
     /* Read input data from file */                           
     read_buf1D_from_file(fptr_inp, p_inp);                  
+
+    if(!strcmp(kernel_name,"prelu"))
+    {
+      /* Read input_alpha data from file */                           
+      read_buf1D_from_file(fptr_inp, p_inp_alpha);
+    }
   }                                                                                  
   return 0;
 }
@@ -293,6 +310,24 @@ int load_norm_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp)
   return 0;
 }
 
+int load_reorg_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp) 
+{
+  if(write_file)                                                                     
+  {                                                                                  
+    /* Set random input data */                                                      
+    set_rand_inp_buf1D(p_inp);                                                      
+    
+    /* Write input data into file */                                                 
+    write_buf1D_to_file(fptr_inp, p_inp);                  
+  }                                                           
+  else                                                        
+  {                                                           
+    /* Read input data from file */                           
+    read_buf1D_from_file(fptr_inp, p_inp);                  
+  }                                                                                  
+  return 0;
+}
+
 int write_output_data(FILE *fptr_out, buf1D_t *p_out) 
 {  
   write_buf1D_to_file(fptr_out, p_out);                  
@@ -329,21 +364,24 @@ int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, buf1D
   if(write_file)
   {
     /* Set random input data */
-    set_rand_inp_buf1D(p_inp1);
+	if(p_inp1)
+		set_rand_inp_buf1D(p_inp1);
 	if(p_inp2)
-      set_rand_inp_buf1D(p_inp2);
+		set_rand_inp_buf1D(p_inp2);
 
     /* Write input data into file */
-    write_buf1D_to_file(fptr_inp1, p_inp1);
+	if(p_inp1 && fptr_inp1)
+		write_buf1D_to_file(fptr_inp1, p_inp1);
 	if(p_inp2 && fptr_inp2)
-      write_buf1D_to_file(fptr_inp2, p_inp2);
+      		write_buf1D_to_file(fptr_inp2, p_inp2);
   }
   else
   {
     /* Read input data from file */
-    read_buf1D_from_file(fptr_inp1, p_inp1);
+	if(p_inp1 && fptr_inp1)
+		 read_buf1D_from_file(fptr_inp1, p_inp1);
 	if(p_inp2 && fptr_inp2)
-      read_buf1D_from_file(fptr_inp2, p_inp2);
+  		 read_buf1D_from_file(fptr_inp2, p_inp2);
   }
   return 0;
 }

@@ -21,10 +21,10 @@
 ******************************************************************************/
 #include "common_fpu.h"
 #include "xa_type_def.h"
+#include "xa_nnlib_common.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_avgpool_state.h"
 #include "xa_nnlib_err_chk.h"
-#include <math.h>
 
 #define INCR_N_PLANE(ptr, n, plane_size) \
     ptr = (ptr) + ((n) * (plane_size));
@@ -368,8 +368,13 @@ const WORD16* __restrict__ p_inp,
                 for(i=0; i<input_channels; i++)
                 {
                     d_out1 = AE_MOVDA32(p_out1[i]);
+#if XCHAL_HAVE_HIFI1
+                    d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32hw);
+                    AE_S16_0_IP(AE_MOVINT16X4_FROMINT32X2(d_tmp32), (ae_int16*)p_out_temp, sizeof(WORD16));
+#else
                     d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
                     p_out_temp[i] = (WORD16)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
+#endif
                 }
             }
             else

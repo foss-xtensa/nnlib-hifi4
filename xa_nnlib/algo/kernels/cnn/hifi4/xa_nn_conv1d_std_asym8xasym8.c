@@ -49,6 +49,17 @@ static WORD32 conv_y_top_pad(
   {
     for(j=0;j<out_channels;j++)
     {
+#if XCHAL_HAVE_HIFI1
+      ae_int32x2 acc = AE_MOVDA32(p_bias[j]);
+      acc = AE_SLAA32(acc, left_shift);
+      acc = AE_MULFP32X2RAS_L(acc, AE_MOVDA32(out_multiplier));
+      ae_int64 acc64 = AE_SLAI64(AE_MOVINT64_FROMINT32X2(acc), 32);
+      acc64 = AE_SRAA64(acc64, right_shift);
+      acc = AE_ROUND32F64SSYM(acc64);
+      acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
+      acc = AE_MAX32(AE_MIN32(acc, AE_MOVDA32(255)), AE_ZERO32());
+      AE_S8_0_I(AE_MOVINT16X4_FROMINT32X2(acc), ((WORD8 *)p_out + i*out_height_offset+j*out_channels_offset), 0);
+#else
       ae_int32x2 acc = AE_MOVDA32(p_bias[j]);
       acc = AE_SLAA32(acc, left_shift);
       acc = AE_MULFP32X2RAS(acc, AE_MOVDA32(out_multiplier));
@@ -58,6 +69,7 @@ static WORD32 conv_y_top_pad(
       acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
       acc = AE_MAX32(AE_MIN32(acc, AE_MOVDA32(255)), AE_ZERO32());
       p_out[i*out_height_offset+j*out_channels_offset] = (UWORD8)AE_MOVAD32_L(acc);
+#endif
     }
   }
   return out_height_over_y_pad;
@@ -89,6 +101,17 @@ static WORD32 conv_y_bottom_pad(
   {
     for(j=0;j<out_channels;j++)
     {
+#if XCHAL_HAVE_HIFI1
+      ae_int32x2 acc = AE_MOVDA32(p_bias[j]);
+      acc = AE_SLAA32(acc, left_shift);
+      acc = AE_MULFP32X2RAS_L(acc, AE_MOVDA32(out_multiplier));
+      ae_int64 acc64 = AE_SLAI64(AE_MOVINT64_FROMINT32X2(acc), 32);
+      acc64 = AE_SRAA64(acc64, right_shift);
+      acc = AE_ROUND32F64SSYM(acc64);
+      acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
+      acc = AE_MAX32(AE_MIN32(acc, AE_MOVDA32(255)), AE_ZERO32());
+      AE_S8_0_I(AE_MOVINT16X4_FROMINT32X2(acc), ((WORD8 *)p_out + i*out_height_offset+j*out_channels_offset), 0);
+#else
       ae_int32x2 acc = AE_MOVDA32(p_bias[j]);
       acc = AE_SLAA32(acc, left_shift);
       acc = AE_MULFP32X2RAS(acc, AE_MOVDA32(out_multiplier));
@@ -98,6 +121,7 @@ static WORD32 conv_y_bottom_pad(
       acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
       acc = AE_MAX32(AE_MIN32(acc, AE_MOVDA32(255)), AE_ZERO32());
       p_out[i*out_height_offset+j*out_channels_offset] = (UWORD8)AE_MOVAD32_L(acc);
+#endif
     }
   }
   return out_height_over_y_b_pad;

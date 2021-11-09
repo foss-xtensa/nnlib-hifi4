@@ -22,7 +22,6 @@
 #include "common_fpu.h"
 #include "xa_nnlib_common.h"
 #include "xa_nn_maxpool_state.h"
-#include <math.h>
 
 #define INCR_N_PLANE_1(ptr, n, plane_size) \
     ptr = (ptr) + ((n) * (plane_size));
@@ -47,6 +46,15 @@
             width--; \
         }
 
+#if XCHAL_HAVE_HIFI1
+
+#define MAX_16X4(out, id2, id1, id0) {\
+        out = AE_MAX16(id1, id0);\
+        out = AE_MAX16(id2, out);\
+}
+
+#else
+
 #define MAX_16X4(out, id2, id1, id0) {\
         out = id1;\
         b0 = AE_LT16(id1, id0); \
@@ -54,6 +62,8 @@
         b0 = AE_LT16(out, id2); \
         AE_MOVT16X4(out, id2, b0);\
 }
+
+#endif
 
 
 
@@ -78,24 +88,26 @@ const WORD8* __restrict__ p_inp,
       WORD32   out_width,
       pVOID    p_scratch_in)
 {
-    WORD16 *p_scratch = (WORD16 *)(p_scratch_in);
+    /* aligning to the next 8-byte boundary to be able to use AE_[L,S]16X4 */
+    WORD16 *p_scratch = (WORD16 *)ALIGN_PTR(p_scratch_in, 8);
 
     int itr_oh, itr_ow;
-    int plane_size;
+    const unsigned int plane_size = input_width * input_channels;
+#if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
+#endif
     WORD8 * p_src1, * p_src2, * p_src3;
     WORD16 * p_src1_w, * p_src2_w, * p_src3_w;
     WORD8 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp;
     ae_int16x4 * __restrict p_src1_temp_w, * __restrict p_src2_temp_w, * __restrict p_src3_temp_w;
-    ae_int16x4 * p_dst, *p_dst_temp;
+    ae_int16x4 * __restrict__ p_dst, * __restrict__ p_dst_temp;
     WORD8 *p_out_temp;
     ae_int16x4 * p_src1_scratch;
     ae_valign align_src1, align_src2, align_src3, align_dst;
-    ae_int16x4 i1_la, i2_la, i3_la;
+    ALIGN_REGISTER_TYPE i1_la, i2_la, i3_la;
     int i;
     WORD16 *p_dst_pad;
 
-    plane_size = input_width * input_channels;
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)
     {
         int pool_height, pool_width;
@@ -147,10 +159,8 @@ const WORD8* __restrict__ p_inp,
                     AE_LA8X4F_IP(i3, i3_la, p_src3_temp);
 
                     MAX_16X4(out, i3, i2, i1)
-                    AE_SA16X4_IP(out, align_dst, p_dst_temp);
+                    AE_S16X4_IP(out, p_dst_temp, 8);
                 }
-
-                AE_SA64POS_FP(align_dst, p_dst_temp); // finalize the stream
 
                 /* remainder loop */
                 for(i = 0; i < (plane_size & 3); i++)
@@ -188,22 +198,17 @@ const WORD8* __restrict__ p_inp,
                     PRIME_8X4F(p_src2_temp, i2_la);
                     PRIME_8X4F(p_src3_temp, i3_la);
 
-                    align_dst = AE_ZALIGN64(); // zero alignment reg
-                    align_src1 = AE_LA64_PP(p_src1_scratch);
-
                     for(i = 0; i < (plane_size >> 2); i++)
                     {
                         ae_int16x4 i1, i2, i3, out;
 
-                        AE_LA16X4_IP(i1, align_src1, p_src1_scratch);
+                        AE_L16X4_IP(i1, p_src1_scratch, 8);
                         AE_LA8X4F_IP(i2, i2_la, p_src2_temp);
                         AE_LA8X4F_IP(i3, i3_la, p_src3_temp);
 
                         MAX_16X4(out, i3, i2, i1)
-                        AE_SA16X4_IP(out, align_dst, p_dst_temp);
+                        AE_S16X4_IP(out, p_dst_temp, 8);
                     }
-
-                    AE_SA64POS_FP(align_dst, p_dst_temp); // finalize the stream
 
                     /* remainder loop */
                     for(i = 0; i < (plane_size & 3); i++)
@@ -254,8 +259,7 @@ const WORD8* __restrict__ p_inp,
             LIMIT(end_row , 0, input_width);
             pool_width = end_row - start_row;
             p_out_temp = p_out + (itr_oh*out_width*input_channels) + (itr_ow*input_channels);
-            p_dst = (ae_int16x4 *)((WORD16 *)p_scratch + plane_size);
-            p_dst_temp = p_dst;
+            p_dst = (ae_int16x4 *)ALIGN_PTR((WORD16 *)p_scratch + plane_size, 8);
 
             if(pool_width)
             {
@@ -281,22 +285,19 @@ const WORD8* __restrict__ p_inp,
                     align_src1 = AE_LA64_PP(p_src1_temp_w);
                     align_src2 = AE_LA64_PP(p_src2_temp_w);
                     align_src3 = AE_LA64_PP(p_src3_temp_w);
-                    align_dst = AE_ZALIGN64(); // zero alignment reg
 
                     for(i = 0; i < (input_channels >> 2); i++)
                     {
                         ae_int16x4 i1, i2, i3, out;
 
-                        AE_LA16X4_IP(i1, align_src1, p_src1_temp_w);
-                        AE_LA16X4_IP(i2, align_src2, p_src2_temp_w);
-                        AE_LA16X4_IP(i3, align_src3, p_src3_temp_w);
+                        AE_L16X4_IP(i1, p_src1_temp_w, 8);
+                        AE_L16X4_IP(i2, p_src2_temp_w, 8);
+                        AE_L16X4_IP(i3, p_src3_temp_w, 8);
 
                         MAX_16X4(out, i3, i2, i1)
 
-                        AE_SA16X4_IP(out, align_dst, p_dst_temp);
+                        AE_S16X4_IP(out, p_dst_temp, 8);
                     }
-
-                    AE_SA64POS_FP(align_dst, p_dst_temp); // finalize the stream
 
                     /* remainder loop */
                     for(i = 0; i < (input_channels & 3); i++)

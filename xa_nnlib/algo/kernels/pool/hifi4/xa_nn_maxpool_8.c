@@ -42,10 +42,18 @@
             width--; \
         }
 
+#if XCHAL_HAVE_HIFI1
+
+#define MAX_16X4(id1, id0) \
+        id1 = AE_MAX16(id1, id0);\
+
+#else
+
 #define MAX_16X4(id1, id0) \
         b0 = AE_LT16(id1, id0); \
         AE_MOVT16X4(id1, id0, b0); \
 
+#endif
 
 /* Max pooling without using extra copy of input data
  * Works with unaligned input, output.
@@ -72,12 +80,14 @@ const WORD8* __restrict__ p_inp,
     ae_int16x4 * p_src1, * p_src2, * p_src3;
     ae_int16x4 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp;
     WORD8 *p_src2_temp1;
-    ae_int16x4 *p_dst, *p_dst_temp;
+    ae_int16x4 * __restrict__ p_dst, *__restrict__ p_dst_temp;
     ae_valign align_src1, align_src2, align_src3, align_dst;
     ae_int16x4 src1, src2, src3;
     int i;
     WORD16 *p_dst_pad;
+#if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
+#endif
 
     left_pad_aligned = ALIGNED_SIZE(x_padding, ALIGNMENT/sizeof(WORD16));
 

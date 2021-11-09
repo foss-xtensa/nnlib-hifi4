@@ -29,7 +29,7 @@
 #define ALIGNMENT   8   /* 8 bytes alignment */
 #define LIMIT_SX2(out, inp, min, max){\
         out = XT_MAX_SX2(min, inp);\
-        out = XT_MIN_SX2(out, max);\
+        out = XT_MIN_SX2(max, out);\
 }
 
 #if !HAVE_VFPU

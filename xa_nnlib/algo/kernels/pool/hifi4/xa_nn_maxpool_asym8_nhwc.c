@@ -22,7 +22,6 @@
 #include "common_fpu.h"
 #include "xa_nnlib_common.h"
 #include "xa_nn_maxpool_state.h"
-#include <math.h>
 
 #define STORE_8X4_FROM_16X4(out_ptr, val){\
     int o1, o2, o3, o4;\
@@ -36,6 +35,15 @@
     *out_ptr++ = (UWORD8)o4;\
 }
 
+#if XCHAL_HAVE_HIFI1
+
+#define MAX_16X4(out, id2, id1, id0) {\
+        out = AE_MAX16(id0, id1);\
+        out = AE_MAX16(out, id2);\
+}
+
+#else
+
 #define MAX_16X4(out, id2, id1, id0) {\
         out = id1;\
         b0 = AE_LT16(id1, id0); \
@@ -43,6 +51,8 @@
         b0 = AE_LT16(out, id2); \
         AE_MOVT16X4(out, id2, b0);\
 }
+
+#endif
 
 #define INCR_N_PLANE_1(ptr, n, plane_size) \
     ptr = (ptr) + ((n) * (plane_size));
@@ -91,7 +101,9 @@ const UWORD8* __restrict__ p_inp,
 
     int itr_oh, itr_ow;
     int plane_size;
+#if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
+#endif
     WORD8 * p_src1, * p_src2, * p_src3;
     WORD16 * p_src1_w, * p_src2_w, * p_src3_w;
     WORD8 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp;
@@ -330,10 +342,21 @@ const UWORD8* __restrict__ p_inp,
 
                 // Saving Output
                 p_dst_pad = (WORD16 *)p_dst;
+#if XCHAL_HAVE_HIFI1
+                ae_int16x4 temp;
+                AE_L16_IP(temp, (ae_int16*)p_dst_pad, 2);
+                for(i=0; i<input_channels-1; i++)
+                {
+                    AE_S8_0_IP(temp, (WORD8*)p_out_temp, 1);
+                    AE_L16_IP(temp, (ae_int16*)p_dst_pad, 2);
+                }
+                AE_S8_0_IP(temp, (WORD8*)p_out_temp, 1);
+#else
                 for(i=0; i<input_channels; i++)
                 {
                     p_out_temp[i] = (UWORD8)p_dst_pad[i];
                 }
+#endif
             }
             else
             {

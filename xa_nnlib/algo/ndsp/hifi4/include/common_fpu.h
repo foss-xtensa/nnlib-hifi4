@@ -46,6 +46,8 @@
 #define HAVE_VFPU 1
 #elif ( (XCHAL_HAVE_HIFI3_VFPU) )
 #define HAVE_VFPU 1
+#elif ( (XCHAL_HAVE_HIFI1_VFPU) )
+#define HAVE_VFPU 1
 #else
 #define HAVE_VFPU 0
 #endif

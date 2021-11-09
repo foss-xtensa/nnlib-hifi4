@@ -27,22 +27,68 @@ Cadence HiFi4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
-Version 2.4.1 API 1.0: Jul 27, 2021
+Version 2.5.0 API 1.1: Novemeber 9, 2021
 
-+ Patch Release of HiFi 4 NN Library
-+ Tested using RI.5 tools, xt-xcc/xt-xc++ and xt-clang/xt-clang++ compiler
-+ [J2938]: Fixed the issue related to special case handling.
-    Moved the special cases handling for vec_length=8/32 to the start 
-    of the function in xa_nn_dot_prod_16x16_asym8s.
-+ [J2976]: Removed legacy condition checks for depthwise_conv.
-+ [J2994]: Fixed the issue related to xa_nn_conv2d_std_per_chan_sym8sxasym8s.
-    updated to select correct vec values in case of vec_align_val is 1 and 3.
++ Intermediate Release of HiFi4 NN Library
++ Tested using RI.6 tools, xt-clang/xt-clang++ compiler.
++ Adds support for build on HiFi1 core.
++ Adds support for asymmetric quantized 8 bit (int8) variants of following
+  TFLM operators:
+  DEPTH_TO_SPACE, SPACE_TO_DEPTH, PAD, PAD_V2
+  BATCH_TO_SPACE_ND, SPACE_TO_BATCH_ND
+  L2Normalization
+  LogicalAND, LogicalOR, LogicalNOT
+  ReduceMax, ReduceMean
+  Equal, Greater, GreaterEqual
+  Less, LessEqual, NotEqual
+  Logistic, Hardswish,Tanh
+  Maximum, Minimum
+  Prelu, Relu, leaky_relu
+  Sub, Add, Mul
++ Adds support for single precision float (float32) variants of following
+  TFLM operators:
+  SIN, COS, LOG
+  SQRT, RSQRT, SQUARE
+  FILL, CEIL, ROUND
+  ABS, NEG
++ Adds support for Dilated Standard 2D Convolution.
++ Adds 16-bit input/output variants for sigmoid and tanh kernels based on 
+  Tensorflow.
++ Adds matXvec batch kernel with accumulation (8-bit input, sym8s kernel and
+  asym16s output).
++ Adds support for TFLM Dequantize (asymmetric int8 to float32) operators.
++ Adds support for additional data types (int8 to int32, int16 to int32) for 
+  TFLM Quantize operator.
++ Adds broadcast kernel for int8 data type.
++ Adds broadcast variants of elementwise minimum and maximum kernels for int8
+  data type
++ Improves performance for following kernels:
+  xa_nn_conv1d_std_8x8
+  xa_nn_conv1d_std_8x16
+  xa_nn_conv1d_std_f32
+  xa_nn_conv2d_depthwise_8x8
+  xa_nn_conv2d_depthwise_8x16
+  xa_nn_conv2d_depthwise_asym8xasym8
+  xa_nn_conv2d_depthwise_per_chan_sym8sxasym8s
+  xa_nn_conv2d_depthwise_per_chan_nhwc_sym8sxasym8s
+  xa_nn_conv2d_pointwise_nhwc_asym8xasym8
+  xa_nn_conv2d_pointwise_per_chan_nhwc_sym8sxasym8s
+  xa_nn_matXvec_asym8xasym8_asym8
+  fully_connected_asym8xasym8_asym8
+  xa_nn_maxpool_8
++ Improves code-size for following kernels:
+  xa_nn_matXvec_asym8uxasym8u_asym8u
+  xa_nn_matmul_asym8uxasym8u_asym8u
+  xa_nn_conv2d_std_per_chan_sym8sxasym8s
+  xa_nn_conv2d_pointwise_asym8uxasym8u
+  xa_nn_conv2d_depthwise_per_chan_sym8sxasym8s
++ Fixes issues TENA-2938, TENA-2976 and TENA-2994
 
-Limitations
-> The ANN test bench, TFLite Micro example application and the supporting libraries
-  need support for C++11 standard. This is supported only with Xtensa C library. 
-> For configurations without VFPU, the floating point  variants of the kernels 
-  are not supported and should not be used. 
+Note
+> For configurations without VFPU, the floating point  variants of the kernels
+  are not supported and should not be used.
+> The ANN test bench and the supporting libraries need support for C++11 standard. 
+  This is supported only with Xtensa C library. 
 
 Known issues
 > Compiler optimizations are disabled for C++ source files 

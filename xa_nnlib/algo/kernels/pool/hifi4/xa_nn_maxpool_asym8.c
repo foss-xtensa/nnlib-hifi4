@@ -42,11 +42,18 @@
             width--; \
         }
 
+#if XCHAL_HAVE_HIFI1
+
+#define MAX_16X4(id1, id0) \
+        id1 =  AE_MAX16(id1, id0);\
+
+#else
+
 #define MAX_16X4(id1, id0) \
         b0 = AE_LT16(id1, id0); \
         AE_MOVT16X4(id1, id0, b0); \
 
-
+#endif
 /* Max pooling without using extra copy of input data
  * Works with unaligned input, output.
  */
@@ -78,7 +85,9 @@ const UWORD8* __restrict__ p_inp,
     ae_int16x4 src1, src2, src3;
     int i;
     WORD16 *p_dst_pad;
+#if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
+#endif
 
     left_pad_aligned = ALIGNED_SIZE(x_padding, ALIGNMENT/sizeof(WORD16));
 
@@ -142,8 +151,12 @@ const UWORD8* __restrict__ p_inp,
             p_src2_temp1 = (WORD8 *)p_src2_temp;
             for(i = 0; i < (loop_count >> 2); i++)
             {
+#if XCHAL_HAVE_HIFI1
+                AE_L8X4U_IP(src2, p_src2_temp1, 4);
+#else
                 AE_L8X4F_IP(src2, p_src2_temp1, 4);
                 src2 = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(src2), 8));
+#endif
                 AE_SA16X4_IP(src2, align_dst, p_dst_temp);
             }
             AE_SA64POS_FP(align_dst, p_dst_temp); // finalize the stream
@@ -190,9 +203,12 @@ const UWORD8* __restrict__ p_inp,
                 for(i = 0; i < (loop_count >> 2); i++)
                 {
                     AE_LA16X4_IP(src1, align_src1, p_src1_temp);
+#if XCHAL_HAVE_HIFI1
+                    AE_L8X4U_IP(src2, p_src2_temp1, 4);
+#else
                     AE_L8X4F_IP(src2, p_src2_temp1, 4);
                     src2 = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(src2), 8));
-
+#endif
                     MAX_16X4(src1, src2);
                     AE_SA16X4_IP(src1, align_dst, p_dst_temp);
                 }
@@ -290,10 +306,20 @@ const UWORD8* __restrict__ p_inp,
         }while(1);
 
         WORD16 *ptr_out1 = p_scratch + total_out_width;
+#if XCHAL_HAVE_HIFI1
+#pragma no_unroll
+        for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+        {   ae_int16x4 temp;
+            temp = AE_L16_X((ae_int16*)ptr_out1, (itr_ow * x_stride<<1));
+            AE_S8_0_I(temp, ((WORD8*)p_out + (itr_oh * out_width) + itr_ow), 0);
+        }
+#else
+
         for(itr_ow = 0; itr_ow < out_width; itr_ow++)
         {
             p_out[itr_oh * out_width + itr_ow] = (UWORD8)AE_MOVAD16_0(*(ae_int16 *)(&ptr_out1[itr_ow * x_stride]));
         }
+#endif
     }
 }
 

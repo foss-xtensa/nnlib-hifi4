@@ -22,6 +22,61 @@
 #include "xa_nnlib_common.h"
 #include "NatureDSP_Signal_math.h"
 
+#if XCHAL_HAVE_HIFI1
+
+#define GET_8X2_FROM_32X2(var,ptr)\
+{\
+/*
+*	Z(var) is 32x2 vector.
+*	Procedure to make 32-bit to 8-bit with symmetric rounding:
+*	1. We want to extract the 2nd LSB (out of 4 in 32-bit) with rounding
+*	2. Shift the vector left by 8 bits
+*	3. Use symmetric rounding ISA to get 16x4 rounded output from two 32x2 inputs (give one input zero)
+*	4. Shift the 16x4 vector to left by 8 and again shift right by 8 bits.
+*	5. This saturates the output and prevents change of sign during typecast to 8 bits.
+*	6. Extract the LSB of the 16-bit output
+*	7. Resultant - two 8-bit words
+*/\
+/* 	Info about ISA:
+	1. Assigning 16x4 vector to 16 bit scalar assigns the most significant 16 bits.
+	2. In rounding ISA, the result of first argument is stored in lower memory address.
+*/\
+	ae_f32x2 var_shifted = AE_SRAA32RS((ae_f32x2) var, 8);\
+	ae_f16x4 rounded = AE_ROUND16X4F32SSYM(0, var_shifted);\
+        rounded = AE_SAT8S(rounded);\
+	/* We can use any one of the three select patterns: 4321, 2301, 7531 below */ \
+	ae_int16x4 tmp1 = AE_SEL16_4321(rounded,rounded);\
+	AE_S8_0_IP(tmp1, ptr, 1);\
+	AE_S8_0_IP(rounded, ptr, 1); \
+}
+
+
+#define GET_8_FROM_32(var,ptr)\
+{\
+/*
+*	Z(var) is 32x2 vector.
+*	Procedure to make 32-bit to 8-bit with symmetric rounding:
+*	1. We want to extract the 2nd LSB (out of 4 in 32-bit) with rounding
+*	2. Shift the vector left by 8 bits
+*	3. Use symmetric rounding ISA to get 16x4 rounded output from two 32x2 inputs (give one input zero)
+*	4. Shift the 16x4 vector to left by 8 and again shift right by 8 bits.
+*	5. This saturates the output and prevents change of sign during typecast to 8 bits.
+*	6. Extract the LSB of the 16-bit output
+*	7. Resultant - two 8-bit words
+*/\
+/* 	Info about ISA:
+	1. Assigning 16x4 vector to 16 bit scalar assigns the most significant 16 bits.
+	2. In rounding ISA, the result of first argument is stored in lower memory address.
+*/\
+	ae_f32x2 var_shifted = AE_SRAA32RS((ae_f32x2) var, 8);\
+	ae_f16x4 rounded = AE_ROUND16X4F32SSYM(0, var_shifted);\
+	rounded = AE_SAT8S(rounded);\
+	ae_int16 tmp1 = rounded;\
+	*ptr = *((WORD8 *) &tmp1);\
+}
+
+#else
+
 #define GET_8X2_FROM_32X2(var,ptr)\
 {\
 /*
@@ -74,6 +129,8 @@
 	ae_int16 tmp1 = rounded;\
 	*ptr = *((WORD8 *) &tmp1);\
 }
+
+#endif
 
 /*-------------------------------------------------------------------------
   Sigmoid

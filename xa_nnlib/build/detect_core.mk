@@ -5,12 +5,14 @@ hifi5="0"
 hifi4="0"
 hifi3z="0"
 hifi3="0"
+hifi1="0"
 
 #simple logic to differentiate cores; need to optimize this logic
 hifi5_tmp:=$(shell grep "IsaUseHiFi5 = 1"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
 hifi4_tmp:=$(shell grep "IsaUseHiFi4 = 1"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
 hifi3z_tmp:=$(shell grep "IsaUseHiFi3Z = 1" "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
 hifi3_tmp:=$(shell grep "IsaUseHiFi3 = 1"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
+hifi1_tmp:=$(shell grep "IsaUseHiFi1 = 1"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
 
 #check exclusively for hifi5 or hifi4
 ifeq (, $(filter $(CPU), gcc x86))
@@ -23,8 +25,12 @@ ifeq (, $(filter $(CPU), gcc x86))
             ifneq ("", "$(hifi3z_tmp)")
                 detected_core=hifi3z
             else
-                ifneq ("", "$(hifi3_tmp)")
-                    detected_core=hifi3
+                ifneq ("", "$(hifi1_tmp)")
+                    detected_core=hifi1
+                else
+                    ifneq ("", "$(hifi3_tmp)")
+                        detected_core=hifi3
+                    endif
                 endif
             endif
         endif
@@ -53,11 +59,17 @@ else
                 detected_core=hifi3
                 CFLAGS+= -DCORE_HIFI3=1
             else
-                ifeq ("$(detected_core)", "ref")
-                    ref=1
-                    CFLAGS+= -DREF_GCC=1
+                ifeq ("$(detected_core)", "hifi1")
+                      hifi4=1
+                      detected_core=hifi4
+                      CFLAGS+= -DCORE_HIFI4=1
                 else
-                    $(error Core Not Found)
+                    ifeq ("$(detected_core)", "ref")
+                        ref=1
+                        CFLAGS+= -DREF_GCC=1
+                    else
+                        $(error Core Not Found)
+                    endif
                 endif
             endif
         endif
@@ -70,3 +82,4 @@ ifneq ("", "$(xclib_tmp)")
 else
     xclib=0
 endif
+

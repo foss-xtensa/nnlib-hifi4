@@ -48,6 +48,25 @@
             continue;\
           }
 
+#define ARGTYPE_ONETIME_CONFIG_ARRAY(_switch, ARRAY, NUM_DIMS, STRING)      \
+    if(strcmp((argv[argidx]), _switch) == 0) {             \
+            int count = 0; \
+            while (count < NUM_DIMS) \
+            { \
+              ARRAY[count] = atoi(argv[argidx+1]); \
+              if(STRING != NULL) \
+              { \
+                strcat(STRING, argv[argidx+1]); \
+                strcat(STRING, " "); \
+              } \
+              argidx++; \
+              count++; \
+            } \
+            continue;\
+          }
+
+
+
 #define ARGTYPE_INDICATE(_switch, _param)         \
    if(strcmp((argv[argidx]), _switch) == 0) {      \
          _param = 1;  \
@@ -63,6 +82,13 @@
     if(strcmp((argv[argidx]), _switch) == 0) {             \
           _param = atoi(argv[argidx+1]);  \
       /* printf("PARSE: %s %d\n", argv[argidx], _param); */ \
+          argidx++;\
+          continue;\
+        }
+
+#define ARGTYPE_ONETIME_CONFIG_F32( _switch, _param)                \
+    if(strcmp((argv[argidx]), _switch) == 0) {             \
+          _param = atof(argv[argidx+1]);  \
           argidx++;\
           continue;\
         }

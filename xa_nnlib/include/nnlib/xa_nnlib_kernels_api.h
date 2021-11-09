@@ -593,9 +593,22 @@ WORD32 xa_nn_vec_sigmoid_32_32(
     WORD32       vec_length                    /*!< [in] length of vectors */
   );
 
+WORD32 xa_nn_vec_sigmoid_16_16(
+    WORD16       *p_out,                       /*!< [out] result: vec_length x 1, Q0.15 */
+    const WORD16 *p_vec,                       /*!< [in] input data: vec_length x 1, Q3.12 */
+    WORD32       vec_length                    /*!< [in] length of vectors */
+  );
+
 WORD32 xa_nn_vec_tanh_32_32(
     WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
     const WORD32 * __restrict__ p_vec,         /*!< [in] input data: vec_length x 1, Q6.25 */
+    WORD32       vec_length                    /*!< [in] length of vectors */
+  );
+
+WORD32 xa_nn_vec_tanh_16_16(
+    WORD16       *p_out,                       /*!< [out] result: vec_length x 1, Q0.15 */
+    const WORD16 *p_vec,                       /*!< [in] input data: vec_length x 1, Q(integer_bits).(15-integer_bits) */
+    WORD32       integer_bits,                 /*!< [in] Number of integer bits in input */
     WORD32       vec_length                    /*!< [in] length of vectors */
   );
 
@@ -823,6 +836,7 @@ WORD32 xa_nn_dilated_conv2d_std_getsize(
     WORD32 y_stride,
     WORD32 y_padding,
     WORD32 out_height,
+    WORD32 out_channels,
     WORD32 input_precision,
     WORD32 dilation_height
     );
@@ -1422,6 +1436,16 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
                             WORD32 out_zero_bias,
                             WORD32 vec_length);
 
+WORD32 xa_nn_vec_leaky_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
+                    const   WORD8 * __restrict__ p_vec,
+                            WORD32 inp_zero_bias,
+                            WORD32 alpha_multiplier,
+                            WORD32 alpha_shift,
+                            WORD32 out_multiplier,
+                            WORD32 out_shift,
+                            WORD32 out_zero_bias,
+                            WORD32 vec_length);
+
 WORD32 xa_nn_vec_hard_swish_asym8s_asym8s( WORD8 * __restrict__ p_out,
                     const   WORD8 * __restrict__ p_vec,
                             WORD32 inp_zero_bias,
@@ -1668,6 +1692,19 @@ WORD32 xa_nn_conv2d_pointwise_per_chan_sym8sxasym8s(
     WORD32  out_zero_bias,
     WORD32  out_data_format);
 
+WORD32 xa_nn_matXvec_acc_batch_sym8sx8_asym16s(
+    WORD16 * __restrict__ p_out,           /* output pointer */
+    const WORD8 *  __restrict__ p_mat1,    /* matrix1: rows x cols1 */
+    const WORD8 * __restrict__ p_vec1,     /* vec1: cols1 x vec_count */
+    const WORD32 *  __restrict__ p_bias,   /* bias: rows x 1 */
+    WORD32 rows,
+    WORD32 cols1,
+    WORD32 row_stride1,                    /* row stride for matrix1 */
+    WORD32 out_multiplier,                 /* out multiplier for quantization */
+    WORD32 out_shift,                      /* out shift for quantization */
+    WORD32 out_zero_bias,						       /* out zero bias for quantization */
+    WORD32 vec_count);                     /* number of vectors */
+
 WORD32 xa_nn_elm_mul_f32xf32_f32(FLOAT32 * __restrict__ p_out,
                                const FLOAT32 * __restrict__ p_inp1,
                                const FLOAT32 * __restrict__ p_inp2,
@@ -1789,7 +1826,7 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
                             WORD32  inp2_zero_bias,
                             WORD32  num_elm);
 
-WORD32 xa_nn_elm_quantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
+WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
                                     const WORD16 * __restrict__ p_inp,
                                     WORD32  inp_zero_bias,
                                     WORD32  out_zero_bias,
@@ -1797,13 +1834,27 @@ WORD32 xa_nn_elm_quantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
                                     WORD32  out_multiplier,
                                     WORD32  num_elm);
 
-WORD32 xa_nn_elm_quantize_asym16s_asym32s(WORD32 * __restrict__ p_out,
+WORD32 xa_nn_elm_requantize_asym16s_asym32s(WORD32 * __restrict__ p_out,
                                     const WORD16 * __restrict__ p_inp,
                                     WORD32  inp_zero_bias,
                                     WORD32  out_zero_bias,
                                     WORD32  out_shift,
                                     WORD32  out_multiplier,
                                     WORD32  num_elm);
+
+WORD32 xa_nn_elm_requantize_asym8s_asym32s(WORD32 * __restrict__ p_out,
+                                           const WORD8 * __restrict__ p_inp,
+                                           WORD32  inp_zero_bias,
+                                           WORD32  out_zero_bias,
+                                           WORD32  out_shift,
+                                           WORD32  out_multiplier,
+                                           WORD32  num_elm);
+
+WORD32 xa_nn_elm_dequantize_asym8s_f32(FLOAT32 * __restrict__ p_out,
+                                       const WORD8 * __restrict__ p_inp,
+                                       WORD32   inp_zero_bias,
+                                       FLOAT32  inp_scale,
+                                       WORD32   num_elm);
 
 WORD32 xa_nn_elm_max_8x8_8(  WORD8* __restrict__ p_out,
                        const WORD8* __restrict__ p_in1,
@@ -1823,9 +1874,7 @@ WORD32 xa_nn_elm_min_4D_Bcast_8x8_8(
                             const int * const in1_strides,      /* member 'strides' as defined in struct 'NdArrayDesc' for tensor 1*/
 
                             const  WORD8* __restrict__ in2,     /* pointer to unextended input data for tensor 2 */
-                            const int * const in2_strides,      /* member 'strides' as defined in struct 'NdArrayDesc' for tensor 2*/
-
-                            WORD32 num_Dims);                   /* Number of dimensions. Must be same for all IO */
+                            const int * const in2_strides);     /* member 'strides' as defined in struct 'NdArrayDesc' for tensor 2*/
 
 WORD32 xa_nn_elm_max_4D_Bcast_8x8_8(
                             WORD8* __restrict__ out,            /* pointer to write output data to */
@@ -1835,9 +1884,7 @@ WORD32 xa_nn_elm_max_4D_Bcast_8x8_8(
                             const int * const in1_strides,      /* member 'strides' as defined in struct 'NdArrayDesc' for tensor 1*/
 
                             const  WORD8* __restrict__ in2,     /* pointer to unextended input data for tensor 2 */
-                            const int * const in2_strides,      /* member 'strides' as defined in struct 'NdArrayDesc' for tensor 2*/
-
-                            WORD32 num_Dims);                   /* Number of dimensions. Must be same for all IO */
+                            const int * const in2_strides);     /* member 'strides' as defined in struct 'NdArrayDesc' for tensor 2*/
 
 WORD32 xa_nn_elm_min_8D_Bcast_8x8_8(
                             WORD8* __restrict__ out,            /* pointer to write output data to */
@@ -1858,6 +1905,12 @@ WORD32 xa_nn_elm_max_8D_Bcast_8x8_8(
 
                             const  WORD8* __restrict__ in2,     /* pointer to unextended input data for tensor 2 */
                             const int * const in2_strides);     /* member 'strides' as defined in struct 'NdArrayDesc' for tensor 2*/
+
+WORD32 xa_nn_broadcast_8_8( WORD8* __restrict__ p_out,          /* pointer to write broadcasted output data to */
+                        const int *const out_shape,             /* output shape resulting after broadcast */
+                        const  WORD8* __restrict__ p_in,        /* pointer to unextended input data */
+                        const int * const in_shape,             /* input shape */
+                              int num_dims);                    /* number of dimensions in [in,out]_shape */ 
 
 WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
                        const WORD8 * __restrict__ p_inp1,
@@ -1935,11 +1988,12 @@ WORD32 xa_nn_memmove_16( void *pdst,
         const void *psrc,
         WORD32 n);
 
-WORD32 xa_nn_reduce_max_getsize_nhwc(WORD32  inp_precision
+WORD32 xa_nn_reduce_getsize_nhwc(WORD32  inp_precision
                                     ,const WORD32 *const p_inp_shape
                                     ,WORD32 num_inp_dims
                                     ,const WORD32 *p_axis
-                                    ,WORD32 num_axis_dims);
+                                    ,WORD32 num_axis_dims
+                                    ,WORD32 reduce_ops);
 
 WORD32 xa_nn_reduce_max_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
                                         ,const WORD32 *const p_out_shape
@@ -1949,7 +2003,21 @@ WORD32 xa_nn_reduce_max_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
                                         ,WORD32 num_out_dims
                                         ,WORD32 num_inp_dims
                                         ,WORD32 num_axis_dims
-                                        ,pVOID p_scratch);
+                                        ,pVOID p_scratch_in);
+
+WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
+                                        ,const WORD32 *const p_out_shape
+                                        ,const WORD8 * __restrict__ p_inp
+                                        ,const WORD32 *const p_inp_shape
+                                        ,const WORD32 * __restrict__ p_axis
+                                        ,WORD32 num_out_dims
+                                        ,WORD32 num_inp_dims
+                                        ,WORD32 num_axis_dims
+                                        ,WORD32 inp_zero_bias
+                                        ,WORD32 out_multiplier
+                                        ,WORD32 out_shift
+                                        ,WORD32 out_zero_bias
+                                        ,pVOID p_scratch_in);
 
 WORD32 xa_nn_elm_logicaland_boolxbool_bool(WORD8 * __restrict__ p_out,
                     const   WORD8 * __restrict__ p_inp1,
@@ -1964,6 +2032,54 @@ WORD32 xa_nn_elm_logicalor_boolxbool_bool(WORD8 * __restrict__ p_out,
 WORD32 xa_nn_elm_logicalnot_bool_bool(WORD8 * __restrict__ p_out,
                     const   WORD8 * __restrict__ p_inp,
                             WORD32  num_elm);
+
+WORD32 xa_nn_elm_sine_f32_f32(FLOAT32 * __restrict__ p_out,
+                              const FLOAT32 * __restrict__ p_inp,
+                              WORD32 num_elm);
+
+WORD32 xa_nn_elm_cosine_f32_f32(FLOAT32 * __restrict__ p_out,
+                                const FLOAT32 * __restrict__ p_inp,
+                                WORD32 num_elm);
+
+WORD32 xa_nn_elm_logn_f32_f32(FLOAT32 * __restrict__ p_out,
+                              const FLOAT32 * __restrict__ p_inp,
+                              WORD32 num_elm);
+
+WORD32 xa_nn_elm_abs_f32_f32(FLOAT32 * __restrict__ p_out,
+                             const FLOAT32 * __restrict__ p_inp,
+                             WORD32 num_elm);
+
+WORD32 xa_nn_elm_ceil_f32_f32(FLOAT32 * __restrict__ p_out,
+                              const FLOAT32 * __restrict__ p_inp,
+                              WORD32 num_elm);
+
+WORD32 xa_nn_elm_round_f32_f32(FLOAT32 * __restrict__ p_out,
+                               const FLOAT32 * __restrict__ p_inp,
+                               WORD32 num_elm);
+
+WORD32 xa_nn_elm_neg_f32_f32(FLOAT32 * __restrict__ p_out,
+                             const FLOAT32 * __restrict__ p_inp,
+                             WORD32 num_elm);
+
+WORD32 xa_nn_elm_square_f32_f32(FLOAT32 * __restrict__ p_out,
+                                const FLOAT32 * __restrict__ p_inp,
+                                WORD32 num_elm);
+
+WORD32 xa_nn_elm_rsqrt_f32_f32(FLOAT32 * __restrict__ p_out,
+                                const FLOAT32 * __restrict__ p_inp,
+                                WORD32 num_elm);
+
+WORD32 xa_nn_elm_sqrt_f32_f32(FLOAT32 * __restrict__ p_out,
+                              const FLOAT32 * __restrict__ p_inp,
+                              WORD32 num_elm);
+
+WORD32 xa_nn_memmove_8_8( void *pdst,
+        const void *psrc,
+        WORD32 n);
+
+WORD32 xa_nn_memset_f32_f32(FLOAT32 * __restrict__ p_out,
+                                FLOAT32 val,
+                                WORD32 num_elm);
 
 WORD32 xa_nn_l2_norm_f32(
     FLOAT32 * __restrict__ p_out,
@@ -1992,6 +2108,65 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
     WORD32 out_shift,
     WORD32 out_zero_bias,
     WORD32 vec_count);
+
+WORD32 xa_nn_depth_to_space_8_8(
+    WORD8 *__restrict__ p_out,
+    const WORD8 *__restrict__ p_inp,
+    WORD32  input_height,
+    WORD32  input_width,
+    WORD32  input_channels,
+    WORD32  block_size,
+    WORD32  out_height,
+    WORD32  out_width,
+    WORD32  out_channels,
+    WORD32  inp_data_format,
+    WORD32  out_data_format);
+
+WORD32 xa_nn_space_to_depth_8_8(
+    WORD8 *__restrict__ p_out,
+    const WORD8 *__restrict__ p_inp,
+    WORD32  input_height,
+    WORD32  input_width,
+    WORD32  input_channels,
+    WORD32  block_size,
+    WORD32  out_height,
+    WORD32  out_width,
+    WORD32  out_channels,
+    WORD32  inp_data_format,
+    WORD32  out_data_format);
+
+WORD32 xa_nn_batch_to_space_nd_8_8(
+    WORD8 *__restrict__ p_out,
+    const WORD32 *const p_out_shape,
+    const WORD8 *__restrict__ p_inp,
+    const WORD32 *const p_inp_shape,
+    const WORD32 *const p_block_sizes,
+    const WORD32 *const p_crop_sizes,
+    WORD32  num_out_dims,
+    WORD32  num_inp_dims);
+
+WORD32 xa_nn_space_to_batch_nd_8_8(
+    WORD8 *__restrict__ p_out,
+    const WORD32 *const p_out_shape,
+    const WORD8 *__restrict__ p_inp,
+    const WORD32 *const p_inp_shape,
+    const WORD32 *const p_block_sizes,
+    const WORD32 *const p_pad_sizes,
+    WORD32  num_out_dims,
+    WORD32  num_inp_dims,
+    WORD32  pad_value);
+
+WORD32 xa_nn_pad_8_8(
+    WORD8 * __restrict__ p_out
+    ,const WORD32 *const p_out_shape
+    ,const WORD8 * __restrict__ p_inp
+    ,const WORD32 *const p_inp_shape
+    ,const WORD32 * __restrict__ p_pad_values
+    ,const WORD32 *const p_pad_shape
+    ,WORD32 num_out_dims
+    ,WORD32 num_inp_dims
+    ,WORD32 num_pad_dims
+    ,WORD32 pad_value);
 
 /* Mapping the functions names from previous naming convension for backward compatibility */
 #define xa_nn_matXvec_asym8xasym8_asym8 xa_nn_matXvec_asym8uxasym8u_asym8u

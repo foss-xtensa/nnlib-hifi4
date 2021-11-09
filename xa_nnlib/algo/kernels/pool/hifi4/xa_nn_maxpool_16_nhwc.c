@@ -21,10 +21,10 @@
 ******************************************************************************/
 #include "common_fpu.h"
 #include "xa_type_def.h"
+#include "xa_nnlib_common.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_maxpool_state.h"
 #include "xa_nnlib_err_chk.h"
-#include <math.h>
 
 #define INCR_N_PLANE_NHWC(ptr, n, plane_size) \
     ptr = (ae_int16x4 *)((WORD16 *)(ptr) + (n) * (plane_size));
@@ -46,6 +46,15 @@
             width--; \
         }
 
+#if XCHAL_HAVE_HIFI1
+
+#define MAX_16X4(out, id2, id1, id0) {\
+        out = AE_MAX16(id0, id1);\
+        out = AE_MAX16(out, id2);\
+}
+
+#else
+
 #define MAX_16X4(out, id2, id1, id0) {\
         out = id1;\
         b0 = AE_LT16(id1, id0); \
@@ -53,6 +62,8 @@
         b0 = AE_LT16(out, id2); \
         AE_MOVT16X4(out, id2, b0);\
 }
+
+#endif
 
 /* Max pooling without using extra copy of input data
  * Works with unaligned input, output.
@@ -77,13 +88,15 @@ const WORD16* __restrict__ p_inp,
 
     int itr_oh, itr_ow;
     int plane_size;
-    xtbool4 b0;
     ae_int16x4 * p_src1, * p_src2, * p_src3;
     ae_int16x4 * __restrict p_src1_temp, * __restrict p_src2_temp, * __restrict p_src3_temp;
     ae_int16x4 * p_dst, *p_dst_temp;
     ae_valign align_src1, align_src2, align_src3, align_dst;
     int i;
     WORD16 *p_dst_pad;
+#if !XCHAL_HAVE_HIFI1
+    xtbool4 b0;
+#endif
 
     plane_size = input_width * input_channels;
     for(itr_oh = 0; itr_oh < out_height; itr_oh++)

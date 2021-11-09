@@ -43,7 +43,6 @@
 #include "inff_tbl.h"
 
 const union ufloat32uint32 minusInff ={0xff800000}; /* -Inf */
-#if 0
 const union ufloat32uint32 plusInff  ={0x7f800000}; /* +Inf */
 const union ufloat32uint32 realmaxf  ={0x7f7fffff}; /* maximum floating point number */
-#endif
+const union ufloat32uint32 realminf  ={0x00800000}; /* minimum floating point number */

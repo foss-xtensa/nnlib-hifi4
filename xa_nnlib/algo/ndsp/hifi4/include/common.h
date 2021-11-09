@@ -49,6 +49,7 @@
   #include <xtensa/tie/xt_core.h>
   #include <xtensa/tie/xt_misc.h>
   #include <xtensa/tie/xt_hifi3.h>
+  #include <xtensa/tie/xt_hifi2.h>
 #if XCHAL_HAVE_HIFI4_VFPU
   #include <xtensa/tie/xt_FP.h>
 #endif

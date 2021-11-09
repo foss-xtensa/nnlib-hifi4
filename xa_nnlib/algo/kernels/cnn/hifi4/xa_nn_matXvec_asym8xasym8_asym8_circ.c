@@ -56,16 +56,25 @@
   WORD8 *_WORD8_p_mat1_ ## idx = (WORD8 *) p_mat1; \
   AE_ADDCIRC16X4_XC((ae_int16x4 *)_WORD8_p_mat1_ ##idx, (m_itr+idx)*row_stride1); \
 
+#if XCHAL_HAVE_HIFI1
+#define LOAD_VEC_BATCH_ASYM8b(idx_vec) \
+  AE_L8X4U_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, 4*sizeof(WORD8)); \
+  _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_offset));
+#define LOAD_ROW_MAT1_ASYM8b(idx_row) \
+  _ae_int16x4_mat1_ ##idx_row = AE_L8X4U_I(_WORD8_p_mat1_ ##idx_row, 0); \
+  AE_ADDCIRC16X4_XC((ae_int16x4 *)_WORD8_p_mat1_ ##idx_row, 4*sizeof(WORD8)); \
+  _ae_int16x4_mat1_ ##idx_row = AE_ADD16(_ae_int16x4_mat1_ ##idx_row, AE_MOVDA16(mat1_offset));
+#else
 #define LOAD_VEC_BATCH_ASYM8b(idx_vec) \
   AE_L8X4F_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, 4*sizeof(WORD8)); \
   _ae_int16x4_vec_batch_ ##idx_vec  = AE_MOVF16X4_FROMF64(AE_SRLI64(AE_MOVF64_FROMF16X4(_ae_int16x4_vec_batch_ ##idx_vec), 8)); \
   _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_offset));
-
 #define LOAD_ROW_MAT1_ASYM8b(idx_row) \
   _ae_int16x4_mat1_ ##idx_row = AE_L8X4F_I(_WORD8_p_mat1_ ##idx_row, 0); \
   AE_ADDCIRC16X4_XC((ae_int16x4 *)_WORD8_p_mat1_ ##idx_row, 4*sizeof(WORD8)); \
   _ae_int16x4_mat1_ ##idx_row = AE_MOVF16X4_FROMF64(AE_SRLI64(AE_MOVF64_FROMF16X4(_ae_int16x4_mat1_ ##idx_row), 8)); \
   _ae_int16x4_mat1_ ##idx_row = AE_ADD16(_ae_int16x4_mat1_ ##idx_row, AE_MOVDA16(mat1_offset));
+#endif
 
 #define KERNEL_MAT1_VEC_BATCH_ROW_ASYM8b_ASYM8b(idx_row) \
   KERNEL_MAT1_VEC_BATCH_VEC_UNROLL(idx_row); \
@@ -88,6 +97,21 @@
 #define ADJUST_ACC_BATCH_ROW_ASYM8b(idx_row) \
   ADJUST_ACC_BATCH_VEC_UNROLL(idx_row); \
 
+#if XCHAL_HAVE_HIFI1
+#define ADJUST_ACC_BATCH_ASYM8b(idx_row, idx_vec) \
+  ae_int32x2 _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_SLAA32(AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec), left_shift); \
+  _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MULFP32X2RAS_L(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(out_multiplier)); \
+  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SLAI64(AE_MOVINT64_FROMINT32X2(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec), 32); \
+  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAA64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, right_shift); \
+  _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_ROUND32F64SSYM(_ae_int64_acc_ ##idx_row ##_ ##idx_vec); \
+  (_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec) = AE_ADD32S(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(out_offset)); \
+
+
+#define STORE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row,idx_vec) \
+  _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(0)), AE_MOVDA32(255)); \
+    AE_S8_0_I(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec), ((WORD8 *)(&p_out[(vec_itr + idx_vec)*out_col_offset + (m_itr + idx_row)*out_row_offset])) , 0); \
+
+#else
 #define ADJUST_ACC_BATCH_ASYM8b(idx_row, idx_vec) \
   ae_int32x2 _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_SLAA32(AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec), left_shift); \
   _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MULFP32X2RAS(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(out_multiplier)); \
@@ -96,13 +120,15 @@
   _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_ROUND32F64SSYM(_ae_int64_acc_ ##idx_row ##_ ##idx_vec); \
   (_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec) = AE_ADD32S(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(out_offset)); \
 
-/* Saturate result to unsigned 8 bit (0-255) and store */
-#define STORE_ACC_BATCH_ROW_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row) \
-  STORE_ACC_BATCH_VEC_UNROLL(idx_row); \
-
 #define STORE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row,idx_vec) \
   _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(0)), AE_MOVDA32(255)); \
   (*((UWORD8 *) (&p_out[(vec_itr + idx_vec)*out_col_offset + (m_itr + idx_row)*out_row_offset]))) = (UWORD8)AE_MOVAD32_L(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec); \
+
+#endif
+
+/* Saturate result to unsigned 8 bit (0-255) and store */
+#define STORE_ACC_BATCH_ROW_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row) \
+  STORE_ACC_BATCH_VEC_UNROLL(idx_row); \
 
 #if (ROW_UNROLL == 1)
 #define SETUP_ACC            UNROLL_SETUP_ACC(0)

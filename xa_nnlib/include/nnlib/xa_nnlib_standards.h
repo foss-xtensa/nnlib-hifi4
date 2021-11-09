@@ -29,11 +29,15 @@ extern "C"
 {
 #endif
 
-#if ( (XCHAL_HAVE_HIFI4_VFPU) )
+#if ( (XCHAL_HAVE_HIFI5_VFPU) )
+#define HIFI_VFPU 1
+#elif ( (XCHAL_HAVE_HIFI4_VFPU) )
 #define HIFI_VFPU 1
 #elif ( (XCHAL_HAVE_HIFI3Z_VFPU) )
 #define HIFI_VFPU 1
 #elif ( (XCHAL_HAVE_HIFI3_VFPU) )
+#define HIFI_VFPU 1
+#elif ( (XCHAL_HAVE_HIFI1_VFPU) )
 #define HIFI_VFPU 1
 #else
 #define HIFI_VFPU 0
@@ -65,6 +69,12 @@ typedef float coefff32_t;
 
 typedef struct xa_nnlib_opaque { Int32 _; } *xa_nnlib_handle_t;
 
+//For reduce ops
+typedef enum _reduce_ops_t{
+  REDUCE_MAX = 0,
+  REDUCE_MEAN = 1
+}reduce_ops_t;
+
 typedef enum _xa_nnlib_prec_t
 {
   PREC_BOOL   =  1,
@@ -79,6 +89,9 @@ typedef enum _xa_nnlib_prec_t
   PREC_ASYM16U = -6,
   PREC_ASYM16S = -7,
   PREC_SYM16S  = -8,
+  PREC_ASYM32U = -9,
+  PREC_ASYM32S = -10,
+  PREC_SYM32S  = -11,
 } xa_nnlib_prec_t;
 
 #define PREC_ASYM8 PREC_ASYM8U
