@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -138,6 +138,34 @@ int default_config(test_config_t *p_cfg)
   }
 }
 
+void show_usage(void)
+{
+    printf ("Usage xt-run <binary> [Options]\n");
+    printf("\t-inp_data_format: data format of input and output, 0 for nhwc, 1 for dhw/chw; Default=1\n");
+    printf("\t-input_height: input height; Default=16\n");
+    printf("\t-input_width: input width; Default=16\n");
+    printf("\t-input_channels: input channels; Default=4\n");
+    printf("\t-kernel_height: kernel height; Default=3\n");
+    printf("\t-kernel_width: kernel width; Default=3\n");
+    printf("\t-x_stride: stride in width dimension; Default=2\n");
+    printf("\t-y_stride: stride in height dimension; Default=2\n");
+    printf("\t-x_padding: left padding in width dimension; Default=2\n");
+    printf("\t-y_padding: top padding in width dimension; Default=2\n");
+    printf("\t-out_height: output height; Default=16\n");
+    printf("\t-out_width: output width; Default=16\n");
+    printf("\t-acc_shift: accumulator left shift; Default=-7\n");
+    printf("\t-out_data_format: data format; Default=1 (WHD)\n");
+    printf("\t-inp_precision: 8, 16, -1(single prec float); Default=16\n");
+    printf("\t-out_precision: 8, 16, -1(single prec float); Default=16\n");
+    printf("\t-frames: Positive number; Default=2\n");
+    printf("\t-kernel_name: avgpool, maxpool; Default=""avgpool""\n");
+    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
+    printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp) \n");
+    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
+    printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp) \n");
+    printf("\t-write_out_file_name: Full filename for writing output \n");
+    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+}
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 {
@@ -148,6 +176,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     {
       //err_code = 0;
       printf("Invalid argument: %s\n",argv[argidx]);
+      show_usage();
       exit(1);
     }
     ARGTYPE_INDICATE("--help", p_cfg->help);
@@ -180,38 +209,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
+    show_usage();
     exit(1);
   }
 }
 
-void show_usage(void)
-{
-    printf ("Usage xt-run <binary> [Options]\n");
-    printf("\t-inp_data_format: data format of input and output, 0 for nhwc, 1 for dhw/chw; Default=1\n");
-    printf("\t-input_height: input height; Default=16\n");
-    printf("\t-input_width: input width; Default=16\n");
-    printf("\t-input_channels: input channels; Default=4\n");
-    printf("\t-kernel_height: kernel height; Default=3\n");
-    printf("\t-kernel_width: kernel width; Default=3\n");
-    printf("\t-x_stride: stride in width dimension; Default=2\n");
-    printf("\t-y_stride: stride in height dimension; Default=2\n");
-    printf("\t-x_padding: left padding in width dimension; Default=2\n");
-    printf("\t-y_padding: top padding in width dimension; Default=2\n");
-    printf("\t-out_height: output height; Default=16\n");
-    printf("\t-out_width: output width; Default=16\n");
-    printf("\t-acc_shift: accumulator left shift; Default=-7\n");
-    printf("\t-out_data_format: data format; Default=1 (WHD)\n");
-    printf("\t-inp_precision: 8, 16, -1(single prec float); Default=16\n");
-    printf("\t-out_precision: 8, 16, -1(single prec float); Default=16\n");
-    printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: avgpool, maxpool; Default=""avgpool""\n");
-    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
-    printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp) \n");
-    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
-    printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp) \n");
-    printf("\t-write_out_file_name: Full filename for writing output \n");
-    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
-}
+
 
 #define AVGPOOL_KERNEL_F_FN(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
@@ -316,7 +319,12 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-  
+
+  fprintf(stderr, "\n--------------------------------------------------------\n");
+  fprintf(stderr, "%s library version %s\n", xa_nnlib_get_lib_name_string() , xa_nnlib_get_lib_version_string());
+  fprintf(stderr, "API version: %s\n", xa_nnlib_get_lib_api_version_string());
+  fprintf(stderr, "Cadence Design Systems, Inc. http://www.cadence.com\n");
+
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -488,7 +496,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames), cfg.verify);
 
   fclose(fptr_inp);
   fclose(fptr_out);

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -43,9 +43,9 @@ WORD32 xa_nn_elm_logicaland_boolxbool_bool(WORD8 * __restrict__ p_out,
     WORD8 *pin2 = (WORD8 *)p_inp2;
     WORD8 *pout = (WORD8 *)p_out;
  
-    unsigned int remainder_start;
+    int remainder_start;
     int i;
-    unsigned int N = num_elm;
+    int N = num_elm;
 
     
     ae_int16x4 vi1, vi2, vo; 
@@ -56,7 +56,7 @@ WORD32 xa_nn_elm_logicaland_boolxbool_bool(WORD8 * __restrict__ p_out,
 
     if(((((unsigned)pin1)&1) == 0) && ((((unsigned)pin2)&1) == 0) && ((((unsigned)pout)&1) == 0))
     {
-      unsigned int Nby8 =  N >> 3 ; 
+      int Nby8 =  N >> 3 ; 
       remainder_start = Nby8 << 3;
       
       /* Loop is unrolled by 8, to use LA16X4/SA16X4 */
@@ -71,7 +71,7 @@ WORD32 xa_nn_elm_logicaland_boolxbool_bool(WORD8 * __restrict__ p_out,
     }
     else
     {
-      unsigned int Nby4 =  N >> 2 ; 
+      int Nby4 =  N >> 2 ; 
       remainder_start = Nby4 << 2;
       
       /* Loop is unrolled by 4, to use LA8X4/SA8X4 */
@@ -116,12 +116,12 @@ WORD32 xa_nn_elm_logicaland_boolxbool_bool(WORD8 * __restrict__ p_out,
     ae_int24x2 *pin2 = (ae_int24x2 *)p_inp2;
     ae_int24x2 *pout = (ae_int24x2 *)p_out;
     int i;
-    unsigned int N = num_elm;
+    int N = num_elm;
     /* Following line divides N by 6. Much faster than compiler implementation. Works for N<32768. */ 
     /* unsigned int Nby6 = (N*10923)>>16;*/
     /* Following works for all int32 N */
-    unsigned int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(N, 0x2AAAAAAB)));
-    unsigned int remainder_start = 6*Nby6;
+    int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(N, 0x2AAAAAAB)));
+    int remainder_start = 6*Nby6;
 
     ae_valign align_src_in1, align_src_in2, align_dst;
     align_src_in1 = AE_LA64_PP(pin1);
@@ -168,9 +168,9 @@ WORD32 xa_nn_elm_logicalor_boolxbool_bool(WORD8 * __restrict__ p_out,
     WORD8 *pin1 = (WORD8 *)p_inp1;
     WORD8 *pin2 = (WORD8 *)p_inp2;
     WORD8 *pout = (WORD8 *)p_out;
-    unsigned int remainder_start;
+    int remainder_start;
     int i;
-    unsigned int N = num_elm;
+    int N = num_elm;
 
     
     ae_int16x4 vi1, vi2, vo; 
@@ -181,7 +181,7 @@ WORD32 xa_nn_elm_logicalor_boolxbool_bool(WORD8 * __restrict__ p_out,
 
     if(((((unsigned)pin1)&1) == 0) && ((((unsigned)pin2)&1) == 0) && ((((unsigned)pout)&1) == 0))
     {
-      unsigned int Nby8 =  N >> 3 ; 
+      int Nby8 =  N >> 3 ; 
       remainder_start = Nby8 << 3;
       
       /* Loop is unrolled by 8, to use LA16X4/SA16X4 */
@@ -195,7 +195,7 @@ WORD32 xa_nn_elm_logicalor_boolxbool_bool(WORD8 * __restrict__ p_out,
     }
     else
     {
-      unsigned int Nby4 =  N >> 2 ; 
+      int Nby4 =  N >> 2 ; 
       remainder_start = Nby4 << 2;
       
       /* Loop is unrolled by 4, to use LA8X4/SA8X4 */
@@ -240,12 +240,12 @@ WORD32 xa_nn_elm_logicalor_boolxbool_bool(WORD8 * __restrict__ p_out,
     ae_int24x2 *pin2 = (ae_int24x2 *)p_inp2;
     ae_int24x2 *pout = (ae_int24x2 *)p_out;
     int i;
-    unsigned int N = num_elm;
+    int N = num_elm;
     /* Following line divides N by 6. Much faster than compiler implementation. Works for N<32768. */ 
     /* unsigned int Nby6 = (N*10923)>>16;*/
     /* Following works for all int32 N */
-    unsigned int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(N, 0x2AAAAAAB)));
-    unsigned int remainder_start = 6*Nby6;
+    int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(N, 0x2AAAAAAB)));
+    int remainder_start = 6*Nby6;
 
     ae_valign align_src_in1, align_src_in2, align_dst;
     align_src_in1 = AE_LA64_PP(pin1);
@@ -292,9 +292,9 @@ WORD32 xa_nn_elm_logicalnot_bool_bool(WORD8 * __restrict__ p_out,
     ae_int16x4 cnst_notbit = 0x01010101;
     ae_int16x4 vi1, vo;
 
-    unsigned int remainder_start;
+    int remainder_start;
     int i;
-    unsigned int N = num_elm;
+    int N = num_elm;
 
     ae_valign align_src_in, align_dst;
     align_src_in = AE_LA64_PP(pin);
@@ -302,7 +302,7 @@ WORD32 xa_nn_elm_logicalnot_bool_bool(WORD8 * __restrict__ p_out,
 
     if(((((unsigned)pin)&1) == 0) && ((((unsigned)pout)&1) == 0) )
     {
-      unsigned int Nby8 =  N >> 3 ; 
+      int Nby8 =  N >> 3 ; 
       remainder_start = Nby8 << 3;
       
       /* Loop is unrolled by 8, to use LA16X4/SA16X4 */
@@ -315,7 +315,7 @@ WORD32 xa_nn_elm_logicalnot_bool_bool(WORD8 * __restrict__ p_out,
     }
     else
     {
-      unsigned int Nby4 =  N >> 2 ; 
+      int Nby4 =  N >> 2 ; 
       remainder_start = Nby4 << 2;
 
       /* Loop is unrolled by 4, to use LA8X4/SA8X4 */
@@ -355,12 +355,12 @@ WORD32 xa_nn_elm_logicalnot_bool_bool(WORD8 * __restrict__ p_out,
     ae_int24x2 *pin = (ae_int24x2 *)p_inp;
     ae_int24x2 *pout = (ae_int24x2 *)p_out;
     int i;
-    unsigned int N = num_elm;
+    int N = num_elm;
     /* Following line divides N by 6. Much faster than compiler implementation. Works for N<32768. */ 
     /* unsigned int Nby6 = (N*10923)>>16;*/
     /* Following works for all int32 N */
-    unsigned int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(N, 0x2AAAAAAB)));
-    unsigned int remainder_start = 6*Nby6;
+    int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(N, 0x2AAAAAAB)));
+    int remainder_start = 6*Nby6;
 
     ae_valign align_src_in, align_dst;
     align_src_in = AE_LA64_PP(pin);

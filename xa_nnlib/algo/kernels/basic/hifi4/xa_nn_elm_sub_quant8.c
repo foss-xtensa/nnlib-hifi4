@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -500,8 +500,8 @@ WORD32 xa_nn_elm_sub_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
     ae_int32x2 raw_sum0_1, raw_sum2_3, raw_sum4_5, raw_sum6_7;
     ae_int32x2 out0_1, out2_3, out4_5, out6_7;
 
-    const unsigned int num_simd8_ops = num_elm/8;
-    const unsigned int num_scalar_ops = num_elm%8;
+    const int num_simd8_ops = num_elm/8;
+    const int num_scalar_ops = num_elm%8;
 
     ae_valign va_a, va_b, va_c;
     va_a = AE_LA64_PP(p_a);
@@ -695,8 +695,8 @@ WORD32 xa_nn_elm_sub_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
 
     ae_int16x4 ONE_16X4 = AE_MOVDA16(1);
 
-    const unsigned int num_simd8_ops = num_elm/8;
-    const unsigned int num_scalar_ops = num_elm%8;
+    const int num_simd8_ops = num_elm/8;
+    const int num_scalar_ops = num_elm%8;
 
     if(io_pointers_aligned){
         for(i=0; i<num_simd8_ops; i++){

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -153,18 +153,18 @@ static unsigned long inline GETCLOCK(void)
         total_ave);                                                                                                 \
 }
 
-#define XTPWR_PROFILER_CLOSE( prof, pass_flag) {                                                                                            \
+#define XTPWR_PROFILER_CLOSE( prof, pass_flag, verify_flag) {                                                                                            \
   if((&gProfiler[prof])->metric_units[0] != '\0')                                                                                           \
   {                                                                                                                                         \
     printf("PROFILE_INFO, %-25s, avg_cyc=%-10.2f, effective_metric=%-6.2f (%s), peak_cyc=%-10.2f, peak_frame=%-3d, result=%s, params: %s\n",\
         (&gProfiler[prof])->name, (&gProfiler[prof])->ave, (&gProfiler[prof])->ave_metric, (&gProfiler[prof])->metric_units,                \
-        (&gProfiler[prof])->peak, (&gProfiler[prof])->peak_frame, pass_flag ?"pass":"fail", (&gProfiler[prof])->params);                    \
+        (&gProfiler[prof])->peak, (&gProfiler[prof])->peak_frame, pass_flag ? ((verify_flag) ? "pass" : "NA") : "fail", (&gProfiler[prof])->params);                    \
   }                                                                                                                                         \
   else                                                                                                                                      \
   {                                                                                                                                         \
     printf("PROFILE_INFO, %-25s, avg_cyc=%-10.2f, peak_cyc=%-10.2f, peak_frame=%-3d, result=%s, params: %s\n",                              \
         (&gProfiler[prof])->name, (&gProfiler[prof])->ave,                                                                                  \
-        (&gProfiler[prof])->peak, (&gProfiler[prof])->peak_frame, pass_flag ?"pass":"fail", (&gProfiler[prof])->params);                    \
+        (&gProfiler[prof])->peak, (&gProfiler[prof])->peak_frame, pass_flag ? ((verify_flag) ? "pass" : "NA") : "fail", (&gProfiler[prof])->params);                    \
   }                                                                                                                                         \
 }
 
@@ -226,7 +226,7 @@ typedef struct _profiler_t
 #define XTPWR_PROFILER_STOP( prof )
 #define XTPWR_PROFILER_UPDATE( prof )
 #define XTPWR_PROFILER_AVE_TOTAL( no_of_prof )
-#define XTPWR_PROFILER_CLOSE( prof , pass_flag) 
+#define XTPWR_PROFILER_CLOSE( prof , pass_flag, verify_flag) 
 #define XTPWR_PROFILER_PRINT( prof ) 
 
 #define XTPWR_PROFILER_EXCLUDE_ON( prof )

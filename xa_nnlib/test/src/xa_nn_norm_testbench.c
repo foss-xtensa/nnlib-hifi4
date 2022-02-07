@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -93,6 +93,22 @@ int default_config(test_config_t *p_cfg)
   }
 }
 
+void show_usage(void)
+{
+    printf ("Usage xt-run <binary> [Options]\n");
+    printf("\t-num_elms: Number of elements; Default=256\n");
+    printf("\t-inp_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
+    printf("\t-out_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
+    printf("\t-frames: Positive number; Default=2\n");
+    printf("\t-kernel_name: l2_norm; Default=""l2_norm""\n");
+    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
+    printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp) \n");
+    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
+    printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp) \n");
+    printf("\t-write_out_file_name: Full filename for writing output \n");
+    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+    printf("\t-zero_point: l2_norm_asym8s input parameter; Default=0\n");
+}
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 {
@@ -103,6 +119,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     {
       //err_code = 0;
       printf("Invalid argument: %s\n",argv[argidx]);
+      show_usage();
       exit(1);
     }
     ARGTYPE_INDICATE("--help", p_cfg->help);
@@ -123,26 +140,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
+    show_usage();
     exit(1);
   }
 }
 
-void show_usage(void)
-{
-    printf ("Usage xt-run <binary> [Options]\n");
-    printf("\t-num_elms: Number of elements; Default=256\n");
-    printf("\t-inp_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
-    printf("\t-out_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
-    printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: l2_norm; Default=""l2_norm""\n");
-    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
-    printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp) \n");
-    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
-    printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp) \n");
-    printf("\t-write_out_file_name: Full filename for writing output \n");
-    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
-    printf("\t-zero_point: l2_norm_asym8s input parameter; Default=0\n");
-}
+
 
 #if HIFI_VFPU
 #define L2_NORM_KERNEL_F_FN(KERNEL, IPREC, OPREC) \
@@ -189,17 +192,22 @@ int xa_nn_main_process(int argc, char *argv[])
 
   buf1D_t *p_inp;
   buf1D_t *p_out;
-  buf1D_t *p_ref;
+  buf1D_t *p_ref = NULL;
 
   FILE *fptr_inp;
   FILE *fptr_out;
-  FILE *fptr_ref;
+  FILE *fptr_ref = NULL;
 
   if(default_config(&cfg))
   {
     return -1;
   }
-  
+
+  fprintf(stderr, "\n--------------------------------------------------------\n");
+  fprintf(stderr, "%s library version %s\n", xa_nnlib_get_lib_name_string() , xa_nnlib_get_lib_version_string());
+  fprintf(stderr, "API version: %s\n", xa_nnlib_get_lib_api_version_string());
+  fprintf(stderr, "Cadence Design Systems, Inc. http://www.cadence.com\n");
+
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -316,7 +324,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames), cfg.verify);
 
   fclose(fptr_inp);
   fclose(fptr_out);

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -151,6 +151,38 @@ int default_config(test_config_t *p_cfg)
   }
 }
 
+void show_usage(void)
+{
+    printf ("Usage xt-run <binary> [Options]\n");
+    printf("\t-inp_data_format: data format of input and output, 0 for nhwc; Default=0\n");
+    printf("\t-num_inp_dims: number of input dimensions; Default=4\n");
+    printf("\t-num_pad_dims: number of pad dimensions; Default=2\n");
+    printf("\t-num_out_dims: number of output dimensions; Default=4\n");
+    printf("\t-pad_value: input to be padded with this pad value; Default=0\n");
+    printf("\t-input_height: input height; Default=16\n");
+    printf("\t-input_width: input width; Default=16\n");
+    printf("\t-input_channels: input channels; Default=16\n");
+    printf("\t-block_size: block size; Default=2\n");
+    printf("\t-out_height: output height; Default=16\n");
+    printf("\t-out_width: output width; Default=16\n");
+    printf("\t-out_channels: output channels; Default=4\n");
+    printf("\t-inp_precision: 8; Default=8\n");
+    printf("\t-out_precision: 8; Default=8\n");
+    printf("\t-frames: Positive number; Default=2\n");
+    printf("\t-kernel_name: depth_to_space, space_to_depth, pad, batch_to_space_nd, space_to_batch_nd; Default=""depth_to_space""\n");
+    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
+    printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp) \n");
+    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
+    printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp) \n");
+    printf("\t-write_out_file_name: Full filename for writing output \n");
+    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+    printf("\t-inp_shape: Takes the input shape dimensions (num_inp_dims values space ' ' separated) \n");
+    printf("\t-pad_shape: Takes the pad shape dimensions (num_pad_dims values space ' ' separated) \n");
+    printf("\t-out_shape: Takes the output shape dimensions (num_out_dims values space ' ' separated) \n");
+    printf("\t-pad_values: Takes the pad values (prod(pad_shape) values space ' ' separated) \n");
+    printf("\t-block_sizes: Takes the block sizes((num_inp_dims-2) values space ' ' separated) for batch_to_space_nd and space_to_batch_nd kernels \n");
+    printf("\t-crop_or_pad_sizes: Takes the crop sizes for batch_to_space_nd or pad sizes for space_to_batch_nd (2*(num_inp_dims-2) values space ' ' separated) \n");
+}
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 {
@@ -161,6 +193,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     {
       //err_code = 0;
       printf("Invalid argument: %s\n",argv[argidx]);
+      show_usage();
       exit(1);
     }
     ARGTYPE_INDICATE("--help", p_cfg->help);
@@ -204,42 +237,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
+    show_usage();
     exit(1);
   }
 }
 
-void show_usage(void)
-{
-    printf ("Usage xt-run <binary> [Options]\n");
-    printf("\t-inp_data_format: data format of input and output, 0 for nhwc; Default=0\n");
-    printf("\t-num_inp_dims: number of input dimensions; Default=4\n");
-    printf("\t-num_pad_dims: number of pad dimensions; Default=2\n");
-    printf("\t-num_out_dims: number of output dimensions; Default=4\n");
-    printf("\t-pad_value: input to be padded with this pad value; Default=0\n");
-    printf("\t-input_height: input height; Default=16\n");
-    printf("\t-input_width: input width; Default=16\n");
-    printf("\t-input_channels: input channels; Default=16\n");
-    printf("\t-block_size: block size; Default=2\n");
-    printf("\t-out_height: output height; Default=16\n");
-    printf("\t-out_width: output width; Default=16\n");
-    printf("\t-out_channels: output channels; Default=4\n");
-    printf("\t-inp_precision: 8; Default=8\n");
-    printf("\t-out_precision: 8; Default=8\n");
-    printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: depth_to_space, space_to_depth, pad, batch_to_space_nd, space_to_batch_nd; Default=""depth_to_space""\n");
-    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
-    printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp) \n");
-    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
-    printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp) \n");
-    printf("\t-write_out_file_name: Full filename for writing output \n");
-    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
-    printf("\t-inp_shape: Takes the input shape dimensions (num_inp_dims values space ' ' separated) \n");
-    printf("\t-pad_shape: Takes the pad shape dimensions (num_pad_dims values space ' ' separated) \n");
-    printf("\t-out_shape: Takes the output shape dimensions (num_out_dims values space ' ' separated) \n");
-    printf("\t-pad_values: Takes the pad values (prod(pad_shape) values space ' ' separated) \n");
-    printf("\t-block_sizes: Takes the block sizes((num_inp_dims-2) values space ' ' separated) for batch_to_space_nd and space_to_batch_nd kernels \n");
-    printf("\t-crop_or_pad_sizes: Takes the crop sizes for batch_to_space_nd or pad sizes for space_to_batch_nd (2*(num_inp_dims-2) values space ' ' separated) \n");
-}
+
 
 #define DEPTH_SPACE_KERNEL_FN(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) {\
@@ -324,6 +327,11 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
+
+  fprintf(stderr, "\n--------------------------------------------------------\n");
+  fprintf(stderr, "%s library version %s\n", xa_nnlib_get_lib_name_string() , xa_nnlib_get_lib_version_string());
+  fprintf(stderr, "API version: %s\n", xa_nnlib_get_lib_api_version_string());
+  fprintf(stderr, "Cadence Design Systems, Inc. http://www.cadence.com\n");
 
   if(argc > 1)
   {
@@ -513,7 +521,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames), cfg.verify);
 
   fclose(fptr_inp);
   fclose(fptr_out);

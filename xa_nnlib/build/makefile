@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -22,12 +22,19 @@
 .PHONY: all install clean
 include detect_core.mk
 
+ifeq ($(hifi1), 1)
+all: nnlib
+
+install: install_nnlib
+
+clean: clean_nnlib
+else
 all: nnlib annlib
 
 install: install_nnlib install_annlib
 
 clean: clean_nnlib clean_annlib
-
+endif
 
 nnlib:
 	$(MAKE) -f makefile_nn_lib_hifi4 all
@@ -38,6 +45,7 @@ install_nnlib: nnlib
 clean_nnlib:
 	$(MAKE) -f makefile_nn_lib_hifi4 clean
 
+ifneq ($(hifi1), 1)
 ifeq ($(xclib), 1)
 annlib:
 	$(MAKE) -f makefile_ann_lib_hifi4 all 
@@ -51,4 +59,5 @@ clean_annlib:
 else
 annlib install_annlib clean_annlib:
 	@echo "ann_lib is not supported with newlib"
+endif
 endif

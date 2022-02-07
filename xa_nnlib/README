@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -20,12 +20,38 @@
 #
 
 ======================================================================
-Cadence HiFi4 Neural Network (NN) Library
+Cadence HiFi 4 Neural Network (NN) Library
 ======================================================================
 
 ======================================================================
 Revision History
 ======================================================================
+
+Version 2.6.0, API 1.1: February 1, 2022
+
++ GA Release of HiFi4 NN Library
++ Tested using RI.6 tools, xt-clang/xt-clang++ compiler.
++ Fixed following issues:
+  Fixes hang in matXvec sample testbench.(TENA-3062)
+  Fixes sigmoid_asym8, sigmoid_asym8s and tanh_asym8s bit-exactness issue (TENA-2918)
+  Adds -Wsign-compare flag in build set up. (TENA-2953)
+  Allows null bias for fully connected (sym8sxasym8s) kernel. (TENA-3091)
+
+Note
+> Processor Configuration must be built with SP-VFP option in order to compile 
+  floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for C++11 standard. 
+  This is supported only with Xtensa C library. 
+
+Known issues
+> Compiler optimizations are disabled for ANN C++ source files
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
 
 Version 2.5.0 API 1.1: Novemeber 9, 2021
 

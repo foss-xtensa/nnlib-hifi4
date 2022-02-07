@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -30,6 +30,7 @@
 #include "cmdline_parser.h"
 #include "file_io.h"
 #include "xa_nnlib_standards.h"
+#include "stdbool.h"
 
 #define PROF_ALLOCATE
 #include "xt_profiler.h"
@@ -170,6 +171,54 @@ int default_config(test_config_t *p_cfg)
   }
 }
 
+void show_usage(void)
+{
+    printf ("Usage xt-run <binary> [Options]\n");
+    printf("\t-io_length: input/output vector length; Default=1024\n");
+    printf("\t-num_inp_dims: number of input dimensions; Default=4\n");
+    printf("\t-num_axis_dims: number of axis dimensions; Default=4\n");
+    printf("\t-num_out_dims: number of output dimensions; Default=4\n");
+    printf("\t-inp_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float); Default=-1\n");
+    printf("\t-out_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float); Default=-1\n");
+    printf("\t-vec_count: number of input vectors; Default=1\n");
+    printf("\t-frames: Positive number; Default=2\n");
+    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, elm_min, elm_max, dot_prod, elm_equal, elm_notequal, elm_greater, elm_greaterequal, elm_less, elm_lessequal, reduce_max_4D, reduce_mean_4D, elm_sine, elm_cosine, elm_logn, elm_abs, elm_ceil, elm_round, elm_neg, elm_square, elm_rsqrt, elm_sqrt, broadcast, memmove, memset; Default=""elm_add""\n");
+    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
+    printf("\t-read_inp1_file_name: Full filename for reading inputs (order - inp) \n");
+    printf("\t-read_inp2_file_name: Full filename for reading inputs (order - inp) \n");
+    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
+    printf("\t-write_inp1_file_name: Full filename for writing inputs (order - inp) \n");
+    printf("\t-write_inp2_file_name: Full filename for writing inputs (order - inp) \n");
+    printf("\t-write_out_file_name: Full filename for writing output \n");
+    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+    printf("\t-read_inp_shape_str: Takes the input  shape dimensions(space ' ' separated) as a string \n");
+    printf("\t-read_out_shape_str: Takes the output shape dimensions(space ' ' separated) as a string \n");
+    printf("\t-read_axis_data_str: Takes the axis data(space ' ' separated) as a string \n");
+    printf("\t =========================================\n ");
+    printf("\t ===== Broadcast specific parameters =====\n ");
+    printf("\t =========================================\n ");
+    printf("\t-input1_numElements: Number of elements in input (order - inp) \n ");
+    printf("\t-input2_numElements: Number of elements in input (order - inp) \n ");
+    printf("\t-input1_strides: Input strides (order - inp) \n ");
+    printf("\t-input2_strides: Input strides (order - inp) \n ");
+    printf("\t =====================================\n ");
+    printf("\t ===== ASYM8 specific parameters =====\n ");
+    printf("\t =====================================\n ");
+    printf ("\t-output_zero_bias: output zero_bias; Default=127\n");
+    printf ("\t-output_left_shift: output_left_shift;   Default=1\n");
+    printf ("\t-output_multiplier: output_multiplier; Default=0x7fff\n");
+    printf ("\t-output_activation_min: output_activation_min; Default=0\n");
+    printf ("\t-output_activation_max: output_activation_max; Default=225\n");
+    printf ("\t-input1_zero_bias: input1_zero_bias(Only needed in add_asym8); Default=-127\n");
+    printf ("\t-input1_left_shift: input1_left_shift(Only needed in add_asym8); Default=0\n");
+    printf ("\t-input1_multiplier: input1_multiplier(Only needed in add_asym8); Default=0x7fff\n");
+    printf ("\t-input2_zero_bias: input2_zero_bias(Only needed in add_asym8); Default=-127\n");
+    printf ("\t-input2_left_shift: input2_left_shift(Only needed in add_asym8); Default=0\n");          
+    printf ("\t-input2_multiplier: input2_multiplier(Only needed in add_asym8); Default=0x7fff\n");   
+    printf ("\t-left_shift: global left_shift(Only needed in add_asym8); Default=0\n");
+    printf ("\t-input1_scale: input_scale(Float value. Only needed in dequantize operation); Default=0.5\n");
+    printf ("\t-val_memset: input_memset(Float value. Needed in memset operation); Default=0.0\n");
+}
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 {
@@ -180,6 +229,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     {
       //err_code = 0;
       printf("Invalid argument: %s\n",argv[argidx]);
+      show_usage();
       exit(1);
     }
     ARGTYPE_INDICATE("--help", p_cfg->help);
@@ -237,58 +287,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n", argv[argidx]);
+    show_usage();
     exit(1);
   }
 }
 
-void show_usage(void)
-{
-    printf ("Usage xt-run <binary> [Options]\n");
-    printf("\t-io_length: input/output vector length; Default=1024\n");
-    printf("\t-num_inp_dims: number of input dimensions; Default=4\n");
-    printf("\t-num_axis_dims: number of axis dimensions; Default=4\n");
-    printf("\t-num_out_dims: number of output dimensions; Default=4\n");
-    printf("\t-inp_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float); Default=-1\n");
-    printf("\t-out_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float); Default=-1\n");
-    printf("\t-vec_count: number of input vectors; Default=1\n");
-    printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, elm_min, elm_max, dot_prod, elm_equal, elm_notequal, elm_greater, elm_greaterequal, elm_less, elm_lessequal, reduce_max_4D, reduce_mean_4D, elm_sine, elm_cosine, elm_logn, elm_abs, elm_ceil, elm_round, elm_neg, elm_square, elm_rsqrt, elm_sqrt, broadcast, memmove, memset; Default=""elm_add""\n");
-    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
-    printf("\t-read_inp1_file_name: Full filename for reading inputs (order - inp) \n");
-    printf("\t-read_inp2_file_name: Full filename for reading inputs (order - inp) \n");
-    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
-    printf("\t-write_inp1_file_name: Full filename for writing inputs (order - inp) \n");
-    printf("\t-write_inp2_file_name: Full filename for writing inputs (order - inp) \n");
-    printf("\t-write_out_file_name: Full filename for writing output \n");
-    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
-    printf("\t-read_inp_shape_str: Takes the input  shape dimensions(space ' ' separated) as a string \n");
-    printf("\t-read_out_shape_str: Takes the output shape dimensions(space ' ' separated) as a string \n");
-    printf("\t-read_axis_data_str: Takes the axis data(space ' ' separated) as a string \n");
-    printf("\t =========================================\n ");
-    printf("\t ===== Broadcast specific parameters =====\n ");
-    printf("\t =========================================\n ");
-    printf("\t-input1_numElements: Number of elements in input (order - inp) \n ");
-    printf("\t-input2_numElements: Number of elements in input (order - inp) \n ");
-    printf("\t-input1_strides: Input strides (order - inp) \n ");
-    printf("\t-input2_strides: Input strides (order - inp) \n ");
-    printf("\t =====================================\n ");
-    printf("\t ===== ASYM8 specific parameters =====\n ");
-    printf("\t =====================================\n ");
-    printf ("\t-output_zero_bias: output zero_bias; Default=127\n");
-    printf ("\t-output_left_shift: output_left_shift;   Default=1\n");
-    printf ("\t-output_multiplier: output_multiplier; Default=0x7fff\n");
-    printf ("\t-output_activation_min: output_activation_min; Default=0\n");
-    printf ("\t-output_activation_max: output_activation_max; Default=225\n");
-    printf ("\t-input1_zero_bias: input1_zero_bias(Only needed in add_asym8); Default=-127\n");
-    printf ("\t-input1_left_shift: input1_left_shift(Only needed in add_asym8); Default=0\n");
-    printf ("\t-input1_multiplier: input1_multiplier(Only needed in add_asym8); Default=0x7fff\n");
-    printf ("\t-input2_zero_bias: input2_zero_bias(Only needed in add_asym8); Default=-127\n");
-    printf ("\t-input2_left_shift: input2_left_shift(Only needed in add_asym8); Default=0\n");          
-    printf ("\t-input2_multiplier: input2_multiplier(Only needed in add_asym8); Default=0x7fff\n");   
-    printf ("\t-left_shift: global left_shift(Only needed in add_asym8); Default=0\n");
-    printf ("\t-input1_scale: input_scale(Float value. Only needed in dequantize operation); Default=0.5\n");
-    printf ("\t-val_memset: input_memset(Float value. Needed in memset operation); Default=0.0\n");
-}
+
 
 #define REDUCE_MAX_ASYM8S(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
@@ -1037,12 +1041,12 @@ int xa_nn_main_process(int argc, char *argv[])
   buf1D_t *p_inp1 = NULL;
   buf1D_t *p_inp2 = NULL;
   buf1D_t *p_out;
-  buf1D_t *ptr_ref;
+  buf1D_t *ptr_ref = NULL;
 
   FILE *fptr_inp1 = NULL;
   FILE *fptr_inp2 = NULL;
   FILE *fptr_out;
-  FILE *fptr_ref;
+  FILE *fptr_ref = NULL;
 
   // Axis and shape pointers for reduce max kernel
   WORD32 *p_inp_shape, *p_out_shape, *p_axis;
@@ -1052,7 +1056,12 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-  
+
+  fprintf(stderr, "\n--------------------------------------------------------\n");
+  fprintf(stderr, "%s library version %s\n", xa_nnlib_get_lib_name_string() , xa_nnlib_get_lib_version_string());
+  fprintf(stderr, "API version: %s\n", xa_nnlib_get_lib_api_version_string());
+  fprintf(stderr, "Cadence Design Systems, Inc. http://www.cadence.com\n");
+
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -1149,31 +1158,53 @@ int xa_nn_main_process(int argc, char *argv[])
     sprintf(profiler_params, "N=%d\n", cfg.io_length);
   }
 
-  // Open input file
-  if(cfg.write_file)
+  bool single_input_kernel = 0;
+  if( !strcmp(cfg.kernel_name, "elm_floor")       ||
+      !strcmp(cfg.kernel_name, "elm_sine")        ||
+      !strcmp(cfg.kernel_name, "elm_cosine")      ||
+      !strcmp(cfg.kernel_name, "elm_logn")        ||
+      !strcmp(cfg.kernel_name, "elm_abs")         ||
+      !strcmp(cfg.kernel_name, "elm_ceil")        ||
+      !strcmp(cfg.kernel_name, "elm_round")       ||
+      !strcmp(cfg.kernel_name, "elm_neg")         ||
+      !strcmp(cfg.kernel_name, "elm_square")      ||
+      !strcmp(cfg.kernel_name, "elm_sqrt")        ||
+      !strcmp(cfg.kernel_name, "elm_rsqrt")       ||
+      !strcmp(cfg.kernel_name, "broadcast")       ||
+      !strcmp(cfg.kernel_name, "memmove")         ||
+      !strcmp(cfg.kernel_name, "elm_dequantize")  ||
+      !strcmp(cfg.kernel_name, "elm_requantize")  ||
+      !strcmp(cfg.kernel_name, "reduce_max_4D")      ||
+      !strcmp(cfg.kernel_name, "reduce_mean_4D"))
   {
-    /* If write_file (generate test vectors) is enabled, random data would be generated and
-       used; the input data and output data generated would be written into files. 
-     */
-	if(cfg.write_inp1_file_name[0] != '\0')
-		fptr_inp1 = file_open(pb_input_file_path, cfg.write_inp1_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
-	if(cfg.write_inp2_file_name[0] != '\0')
-	  fptr_inp2 = file_open(pb_input_file_path, cfg.write_inp2_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
+    single_input_kernel = 1;
   }
-  else
+
+  if(strcmp(cfg.kernel_name, "memset")) /* memset does not require array of input */
   {
-    /* Else, if input file is specified on command line, input data would be read from it, else
-       input data would be read from the default file set in default_config().
-     */
-	  if(cfg.read_inp1_file_name[0] != '\0')
-		  fptr_inp1 = file_open(pb_input_file_path, cfg.read_inp1_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
-	  if(cfg.read_inp2_file_name[0] != '\0')
-		  fptr_inp2 = file_open(pb_input_file_path, cfg.read_inp2_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
+    // Open input file
+    if(cfg.write_file)
+    {
+      /* If write_file (generate test vectors) is enabled, random data would be generated and
+        used; the input data and output data generated would be written into files. 
+      */
+	    fptr_inp1 = file_open(pb_input_file_path, cfg.write_inp1_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
+      if(!single_input_kernel)
+        fptr_inp2 = file_open(pb_input_file_path, cfg.write_inp2_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
+    }
+    else
+    {
+      /* Else, if input file is specified on command line, input data would be read from it, else
+        input data would be read from the default file set in default_config().
+      */
+	    fptr_inp1 = file_open(pb_input_file_path, cfg.read_inp1_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
+      if(!single_input_kernel)
+	      fptr_inp2 = file_open(pb_input_file_path, cfg.read_inp2_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
+    }
   }
 
   // Open output file
-          if(cfg.write_out_file_name[0] != '\0')
-		fptr_out = file_open(pb_output_file_path, cfg.write_out_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
+	fptr_out = file_open(pb_output_file_path, cfg.write_out_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
 
   // Open reference file if verify flag is enabled
   if(cfg.verify)
@@ -1376,8 +1407,8 @@ int xa_nn_main_process(int argc, char *argv[])
     // If verify flag enabled, compare output against reference
     if(cfg.verify)
     {
-      read_buf1D_from_file(fptr_ref, ptr_ref);
-      pass_count += compare_buf1D(ptr_ref, p_out, cfg.verify, cfg.out_precision, 1);
+      if(-1 != read_buf1D_from_file(fptr_ref, ptr_ref))
+        pass_count += compare_buf1D(ptr_ref, p_out, cfg.verify, cfg.out_precision, 1);
     }
     else
     {
@@ -1385,7 +1416,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames), cfg.verify);
 
   if(fptr_inp1)
   	  fclose(fptr_inp1);

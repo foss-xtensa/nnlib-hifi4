@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -236,8 +236,8 @@ static void vecmax8_inpx3_unaligned(const WORD8 *p_src1, const WORD8* p_src2, co
 #else
 static void vecmax8_inpx3_unaligned(const WORD8 *p_src1, const WORD8* p_src2, const WORD8* p_src3, WORD8 * /*__restrict__*/ p_dst, int N){
     int i = 0;
-    unsigned int Nby8 =  N>>3;
-    unsigned int remainder_cnt = N&0x7;
+    int Nby8 =  N>>3;
+    int remainder_cnt = N&0x7;
 
     ae_valign align_src_in1, align_src_in2, align_src_in3;
 

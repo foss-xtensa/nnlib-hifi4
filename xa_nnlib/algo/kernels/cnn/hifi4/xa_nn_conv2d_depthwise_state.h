@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -87,8 +87,8 @@ VOID xa_nn_conv2d_depthwise_init
     alignIn = AE_LA64_PP(pae_in); \
     alignOut = AE_ZALIGN64(); \
     ae_int24x2 d_tmp; \
-    unsigned int kw_by_6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(kw, 0x2AAAAAAB))); \
-    unsigned int remainder_start = 6*kw_by_6; \
+    int kw_by_6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(kw, 0x2AAAAAAB))); \
+    int remainder_start = 6*kw_by_6; \
     _Pragma("no_unroll") \
     for(itr_kw = 0; itr_kw < kw_by_6; itr_kw++) \
     { \

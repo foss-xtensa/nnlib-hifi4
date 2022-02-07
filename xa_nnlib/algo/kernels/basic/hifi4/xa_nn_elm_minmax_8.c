@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -55,10 +55,10 @@ WORD32 xa_nn_elm_max_8x8_8( WORD8* __restrict__ p_out,
     XA_NNLIB_ARG_CHK_ALIGN(p_in1, sizeof(WORD8), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_in2, sizeof(WORD8), -1);
 
-    const  UWORD8 num_elm_per_simd  = 4;
-    const  UWORD8 num_simd_per_iter = 1;
+    const  WORD8 num_elm_per_simd  = 4;
+    const  WORD8 num_simd_per_iter = 1;
 
-    const UWORD16 num_elm_per_iter = num_elm_per_simd * num_simd_per_iter ;
+    const WORD16 num_elm_per_iter = num_elm_per_simd * num_simd_per_iter ;
 
     WORD8 *p_a = (WORD8 *)p_in1;
     WORD8 *p_b = (WORD8 *)p_in2;
@@ -68,11 +68,11 @@ WORD32 xa_nn_elm_max_8x8_8( WORD8* __restrict__ p_out,
     ae_valign out_a;
     out_a = AE_ZALIGN64();
 
-    UWORD32 i = 0;
-        ALIGN_REGISTER_TYPE va_a, va_b;
+    WORD32 i = 0;
+    ALIGN_REGISTER_TYPE va_a, va_b;
 
-        PRIME_8X4F(p_a, va_a);
-        PRIME_8X4F(p_b, va_b);
+    PRIME_8X4F(p_a, va_a);
+    PRIME_8X4F(p_b, va_b);
 
     for(i = 0; i<(num_element&(~3)); i+=num_elm_per_iter){
 
@@ -113,16 +113,16 @@ WORD32 xa_nn_elm_max_8x8_8( WORD8* __restrict__ p_out,
     XA_NNLIB_ARG_CHK_ALIGN(p_in1, sizeof(WORD8), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_in2, sizeof(WORD8), -1);
 
-    const  UWORD8 num_elm_per_simd  = 4;
-    const  UWORD8 num_simd_per_iter = 1;
+    const  WORD8 num_elm_per_simd  = 4;
+    const  WORD8 num_simd_per_iter = 1;
 
-    const UWORD16 num_elm_per_iter = num_elm_per_simd * num_simd_per_iter ;
+    const WORD16 num_elm_per_iter = num_elm_per_simd * num_simd_per_iter ;
 
     xtbool io_pointers_aligned =    ((uintptr_t)p_in1 % num_elm_per_iter == 0) &&
                                     ((uintptr_t)p_in2 % num_elm_per_iter == 0) &&
                                     ((uintptr_t)p_out % num_elm_per_iter == 0);
 
-    const UWORD32 num_simd_iter   = num_element / num_elm_per_iter ;
+    const WORD32 num_simd_iter   = num_element / num_elm_per_iter ;
 
     WORD8 *p_a = (WORD8 *)p_in1;
     WORD8 *p_b = (WORD8 *)p_in2;
@@ -131,7 +131,7 @@ WORD32 xa_nn_elm_max_8x8_8( WORD8* __restrict__ p_out,
     xtbool4 lt0_3;
     ae_int16x4 a0_3, b0_3;
 
-    UWORD32 i = 0;
+    WORD32 i = 0;
 
     // if all pointers are aligned use 4-way SIMD
     if(io_pointers_aligned){
@@ -218,10 +218,10 @@ WORD32 xa_nn_elm_min_8x8_8( WORD8* __restrict__ p_out,
     XA_NNLIB_ARG_CHK_ALIGN(p_in1, sizeof(WORD8), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_in2, sizeof(WORD8), -1);
 
-    const  UWORD8 num_elm_per_simd  = 4;
-    const  UWORD8 num_simd_per_iter = 1;
+    const  WORD8 num_elm_per_simd  = 4;
+    const  WORD8 num_simd_per_iter = 1;
     
-    const UWORD16 num_elm_per_iter = num_elm_per_simd * num_simd_per_iter ;
+    const WORD16 num_elm_per_iter = num_elm_per_simd * num_simd_per_iter ;
 
     WORD8 *p_a = (WORD8 *)p_in1;
     WORD8 *p_b = (WORD8 *)p_in2;
@@ -231,7 +231,7 @@ WORD32 xa_nn_elm_min_8x8_8( WORD8* __restrict__ p_out,
     ae_valign out_a;
     out_a = AE_ZALIGN64();
 
-    UWORD32 i = 0;
+    WORD32 i = 0;
 
         ALIGN_REGISTER_TYPE va_a, va_b;
 
@@ -276,16 +276,16 @@ WORD32 xa_nn_elm_min_8x8_8( WORD8* __restrict__ p_out,
     XA_NNLIB_ARG_CHK_ALIGN(p_in1, sizeof(WORD8), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_in2, sizeof(WORD8), -1);
 
-    const  UWORD8 num_elm_per_simd  = 4;
-    const  UWORD8 num_simd_per_iter = 1;
+    const  WORD8 num_elm_per_simd  = 4;
+    const  WORD8 num_simd_per_iter = 1;
     
-    const UWORD16 num_elm_per_iter = num_elm_per_simd * num_simd_per_iter ;
+    const WORD16 num_elm_per_iter = num_elm_per_simd * num_simd_per_iter ;
 
     xtbool io_pointers_aligned =    ((uintptr_t)p_in1 % num_elm_per_iter == 0) &&
                                     ((uintptr_t)p_in2 % num_elm_per_iter == 0) &&
                                     ((uintptr_t)p_out % num_elm_per_iter == 0);
 
-    UWORD32 num_simd_iter   = num_element / num_elm_per_iter ;
+    WORD32 num_simd_iter   = num_element / num_elm_per_iter ;
 
     WORD8 *p_a = (WORD8 *)p_in1;
     WORD8 *p_b = (WORD8 *)p_in2;
@@ -294,7 +294,7 @@ WORD32 xa_nn_elm_min_8x8_8( WORD8* __restrict__ p_out,
     xtbool4 lt0_3;
     ae_int16x4 a0_3, b0_3;
 
-    UWORD32 i = 0;
+    WORD32 i = 0;
 
     // if all pointers are aligned use 4-way SIMD, else do element-wise operation
     if(io_pointers_aligned){

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -58,7 +58,7 @@
 }
 #endif
 
-#if XCHAL_HAVE_HIFI1
+#if XCHAL_HAVE_HIFI5 || XCHAL_HAVE_HIFI1
 #define PRIME_8X4F(p_char, tmp) \
     tmp = AE_LA64_PP(p_char) \
 
@@ -141,7 +141,7 @@
   ae_int32x2 d2,d3; \
   ae_int16x4 d = 1; \
   AE_MUL16X4(d3,d2,d0,d1); \
-  d3 = AE_ADD32S(d3, d2); \
+  AE_MULAAD32X16_H0_L1(q0,d2,d); \
   AE_MULAAD32X16_H0_L1(q0,d3,d); \
 }
 #endif

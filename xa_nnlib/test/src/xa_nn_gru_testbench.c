@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -114,18 +114,18 @@ const char *coef_files[9] =
 void show_usage(void)
 {
   printf("xt-run <binary> [Options]\n");
-  printf("--in_feats:    \t Input length (Default=256)                   \t  Range: 4-2048 NOTE:-Input length must be multiple of 4\n");
-  printf("--out_feats:   \t Output length (Default=256)                  \t  Range: 4-2048 NOTE:-Output length must be multiple of 4\n");
-  printf("--membank_padding:\t Memory bank padding (Default=1)           \t  Must be 0 or 1\n");
-  printf("--mat_prec:    \t Coefficient precision (Default=16)                        \t  Must be 8 or 16\n");
-  printf("--vec_prec:    \t Input precision (Default=16)                              \t  Must be 16\n");
-  printf("--verify:      \t Verify output against ref output (Default=1) \t  Supported values: 0:-Disable  1:-Enable\n");
-  printf("--input_file:  \t File containing input shape\n");
-  printf("--filter_path: \t Path where file containing filter are stored\n");
-  printf("--output_file: \t File to which output will be written\n");
-  printf("--prev_h_file: \t File containing context data\n");
-  printf("--ref_file:    \t File which has ref output\n");
-  printf("--h/-help:     \t Prints help\n");
+  printf("--in_feats:        \t Input length (Default=256)                   \t  Range: 4-2048 NOTE:-Input length must be multiple of 4\n");
+  printf("--out_feats:       \t Output length (Default=256)                  \t  Range: 4-2048 NOTE:-Output length must be multiple of 4\n");
+  printf("--membank_padding: \t Memory bank padding (Default=1)              \t  Must be 0 or 1\n");
+  printf("--mat_prec:        \t Coefficient precision (Default=16)           \t  Must be 8 or 16\n");
+  printf("--vec_prec:        \t Input precision (Default=16)                 \t  Must be 16\n");
+  printf("--verify:          \t Verify output against ref output (Default=1) \t  Supported values: 0:-Disable  1:-Enable\n");
+  printf("--input_file:      \t File containing input shape\n");
+  printf("--filter_path:     \t Path where file containing filter are stored\n");
+  printf("--output_file:     \t File to which output will be written\n");
+  printf("--prev_h_file:     \t File containing context data\n");
+  printf("--ref_file:        \t File which has ref output\n");
+  printf("-h/-help/--help:   \t Prints help\n");
 }
      
 void *setup_weights_and_biases(xa_nnlib_gru_weights_t *weights,
@@ -362,10 +362,12 @@ void parse_arguments(int argc, char** argv,
     if(strncmp((argv[argidx]), "-", 1) != 0)
     {
       printf("Invalid argument: %s\n",argv[argidx]);
+      show_usage();
       exit(1);
     }
-    ARGTYPE_INDICATE("--h",*show_help);
+    ARGTYPE_INDICATE("-h",*show_help);
     ARGTYPE_INDICATE("-help",*show_help);
+    ARGTYPE_INDICATE("--help",*show_help);
     ARGTYPE_ONETIME_CONFIG("--in_feats",config->in_feats);
     ARGTYPE_ONETIME_CONFIG("--out_feats",config->out_feats);
     ARGTYPE_ONETIME_CONFIG("--membank_padding",config->pad);
@@ -380,6 +382,7 @@ void parse_arguments(int argc, char** argv,
     
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
+    show_usage();
     exit(1);
   }
 }
@@ -675,7 +678,12 @@ int xa_nn_main_process(int argc, char *argv[])
     }
 
     PRINT_STR("GRU Process loop ended")
-    XTPWR_PROFILER_CLOSE(0, verify_pass);
+#ifdef VERIFY
+    XTPWR_PROFILER_CLOSE(0, verify_pass, verify_flag);
+#else
+    XTPWR_PROFILER_CLOSE(0, verify_pass, 0);
+#endif
+
 #ifdef VERIFY
     if(verify_flag)
     {

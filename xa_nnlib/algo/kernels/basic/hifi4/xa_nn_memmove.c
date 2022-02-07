@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -166,8 +166,8 @@ WORD32 xa_nn_memmove_8_8( void *pdst,
         alignIn = AE_LA64_PP(pInp);
         alignOut = AE_ZALIGN64();
         ae_int24x2 d0;
-        unsigned int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(n, 0x2AAAAAAB)));
-        unsigned int remainder_start = 6*Nby6;
+        int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(n, 0x2AAAAAAB)));
+        int remainder_start = 6*Nby6;
 
         for(i=0;i<Nby6;i++)
         {
@@ -194,8 +194,8 @@ WORD32 xa_nn_memmove_8_8( void *pdst,
         alignIn = AE_LA64_PP(pInp);
         alignOut = AE_ZALIGN64();
         ae_int16x4 d0;
-        unsigned int Nby8 = n>>3;
-        unsigned remainder_start = n - (Nby8<<3);
+        int Nby8 = n>>3;
+        int remainder_start = n - (Nby8<<3);
 
         for(i=0;i<Nby8;i++){
           AE_LA16X4_RIP(d0, alignIn, pInp);
@@ -213,8 +213,8 @@ WORD32 xa_nn_memmove_8_8( void *pdst,
         alignIn = AE_LA64_PP(pInp);
         alignOut = AE_ZALIGN64();
         ae_int24x2 d0;
-        unsigned int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(n, 0x2AAAAAAB)));
-        unsigned int remainder_start = n - 6*Nby6;
+        int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(n, 0x2AAAAAAB)));
+        int remainder_start = n - 6*Nby6;
 
         for(i=0;i<Nby6;i++){
           AE_LA24X2_RIP(d0, alignIn, pInp);

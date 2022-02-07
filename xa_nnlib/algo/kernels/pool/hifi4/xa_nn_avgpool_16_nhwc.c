@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -276,7 +276,7 @@ const WORD16* __restrict__ p_inp,
             LIMIT(end_row , 0, input_width);
             pool_width = end_row - start_row;
             p_out_temp = p_out + (itr_oh*out_width*input_channels) + (itr_ow*input_channels);
-            p_dst = (ae_int32x2 *)((WORD32 *)p_scratch + plane_size);
+            p_dst = (ae_int32x2 *)ALIGN_PTR(((WORD32 *)p_scratch + plane_size), ALIGNMENT);
 
             if(pool_width)
             {
@@ -325,11 +325,11 @@ const WORD16* __restrict__ p_inp,
                     {
                         ae_int32x2 i1, i2, i3, out;
 
-                        i1 = AE_MOVDA32(((WORD32 *)p_src2_temp_w)[i]);
-                        i2 = AE_MOVDA32(((WORD32 *)p_src2_temp_w)[i]);
-                        i3 = AE_MOVDA32(((WORD32 *)p_src3_temp_w)[i]);
+                        AE_L32_IP(i1, (ae_int32 *)p_src1_temp_w, 4);
+                        AE_L32_IP(i2, (ae_int32 *)p_src2_temp_w, 4);
+                        AE_L32_IP(i3, (ae_int32 *)p_src3_temp_w, 4);
 
-                        out = AE_ADD32S(i2, i2);
+                        out = AE_ADD32S(i1, i2);
                         out = AE_ADD32S(out, i3);
 
                         AE_S32_L_IP(out, (ae_int32 *)p_dst_temp, sizeof(WORD32));

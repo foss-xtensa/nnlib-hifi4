@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -25,9 +25,11 @@
 // Macros for commandline parser
 #define ARGTYPE_STRING(_switch, STRING, MAX_STRING_LENGTH)      \
     if(strcmp((argv[argidx]), _switch) == 0) {             \
-            /* printf("PARSE %s: %s %s\n", _switch, argv[argidx], argv[argidx+1]); */ \
-            strncpy(STRING, argv[argidx+1], MAX_STRING_LENGTH);  \
-            argidx++;\
+            if(argv[argidx+1]) {                           \
+              /* printf("PARSE %s: %s %s\n", _switch, argv[argidx], argv[argidx+1]); */ \
+              strncpy(STRING, argv[argidx+1], MAX_STRING_LENGTH);  \
+              argidx++;\
+            } \
             continue;\
           }
 

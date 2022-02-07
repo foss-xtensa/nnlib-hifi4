@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -92,7 +92,7 @@ const WORD8* __restrict__ p_inp,
     WORD16 *p_scratch = (WORD16 *)ALIGN_PTR(p_scratch_in, 8);
 
     int itr_oh, itr_ow;
-    const unsigned int plane_size = input_width * input_channels;
+    const int plane_size = input_width * input_channels;
 #if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
 #endif
@@ -220,7 +220,7 @@ const WORD8* __restrict__ p_inp,
                         i2 = AE_MOVDA16(((WORD8 *)p_src2_temp)[i] );
                         i2 = AE_SLAI16S(i2, 8);
 
-                        i3 = AE_MOVDA16(((WORD8 *)p_src2_temp)[i] );
+                        i3 = AE_MOVDA16(((WORD8 *)p_src3_temp)[i] );
                         i3 = AE_SLAI16S(i3, 8);
 
                         MAX_16X4(out, i3, i2, i1)
@@ -259,7 +259,7 @@ const WORD8* __restrict__ p_inp,
             LIMIT(end_row , 0, input_width);
             pool_width = end_row - start_row;
             p_out_temp = p_out + (itr_oh*out_width*input_channels) + (itr_ow*input_channels);
-            p_dst = (ae_int16x4 *)ALIGN_PTR((WORD16 *)p_scratch + plane_size, 8);
+            p_dst = (ae_int16x4 *)ALIGN_PTR((WORD16 *)p_scratch + plane_size, ALIGNMENT);
 
             if(pool_width)
             {
@@ -290,9 +290,9 @@ const WORD8* __restrict__ p_inp,
                     {
                         ae_int16x4 i1, i2, i3, out;
 
-                        AE_L16X4_IP(i1, p_src1_temp_w, 8);
-                        AE_L16X4_IP(i2, p_src2_temp_w, 8);
-                        AE_L16X4_IP(i3, p_src3_temp_w, 8);
+                        AE_LA16X4_IP(i1, align_src1, p_src1_temp_w);
+                        AE_LA16X4_IP(i2, align_src2, p_src2_temp_w);
+                        AE_LA16X4_IP(i3, align_src3, p_src3_temp_w);
 
                         MAX_16X4(out, i3, i2, i1)
 

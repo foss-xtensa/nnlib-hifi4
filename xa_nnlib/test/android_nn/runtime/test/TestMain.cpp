@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -190,10 +190,14 @@ void compare_uint8(MixedTyped& filteredGolden, MixedTyped& filteredTest, size_t 
     }
 }
 
-int main(void) 
+static void show_usage()
 {
-    Model model;
+    printf ("Usage xt-run <binary>\n");
+    printf ("The ann testbench does not require any additional command line options\n");
+}
 
+int main(int argc, char** argv) 
+{
     /* Library name version etc print */
     fprintf(stderr, "\n--------------------------------------------------------\n");
     fprintf(stderr, "HiFi NN Library Android NN API Testbench\n");
@@ -204,6 +208,36 @@ int main(void)
     fprintf(stderr, "--------------------------------------------------------\n");
     fprintf(stderr, "\n");
 
+    uint8_t help = 0;
+    Model model;
+    if(argc > 1)
+    {
+      int argidx;
+      for(argidx=1; argidx<argc; argidx++)
+      {
+        if(strncmp((argv[argidx]), "-", 1) != 0)
+        {
+          printf("Invalid argument: %s\n",argv[argidx]);
+	        show_usage();
+          exit(1);
+        }
+        if(!strcmp(argv[argidx],"-h") || !strcmp(argv[argidx],"-help") || !strcmp(argv[argidx],"--help"))
+        {
+          help = 1;
+        }
+        else
+        {
+          printf("Invalid argument: %s\n", argv[argidx]);
+	        show_usage();
+          exit(1);
+        }
+      }
+    }
+
+    if (help == 1){
+      show_usage();
+	    return 0;
+    }
 
     printf("Creating model\n");
     CreateModel(&model);
@@ -291,7 +325,6 @@ int main(void)
 #endif //HIFI_BUILD
         exampleNo++;
     }
-
     /*
        execute(all_tests::CreateModel,
        all_tests::is_ignored,

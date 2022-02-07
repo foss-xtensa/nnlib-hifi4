@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -97,6 +97,12 @@
     temp64_h = AE_SLAA64S(temp64_h, lsh);\
     temp64_l = AE_SLAA64S(temp64_l, lsh);\
     prod = AE_ROUND32X2F64SSYM(temp64_h, temp64_l);\
+}
+
+#define MultiplyByQuantizedMultiplier(y, x, multiplier, lsh, rsh) {\
+    y = AE_SLAA32(x, lsh); \
+    y = AE_MULFP32X2RAS(y, AE_MOVDA32(multiplier)); \
+    y = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(y), rsh), AE_SRAA64(AE_CVT64F32_L(y), rsh)); \
 }
 
 #define ROUNDING_HALF_SUM(s, a){\
@@ -288,6 +294,9 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
     ae_valign align_out = AE_ZALIGN64();
 #endif
 
+    int left_shift  = input_left_shift<0?0: input_left_shift;
+    int right_shift = input_left_shift>0?0:-input_left_shift;
+
     if(vec_length > 3)
     {
         pre_loop_count = (int)((4 - ((int)p_vec & 0x3))&3);
@@ -327,9 +336,10 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
 
         // set flag if x < radius
         c32 = AE_LT32(x32, radius);
-        MultiplyByQuantizedMultiplierGreaterThanOne(y32, x32, mul, input_left_shift)
 
-        d32 = AE_LT32(y32, zero);
+        d32 = AE_LT32(x32, zero);
+
+        MultiplyByQuantizedMultiplier(y32, x32, mul, left_shift, right_shift)
 
         // Computing Absolute value
         x32 = AE_ABS32(y32);
@@ -341,7 +351,7 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
 
         ONE_OVER_ONE_PLUS_X_FOR_X_IN_0_1_32X2(y32, y10, x32, x10)
 
-        // if (dequantized_input < 0) output = 1 - sigmoid(abs(dequantized_input))
+        // if (inp_centered < 0) output = 1 - sigmoid(abs(dequantized_input))
         AE_MOVT32X2(y32, AE_SUB32S(q31, y32), d32);
 
         // Downscale to 8 bit
@@ -384,11 +394,11 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         c32 = AE_LT32(x32, radius);
         c10 = AE_LT32(x10, radius);
 
-        MultiplyByQuantizedMultiplierGreaterThanOne(y32, x32, mul, input_left_shift)
-        MultiplyByQuantizedMultiplierGreaterThanOne(y10, x10, mul, input_left_shift)
+        d32 = AE_LT32(x32, zero);
+        d10 = AE_LT32(x10, zero);
 
-        d32 = AE_LT32(y32, zero);
-        d10 = AE_LT32(y10, zero);
+        MultiplyByQuantizedMultiplier(y32, x32, mul, left_shift, right_shift)
+        MultiplyByQuantizedMultiplier(y10, x10, mul, left_shift, right_shift)
 
         // Computing Absolute value
         x32 = AE_ABS32(y32);
@@ -403,7 +413,7 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
 
         ONE_OVER_ONE_PLUS_X_FOR_X_IN_0_1_32X2(y32, y10, x32, x10)
 
-        // if (dequantized_input < 0) output = 1 - sigmoid(abs(dequantized_input))
+        // if (inp_centered < 0) output = 1 - sigmoid(abs(dequantized_input))
         AE_MOVT32X2(y32, AE_SUB32S(q31, y32), d32);
         AE_MOVT32X2(y10, AE_SUB32S(q31, y10), d10);
 
@@ -452,9 +462,10 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
 
         // set flag if x < radius
         c32 = AE_LT32(x32, radius);
-        MultiplyByQuantizedMultiplierGreaterThanOne(y32, x32, mul, input_left_shift)
 
-        d32 = AE_LT32(y32, zero);
+        d32 = AE_LT32(x32, zero);
+
+        MultiplyByQuantizedMultiplier(y32, x32, mul, left_shift, right_shift)
 
         // Computing Absolute value
         x32 = AE_ABS32(y32);
@@ -466,7 +477,7 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
 
         ONE_OVER_ONE_PLUS_X_FOR_X_IN_0_1_32X2(y32, y10, x32, x10)
 
-        // if (dequantized_input < 0) output = 1 - sigmoid(abs(dequantized_input))
+        // if (inp_centered < 0) output = 1 - sigmoid(abs(dequantized_input))
         AE_MOVT32X2(y32, AE_SUB32S(q31, y32), d32);
 
         // Downscale to 8 bit
@@ -689,6 +700,9 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
   zero = AE_ZERO32();
   zero_16x4 = AE_ZERO16();
 
+  int left_shift  = input_left_shift<0?0: input_left_shift;
+  int right_shift = input_left_shift>0?0:-input_left_shift;
+
   for(i=0; i<(vec_length >> 2); i++)
   {
 #if XCHAL_HAVE_HIFI1
@@ -711,8 +725,8 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
     x32 = AE_SEXT32X2D16_32(z10);
     x10 = AE_SEXT32X2D16_10(z10);
 
-    MultiplyByQuantizedMultiplierGreaterThanOne(dequantized_x32, x32, mul, input_left_shift);
-    MultiplyByQuantizedMultiplierGreaterThanOne(dequantized_x10, x10, mul, input_left_shift);
+    MultiplyByQuantizedMultiplier(dequantized_x32, x32, mul, left_shift, right_shift);
+    MultiplyByQuantizedMultiplier(dequantized_x10, x10, mul, left_shift, right_shift);
 
     // Computing Absolute value
     x32 = AE_ABS32(dequantized_x32);
@@ -785,7 +799,7 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
 
     x10 = AE_SEXT32X2D16_10(z10);
 
-    MultiplyByQuantizedMultiplierGreaterThanOne(dequantized_x10, x10, mul, input_left_shift);
+    MultiplyByQuantizedMultiplier(dequantized_x10, x10, mul, left_shift, right_shift);
 
     // Computing Absolute value
     x10 = AE_ABS32(dequantized_x10);
@@ -1931,6 +1945,9 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
   zero = AE_ZERO32();
   zero_16x4 = AE_ZERO16();
 
+  int left_shift  = input_left_shift<0?0: input_left_shift;
+  int right_shift = input_left_shift>0?0:-input_left_shift;
+
   for(i=0; i<(vec_length >> 2); i++)
   {
 #if XCHAL_HAVE_HIFI1
@@ -1953,8 +1970,8 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
     x32 = AE_SEXT32X2D16_32(z10);
     x10 = AE_SEXT32X2D16_10(z10);
 
-    MultiplyByQuantizedMultiplierGreaterThanOne(dequantized_x32, x32, mul, input_left_shift)
-    MultiplyByQuantizedMultiplierGreaterThanOne(dequantized_x10, x10, mul, input_left_shift)
+    MultiplyByQuantizedMultiplier(dequantized_x32, x32, mul, left_shift, right_shift)
+    MultiplyByQuantizedMultiplier(dequantized_x10, x10, mul, left_shift, right_shift)
 
     // Computing Absolute value
     x32 = AE_ABS32(dequantized_x32);
@@ -2027,7 +2044,7 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
 
     x10 = AE_SEXT32X2D16_10(z10);
 
-    MultiplyByQuantizedMultiplierGreaterThanOne(dequantized_x10, x10, mul, input_left_shift)
+    MultiplyByQuantizedMultiplier(dequantized_x10, x10, mul, left_shift, right_shift)
 
     // Computing Absolute value
     x10 = AE_ABS32(dequantized_x10);

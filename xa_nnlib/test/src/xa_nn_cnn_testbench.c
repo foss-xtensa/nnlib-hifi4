@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -204,6 +204,38 @@ int default_config(test_config_t *p_cfg)
   }
 }
 
+void show_usage(void)
+{
+    printf ("Usage xt-run <binary> [Options]\n");
+    printf("\t-input_height: input height; Default=16\n");
+    printf("\t-input_width: input width; Default=16\n");
+    printf("\t-input_channels: input channels; Default=4\n");
+    printf("\t-kernel_height: kernel height; Default=3\n");
+    printf("\t-kernel_width: kernel width; Default=3\n");
+    printf("\t-out_channels: output channels; Default=4\n");
+    printf("\t-channels_multiplier: channel multiplier; Default=1\n");
+    printf("\t-x_stride: stride in width dimension; Default=2\n");
+    printf("\t-y_stride: stride in height dimension; Default=2\n");
+    printf("\t-x_padding: left padding in width dimension; Default=2\n");
+    printf("\t-y_padding: top padding in height dimension; Default=2\n");
+    printf("\t-out_height: output height; Default=16\n");
+    printf("\t-out_width: output width; Default=16\n");
+    printf("\t-bias_shift: bias left shift; Default=7\n");
+    printf("\t-acc_shift: accumulator left shift; Default=-7\n");
+    printf("\t-out_data_format: Output data format, 0 (DWH), 1 (WHD); Default=0 (DWH)\n");
+    printf("\t-inp_precision: 8, 16, -1(single prec float); Default=16\n");
+    printf("\t-kernel_precision: 8, 16, -1(single prec float); Default=8\n");
+    printf("\t-out_precision: 8, 16, -1(single prec float); Default=16\n");
+    printf("\t-bias_precision: 8, 16, -1(single prec float); Default=16\n");
+    printf("\t-frames: Positive number; Default=2\n");
+    printf("\t-kernel_name: conv2d_std, conv2d_depth, conv1d_std; Default="" : conv2d_std\n");
+    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
+    printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp, kernel, bias, (kernel_point, bias_point for conv2d_depth kernel)) \n");
+    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
+    printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp, kernel, bias, (kernel_point, bias_point for conv2d_depth kernel)) \n");
+    printf("\t-write_out_file_name: Full filename for writing output \n");
+    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+}
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 {
@@ -214,6 +246,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     {
       //err_code = 0;
       printf("Invalid argument: %s at index %d\n",argv[argidx], argidx);
+      show_usage();
       exit(1);
     }
     ARGTYPE_INDICATE("--help", p_cfg->help);
@@ -250,6 +283,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
+    show_usage();
     exit(1);
   }
 }
@@ -340,38 +374,7 @@ int map_test_cfg_to_cnn_cfg(test_config_t *p_cfg, xa_nnlib_cnn_init_config_t *cn
     return 0;
 }
 
-void show_usage(void)
-{
-    printf ("Usage xt-run <binary> [Options]\n");
-    printf("\t-input_height: input height; Default=16\n");
-    printf("\t-input_width: input width; Default=16\n");
-    printf("\t-input_channels: input channels; Default=4\n");
-    printf("\t-kernel_height: kernel height; Default=3\n");
-    printf("\t-kernel_width: kernel width; Default=3\n");
-    printf("\t-out_channels: output channels; Default=4\n");
-    printf("\t-channels_multiplier: channel multiplier; Default=1\n");
-    printf("\t-x_stride: stride in width dimension; Default=2\n");
-    printf("\t-y_stride: stride in height dimension; Default=2\n");
-    printf("\t-x_padding: left padding in width dimension; Default=2\n");
-    printf("\t-y_padding: top padding in height dimension; Default=2\n");
-    printf("\t-out_height: output height; Default=16\n");
-    printf("\t-out_width: output width; Default=16\n");
-    printf("\t-bias_shift: bias left shift; Default=7\n");
-    printf("\t-acc_shift: accumulator left shift; Default=-7\n");
-    printf("\t-out_data_format: Output data format, 0 (DWH), 1 (WHD); Default=0 (DWH)\n");
-    printf("\t-inp_precision: 8, 16, -1(single prec float); Default=16\n");
-    printf("\t-kernel_precision: 8, 16, -1(single prec float); Default=8\n");
-    printf("\t-out_precision: 8, 16, -1(single prec float); Default=16\n");
-    printf("\t-bias_precision: 8, 16, -1(single prec float); Default=16\n");
-    printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: conv2d_std, conv2d_depth, conv1d_std; Default="" : conv2d_std\n");
-    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
-    printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp, kernel, bias, (kernel_point, bias_point for conv2d_depth kernel)) \n");
-    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
-    printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp, kernel, bias, (kernel_point, bias_point for conv2d_depth kernel)) \n");
-    printf("\t-write_out_file_name: Full filename for writing output \n");
-    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
-}
+
 
 
 int xa_nn_main_process(int argc, char *argv[])
@@ -401,11 +404,11 @@ int xa_nn_main_process(int argc, char *argv[])
   buf1D_t *p_bias_point;
   buf1D_t *p_dw_out;
   buf1D_t *p_out;
-  buf1D_t *p_ref;
+  buf1D_t *p_ref = NULL;
 
   FILE *fptr_inp;
   FILE *fptr_out;
-  FILE *fptr_ref;
+  FILE *fptr_ref = NULL;
 
   /* Library name version etc print */
   fprintf(stderr, "\n--------------------------------------------------------\n");
@@ -691,7 +694,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames), cfg.verify);
 
   fclose(fptr_inp);
   fclose(fptr_out);

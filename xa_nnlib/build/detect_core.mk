@@ -60,6 +60,7 @@ else
                 CFLAGS+= -DCORE_HIFI3=1
             else
                 ifeq ("$(detected_core)", "hifi1")
+                      hifi1=1
                       hifi4=1
                       detected_core=hifi4
                       CFLAGS+= -DCORE_HIFI4=1

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -68,7 +68,7 @@
 #define PROFILER_STOP \
     XTPWR_PROFILER_STOP(0); \
     XTPWR_PROFILER_UPDATE(0); \
-    XTPWR_PROFILER_CLOSE(0, 1);
+    XTPWR_PROFILER_CLOSE(0, 1, 0);
 
 #endif //HIFI_BUILD
 

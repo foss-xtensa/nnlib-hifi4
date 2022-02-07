@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -34,7 +34,7 @@
 /* Macros for memcpy */
 #define MEMCPY_8b(out, inp, N) \
 { \
-  int itr; \
+  unsigned int itr; \
   ae_int16x4 di0; \
   ae_valign i_a, o_a; \
   WORD8 *inp_ptr = (WORD8 *)inp ;\
@@ -45,14 +45,14 @@
     ae_int16x4 *pae_o = (ae_int16x4 *) out_ptr ;\
     i_a = AE_LA64_PP((void*)pae_i);\
     o_a = AE_ZALIGN64();\
-    for( itr = 0; itr < (N>>3); itr++ )\
+    for( itr = 0; itr < (unsigned int)(N>>3); itr++ )\
     {\
       AE_LA16X4_IP(di0, i_a, pae_i);\
       AE_SA16X4_IP(di0, o_a, pae_o);\
     }\
     AE_SA64POS_FP(o_a, pae_o); \
-    int rem = (N&0x7);\
-    for( itr = 0; itr < (rem>>1); itr++)\
+    unsigned int rem = (N&0x7);\
+    for( itr = 0; itr < (unsigned int)(rem>>1); itr++)\
     {\
       AE_L16_IP(di0, (ae_int16 *)pae_i, 2);\
       AE_S16_0_IP(di0, (ae_int16 *)pae_o, 2);\
@@ -70,13 +70,13 @@
     pae_o = (WORD8 *)(out_ptr); \
   i_a = AE_LA64_PP((void*)pae_i); \
   o_a = AE_ZALIGN64(); \
-  for(itr = 0; itr < ((N)>>2); itr++) \
+  for(itr = 0; itr < (unsigned int)((N)>>2); itr++) \
   { \
     AE_LA8X4S_IP(di0, i_a, pae_i); \
     AE_SA8X4U_IP(di0, o_a, (ae_int32*)pae_o); \
   } \
   AE_SA64POS_FP(o_a, pae_o); \
-  for(itr = 0; itr < (N&3); itr++) \
+  for(itr = 0; itr < (unsigned int)(N&3); itr++) \
   { \
     AE_L8S_IP(di0, pae_i, 1); \
     AE_S8_0_IP(di0, pae_o, 1); \

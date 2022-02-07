@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -384,7 +384,7 @@ bool LSTMCell::Prepare(const Operation &operation,
 }
 
 bool LSTMCell::Eval() {
-  const uint32_t n_batch = input_->shape().dimensions[0];
+  const int32_t n_batch = input_->shape().dimensions[0];
   const uint32_t n_input = input_->shape().dimensions[1];
   // n_cell and n_output will be the same size when there is no projection.
   const uint32_t n_cell = input_to_output_weights_->shape().dimensions[0];

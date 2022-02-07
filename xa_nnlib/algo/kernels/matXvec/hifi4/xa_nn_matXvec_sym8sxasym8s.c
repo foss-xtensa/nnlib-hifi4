@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -1033,7 +1033,6 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s(
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_mat1, -1);
   XA_NNLIB_ARG_CHK_PTR(p_vec1, -1);
-  XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   /* Pointer alignment checks */
   XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD32), -1);
   /* Basic Parameter checks */

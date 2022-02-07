@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -185,6 +185,24 @@ OBJS_NORMOBJS  = $(addprefix $(OBJDIR)/,$(NORMOBJS))
 OBJS_REORGOBJS  = $(addprefix $(OBJDIR)/,$(REORGOBJS))
 OBJS_ANNOBJS  = $(addprefix $(OBJDIR)/,$(ANNOBJS))
 
+ifeq ($(hifi1), 1)
+all: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN)
+
+run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN)
+	xt-run --mem_model --nosummary xa_nn_matXvec_test
+	xt-run --mem_model --nosummary xa_nn_activation_test
+	xt-run --mem_model --nosummary xa_nn_conv_test
+	xt-run --mem_model --nosummary xa_nn_pool_test
+	xt-run --mem_model --nosummary xa_nn_gru_test
+	xt-run --mem_model --nosummary xa_nn_lstm_test
+	xt-run --mem_model --nosummary xa_nn_cnn_test
+	xt-run --mem_model --nosummary xa_nn_basic_test
+	xt-run --mem_model --nosummary xa_nn_norm_test
+	xt-run --mem_model --nosummary xa_nn_reorg_test
+clean:
+	-$(RM) $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN)
+	-$(RM) $(OBJDIR)$(S)*.o
+else
 all: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(ANNBIN)
 
 run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(ANNBIN)
@@ -199,6 +217,10 @@ run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN)
 	xt-run --mem_model --nosummary xa_nn_norm_test
 	xt-run --mem_model --nosummary xa_nn_reorg_test
 	xt-run --mem_model --nosummary xa_nn_ann_test
+clean:
+	-$(RM) $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(ANNBIN)
+	-$(RM) $(OBJDIR)$(S)*.o
+endif
 
 
 nn_activation: $(ACTBIN)
@@ -243,15 +265,16 @@ $(NORMBIN): $(OBJDIR) $(OBJS_NORMOBJS) $(OBJS_UTILOBJS) $(NNLIB)
 $(REORGBIN): $(OBJDIR) $(OBJS_REORGOBJS) $(OBJS_UTILOBJS) $(NNLIB)
 	$(CC) -o $@ $(OBJS_REORGOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
+ifneq ($(hifi1), 1)
 ifeq ($(xclib), 1)
 $(ANNBIN): $(OBJDIR) $(OBJS_ANNOBJS) $(ANNLIB) $(NNLIB)
 	$(CXX) -o $@ $(OBJS_ANNOBJS) $(ANNLIB) $(NNLIB) $(LDFLAGS) $(CXX_LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
 else
-
 $(ANNBIN) $(TFULITEBIN):
 	@echo "$@ not supported with newlib"
 
+endif
 endif
 
 $(OBJDIR):
@@ -264,9 +287,3 @@ $(OBJS_MATMULOBJS) $(OBJS_CONVOBJS) $(OBJS_POOLOBJS) $(OBJS_UTILOBJS) $(OBJS_ACT
 $(OBJS_ANNOBJS): $(OBJDIR)/%.o: %.cpp
 	@echo "Compiling $<"
 	$(QUIET) $(CXX) $(OPT_O0) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $(INCLUDES_ANN) -o $@ -c $<
-
-
-clean:
-	-$(RM) $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(ANNBIN)
-	-$(RM) $(OBJDIR)$(S)*.o
-

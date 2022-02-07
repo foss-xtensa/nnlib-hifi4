@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -66,11 +66,13 @@ int read_buf2D_from_file(FILE *fptr_read_data, buf2D_t *ptr_buf2D, int pad_val)
     if(ptr_buf2D->precision == ASYM8_TYPE)
     {
       int pad_size = ptr_buf2D->row_offset - ptr_buf2D->cols;
+      pad_size = (pad_size < 0) ? 0: pad_size;
       memset((ptr_mat + (row * ptr_buf2D->row_offset * size) + ptr_buf2D->cols * size), (UWORD8)pad_val, pad_size);
     }
     else
     {
       int pad_size = ptr_buf2D->row_offset - ptr_buf2D->cols;
+      pad_size = (pad_size < 0) ? 0: pad_size;
       memset((ptr_mat + (row * ptr_buf2D->row_offset * size) + ptr_buf2D->cols * size), 0, size * pad_size);
     }
   }

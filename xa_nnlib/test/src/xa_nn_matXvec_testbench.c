@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -31,6 +31,7 @@
 #include "cmdline_parser.h"
 #include "file_io.h"
 #include "stdbool.h"
+
 
 #define PROF_ALLOCATE
 #include "xt_profiler.h"
@@ -129,6 +130,41 @@ int default_config(test_config_t *p_cfg)
   }
 }
 
+void show_usage(void)
+{
+    printf ("Usage xt-run <binary> [Options]\n");
+    printf("\t-rows : rows of mat1; Default=32\n");
+    printf("\t-cols1 : columns of mat1 and rows of mat2; should be multiple of 4; Default=32\n");
+    printf("\t-cols2 : columns of mat2; should be multiple of 4; Default=32\n");
+    printf("\t-row_stride1 : row stride for mat1; Default=32\n");
+    printf("\t-row_stride2 : row stride for mat2; Default=32\n");
+    printf("\t-vec_count : vec count for time batching; Default=1\n");
+    printf("\t-acc_shift : Accumulator left shift; Default=0\n");
+    printf("\t-bias_shift : Bias left shift; Default=0\n");
+    printf("\t-mat_precision : 8, 16, -1(single prec float), -3(asym8u) or -5(sym8s); Default=16\n");
+    printf("\t-inp_precision : 8, 16, -1(single prec float), -3(asym8u) or -4(asym8s); Default=16\n");
+    printf("\t-out_precision : 8, 16, 32, 64 or -1(single prec float), -3(asym8u), -4(asym8s) or -7(asym16s); Default=16\n");
+    printf("\t-bias_precision : 8, 16, 64 or -1(single prec float); Default=16\n");
+    printf("\t-mat1_zero_bias : Matrix1 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
+    printf("\t-mat2_zero_bias : Matrix2 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
+    printf("\t-inp1_zero_bias : Input1 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s; Default=-128\n");
+    printf("\t-inp2_zero_bias : Input2 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s; Default=-128\n");
+    printf("\t-out_multiplier : Output multiplier in Q31 format for quantized 8-bit, 0x0 to 0x7fffffff; Default=0x40000000\n");
+    printf("\t-out_shift : Output shift for quantized 8-bit(asym8u and asym8s), 31 to -31; Default=-8\n");
+    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s; Default=128\n");
+    printf("\t-out_stride : Stride for storing the output; Default=1\n");
+    printf("\t-membank_padding: 0, 1; Default=1\n");
+    printf("\t-frames: Positive number; Default=2\n");
+    printf("\t-activation: sigmoid, tanh; Default="" : bypass i.e. no activation for output.\n");
+    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
+    printf("\t-read_inp_file_name: Full filename for reading inputs (order - mat1, vec1, mat2, vec2, bias) \n");
+    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
+    printf("\t-write_inp_file_name: Full filename for writing inputs (order - mat1, vec1, mat2, vec2, bias) \n");
+    printf("\t-write_out_file_name: Full filename for writing output \n");
+    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+    printf("\t-batch: Flag to check time batching; 0: Disable, 1: Enable; Default=0\n");
+    printf("\t-fc: Flag for fully connected; 0: Disable, 1: Enable; Default=0\n");
+}
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 {
@@ -139,6 +175,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     {
       //err_code = 0;
       printf("Invalid argument: %s\n",argv[argidx]);
+      show_usage();
       exit(1);
     }
     ARGTYPE_INDICATE("--help", p_cfg->help);
@@ -178,45 +215,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
+    show_usage();
     exit(1);
   }
 }
 
-void show_usage(void)
-{
-    printf ("Usage xt-run <binary> [Options]\n");
-    printf("\t-rows : rows of mat1; Default=32\n");
-    printf("\t-cols1 : columns of mat1 and rows of mat2; should be multiple of 4; Default=32\n");
-    printf("\t-cols2 : columns of mat2; should be multiple of 4; Default=32\n");
-    printf("\t-row_stride1 : row stride for mat1; Default=32\n");
-    printf("\t-row_stride2 : row stride for mat2; Default=32\n");
-    printf("\t-vec_count : vec count for time batching; Default=1\n");
-    printf("\t-acc_shift : Accumulator left shift; Default=0\n");
-    printf("\t-bias_shift : Bias left shift; Default=0\n");
-    printf("\t-mat_precision : 8, 16, -1(single prec float), -3(asym8u) or -5(sym8s); Default=16\n");
-    printf("\t-inp_precision : 8, 16, -1(single prec float), -3(asym8u) or -4(asym8s); Default=16\n");
-    printf("\t-out_precision : 8, 16, 32, 64 or -1(single prec float), -3(asym8u), -4(asym8s) or -7(asym16s); Default=16\n");
-    printf("\t-bias_precision : 8, 16, 64 or -1(single prec float); Default=16\n");
-    printf("\t-mat1_zero_bias : Matrix1 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
-    printf("\t-mat2_zero_bias : Matrix2 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
-    printf("\t-inp1_zero_bias : Input1 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s; Default=-128\n");
-    printf("\t-inp2_zero_bias : Input2 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s; Default=-128\n");
-    printf("\t-out_multiplier : Output multiplier in Q31 format for quantized 8-bit, 0x0 to 0x7fffffff; Default=0x40000000\n");
-    printf("\t-out_shift : Output shift for quantized 8-bit(asym8u and asym8s), 31 to -31; Default=-8\n");
-    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s; Default=128\n");
-    printf("\t-out_stride : Stride for storing the output; Default=1\n");
-    printf("\t-membank_padding: 0, 1; Default=1\n");
-    printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-activation: sigmoid, tanh, relu or softmax; Default="" : bypass i.e. no activation for output.\n");
-    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
-    printf("\t-read_inp_file_name: Full filename for reading inputs (order - mat1, vec1, mat2, vec2, bias) \n");
-    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
-    printf("\t-write_inp_file_name: Full filename for writing inputs (order - mat1, vec1, mat2, vec2, bias) \n");
-    printf("\t-write_out_file_name: Full filename for writing output \n");
-    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
-    printf("\t-batch: Flag to check time batching; 0: Disable, 1: Enable; Default=0\n");
-    printf("\t-fc: Flag for fully connected; 0: Disable, 1: Enable; Default=0\n");
-}
+
 
 #define MAT_VEC_MUL_FN(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
@@ -534,11 +538,22 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-  
+
+  fprintf(stderr, "\n--------------------------------------------------------\n");
+  fprintf(stderr, "%s library version %s\n", xa_nnlib_get_lib_name_string() , xa_nnlib_get_lib_version_string());
+  fprintf(stderr, "API version: %s\n", xa_nnlib_get_lib_api_version_string());
+  fprintf(stderr, "Cadence Design Systems, Inc. http://www.cadence.com\n");
+
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
     parse_arguments(argc, argv, &cfg);
+    if(strcmp(cfg.activation, "sigmoid") && strcmp(cfg.activation, "tanh") && strcmp(cfg.activation, ""))
+    {
+      printf("Invalid activation %s\n", cfg.activation);
+      show_usage();
+      return 0;
+    }
     if(1 == cfg.help)
     {
       show_usage();
@@ -725,7 +740,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames), cfg.verify);
   printf("\r\n");
 
 

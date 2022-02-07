@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -131,6 +131,44 @@ int default_config(test_config_t *p_cfg)
   }
 }
 
+void show_usage(void)
+{
+    printf ("Usage xt-run <binary> [Options]\n");
+    printf("\t-num_elements : number of elements; Default=32\n");
+    printf("\t-relu_threshold : threshold for relu in Q16.15; Default=32768 (=1 in Q16.15)\n");
+    printf("\t-inp_precision : 16, 32 or -1(single prec float); Default=32\n");
+    printf("\t-out_precision : 16, 32, or -1(single prec float); Default=32\n");
+    printf("\t-integer_bits : number of integer bits in input for tanh_16_16 (0-6); Default=3\n");
+    printf("\t-frames: Positive number; Default=2\n");
+    printf("\t-activation: sigmoid, tanh, relu, relu_std, relu1, relu6, leaky_relu, prelu, hard_swish, activation_min_max or softmax; Default=sigmoid\n");
+    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
+    printf("\t-read_inp_file_name: Full filename for reading input \n");
+    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
+    printf("\t-write_inp_file_name: Full filename for writing input \n");
+    printf("\t-write_out_file_name: Full filename for writing output \n");
+    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+    printf("\t =====================================\n ");
+    printf("\t ===== ASYM8 specific parameters =====\n ");
+    printf("\t =====================================\n ");
+    printf ("\t-diffmin: diffmin; Default=-15\n");
+    printf ("\t-input_left_shift: input_left_shift;   Default=27\n");
+    printf ("\t-input_multiplier: input_multiplier; Default=2060158080\n");
+    printf("\t-activation_max: asym8/16/8 input data activation max; Default=0\n");
+    printf("\t-activation_min: asym8/16/8 input data activation min; Default=0\n");
+    printf("\t-activation_max_f32: float input data activation max; Default=0\n");
+    printf("\t-activation_min_f32: float input data activation min; Default=0\n");
+    printf("\t-input_range_radius: sigmoid_asym8 input parameter; Default=128\n");
+    printf("\t-zero_point: sigmoid_asym8 input parameter; Default=0\n");
+    printf("\t-inp_zero_bias: Zero bias value for input Default=0\n");
+    printf("\t-alpha_zero_bias: Prelu parameter - Zero bias value for alpha Default=0\n");
+    printf("\t-alpha_multiplier: Leaky Relu and Prelu parameter - Multiplier value for alpha Default=0x40000000\n");
+    printf("\t-alpha_shift: Leaky Relu and Prelu parameter - Shift value for alpha Default=0\n");
+    printf("\t-reluish_multiplier: Hard Swish parameter - Multiplier value for relu scale Default=0x40000000\n");
+    printf("\t-reluish_shift: Hard Swish parameter - Shift value for relu scale Default=0\n");
+    printf("\t-out_multiplier: Multiplier value for output Default=0x40000000\n");
+    printf("\t-out_shift: Shift value for output Default=0\n");
+    printf("\t-out_zero_bias: Zero bias value for output Default=0\n");
+}
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 {
@@ -141,6 +179,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     {
       //err_code = 0;
       printf("Invalid argument: %s\n",argv[argidx]);
+      show_usage();
       exit(1);
     }
     ARGTYPE_INDICATE("--help", p_cfg->help);
@@ -180,48 +219,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
+    show_usage();
     exit(1);
   }
 }
 
-void show_usage(void)
-{
-    printf ("Usage xt-run <binary> [Options]\n");
-    printf("\t-num_elements : number of elements; Default=32\n");
-    printf("\t-relu_threshold : threshold for relu in Q16.15; Default=32768 (=1 in Q16.15)\n");
-    printf("\t-inp_precision : 16, 32 or -1(single prec float); Default=32\n");
-    printf("\t-out_precision : 16, 32, or -1(single prec float); Default=32\n");
-    printf("\t-integer_bits : number of integer bits in input for tanh_16_16 (0-6); Default=3\n");
-    printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-activation: sigmoid, tanh, relu, relu_std, relu1, relu6, leaky_relu, prelu, hard_swish, activation_min_max or softmax; Default=sigmoid\n");
-    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
-    printf("\t-read_inp_file_name: Full filename for reading input \n");
-    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
-    printf("\t-write_inp_file_name: Full filename for writing input \n");
-    printf("\t-write_out_file_name: Full filename for writing output \n");
-    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
-    printf("\t =====================================\n ");
-    printf("\t ===== ASYM8 specific parameters =====\n ");
-    printf("\t =====================================\n ");
-    printf ("\t-diffmin: diffmin; Default=-15\n");
-    printf ("\t-input_left_shift: input_left_shift;   Default=27\n");
-    printf ("\t-input_multiplier: input_multiplier; Default=2060158080\n");
-    printf("\t-activation_max: asym8/16/8 input data activation max; Default=0\n");
-    printf("\t-activation_min: asym8/16/8 input data activation min; Default=0\n");
-    printf("\t-activation_max_f32: float input data activation max; Default=0\n");
-    printf("\t-activation_min_f32: float input data activation min; Default=0\n");
-    printf("\t-input_range_radius: sigmoid_asym8 input parameter; Default=128\n");
-    printf("\t-zero_point: sigmoid_asym8 input parameter; Default=0\n");
-    printf("\t-inp_zero_bias: Zero bias value for input Default=0\n");
-    printf("\t-alpha_zero_bias: Prelu parameter - Zero bias value for alpha Default=0\n");
-    printf("\t-alpha_multiplier: Leaky Relu and Prelu parameter - Multiplier value for alpha Default=0x40000000\n");
-    printf("\t-alpha_shift: Leaky Relu and Prelu parameter - Shift value for alpha Default=0\n");
-    printf("\t-reluish_multiplier: Hard Swish parameter - Multiplier value for relu scale Default=0x40000000\n");
-    printf("\t-reluish_shift: Hard Swish parameter - Shift value for relu scale Default=0\n");
-    printf("\t-out_multiplier: Multiplier value for output Default=0x40000000\n");
-    printf("\t-out_shift: Shift value for output Default=0\n");
-    printf("\t-out_zero_bias: Zero bias value for output Default=0\n");
-}
+
 
 #define SIGMOID_ASYM8(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
@@ -530,7 +533,7 @@ int xa_nn_main_process(int argc, char *argv[])
   test_config_t cfg;
 
   buf1D_t *p_inp;
-  buf1D_t *p_inp_alpha;
+  buf1D_t *p_inp_alpha = NULL;
   buf1D_t *p_out;
   buf1D_t *ptr_ref;
 
@@ -544,7 +547,12 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-  
+
+  fprintf(stderr, "\n--------------------------------------------------------\n");
+  fprintf(stderr, "%s library version %s\n", xa_nnlib_get_lib_name_string() , xa_nnlib_get_lib_version_string());
+  fprintf(stderr, "API version: %s\n", xa_nnlib_get_lib_api_version_string());
+  fprintf(stderr, "Cadence Design Systems, Inc. http://www.cadence.com\n");
+
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -679,7 +687,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+  XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames), cfg.verify);
 
   fclose(fptr_inp);
   fclose(fptr_out);

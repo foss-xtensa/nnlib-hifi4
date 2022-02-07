@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2021 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -30,6 +30,7 @@
 #include "cmdline_parser.h"
 #include "file_io.h"
 #include "xa_nnlib_standards.h"
+#include "stdbool.h"
 
 #define PROF_ALLOCATE
 #include "xt_profiler.h"
@@ -149,6 +150,47 @@ int default_config(test_config_t *p_cfg)
   }
 }
 
+void show_usage(void)
+{
+    printf ("Usage xt-run <binary> [Options]\n");
+    printf("\t-input_height: input height; Default=16\n");
+    printf("\t-input_width: input width; Default=16\n");
+    printf("\t-input_channels: input channels; Default=4\n");
+    printf("\t-kernel_height: kernel height; Default=3\n");
+    printf("\t-kernel_width: kernel width; Default=3\n");
+    printf("\t-out_channels: output channels; Default=4\n");
+    printf("\t-channels_multiplier: channel multiplier; Default=1\n");
+    printf("\t-x_stride: stride in width dimension; Default=2\n");
+    printf("\t-y_stride: stride in height dimension; Default=2\n");
+    printf("\t-x_padding: left padding in width dimension; Default=2\n");
+    printf("\t-y_padding: top padding in height dimension; Default=2\n");
+    printf("\t-dilation_height: dilation in height dimension; Default=1\n");
+    printf("\t-dilation_width: dilation in width dimension; Default=1\n");
+    printf("\t-out_height: output height; Default=16\n");
+    printf("\t-out_width: output width; Default=16\n");
+    printf("\t-bias_shift: bias left shift; Default=7\n");
+    printf("\t-acc_shift: accumulator left shift; Default=-7\n");
+    printf("\t-inp_data_format: Input data format, 0 (DWH), 1 (WHD); Default=1 (WHD), ignored for conv2d_std and conv1d_std kernels \n");
+    printf("\t-out_data_format: Output data format, 0 (DWH), 1 (WHD); Default=0 (DWH)\n");
+    printf("\t-inp_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit unsigned), -4(Asymmetric 8-bit signed); Default=16\n");
+    printf("\t-kernel_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit), -5(Symmetric 8-bit signed); Default=8\n");
+    printf("\t-out_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit), -4(Asymmetric 8-bit signed); Default=16\n");
+    printf("\t-bias_precision: 8, 16, 32, -1(single prec float); Default=16\n");
+    printf("\t-input_zero_bias: input zero zero bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), -127 to 128 (for Asymmetric 8-bit signed); Default=-127\n");
+    printf("\t-kernel_zero_bias: kernel zero zero_bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), ignored for symmetric 8-bit signed ; Default=-127\n");
+    printf("\t-out_multiplier : Output multiplier in Q31 format for quantized 8-bit, 0x0 to 0x7fffffff; Default=0x40000000\n");
+    printf("\t-out_shift : Output shift for quantized 8-bit(asym8u and asym8s), 31 to -31; Default=-8\n");
+    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s; Default=128\n");
+    printf("\t-frames: Positive number; Default=2\n");
+    printf("\t-kernel_name: conv2d_std, dilated_conv2d_std, conv2d_depth, conv1d_std; Default="" : conv2d_std\n");
+    printf("\t-pointwise_profile_only: Applicable only when kernel_name is conv2d_depth, 0 (print conv2d depthwise and pointwise profile info), 1(print only conv2d pointwise profile info); Default=0\n");
+    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
+    printf("\t-read_inp_file_name: Full filename for reading inputs (order - input, kernel, bias, (pointwise kernel, pointwise bias for depth separable)) \n");
+    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
+    printf("\t-write_inp_file_name: Full filename for writing inputs (order - input, kernel, bias, (pointwise kernel, pointwise bias for depth separable)) \n");
+    printf("\t-write_out_file_name: Full filename for writing output \n");
+    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+}
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 {
@@ -159,6 +201,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     {
       //err_code = 0;
       printf("Invalid argument: %s at index %d\n",argv[argidx], argidx);
+      show_usage();
       exit(1);
     }
     ARGTYPE_INDICATE("--help", p_cfg->help);
@@ -204,54 +247,15 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
+    show_usage();
     exit(1);
   }
 }
 
-void show_usage(void)
-{
-    printf ("Usage xt-run <binary> [Options]\n");
-    printf("\t-input_height: input height; Default=16\n");
-    printf("\t-input_width: input width; Default=16\n");
-    printf("\t-input_channels: input channels; Default=4\n");
-    printf("\t-kernel_height: kernel height; Default=3\n");
-    printf("\t-kernel_width: kernel width; Default=3\n");
-    printf("\t-out_channels: output channels; Default=4\n");
-    printf("\t-channels_multiplier: channel multiplier; Default=1\n");
-    printf("\t-x_stride: stride in width dimension; Default=2\n");
-    printf("\t-y_stride: stride in height dimension; Default=2\n");
-    printf("\t-x_padding: left padding in width dimension; Default=2\n");
-    printf("\t-y_padding: top padding in height dimension; Default=2\n");
-    printf("\t-dilation_height: dilation in height dimension; Default=1\n");
-    printf("\t-dilation_width: dilation in width dimension; Default=1\n");
-    printf("\t-out_height: output height; Default=16\n");
-    printf("\t-out_width: output width; Default=16\n");
-    printf("\t-bias_shift: bias left shift; Default=7\n");
-    printf("\t-acc_shift: accumulator left shift; Default=-7\n");
-    printf("\t-inp_data_format: Input data format, 0 (DWH), 1 (WHD); Default=1 (WHD), ignored for conv2d_std and conv1d_std kernels \n");
-    printf("\t-out_data_format: Output data format, 0 (DWH), 1 (WHD); Default=0 (DWH)\n");
-    printf("\t-inp_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit unsigned), -4(Asymmetric 8-bit signed); Default=16\n");
-    printf("\t-kernel_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit), -5(Symmetric 8-bit signed); Default=8\n");
-    printf("\t-out_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit), -4(Asymmetric 8-bit signed); Default=16\n");
-    printf("\t-bias_precision: 8, 16, 32, -1(single prec float); Default=16\n");
-    printf("\t-input_zero_bias: input zero zero bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), -127 to 128 (for Asymmetric 8-bit signed); Default=-127\n");
-    printf("\t-kernel_zero_bias: kernel zero zero_bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), ignored for symmetric 8-bit signed ; Default=-127\n");
-    printf("\t-out_multiplier : Output multiplier in Q31 format for quantized 8-bit, 0x0 to 0x7fffffff; Default=0x40000000\n");
-    printf("\t-out_shift : Output shift for quantized 8-bit(asym8u and asym8s), 31 to -31; Default=-8\n");
-    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s; Default=128\n");
-    printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: conv2d_std, dilated_conv2d_std, conv2d_depth, conv1d_std; Default="" : conv2d_std\n");
-    printf("\t-pointwise_profile_only: Applicable only when kernel_name is conv2d_depth, 0 (print conv2d depthwise and pointwise profile info), 1(print only conv2d pointwise profile info); Default=0\n");
-    printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
-    printf("\t-read_inp_file_name: Full filename for reading inputs (order - input, kernel, bias, (pointwise kernel, pointwise bias for depth separable)) \n");
-    printf("\t-read_ref_file_name: Full filename for reading reference output \n");
-    printf("\t-write_inp_file_name: Full filename for writing inputs (order - input, kernel, bias, (pointwise kernel, pointwise bias for depth separable)) \n");
-    printf("\t-write_out_file_name: Full filename for writing output \n");
-    printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
-}
+
 
 #define CONV_KERNEL_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_##KERNEL##_##KPREC##x##IPREC ( \
         (WORD##OPREC *)p_out->p, (WORD##IPREC *) p_inp->p, (WORD##KPREC *) p_kernel->p, (WORD##BPREC *)p_bias->p, \
@@ -262,7 +266,7 @@ void show_usage(void)
   }
 
 #define CONV_KERNEL_ASYM8_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_##KERNEL##_asym8xasym8 ( \
         (UWORD8 *)p_out->p, (UWORD8 *) p_inp->p, (UWORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
@@ -274,7 +278,7 @@ void show_usage(void)
   }
 
 #define CONV_KERNEL_SYM8S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
         (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
@@ -286,7 +290,7 @@ void show_usage(void)
   }
 
 #define CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
         (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
@@ -298,7 +302,7 @@ void show_usage(void)
   }
 
 #define CONV1D_KERNEL_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_##KERNEL##_##KPREC##x##IPREC ( \
         (WORD##OPREC *)p_out->p, (WORD##IPREC *) p_inp->p, (WORD##KPREC *) p_kernel->p, (WORD##BPREC *)p_bias->p, \
@@ -309,7 +313,7 @@ void show_usage(void)
   }
 
 #define CONV1D_KERNEL_ASYM8_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_##KERNEL##_asym8xasym8 ( \
         (UWORD8 *)p_out->p, (UWORD8 *) p_inp->p, (UWORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
@@ -321,7 +325,7 @@ void show_usage(void)
   }
 
 #define CONV1D_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_##KERNEL##_f32 ( \
         (FLOAT32 *)p_out->p, (FLOAT32 *) p_inp->p, (FLOAT32 *) p_kernel->p, (FLOAT32 *)p_bias->p, \
@@ -332,7 +336,7 @@ void show_usage(void)
   }
 
 #define CONV_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_##KERNEL##_f32 ( \
         (FLOAT32 *)p_out->p, (FLOAT32 *) p_inp->p, (FLOAT32 *) p_kernel->p, (FLOAT32 *)p_bias->p, \
@@ -343,7 +347,7 @@ void show_usage(void)
   }
 
 #define CONV_DS_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_conv2d_depthwise_f32 ( \
         (FLOAT32 *)p_dw_out->p, (FLOAT32 *) p_kernel->p, (FLOAT32 *) p_inp->p, (FLOAT32 *)p_bias->p, \
@@ -367,7 +371,7 @@ void show_usage(void)
   }
 
 #define CONV_DS_KERNEL_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_conv2d_depthwise_##KPREC##x##IPREC ( \
         (WORD##OPREC *) p_dw_out->p, (WORD##KPREC *) p_kernel->p, (WORD##IPREC *) p_inp->p, (WORD##BPREC *)p_bias->p, \
@@ -394,7 +398,7 @@ void show_usage(void)
   }
 
 #define CONV_DS_KERNEL_ASYM8_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_conv2d_depthwise_asym8xasym8 ( \
         (UWORD8 *) p_dw_out->p, (UWORD8 *) p_kernel->p, (UWORD8 *) p_inp->p, (WORD32 *)p_bias->p, \
@@ -421,7 +425,7 @@ void show_usage(void)
   }
 
 #define CONV_DS_KERNEL_SYM8_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision)) {\
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_conv2d_depthwise_per_chan_sym8sxasym8s ( \
         (WORD8 *) p_dw_out->p, (const WORD8 *) p_kernel->p, (const WORD8 *) p_inp->p, (const WORD32 *)p_bias->p, \
@@ -476,6 +480,7 @@ void show_usage(void)
     else if CONV_KERNEL_FN(conv2d_std, 16, 16, 16, 16) \
     else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
     else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
+    else if CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(dilated_conv2d_std,-5,-4,-4, 32) \
     else if CONV_DS_KERNEL_FN(conv2d_depth,8,16,16,16) \
     else if CONV_DS_KERNEL_FN(conv2d_depth,16,16,16,16) \
     else if CONV_DS_KERNEL_FN(conv2d_depth,8,8,8,8) \
@@ -524,7 +529,12 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     return -1;
   }
-  
+
+  fprintf(stderr, "\n--------------------------------------------------------\n");
+  fprintf(stderr, "%s library version %s\n", xa_nnlib_get_lib_name_string() , xa_nnlib_get_lib_version_string());
+  fprintf(stderr, "API version: %s\n", xa_nnlib_get_lib_api_version_string());
+  fprintf(stderr, "Cadence Design Systems, Inc. http://www.cadence.com\n");
+
   if(argc > 1)
   {
     printf("Parsing CMDLINE\n");
@@ -534,6 +544,24 @@ int xa_nn_main_process(int argc, char *argv[])
       show_usage();
       return 0;
     }
+  }
+
+  const char *kernel_names_supported[] = {"conv2d_std", "dilated_conv2d_std", "conv2d_depth", "conv1d_std"};
+  int num_kernel_names = 4;
+  int ker_name_itr = 0;
+  bool is_ker_name_supported = 0;
+  for(ker_name_itr = 0; ker_name_itr < num_kernel_names; ker_name_itr++)
+  {
+    if(!strcmp(cfg.kernel_name,kernel_names_supported[ker_name_itr]))
+    {
+      is_ker_name_supported = 1;
+      break;
+    }
+  }
+  if(!is_ker_name_supported)
+  {
+    printf("[Error] : Invalid kernel name\n");
+    return -1;
   }
 
   if( (!strcmp(cfg.kernel_name,"conv2d_std")) || (!strcmp(cfg.kernel_name,"dilated_conv2d_std")))
@@ -849,11 +877,11 @@ int xa_nn_main_process(int argc, char *argv[])
 
   if(!(!strcmp(cfg.kernel_name,"conv2d_depth") && cfg.pointwise_profile_only))
   {
-    XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames));
+    XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames), cfg.verify);
   }
   if(!strcmp(cfg.kernel_name,"conv2d_depth"))
   {
-    XTPWR_PROFILER_CLOSE(1, (pass_count == cfg.frames));
+    XTPWR_PROFILER_CLOSE(1, (pass_count == cfg.frames), cfg.verify);
   }
 
   fclose(fptr_inp);
