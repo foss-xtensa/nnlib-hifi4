@@ -175,11 +175,12 @@ WORD32 xa_nn_strided_slice_int16(WORD16 * __restrict__ p_out,
   }
   else
   {
-    int i0_cnt = XT_FICEIL_S((stop_0 - start_0)/(float)stride_0);
-    int i1_cnt = XT_FICEIL_S((stop_1 - start_1)/(float)stride_1);
-    int i2_cnt = XT_FICEIL_S((stop_2 - start_2)/(float)stride_2);
-    int i3_cnt = XT_FICEIL_S((stop_3 - start_3)/(float)stride_3);
-    int i4_cnt = XT_FICEIL_S((stop_4 - start_4)/(float)stride_4);
+    /* TODO : See if the below ceil function implementation can be optimized. */
+    int i0_cnt = ((stop_0 - start_0)/(float)stride_0 + (((stop_0 - start_0)%stride_0)!=0));
+    int i1_cnt = ((stop_1 - start_1)/(float)stride_1 + (((stop_1 - start_1)%stride_1)!=0));
+    int i2_cnt = ((stop_2 - start_2)/(float)stride_2 + (((stop_2 - start_2)%stride_2)!=0));
+    int i3_cnt = ((stop_3 - start_3)/(float)stride_3 + (((stop_3 - start_3)%stride_3)!=0));
+    int i4_cnt = ((stop_4 - start_4)/(float)stride_4 + (((stop_4 - start_4)%stride_4)!=0));
     
     i0_cnt = i0_cnt < 0 ? 0 : i0_cnt;
     i1_cnt = i1_cnt < 0 ? 0 : i1_cnt;
