@@ -376,6 +376,49 @@ WORD32 xa_nn_vec_sigmoid_16_16(WORD16 *p_out,         /* result, Q0.15     */
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
 
+#if defined(AE_SIGMOID16X4) && defined(USE_HIFI_ACT_TIE)
+  int i;
+  ae_int16x4 z10_op, z10;
+  ae_valign align_in, align_out;
+
+  const ae_int16x4 *p_in_0  = (const ae_int16x4 *)p_vec;
+  ae_int16x4 *p_out_0 = (ae_int16x4 *)p_out;
+
+  align_in = AE_LA64_PP(p_in_0);
+  align_out = AE_ZALIGN64();
+
+  WUR_AE_SAR(4);
+
+#pragma concurrent
+  for(i=0; i<(vec_length >> 2); i++)
+  {
+    AE_LA16X4_IP(z10, align_in, p_in_0);
+
+    z10_op = AE_SIGMOID16X4(z10);
+    z10_op = AE_SRAI16(z10_op, 1);
+    z10_op = AE_AND16(z10_op, AE_MOVDA16(0x7fff));
+
+    AE_SA16X4_IP(z10_op, align_out, p_out_0);
+  }
+  AE_SA64POS_FP(align_out, p_out_0);
+
+  int rem_itr = vec_length & 3;
+  // remainder loop
+#pragma concurrent
+#pragma loop_count max=3
+  for(i = 0; i < rem_itr; i++)
+  {
+    z10 = ((ae_int16 *)p_in_0)[i];
+
+    z10_op = AE_SIGMOID16X4(z10);
+    z10_op = AE_SRAI16(z10_op, 1);
+    z10_op = AE_AND16(z10_op, AE_MOVDA16(0x7fff));
+
+    ((ae_int16 *)p_out_0)[i] = z10_op;
+  }
+
+#else /* #if defined(AE_SIGMOID16X4) && defined(USE_HIFI_ACT_TIE) */
+
 #if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
 #endif
@@ -480,7 +523,8 @@ WORD32 xa_nn_vec_sigmoid_16_16(WORD16 *p_out,         /* result, Q0.15     */
     }
     p16_out[0] = y3210;
   }
-  
+#endif /* #if defined(AE_SIGMOID16X4) && defined(USE_HIFI_ACT_TIE) */
+
   return 0;
 }
 
@@ -572,6 +616,69 @@ WORD32 xa_nn_vec_tanh_16_16(WORD16 *p_out,
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((integer_bits > 6), -1);
+
+#if defined(AE_TANH16X4) && defined(USE_HIFI_ACT_TIE)
+  int i;
+  ae_int16x4 z10_op, z10;
+  ae_valign align_in, align_out;
+
+  const ae_int16x4 *p_in_0  = (const ae_int16x4 *)p_vec;
+  ae_int16x4 *p_out_0 = (ae_int16x4 *)p_out;
+
+  align_in = AE_LA64_PP(p_in_0);
+  align_out = AE_ZALIGN64();
+
+  if(integer_bits < 4)
+  {
+    WUR_AE_SAR(1+integer_bits);
+
+#pragma concurrent
+    for(i=0; i<(vec_length >> 2); i++)
+    {
+      AE_LA16X4_IP(z10, align_in, p_in_0);
+      z10_op = AE_TANH16X4(z10);
+      AE_SA16X4_IP(z10_op, align_out, p_out_0);
+    }
+    AE_SA64POS_FP(align_out, p_out_0);
+    
+    int rem_itr = vec_length & 3;
+    // remainder loop
+#pragma concurrent
+#pragma loop_count max=3
+    for(i = 0; i < rem_itr; i++)
+    {
+      z10 = ((ae_int16 *)p_in_0)[i];
+      z10_op = AE_TANH16X4(z10);
+      ((ae_int16 *)p_out_0)[i] = z10_op;
+    }
+  }
+  else
+  {
+    WUR_AE_SAR(4); /* Allowed shift value is [0, 4], Thus, max value of integer bits = 3 */
+    int lshift = integer_bits - 3; /* Left shift value before calling tanh to make integer_bits = 3 */
+#pragma concurrent
+    for(i=0; i<(vec_length >> 2); i++)
+    {
+      AE_LA16X4_IP(z10, align_in, p_in_0);
+      z10 = AE_SLAA16S(z10, lshift);
+      z10_op = AE_TANH16X4(z10);
+      AE_SA16X4_IP(z10_op, align_out, p_out_0);
+    }
+    AE_SA64POS_FP(align_out, p_out_0);
+    
+    int rem_itr = vec_length & 3;
+    // remainder loop
+#pragma concurrent
+#pragma loop_count max=3
+    for(i = 0; i < rem_itr; i++)
+    {
+      z10 = ((ae_int16 *)p_in_0)[i];
+      z10 = AE_SLAA16S(z10, lshift);
+      z10_op = AE_TANH16X4(z10);
+      ((ae_int16 *)p_out_0)[i] = z10_op;
+    }
+  }
+#else /* #if defined(AE_TANH16X4) && defined(USE_HIFI_ACT_TIE) */
 
 #if !XCHAL_HAVE_HIFI1
     xtbool4 b0;
@@ -672,6 +779,7 @@ WORD32 xa_nn_vec_tanh_16_16(WORD16 *p_out,
     }
     p16_out[0] = out1;
   }
+#endif /* #if defined(AE_TANH16X4) && defined(USE_HIFI_ACT_TIE) */
 
   return 0;
 }

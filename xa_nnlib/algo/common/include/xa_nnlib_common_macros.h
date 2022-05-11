@@ -25,6 +25,7 @@
 
 #include <xtensa/config/core-isa.h>
 #include <stddef.h>
+#include "xa_nnlib_quant_macros.h"
 
 #ifndef NULL
 #define NULL (void *)0
@@ -570,6 +571,26 @@ __Pragma("no_unroll") \
   ae_int16x4 _ae_int16x4_vec1 = ZERO16X4; \
   WORD8 *_WORD8_p_vec1 = (WORD8 *) p_vec1; \
 
+#define SETUP_VEC1_8b_x2 \
+  ae_int16x4 _ae_int16x4_vec1 = ZERO16X4; \
+  WORD8 *_WORD8_p_vec1 = (WORD8 *) p_vec1; \
+  ae_int16x4 _ae_int16x4_vec1_I = ZERO16X4; \
+
+#define SETUP_VEC2_8b_x2 \
+  ae_int16x4 _ae_int16x4_vec2 = ZERO16X4; \
+  WORD8 *_WORD8_p_vec2 = (WORD8 *) p_vec2; \
+  ae_int16x4 _ae_int16x4_vec2_I = ZERO16X4; \
+
+#define SETUP_VEC1_16b_x2 \
+  ae_int16x4 _ae_int16x4_vec1 = ZERO16X4; \
+  ae_int16x4 *_ae_int16x4_p_vec1 = (ae_int16x4 *) p_vec1; \
+  ae_int16x4 _ae_int16x4_vec1_I = ZERO16X4; \
+
+#define SETUP_VEC2_16b_x2 \
+  ae_int16x4 _ae_int16x4_vec2 = ZERO16X4; \
+  ae_int16x4 *_ae_int16x4_p_vec2 = (ae_int16x4 *) p_vec2; \
+  ae_int16x4 _ae_int16x4_vec2_I = ZERO16X4; \
+
 #define SETUP_VEC2_8b \
   ae_int16x4 _ae_int16x4_vec2 = ZERO16X4; \
   WORD8 *_WORD8_p_vec2 = (WORD8 *) p_vec2; \
@@ -637,6 +658,26 @@ __Pragma("no_unroll") \
   ae_int16x4 _ae_int16x4_mat1_ ## idx = ZERO16X4; \
   WORD8 *_WORD8_p_mat1_ ## idx = (WORD8 *) &p_mat1[(m_itr+idx)*row_stride1]; \
 
+#define SETUP_MAT1_8b_x2(idx) \
+  ae_int16x4 _ae_int16x4_mat1_ ## idx = ZERO16X4; \
+  WORD8 *_WORD8_p_mat1_ ## idx = (WORD8 *) &p_mat1[(m_itr+idx)*row_stride1]; \
+  ae_int16x4 _ae_int16x4_mat1_ ## idx ## _I = ZERO16X4; \
+
+#define SETUP_MAT2_8b_x2(idx) \
+  ae_int16x4 _ae_int16x4_mat2_ ## idx = ZERO16X4; \
+  WORD8 *_WORD8_p_mat2_ ## idx = (WORD8 *) &p_mat2[(m_itr+idx)*row_stride2]; \
+  ae_int16x4 _ae_int16x4_mat2_ ## idx ## _I = ZERO16X4; \
+
+#define SETUP_MAT1_16b_x2(idx) \
+  ae_int16x4 _ae_int16x4_mat1_ ## idx = ZERO16X4; \
+  ae_int16x4 *_ae_int16x4_p_mat1_ ## idx = (ae_int16x4 *) &p_mat1[(m_itr+idx)*row_stride1]; \
+  ae_int16x4 _ae_int16x4_mat1_ ## idx ## _I = ZERO16X4; \
+
+#define SETUP_MAT2_16b_x2(idx) \
+  ae_int16x4 _ae_int16x4_mat2_ ## idx = ZERO16X4; \
+  ae_int16x4 *_ae_int16x4_p_mat2_ ## idx = (ae_int16x4 *) &p_mat2[(m_itr+idx)*row_stride2]; \
+  ae_int16x4 _ae_int16x4_mat2_ ## idx ## _I = ZERO16X4; \
+
 #define SETUP_MAT1_8b_UNALIGNED(idx) \
   ae_int16x4 _ae_int16x4_mat1_ ## idx = ZERO16X4; \
   WORD8 *_WORD8_p_mat1_ ## idx = (WORD8 *) &p_mat1[(m_itr+idx)*row_stride1]; \
@@ -678,6 +719,22 @@ __Pragma("no_unroll") \
 
 #define LOAD_VEC1_8b \
   AE_L8X4F_IP(_ae_int16x4_vec1, _WORD8_p_vec1, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+
+#define LOAD_VEC1_8b_x2 \
+  _ae_int16x4_vec1_I = AE_L8X4F_I(_WORD8_p_vec1,INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  AE_L8X4F_IP(_ae_int16x4_vec1, _WORD8_p_vec1, 2 * INCREMENT_IN_BYTES_FOR_WORD8X4); \
+
+#define LOAD_VEC2_8b_x2 \
+  _ae_int16x4_vec2_I = AE_L8X4F_I(_WORD8_p_vec2,INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  AE_L8X4F_IP(_ae_int16x4_vec2, _WORD8_p_vec2, 2 * INCREMENT_IN_BYTES_FOR_WORD8X4); \
+
+#define LOAD_VEC1_16b_x2 \
+  _ae_int16x4_vec1_I = AE_L16X4_I(_ae_int16x4_p_vec1,INCREMENT_IN_BYTES_FOR_INT16X4); \
+  AE_L16X4_IP(_ae_int16x4_vec1, _ae_int16x4_p_vec1, 2   * INCREMENT_IN_BYTES_FOR_INT16X4); \
+
+#define LOAD_VEC2_16b_x2 \
+  _ae_int16x4_vec2_I = AE_L16X4_I(_ae_int16x4_p_vec2,INCREMENT_IN_BYTES_FOR_INT16X4); \
+  AE_L16X4_IP(_ae_int16x4_vec2, _ae_int16x4_p_vec2, 2   * INCREMENT_IN_BYTES_FOR_INT16X4); \
 
 #define LOAD_VEC2_8b \
   AE_L8X4F_IP(_ae_int16x4_vec2, _WORD8_p_vec2, INCREMENT_IN_BYTES_FOR_WORD8X4); \
@@ -969,6 +1026,42 @@ __Pragma("no_unroll") \
 #define KERNEL_MAT1_VEC1_8b_8b(idx) \
   LOAD_ROW_MAT1_8b(idx); \
   AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec1, _ae_int16x4_mat1_ ## idx); \
+
+#define KERNEL_MAT1_VEC1_8b_8b_x2(idx) \
+  _ae_int16x4_mat1_ ## idx ## _I = AE_L8X4F_I(_WORD8_p_mat1_ ## idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  AE_L8X4F_IP(_ae_int16x4_mat1_ ## idx, _WORD8_p_mat1_ ## idx, (2 * INCREMENT_IN_BYTES_FOR_WORD8X4)); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec1, _ae_int16x4_mat1_ ## idx); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec1_I, _ae_int16x4_mat1_ ## idx ## _I);
+
+#define KERNEL_MAT2_VEC2_8b_8b_x2(idx) \
+  _ae_int16x4_mat2_ ## idx ## _I = AE_L8X4F_I(_WORD8_p_mat2_ ## idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  AE_L8X4F_IP(_ae_int16x4_mat2_ ## idx, _WORD8_p_mat2_ ## idx, (2 * INCREMENT_IN_BYTES_FOR_WORD8X4));\
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec2, _ae_int16x4_mat2_ ## idx); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec2_I, _ae_int16x4_mat2_ ## idx ## _I); 
+
+#define KERNEL_MAT1_VEC1_8b_16b_x2(idx) \
+  _ae_int16x4_mat1_ ## idx ## _I = AE_L8X4F_I(_WORD8_p_mat1_ ## idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  AE_L8X4F_IP(_ae_int16x4_mat1_ ## idx, _WORD8_p_mat1_ ## idx, (2 * INCREMENT_IN_BYTES_FOR_WORD8X4)); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec1, _ae_int16x4_mat1_ ## idx); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec1_I, _ae_int16x4_mat1_ ## idx ## _I);
+
+#define KERNEL_MAT2_VEC2_8b_16b_x2(idx) \
+  _ae_int16x4_mat2_ ## idx ## _I = AE_L8X4F_I(_WORD8_p_mat2_ ## idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  AE_L8X4F_IP(_ae_int16x4_mat2_ ## idx, _WORD8_p_mat2_ ## idx, (2 * INCREMENT_IN_BYTES_FOR_WORD8X4));\
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec2, _ae_int16x4_mat2_ ## idx); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec2_I, _ae_int16x4_mat2_ ## idx ## _I);
+
+#define KERNEL_MAT1_VEC1_16b_16b_x2(idx) \
+  _ae_int16x4_mat1_ ## idx ## _I = AE_L16X4_I(_ae_int16x4_p_mat1_ ## idx, INCREMENT_IN_BYTES_FOR_INT16X4); \
+  AE_L16X4_IP(_ae_int16x4_mat1_ ## idx, _ae_int16x4_p_mat1_ ## idx, (2 * INCREMENT_IN_BYTES_FOR_INT16X4)); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec1, _ae_int16x4_mat1_ ## idx); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec1_I, _ae_int16x4_mat1_ ## idx ## _I);
+
+#define KERNEL_MAT2_VEC2_16b_16b_x2(idx) \
+  _ae_int16x4_mat2_ ## idx ## _I = AE_L16X4_I(_ae_int16x4_p_mat2_ ## idx, INCREMENT_IN_BYTES_FOR_INT16X4); \
+  AE_L16X4_IP(_ae_int16x4_mat2_ ## idx, _ae_int16x4_p_mat2_ ## idx, (2 * INCREMENT_IN_BYTES_FOR_INT16X4));\
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec2, _ae_int16x4_mat2_ ## idx); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ## idx, _ae_int16x4_vec2_I, _ae_int16x4_mat2_ ## idx ## _I);
 
 #define KERNEL_MAT2_VEC2_8b_8b(idx) \
   LOAD_ROW_MAT2_8b(idx); \
@@ -1475,12 +1568,8 @@ __Pragma("no_unroll") \
 #else
 #define ADJUST_ACC_ASYM8b(idx) \
   /* Multiply accumulator with 'out_multiplier', same as Tensorflow */ \
-  ae_int32x2 _ae_int32x2_acc_ ## idx = AE_SLAA32(AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ## idx), left_shift); \
-  _ae_int32x2_acc_ ## idx = AE_MULFP32X2RAS(_ae_int32x2_acc_ ## idx, AE_MOVDA32(out_multiplier)); \
-  /* Shift by out_shift, same as Tensorflow */ \
-  _ae_int64_acc_ ## idx = AE_SLAI64(AE_MOVINT64_FROMINT32X2(_ae_int32x2_acc_ ## idx), 32); \
-  _ae_int64_acc_ ## idx = AE_SRAA64(_ae_int64_acc_ ## idx, right_shift); \
-  _ae_int32x2_acc_ ## idx = AE_ROUND32F64SSYM(_ae_int64_acc_ ## idx); \
+  ae_int32x2 _ae_int32x2_acc_ ## idx; \
+  MPY_BY_QUANT_MULT_X2_OUT32(_ae_int32x2_acc_ ## idx, AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ## idx), out_multiplier, left_shift, right_shift); \
   /* Add output zero point */ \
   (_ae_int32x2_acc_ ## idx) = AE_ADD32S(_ae_int32x2_acc_ ## idx, AE_MOVDA32(out_zero_bias)); \
 
@@ -1506,12 +1595,8 @@ __Pragma("no_unroll") \
 #else
 #define ADJUST_ACC_BATCH_ASYM8b(idx_row, idx_vec) \
   /* Multiply accumulator with 'out_multiplier', same as Tensorflow */ \
-  ae_int32x2 _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_SLAA32(AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec), left_shift); \
-  _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MULFP32X2RAS(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(out_multiplier)); \
-  /* Shift by out_shift, same as Tensorflow */ \
-  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SLAI64(AE_MOVINT64_FROMINT32X2(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec), 32); \
-  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAA64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, right_shift); \
-  _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_ROUND32F64SSYM(_ae_int64_acc_ ##idx_row ##_ ##idx_vec); \
+  ae_int32x2 _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec; \
+  MPY_BY_QUANT_MULT_X2_OUT32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec), out_multiplier, left_shift, right_shift); \
   /* Add output zero point */ \
   (_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec) = AE_ADD32S(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(out_zero_bias)); \
 
@@ -1522,8 +1607,14 @@ __Pragma("no_unroll") \
 #define SETUP_ACC            UNROLL_SETUP_ACC(0)
 #define SETUP_MAT1           UNROLL_SETUP_MAT1(0)
 #define SETUP_MAT2           UNROLL_SETUP_MAT2(0)
+#define SETUP_MAT1_X2        UNROLL_SETUP_MAT1_X2(0)
+#define SETUP_MAT2_X2        UNROLL_SETUP_MAT2_X2(0)
 #define KERNEL_MAT1_VEC1     UNROLL_KERNEL_MAT1_VEC1(0)
 #define KERNEL_MAT2_VEC2     UNROLL_KERNEL_MAT2_VEC2(0)
+#define KERNEL_MAT1_VEC1_X2  UNROLL_KERNEL_MAT1_VEC1_LOAD_X2(0)          UNROLL_KERNEL_MAT1_VEC1_MAC_X2(0)
+#define KERNEL_MAT2_VEC2_X2  UNROLL_KERNEL_MAT2_VEC2_LOAD_X2(0)          UNROLL_KERNEL_MAT2_VEC2_MAC_X2(0)
+#define KERNEL_MAT1_VEC1_X2 UNROLL_KERNEL_MAT1_VEC1_X2(0)
+#define KERNEL_MAT2_VEC2_X2  UNROLL_KERNEL_MAT2_VEC2_X2(0)
 #define ADD_BIAS_ACC         UNROLL_ADD_BIAS_ACC(0)
 #define ADJUST_ACC           UNROLL_ADJUST_ACC(0)
 #define STORE_ACC            UNROLL_STORE_ACC(0)
@@ -1532,8 +1623,12 @@ __Pragma("no_unroll") \
 #define SETUP_ACC            UNROLL_SETUP_ACC(0)            UNROLL_SETUP_ACC(1)
 #define SETUP_MAT1           UNROLL_SETUP_MAT1(0)           UNROLL_SETUP_MAT1(1)
 #define SETUP_MAT2           UNROLL_SETUP_MAT2(0)           UNROLL_SETUP_MAT2(1)
+#define SETUP_MAT1_X2        UNROLL_SETUP_MAT1_X2(0)        UNROLL_SETUP_MAT1_X2(1)
+#define SETUP_MAT2_X2        UNROLL_SETUP_MAT2_X2(0)        UNROLL_SETUP_MAT2_X2(1)
 #define KERNEL_MAT1_VEC1     UNROLL_KERNEL_MAT1_VEC1(0)     UNROLL_KERNEL_MAT1_VEC1(1)
 #define KERNEL_MAT2_VEC2     UNROLL_KERNEL_MAT2_VEC2(0)     UNROLL_KERNEL_MAT2_VEC2(1)
+#define KERNEL_MAT1_VEC1_X2  UNROLL_KERNEL_MAT1_VEC1_X2(0)  UNROLL_KERNEL_MAT1_VEC1_X2(1)
+#define KERNEL_MAT2_VEC2_X2  UNROLL_KERNEL_MAT2_VEC2_X2(0)  UNROLL_KERNEL_MAT2_VEC2_X2(1)
 #define ADD_BIAS_ACC         UNROLL_ADD_BIAS_ACC(0)         UNROLL_ADD_BIAS_ACC(1)
 #define ADJUST_ACC           UNROLL_ADJUST_ACC(0)           UNROLL_ADJUST_ACC(1)
 #define STORE_ACC            UNROLL_STORE_ACC(0)            UNROLL_STORE_ACC(1)
@@ -1542,8 +1637,12 @@ __Pragma("no_unroll") \
 #define SETUP_ACC            UNROLL_SETUP_ACC(0)            UNROLL_SETUP_ACC(1)            UNROLL_SETUP_ACC(2)            UNROLL_SETUP_ACC(3)
 #define SETUP_MAT1           UNROLL_SETUP_MAT1(0)           UNROLL_SETUP_MAT1(1)           UNROLL_SETUP_MAT1(2)           UNROLL_SETUP_MAT1(3)
 #define SETUP_MAT2           UNROLL_SETUP_MAT2(0)           UNROLL_SETUP_MAT2(1)           UNROLL_SETUP_MAT2(2)           UNROLL_SETUP_MAT2(3)
+#define SETUP_MAT1_X2        UNROLL_SETUP_MAT1_X2(0)        UNROLL_SETUP_MAT1_X2(1)        UNROLL_SETUP_MAT1_X2(2)        UNROLL_SETUP_MAT1_X2(3)
+#define SETUP_MAT2_X2        UNROLL_SETUP_MAT2_X2(0)        UNROLL_SETUP_MAT2_X2(1)        UNROLL_SETUP_MAT2_X2(2)        UNROLL_SETUP_MAT2_X2(3)
 #define KERNEL_MAT1_VEC1     UNROLL_KERNEL_MAT1_VEC1(0)     UNROLL_KERNEL_MAT1_VEC1(1)     UNROLL_KERNEL_MAT1_VEC1(2)     UNROLL_KERNEL_MAT1_VEC1(3)
 #define KERNEL_MAT2_VEC2     UNROLL_KERNEL_MAT2_VEC2(0)     UNROLL_KERNEL_MAT2_VEC2(1)     UNROLL_KERNEL_MAT2_VEC2(2)     UNROLL_KERNEL_MAT2_VEC2(3)
+#define KERNEL_MAT1_VEC1_X2  UNROLL_KERNEL_MAT1_VEC1_X2(0)  UNROLL_KERNEL_MAT1_VEC1_X2(1)  UNROLL_KERNEL_MAT1_VEC1_X2(2)  UNROLL_KERNEL_MAT1_VEC1_X2(3)
+#define KERNEL_MAT2_VEC2_X2  UNROLL_KERNEL_MAT2_VEC2_X2(0)  UNROLL_KERNEL_MAT2_VEC2_X2(1)  UNROLL_KERNEL_MAT2_VEC2_X2(2)  UNROLL_KERNEL_MAT2_VEC2_X2(3)
 #define ADD_BIAS_ACC         UNROLL_ADD_BIAS_ACC(0)         UNROLL_ADD_BIAS_ACC(1)         UNROLL_ADD_BIAS_ACC(2)         UNROLL_ADD_BIAS_ACC(3)
 #define ADJUST_ACC           UNROLL_ADJUST_ACC(0)           UNROLL_ADJUST_ACC(1)           UNROLL_ADJUST_ACC(2)           UNROLL_ADJUST_ACC(3)
 #define STORE_ACC            UNROLL_STORE_ACC(0)            UNROLL_STORE_ACC(1)            UNROLL_STORE_ACC(2)            UNROLL_STORE_ACC(3)
@@ -1552,8 +1651,12 @@ __Pragma("no_unroll") \
 #define SETUP_ACC            UNROLL_SETUP_ACC(0)            UNROLL_SETUP_ACC(1)            UNROLL_SETUP_ACC(2)            UNROLL_SETUP_ACC(3)            UNROLL_SETUP_ACC(4)            UNROLL_SETUP_ACC(5)            UNROLL_SETUP_ACC(6)            UNROLL_SETUP_ACC(7)
 #define SETUP_MAT1           UNROLL_SETUP_MAT1(0)           UNROLL_SETUP_MAT1(1)           UNROLL_SETUP_MAT1(2)           UNROLL_SETUP_MAT1(3)           UNROLL_SETUP_MAT1(4)           UNROLL_SETUP_MAT1(5)           UNROLL_SETUP_MAT1(6)           UNROLL_SETUP_MAT1(7)
 #define SETUP_MAT2           UNROLL_SETUP_MAT2(0)           UNROLL_SETUP_MAT2(1)           UNROLL_SETUP_MAT2(2)           UNROLL_SETUP_MAT2(3)           UNROLL_SETUP_MAT2(4)           UNROLL_SETUP_MAT2(5)           UNROLL_SETUP_MAT2(6)           UNROLL_SETUP_MAT2(7)
+#define SETUP_MAT1_X2        UNROLL_SETUP_MAT1_X2(0)        UNROLL_SETUP_MAT1_X2(1)        UNROLL_SETUP_MAT1_X2(2)        UNROLL_SETUP_MAT1_X2(3)        UNROLL_SETUP_MAT1_X2(4)        UNROLL_SETUP_MAT1_X2(5)        UNROLL_SETUP_MAT1_X2(6)        UNROLL_SETUP_MAT1_X2(7)
+#define SETUP_MAT2_X2        UNROLL_SETUP_MAT2_X2(0)        UNROLL_SETUP_MAT2_X2(1)        UNROLL_SETUP_MAT2_X2(2)        UNROLL_SETUP_MAT2_X2(3)        UNROLL_SETUP_MAT2_X2(4)        UNROLL_SETUP_MAT2_X2(5)        UNROLL_SETUP_MAT2_X2(6)        UNROLL_SETUP_MAT2_X2(7)
 #define KERNEL_MAT1_VEC1     UNROLL_KERNEL_MAT1_VEC1(0)     UNROLL_KERNEL_MAT1_VEC1(1)     UNROLL_KERNEL_MAT1_VEC1(2)     UNROLL_KERNEL_MAT1_VEC1(3)     UNROLL_KERNEL_MAT1_VEC1(4)     UNROLL_KERNEL_MAT1_VEC1(5)     UNROLL_KERNEL_MAT1_VEC1(6)     UNROLL_KERNEL_MAT1_VEC1(7)
 #define KERNEL_MAT2_VEC2     UNROLL_KERNEL_MAT2_VEC2(0)     UNROLL_KERNEL_MAT2_VEC2(1)     UNROLL_KERNEL_MAT2_VEC2(2)     UNROLL_KERNEL_MAT2_VEC2(3)     UNROLL_KERNEL_MAT2_VEC2(4)     UNROLL_KERNEL_MAT2_VEC2(5)     UNROLL_KERNEL_MAT2_VEC2(6)     UNROLL_KERNEL_MAT2_VEC2(7)
+#define KERNEL_MAT1_VEC1_X2  UNROLL_KERNEL_MAT1_VEC1_X2(0)  UNROLL_KERNEL_MAT1_VEC1_X2(1)  UNROLL_KERNEL_MAT1_VEC1_X2(2)  UNROLL_KERNEL_MAT1_VEC1_X2(3)  UNROLL_KERNEL_MAT1_VEC1_X2(4)  UNROLL_KERNEL_MAT1_VEC1_X2(5)  UNROLL_KERNEL_MAT1_VEC1_X2(6)  UNROLL_KERNEL_MAT1_VEC1_X2(7)
+#define KERNEL_MAT2_VEC2_X2  UNROLL_KERNEL_MAT2_VEC2_X2(0)  UNROLL_KERNEL_MAT2_VEC2_X2(1)  UNROLL_KERNEL_MAT2_VEC2_X2(2)  UNROLL_KERNEL_MAT2_VEC2_X2(3)  UNROLL_KERNEL_MAT2_VEC2_X2(4)  UNROLL_KERNEL_MAT2_VEC2_X2(5)  UNROLL_KERNEL_MAT2_VEC2_X2(6)  UNROLL_KERNEL_MAT2_VEC2_X2(7)
 #define ADD_BIAS_ACC         UNROLL_ADD_BIAS_ACC(0)         UNROLL_ADD_BIAS_ACC(1)         UNROLL_ADD_BIAS_ACC(2)         UNROLL_ADD_BIAS_ACC(3)         UNROLL_ADD_BIAS_ACC(4)         UNROLL_ADD_BIAS_ACC(5)         UNROLL_ADD_BIAS_ACC(6)         UNROLL_ADD_BIAS_ACC(7)
 #define ADJUST_ACC           UNROLL_ADJUST_ACC(0)           UNROLL_ADJUST_ACC(1)           UNROLL_ADJUST_ACC(2)           UNROLL_ADJUST_ACC(3)           UNROLL_ADJUST_ACC(4)           UNROLL_ADJUST_ACC(5)           UNROLL_ADJUST_ACC(6)           UNROLL_ADJUST_ACC(7)
 #define STORE_ACC            UNROLL_STORE_ACC(0)            UNROLL_STORE_ACC(1)            UNROLL_STORE_ACC(2)            UNROLL_STORE_ACC(3)            UNROLL_STORE_ACC(4)            UNROLL_STORE_ACC(5)            UNROLL_STORE_ACC(6)            UNROLL_STORE_ACC(7)

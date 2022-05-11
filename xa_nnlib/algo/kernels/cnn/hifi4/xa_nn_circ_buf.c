@@ -182,7 +182,7 @@ void xa_nn_circ_buf_nchw_add_rows(
             p_dst[j] = p_src[i*input_width+(j-left_padding)];
         }
 #else
-        memcpy(&p_dst[left_padding*bytewidth], &p_src[i*input_width*bytewidth], input_width*bytewidth);
+        xa_nn_memcpy(&p_dst[left_padding*bytewidth], &p_src[i*input_width*bytewidth], input_width*bytewidth);
 #endif
         AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*bytewidth);
     }
@@ -242,7 +242,7 @@ void xa_nn_circ_buf_nchw_add_rows_with_pad_val(
         for(i = 0; i < (n_rows - top_pad - bottom_pad); i++)
         {
             /* Input */
-            memcpy(&p_dst[left_padding], &p_src[i*input_width], input_width);
+            xa_nn_memcpy(&p_dst[left_padding], &p_src[i*input_width], input_width);
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset);
         }
         /* Add bottom padding rows */
@@ -276,7 +276,7 @@ void xa_nn_circ_buf_nchw_add_rows_with_pad_val(
         for(i = 0; i < (n_rows - top_pad - bottom_pad); i++)
         {
             /* Input */
-            memcpy(&p_dst[left_padding], &p_src[i*input_width], (input_width<<1));
+            xa_nn_memcpy(&p_dst[left_padding], &p_src[i*input_width], (input_width<<1));
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset<<1);
         }
         /* Add bottom padding rows */
@@ -315,7 +315,7 @@ void xa_nn_circ_buf_nchw_add_rows_with_pad_val(
         for(i = 0; i < (n_rows - top_pad - bottom_pad); i++)
         {
             /* Input */
-            memcpy(&p_dst[left_padding], &p_src[i*input_width], input_width<<2);
+            xa_nn_memcpy(&p_dst[left_padding], &p_src[i*input_width], input_width<<2);
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset<<2);
         }
         /* Add bottom padding rows */
@@ -463,7 +463,7 @@ void xa_nn_circ_buf_nhwc_add_cols(
             pWORD8 p_src1 = (pWORD8)(&p_src[i*input_channels*bytewidth]);
             for(j = 0; j < input_height; j++)
             {
-                memcpy(p_dst, p_src1, input_channels*bytewidth);
+                xa_nn_memcpy(p_dst, p_src1, input_channels*bytewidth);
                 p_src1 += input_width*input_channels*bytewidth;
                 AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
             }
@@ -632,7 +632,7 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
 #pragma loop_count min=1
           for(j = 0; j < input_height; j++)
           {
-            memcpy(p_dst, p_src1, input_channels);
+            xa_nn_memcpy(p_dst, p_src1, input_channels);
             p_src1 += input_width * input_channels;
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset * circ_buf_width);
           }

@@ -22,11 +22,6 @@
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_common_macros.h"
 
-#define MULTIPLYBYQUANTIZEDMULTIPLIER_X2(inp, multiplier, left_shift, right_shift) \
-    inp = AE_SLAA32(inp, left_shift); \
-    inp = AE_MULFP32X2RAS(inp, AE_MOVDA32(multiplier)); \
-    inp = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(inp), right_shift), AE_SRAA64(AE_CVT64F32_L(inp), right_shift));
-
 #define AE_SAT32X2_HIFI4(out32, inp64) \
     out32 = AE_TRUNCA32X2F64S(ZERO64, inp64, 32);
 
@@ -75,9 +70,15 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
     p_bias_load = bias_ptr;
   }
 
-  left_shift = out_shift < 0 ? 0 : out_shift;
-  right_shift = out_shift > 0 ? 0 : -out_shift;
-
+#if TFLITE_SINGLE_ROUNDING
+	left_shift = out_shift;
+    /* Single rounding requires only original shift value */
+	(void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+	left_shift = out_shift < 0 ? 0 : out_shift;
+	right_shift = out_shift > 0 ? 0 : -out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
+  
   ae_int32x2 max_int8 = AE_MOVDA32(127);
   ae_int32x2 min_int8 = AE_MOVDA32(-128);
 
@@ -118,7 +119,7 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
 
-      MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_out32, out_multiplier, left_shift, right_shift)
+      MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
@@ -151,7 +152,7 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
 
-      MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_out32, out_multiplier, left_shift, right_shift)
+      MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
@@ -183,7 +184,7 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
 
-      MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_out32, out_multiplier, left_shift, right_shift)
+      MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
@@ -216,7 +217,7 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
 
-      MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_out32, out_multiplier, left_shift, right_shift)
+      MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
@@ -250,7 +251,7 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
 
-      MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_out32, out_multiplier, left_shift, right_shift)
+      MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
@@ -284,7 +285,7 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
 
-      MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_out32, out_multiplier, left_shift, right_shift)
+      MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);

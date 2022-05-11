@@ -326,7 +326,6 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
-#ifdef NNLIB_V2
 #define MAT_VEC_MUL_FN_ASYM8_BATCH(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
       XTPWR_PROFILER_START(0);\
@@ -348,11 +347,6 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       free(pp_out);\
       XTPWR_PROFILER_STOP(0);\
     }
-#else
-#define MAT_VEC_MUL_FN_ASYM8_BATCH(MPREC, VPREC, OPREC) \
-    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
-     printf("unsupported multiplication\n"); return -1;} 
-#endif /* NNLIB_V2 */
 
 #define MAT_VEC_MUL_FN_8X8_ASYM16S_BATCH(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\

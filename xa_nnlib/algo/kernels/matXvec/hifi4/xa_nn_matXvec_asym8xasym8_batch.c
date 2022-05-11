@@ -102,8 +102,14 @@ WORD32 xa_nn_matXvec_batch_asym8xasym8_asym8(
 #define UNROLL_ROW_STORE_ACC                    STORE_ACC_BATCH_ROW_ASYM8bxASYM8b_AT_OUT_ASYM8b
 #define UNROLL_STORE_ACC_BATCH                  STORE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b
 
+#if TFLITE_SINGLE_ROUNDING
+  left_shift = out_shift;
+  /* Single rounding macro doesn't need two shifts so this is not used */
+  (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
   left_shift = out_shift<0?0:out_shift;
   right_shift = out_shift>0?0:-out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
   for(vec_itr = 0; vec_itr < (vec_count & ~(VEC_UNROLL-1)); vec_itr+=VEC_UNROLL)
   {

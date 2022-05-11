@@ -99,6 +99,15 @@
 #define AE_ADD32S_HL_LH(sum_exp,sum_exp_) AE_ADD32S(sum_exp, AE_SEL32_LH(sum_exp_, sum_exp_)); 
 #endif
 
+/* FOR HIFI3Z NN LIB CROSS-COMPILATION ON F1 */
+#ifndef AE_MINMAX32
+#define AE_MINMAX32(dout, dmin, dmax) \
+{ \
+	dout = AE_MAX32(dout, dmin); \
+	dout = AE_MIN32(dout, dmax); \
+}
+#endif
+
 #ifndef AE_ADDCIRC16X4_XC
 /* Alignment requirement of 2 bytes */
 #define AE_ADDCIRC16X4_XC(ptr, inc) \
@@ -110,6 +119,7 @@
 #define HW_AE_ADDCIRC16X4_XC 1
 #endif
 
+#if 0
 /* For cores that do not have hardware support for AE_ADDCIRC16X4_XC will have padding enabled by default.
  * Padding can be forcibly enabled for cores that do not have support for the above instruction by setting this to 1. 
  */
@@ -119,7 +129,21 @@
 
 /* Do not modify this macro directly. Use FORCE_ENABLE_PADDING_CONV2D_STD should you need to use padding.*/
 #define ENABLE_PADDING_CONV2D_STD ((!HW_AE_ADDCIRC16X4_XC) || FORCE_ENABLE_PADDING_CONV2D_STD)
+#endif
 
+/* Below macro (ENABLE_PADDING_CONV2D_STD) is only used in HiFi4 NNLIB as of now.
+ * By Default enabling padding for Conv2d Std in HiFi4 NNLIB. This will also be true for cross-compiling HiFi4 NNLIB on any other core. 
+ */ 
+#define ENABLE_PADDING_CONV2D_STD 1
+
+#ifndef AE_L8X4F_XP
+#define AE_L8X4F_XP(d0, ptr, inc) \
+{ \
+  d0 = AE_L8X4F_I(ptr, 0); \
+  ae_int32x2 dummy; \
+  AE_L32_XP(dummy, (ae_int32*)ptr, inc); \
+}
+#endif
 
 #ifndef AE_MULA16_00
 #define AE_MULA16_00(q0, d0, d1) \
@@ -153,7 +177,7 @@ static inline ae_int64 AE_MULZAAAAQ16(ae_int16x4 d0,ae_int16x4  d1)
   ae_int64 q0=0 ; 
   ae_int16x4 d = 1; 
   AE_MUL16X4(d3,d2,d0,d1);
-  d3 = AE_ADD32S(d3, d2); 
+  AE_MULAAD32X16_H0_L1(q0,d2,d);
   AE_MULAAD32X16_H0_L1(q0,d3,d);
   return q0; 
 }

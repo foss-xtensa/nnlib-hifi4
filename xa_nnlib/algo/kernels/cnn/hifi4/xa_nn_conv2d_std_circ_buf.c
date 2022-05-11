@@ -57,7 +57,12 @@ WORD32 xa_nn_conv2d_std_getsize(
       input_size = sizeof(WORD8);
       align_size = ALIGNMENT>>1;
       break;
+    case -7:
     case 16:
+      input_size = sizeof(WORD16);
+      align_size = ALIGNMENT>>1;
+      break;
+    case -8:
       input_size = sizeof(WORD16);
       align_size = ALIGNMENT>>1;
       break;
@@ -262,6 +267,7 @@ VOID xa_nn_conv2d_std_init_state(
       input_size = sizeof(WORD8);
       align_size = ALIGNMENT>>1;
       break;
+    case -8:
     case 16:
       input_size = sizeof(WORD16);
       align_size = ALIGNMENT>>1;

@@ -22,6 +22,7 @@
 #include "xa_type_def.h"
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_kernels_api.h"
+#include "xa_nnlib_common_macros.h"
 
 //output: output_inv_sqrt (ae_int32x2), output_shift (int)
 //input:  input (ae_int32x2) , reverse_shift (int)
@@ -104,17 +105,6 @@ static inline unsigned char  AE_MOVAB2( xtbool2 b2){
     output_shift *= reverse_shift;\
 \
   }\
-}
-
-#define MULTIPLYBYQUANTIZEDMULTIPLIER_X4(out, inp1, inp2, multiplier, left_shift, right_shift) \
-{\
-  inp1 = AE_SLAA32S(inp1, left_shift); \
-  inp2 = AE_SLAA32S(inp2, left_shift); \
-  inp1 = AE_MULFP32X2RAS(inp1, AE_NEG32(AE_MOVDA32(multiplier))); \
-  inp2 = AE_MULFP32X2RAS(inp2, AE_NEG32(AE_MOVDA32(multiplier))); \
-  inp1 = AE_MULFP32X2RS(inp1, right_shift); \
-  inp2 = AE_MULFP32X2RS(inp2, right_shift); \
-  out = AE_SAT16X4(inp1, inp2); \
 }
 
 #if !XCHAL_HAVE_HIFI1
@@ -225,10 +215,15 @@ WORD32 xa_nn_l2_norm_asym8s_asym8s(WORD8 *p_out,
   GET_INV_SQRT_QUANTIZED_MULTIPLIER_EXP(inv_l2norm_multiplier, inv_l2norm_shift, acc, reverse_shift);
 
   int shift = inv_l2norm_shift + output_scale;
+#if TFLITE_SINGLE_ROUNDING
+  int left_shift  = shift;
+  int right_shift;
+  /* Single rounding macro doesn't need two shifts so this is not used */
+  (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
   int left_shift  = shift<0 ? 0 : shift;
-
   int right_shift = shift>0 ? 0 :-shift;
-  right_shift = (0XFFFFFFFF << (31 - right_shift));
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
   ae_int32x2 x32, x10;
 
@@ -250,7 +245,7 @@ WORD32 xa_nn_l2_norm_asym8s_asym8s(WORD8 *p_out,
 
     AE_MUL16X4(x32, x10, z10, one_16x4);
 
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(z10, x32, x10, inv_l2norm_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_X2X2_OUT16(z10, x32, x10, inv_l2norm_multiplier, left_shift, right_shift);
 
     m1 = AE_SAT8S(z10);
     AE_SA8X4U_IP(m1, align_dst, (ae_int32*)p_o);
@@ -272,8 +267,8 @@ WORD32 xa_nn_l2_norm_asym8s_asym8s(WORD8 *p_out,
     AE_MUL16X4(x32, x10, z10, one_16x4);
     AE_MUL16X4(y32, y10, z32, one_16x4);
 
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(z10, x32, x10, inv_l2norm_multiplier, left_shift, right_shift);
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(z32, y32, y10, inv_l2norm_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_X2X2_OUT16(z10, x32, x10, inv_l2norm_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_X2X2_OUT16(z32, y32, y10, inv_l2norm_multiplier, left_shift, right_shift);
 
     xtbool4 bsat4_0 = AE_LT16(CONST_127_16x4, z10);
     xtbool4 bsat4_1 = AE_LT16(CONST_127_16x4, z32);
@@ -301,7 +296,7 @@ WORD32 xa_nn_l2_norm_asym8s_asym8s(WORD8 *p_out,
 
     AE_MUL16X4(x32, x10, z10, one_16x4);
 
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(z10, x32, x10, inv_l2norm_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_X2X2_OUT16(z10, x32, x10, inv_l2norm_multiplier, left_shift, right_shift);
 
 #if XCHAL_HAVE_HIFI1
     m1 = AE_SAT8S(z10);

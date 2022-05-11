@@ -56,7 +56,7 @@ char pb_ref_file_path[XA_MAX_CMD_LINE_LENGTH] = "";
 typedef struct _test_config_t
 {
   int  help;
-#if 1  // asym8(data type) specific parameters
+#if 1  // asym8/asym16/s(data type) specific parameters
   int  output_zero_bias;
   int  output_left_shift;
   int  output_multiplier;
@@ -105,6 +105,9 @@ typedef struct _test_config_t
   int dstMemmoveOffset;
   //memsset
   float value;
+  // sub broadcast specific parameters
+  int outerloop_count;
+  int innerloop_count;
 }test_config_t;
 
 int default_config(test_config_t *p_cfg)
@@ -151,6 +154,8 @@ int default_config(test_config_t *p_cfg)
     p_cfg->srcMemmoveOffset = 0;
     p_cfg->dstMemmoveOffset = 0;
     p_cfg->value = 0.0;
+    p_cfg->outerloop_count = 1; 
+    p_cfg->innerloop_count = 200;
 
     int itr;
     for(itr = 0; itr < MAX_DIMS; itr++)
@@ -178,11 +183,11 @@ void show_usage(void)
     printf("\t-num_inp_dims: number of input dimensions; Default=4\n");
     printf("\t-num_axis_dims: number of axis dimensions; Default=4\n");
     printf("\t-num_out_dims: number of output dimensions; Default=4\n");
-    printf("\t-inp_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float); Default=-1\n");
-    printf("\t-out_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float); Default=-1\n");
+    printf("\t-inp_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s); Default=-1\n");
+    printf("\t-out_precision: -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s); Default=-1\n");
     printf("\t-vec_count: number of input vectors; Default=1\n");
     printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, elm_min, elm_max, dot_prod, elm_equal, elm_notequal, elm_greater, elm_greaterequal, elm_less, elm_lessequal, reduce_max_4D, reduce_mean_4D, elm_sine, elm_cosine, elm_logn, elm_abs, elm_ceil, elm_round, elm_neg, elm_square, elm_rsqrt, elm_sqrt, broadcast, memmove, memset; Default=""elm_add""\n");
+    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, elm_min, elm_max, dot_prod, elm_equal, elm_notequal, elm_greater, elm_greaterequal, elm_less, elm_lessequal, reduce_max_4D, reduce_mean_4D, elm_sine, elm_cosine, elm_logn, elm_abs, elm_ceil, elm_round, elm_neg, elm_square, elm_rsqrt, elm_sqrt, broadcast, memmove, memset, elm_sub_broadcast; Default=""elm_add""\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp1_file_name: Full filename for reading inputs (order - inp) \n");
     printf("\t-read_inp2_file_name: Full filename for reading inputs (order - inp) \n");
@@ -202,22 +207,24 @@ void show_usage(void)
     printf("\t-input1_strides: Input strides (order - inp) \n ");
     printf("\t-input2_strides: Input strides (order - inp) \n ");
     printf("\t =====================================\n ");
-    printf("\t ===== ASYM8 specific parameters =====\n ");
+    printf("\t ===== ASYM8/16/s specific parameters =====\n ");
     printf("\t =====================================\n ");
     printf ("\t-output_zero_bias: output zero_bias; Default=127\n");
     printf ("\t-output_left_shift: output_left_shift;   Default=1\n");
     printf ("\t-output_multiplier: output_multiplier; Default=0x7fff\n");
     printf ("\t-output_activation_min: output_activation_min; Default=0\n");
     printf ("\t-output_activation_max: output_activation_max; Default=225\n");
-    printf ("\t-input1_zero_bias: input1_zero_bias(Only needed in add_asym8); Default=-127\n");
-    printf ("\t-input1_left_shift: input1_left_shift(Only needed in add_asym8); Default=0\n");
-    printf ("\t-input1_multiplier: input1_multiplier(Only needed in add_asym8); Default=0x7fff\n");
-    printf ("\t-input2_zero_bias: input2_zero_bias(Only needed in add_asym8); Default=-127\n");
-    printf ("\t-input2_left_shift: input2_left_shift(Only needed in add_asym8); Default=0\n");          
-    printf ("\t-input2_multiplier: input2_multiplier(Only needed in add_asym8); Default=0x7fff\n");   
-    printf ("\t-left_shift: global left_shift(Only needed in add_asym8); Default=0\n");
+    printf ("\t-input1_zero_bias: input1_zero_bias; Default=-127\n");
+    printf ("\t-input1_left_shift: input1_left_shift; Default=0\n");
+    printf ("\t-input1_multiplier: input1_multiplier; Default=0x7fff\n");
+    printf ("\t-input2_zero_bias: input2_zero_bias; Default=-127\n");
+    printf ("\t-input2_left_shift: input2_left_shift; Default=0\n");          
+    printf ("\t-input2_multiplier: input2_multiplier; Default=0x7fff\n");   
+    printf ("\t-left_shift: global left_shift; Default=0\n");
     printf ("\t-input1_scale: input_scale(Float value. Only needed in dequantize operation); Default=0.5\n");
     printf ("\t-val_memset: input_memset(Float value. Needed in memset operation); Default=0.0\n");
+    printf ("\t-outerloop_count: outerloop_count(Needed in sub_broadcast operation); Default=1\n");
+    printf ("\t-innerloop_count: innerloop_count(Needed in sub_broadcast operation); Default=200\n");
 }
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
@@ -248,6 +255,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-input2_multiplier", p_cfg->input2_multiplier);                
     ARGTYPE_ONETIME_CONFIG("-left_shift", p_cfg->left_shift);                           
     ARGTYPE_ONETIME_CONFIG_F32("-input1_scale", p_cfg->input1_scale);                           
+    ARGTYPE_ONETIME_CONFIG("-outerloop_count", p_cfg->outerloop_count);
+    ARGTYPE_ONETIME_CONFIG("-innerloop_count", p_cfg->innerloop_count);
     ARGTYPE_ONETIME_CONFIG("-io_length", p_cfg->io_length);                           
     ARGTYPE_ONETIME_CONFIG("-num_inp_dims", p_cfg->num_inp_dims);                           
     ARGTYPE_ONETIME_CONFIG("-num_axis_dims", p_cfg->num_axis_dims);                           
@@ -433,6 +442,32 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define ADD_ASYM16S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym16sxasym16s_asym16s\
+                (\
+                    (WORD16 *) p_out->p,\
+                    cfg.output_zero_bias,\
+                    cfg.output_left_shift,\
+                    cfg.output_multiplier,\
+                    cfg.output_activation_min,\
+                    cfg.output_activation_max,\
+                    (WORD16 *) p_inp1->p,\
+                    cfg.input1_zero_bias,\
+                    cfg.input1_left_shift,\
+                    cfg.input1_multiplier,\
+                    (WORD16 *) p_inp2->p,\
+                    cfg.input2_zero_bias,\
+                    cfg.input2_left_shift,\
+                    cfg.input2_multiplier,\
+                    cfg.left_shift,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define SUB_ASYM8(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
@@ -481,6 +516,33 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                     cfg.input2_multiplier,\
                     cfg.left_shift,\
                     cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define SUB_BCAST_ASYM16S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym16sxasym16s_asym16s\
+                (\
+                    (WORD16 *) p_out->p,\
+                    cfg.output_zero_bias,\
+                    cfg.output_left_shift,\
+                    cfg.output_multiplier,\
+                    cfg.output_activation_min,\
+                    cfg.output_activation_max,\
+                    (WORD16 *) p_inp1->p,\
+                    cfg.input1_zero_bias,\
+                    cfg.input1_left_shift,\
+                    cfg.input1_multiplier,\
+                    (WORD16 *) p_inp2->p,\
+                    cfg.input2_zero_bias,\
+                    cfg.input2_left_shift,\
+                    cfg.input2_multiplier,\
+                    cfg.left_shift,\
+                    cfg.outerloop_count,\
+                    cfg.innerloop_count\
                 );\
     XTPWR_PROFILER_STOP(0);\
   }
@@ -955,8 +1017,10 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MUL_ASYM8S(elm_mul, -4, -4) \
     else ADD_ASYM8(elm_add, -3, -3) \
     else ADD_ASYM8S(elm_add, -4, -4) \
+    else ADD_ASYM16S(elm_add, -7, -7) \
     else SUB_ASYM8(elm_sub, -3, -3) \
     else SUB_ASYM8S(elm_sub, -4, -4) \
+    else SUB_BCAST_ASYM16S(elm_sub_broadcast, -7, -7) \
     else MINMAX_8(elm_min, -4, -4)\
     else MINMAX_8(elm_max, -4, -4)\
     else MINMAX_BCAST_8(elm_min_4D_Bcast, -4, -4)\
@@ -999,8 +1063,10 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MUL_ASYM8S(elm_mul, -4, -4) \
     else ADD_ASYM8(elm_add, -3, -3) \
     else ADD_ASYM8S(elm_add, -4, -4) \
+    else ADD_ASYM16S(elm_add, -7, -7) \
     else SUB_ASYM8(elm_sub, -3, -3) \
     else SUB_ASYM8S(elm_sub, -4, -4) \
+    else SUB_BCAST_ASYM16S(elm_sub_broadcast, -7, -7) \
     else MINMAX_8(elm_min, -4, -4)\
     else MINMAX_8(elm_max, -4, -4)\
     else MINMAX_BCAST_8(elm_min_4D_Bcast, -4, -4)\
@@ -1106,6 +1172,10 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_name, "%s_asym8s", cfg.kernel_name);
   }
+  else if(cfg.inp_precision == -7 && cfg.out_precision == -7)
+  {
+    sprintf(profiler_name, "%s_asym16s", cfg.kernel_name);
+  }
   else if(cfg.inp_precision == 8 && cfg.out_precision == 8)
   {
     sprintf(profiler_name, "%s_8_8", cfg.kernel_name);
@@ -1152,6 +1222,10 @@ int xa_nn_main_process(int argc, char *argv[])
             !strcmp(cfg.kernel_name, "broadcast")            )
   {
     sprintf(profiler_params, "N=%d\n", out_length);
+  }
+  else if( !strcmp(cfg.kernel_name, "elm_sub_broadcast") )
+  {
+    sprintf(profiler_params, "outerloop_count= %d, innerloop_count= %d\n", cfg.outerloop_count, cfg.innerloop_count);
   }
   else
   {
@@ -1227,6 +1301,10 @@ int xa_nn_main_process(int argc, char *argv[])
     {
     	ptr_ref =  create_buf1D(cfg.numBytesForMemmove, cfg.out_precision);
     }
+    else if( !strcmp(cfg.kernel_name, "elm_sub_broadcast") )
+    {
+      ptr_ref =  create_buf1D(cfg.outerloop_count * cfg.innerloop_count, cfg.out_precision);
+    }
     else
     {
       ptr_ref =  create_buf1D(cfg.io_length * cfg.vec_count, cfg.out_precision); 
@@ -1277,6 +1355,11 @@ int xa_nn_main_process(int argc, char *argv[])
   else if( !strcmp(cfg.kernel_name, "broadcast")) {
     p_inp1 = create_buf1D(inp_length, cfg.inp_precision); VALIDATE_PTR(p_inp1);
   }
+  else if( !strcmp(cfg.kernel_name, "elm_sub_broadcast") )
+  {
+    p_inp1 = create_buf1D(cfg.outerloop_count * cfg.innerloop_count, cfg.inp_precision); VALIDATE_PTR(p_inp1);
+    p_inp2 = create_buf1D(cfg.innerloop_count, cfg.inp_precision); VALIDATE_PTR(p_inp2);
+  }
   else
   {
 	  if(fptr_inp1)
@@ -1310,6 +1393,10 @@ int xa_nn_main_process(int argc, char *argv[])
     {
       memset(p_out->p, 0, cfg.io_length * cfg.vec_count * sizeof(FLOAT32));
     }
+  }
+  else if( !strcmp(cfg.kernel_name, "elm_sub_broadcast") )
+  {
+    p_out = create_buf1D(cfg.outerloop_count * cfg.innerloop_count, cfg.out_precision); VALIDATE_PTR(p_out);
   }
   else
   {
@@ -1370,6 +1457,10 @@ int xa_nn_main_process(int argc, char *argv[])
   else if ( !strcmp(cfg.kernel_name, "memmove")  )
   {   
        XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, cfg.numBytesForMemmove * cfg.vec_count, "cyc/point", 0);
+  }
+  else if( !strcmp(cfg.kernel_name, "elm_sub_broadcast") )
+  {
+    XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, cfg.outerloop_count * cfg.innerloop_count, "cyc/point", 0);
   }
   else
   {

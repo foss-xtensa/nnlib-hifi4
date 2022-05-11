@@ -28,10 +28,10 @@
 
 /* Identification Strings */
 #define LIBNAME "HiFi Neural Network Library"
-#define LIBVERSION "2.6.0"
+#define LIBVERSION "2.7.0"
 
 #define LIB_APIVERSION_MAJOR 1
-#define LIB_APIVERSION_MINOR 1
+#define LIB_APIVERSION_MINOR 2
 
 #if LIB_APIVERSION_MAJOR != XA_APIVERSION_MAJOR || \
 LIB_APIVERSION_MINOR != XA_APIVERSION_MINOR

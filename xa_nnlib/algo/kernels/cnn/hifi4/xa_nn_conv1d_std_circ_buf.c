@@ -173,7 +173,7 @@ VOID conv1d_std_init_cir_buf(
   }
   for(k=0;k<copy_inp_height;k++)
   {
-    memcpy(p_dst, p_inp, input_channels * input_width * input_bytewidth);
+    xa_nn_memcpy(p_dst, p_inp, input_channels * input_width * input_bytewidth);
     memset(&p_dst[input_channels * input_width * input_bytewidth], 0, (input_channelsXwidth_pad - input_channels * input_width) * input_bytewidth);
     AE_ADDCIRC16X4_XC((ae_int16x4*)p_dst, input_channelsXwidth_pad * input_bytewidth);
     p_inp += input_channels * input_width * input_bytewidth;
@@ -236,7 +236,7 @@ VOID conv1d_std_update_cir_buf(
   }
   for(k=0;k<copy_inp_height;k++)
   {
-    memcpy(p_dst, p_inp, input_channels * input_width * input_bytewidth);
+    xa_nn_memcpy(p_dst, p_inp, input_channels * input_width * input_bytewidth);
     memset(&p_dst[input_channels * input_width * input_bytewidth], 0, (input_channelsXwidth_pad - input_channels * input_width) * input_bytewidth);
     AE_ADDCIRC16X4_XC((ae_int16x4*)p_dst, input_channelsXwidth_pad * input_bytewidth);
     p_inp += input_channels * input_width * input_bytewidth;
@@ -288,7 +288,7 @@ VOID conv1d_std_init_cir_buf_asym8(
   }
   for(k=0;k<copy_inp_height;k++)
   {
-    memcpy(p_dst, p_inp, input_channels * input_width * input_bytewidth);
+    xa_nn_memcpy(p_dst, p_inp, input_channels * input_width * input_bytewidth);
     memset(&p_dst[input_channels * input_width * input_bytewidth], pad_val_u8, (input_channelsXwidth_pad - input_channels * input_width) * input_bytewidth);
     AE_ADDCIRC16X4_XC((ae_int16x4*)p_dst, input_channelsXwidth_pad * input_bytewidth);
     p_inp += input_channels * input_width * input_bytewidth;
@@ -353,7 +353,7 @@ VOID conv1d_std_update_cir_buf_asym8(
   }
   for(k=0;k<copy_inp_height;k++)
   {
-    memcpy(p_dst, p_inp, input_channels * input_width * input_bytewidth);
+    xa_nn_memcpy(p_dst, p_inp, input_channels * input_width * input_bytewidth);
     memset(&p_dst[input_channels * input_width * input_bytewidth], pad_val_u8, (input_channelsXwidth_pad - input_channels * input_width) * input_bytewidth);
     AE_ADDCIRC16X4_XC((ae_int16x4*)p_dst, input_channelsXwidth_pad * input_bytewidth);
     p_inp += input_channels * input_width * input_bytewidth;

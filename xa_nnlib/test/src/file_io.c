@@ -29,6 +29,7 @@
     case ASYM8_TYPE: size = sizeof(char);         break;  \
     case ASYM8S_TYPE: size = sizeof(char);        break;  \
     case SYM8S_TYPE: size = sizeof(char);         break;  \
+    case SYM16S_TYPE: size = sizeof(short int);   break;  \
     case ASYM16S_TYPE: size = sizeof(short int);  break;  \
     case ASYM32S_TYPE: size = sizeof(int);        break;  \
     case 1: size = sizeof(char);                  break;  \
@@ -270,6 +271,31 @@ int load_conv2d_ds_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, bu
     read_buf1D_from_file(fptr_inp, p_inp);                  
     read_buf2D_from_file(fptr_inp, p_kernel, kernel_pad_val);                  
     read_buf1D_from_file(fptr_inp, p_bias);                  
+    read_buf1D_from_file(fptr_inp, p_kernel_point);                  
+    read_buf1D_from_file(fptr_inp, p_bias_point);                  
+  }                                                                                  
+  return 0;
+}
+
+int load_conv2d_pt_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp,
+    buf1D_t *p_kernel_point, buf1D_t *p_bias_point)
+{  
+  if(write_file)                                                                     
+  {
+    /* Set random input data */                                                      
+    set_rand_inp_buf1D(p_inp);                                                      
+    set_rand_inp_buf1D(p_kernel_point);                                                      
+    set_rand_inp_buf1D(p_bias_point);                                                      
+                                                                                     
+    /* Write input data into file */                                                 
+    write_buf1D_to_file(fptr_inp, p_inp);                  
+    write_buf1D_to_file(fptr_inp, p_kernel_point);                  
+    write_buf1D_to_file(fptr_inp, p_bias_point);                  
+  }                                                           
+  else                                                        
+  {                                                           
+    /* Read input data from file */                           
+    read_buf1D_from_file(fptr_inp, p_inp);                  
     read_buf1D_from_file(fptr_inp, p_kernel_point);                  
     read_buf1D_from_file(fptr_inp, p_bias_point);                  
   }                                                                                  

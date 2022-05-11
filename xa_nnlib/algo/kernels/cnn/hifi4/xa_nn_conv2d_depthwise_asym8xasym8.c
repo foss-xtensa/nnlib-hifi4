@@ -28,11 +28,6 @@
 
 #include "xa_nnlib_common.h"
 
-#define MULTIPLYBYQUANTIZEDMULTIPLIER_X2(inp, multiplier, left_shift, right_shift) \
-    inp = AE_SLAA32(inp, left_shift); \
-    inp = AE_MULFP32X2RAS(inp, AE_MOVDA32(multiplier)); \
-    inp = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(inp), right_shift), AE_SRAA64(AE_CVT64F32_L(inp), right_shift));
-
 /* 2D Convolution implementation */
 static inline void conv2d_nchw_asym8xasym8_hf4_convmul
 (pWORD8 __restrict__ p_out  /* Output:  [Stream] [(out_stride): (actual_out_height): (actual_out_width)] */
@@ -398,8 +393,15 @@ static inline void conv2d_nchw_asym8xasym8_hf4_convmul
      * height dimension, since we took care of it by efficient row
      * accesses. */
     ae_int32 *scratch_ptr1 = (ae_int32 *) p_scratch;
-    int left_shift = XT_MAX(0, out_shift);
-    int right_shift = XT_MAX(0, -out_shift);
+#if TFLITE_SINGLE_ROUNDING
+  int left_shift = out_shift;
+  int right_shift = out_shift;
+  /* Single rounding macro doesn't need two shifts so this is not used */
+  (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+  int left_shift = XT_MAX(0, out_shift);
+  int right_shift = XT_MAX(0, -out_shift);
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
     for(i = 0; i < actual_out_height; i++)
     {
@@ -412,15 +414,15 @@ static inline void conv2d_nchw_asym8xasym8_hf4_convmul
             accu_int32_0 = scratch_ptr1[(j * x_stride)];
 
             accu_int32_0 = AE_ADD32S(accu_int32_0, _ae_int32_sat_bias);
-            accu_int32_0 = AE_SLAA32(accu_int32_0, left_shift);
 #if XCHAL_HAVE_HIFI1
+            accu_int32_0 = AE_SLAA32(accu_int32_0, left_shift);
             accu_int32_0 = AE_MULFP32X2RAS_L(accu_int32_0, AE_MOVDA32(out_multiplier));
-#else
-            accu_int32_0 = AE_MULFP32X2RAS(accu_int32_0, AE_MOVDA32(out_multiplier));
-#endif
             accu_int64_0 = AE_SLAI64(AE_MOVINT64_FROMINT32X2(accu_int32_0), 32);
             accu_int64_0 = AE_SRAA64(accu_int64_0, right_shift);
             accu_int32_0 = AE_ROUND32F64SSYM(accu_int64_0);
+#else
+            MPY_BY_QUANT_MULT_X2_OUT32(accu_int32_0, accu_int32_0, out_multiplier, left_shift, right_shift);
+#endif
             accu_int32_0 = AE_ADD32S(accu_int32_0, AE_MOVDA32X2(out_zero_bias, out_zero_bias));
             accu_int32_0 = AE_MAX32(AE_MIN32(accu_int32_0, AE_MOVDA32(255)), AE_ZERO32());
 #if XCHAL_HAVE_HIFI1
@@ -666,8 +668,15 @@ static inline void conv2d_nhwc_asym8xasym8
     ae_int32x2 d_acc0, d_acc1, d_bias0, d_bias1;
     ae_int32x2 d_acc2, d_acc3;
     ae_int16x4 d_acc16x4;
-    int left_shift = XT_MAX(0, out_shift);
-    int right_shift = XT_MAX(0, -out_shift);
+#if TFLITE_SINGLE_ROUNDING
+  int left_shift = out_shift;
+  int right_shift = out_shift;
+  /* Single rounding macro doesn't need two shifts so this is not used */
+  (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+  int left_shift = XT_MAX(0, out_shift);
+  int right_shift = XT_MAX(0, -out_shift);
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
     out_channels_pad = (out_channels + 3)&(~3);
 
@@ -721,8 +730,8 @@ static inline void conv2d_nhwc_asym8xasym8
             }
             d_acc0 = AE_ADD32S(d_acc0, d_bias0);
             d_acc1 = AE_ADD32S(d_acc1, d_bias1);
-            MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_acc0, out_multiplier, left_shift, right_shift);
-            MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_acc1, out_multiplier, left_shift, right_shift);
+            MPY_BY_QUANT_MULT_X2_OUT32(d_acc0, d_acc0, out_multiplier, left_shift, right_shift);
+            MPY_BY_QUANT_MULT_X2_OUT32(d_acc1, d_acc1, out_multiplier, left_shift, right_shift);
             d_acc0 = AE_ADD32S(d_acc0, AE_MOVDA32(out_zero_bias));
             d_acc1 = AE_ADD32S(d_acc1, AE_MOVDA32(out_zero_bias));
             d_acc0 = AE_MAX32(AE_MIN32(d_acc0, AE_MOVDA32(255)), AE_ZERO32());
@@ -740,8 +749,8 @@ static inline void conv2d_nhwc_asym8xasym8
             {
             d_acc2 = AE_ADD32S(d_acc2, d_bias0);
             d_acc3 = AE_ADD32S(d_acc3, d_bias1);
-            MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_acc2, out_multiplier, left_shift, right_shift);
-            MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_acc3, out_multiplier, left_shift, right_shift);
+            MPY_BY_QUANT_MULT_X2_OUT32(d_acc2, d_acc2, out_multiplier, left_shift, right_shift);
+            MPY_BY_QUANT_MULT_X2_OUT32(d_acc3, d_acc3, out_multiplier, left_shift, right_shift);
             d_acc2 = AE_ADD32S(d_acc2, AE_MOVDA32(out_zero_bias));
             d_acc3 = AE_ADD32S(d_acc3, AE_MOVDA32(out_zero_bias));
             d_acc2 = AE_MAX32(AE_MIN32(d_acc2, AE_MOVDA32(255)), AE_ZERO32());

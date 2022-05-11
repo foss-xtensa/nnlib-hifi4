@@ -30,7 +30,6 @@ xa_nn_matXvec_batch_16x16_64
 xa_nn_matXvec_asym8uxasym8u_asym8u
 xa_nn_matXvec_batch_asym8uxasym8u_asym8u
 xa_nn_matXvec_acc_batch_sym8sx8_asym16s
-
 xa_nn_matXvec_sym8sxasym8s_asym8s
 xa_nn_matXvec_out_stride_sym8sxasym8s_16
 
@@ -38,6 +37,7 @@ xa_nn_matmul_8x8_8
 xa_nn_matmul_16x16_16
 xa_nn_matmul_8x16_16
 xa_nn_matmul_asym8uxasym8u_asym8u
+xa_nn_matmul_per_chan_sym8sxsym16s_sym16s
 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s
 xa_nn_matmul_f32xf32_f32
 
@@ -108,6 +108,8 @@ xa_nn_dilated_conv2d_std_per_chan_sym8sxasym8s
 xa_nn_conv2d_std_f32
 xa_nn_conv2d_std_getsize
 xa_nn_dilated_conv2d_std_getsize
+xa_nn_conv2d_std_per_chan_sym8sxsym16s
+
 
 xa_nn_conv2d_pointwise_16x16
 xa_nn_conv2d_depthwise_16x16
@@ -119,11 +121,15 @@ xa_nn_conv2d_pointwise_asym8uxasym8u
 xa_nn_conv2d_depthwise_asym8uxasym8u
 xa_nn_conv2d_pointwise_per_chan_sym8sxasym8s
 xa_nn_conv2d_depthwise_per_chan_sym8sxasym8s
+xa_nn_conv2d_pointwise_per_chan_sym8sxsym16s
 
 xa_nn_conv2d_depthwise_getsize
 
 xa_nn_conv2d_depthwise_f32
 xa_nn_conv2d_pointwise_f32
+
+xa_nn_transpose_conv_sym8sxsym16s
+xa_nn_transpose_conv_getsize
 
 xa_nn_avgpool_getsize
 xa_nn_avgpool_8
@@ -178,6 +184,8 @@ xa_nn_elm_neg_f32_f32
 xa_nn_elm_square_f32_f32
 xa_nn_elm_rsqrt_f32_f32
 xa_nn_elm_sqrt_f32_f32
+xa_nn_elm_add_asym16sxasym16s_asym16s
+xa_nn_elm_sub_broadcast_asym16sxasym16s_asym16s
 xa_nn_memmove_8_8
 xa_nn_memset_f32_f32
 
@@ -196,6 +204,7 @@ xa_nn_vec_relu_asym8u_asym8u
 xa_nn_vec_relu_asym8s_asym8s
 xa_nn_vec_prelu_asym8s_asym8s
 xa_nn_vec_leaky_relu_asym8s_asym8s
+xa_nn_vec_leaky_relu_asym16s_asym16s
 xa_nn_vec_hard_swish_asym8s_asym8s
 xa_nn_vec_tanh_asym8s_asym8s
 xa_nn_vec_sigmoid_16_16
@@ -219,6 +228,8 @@ xa_nn_space_to_depth_8_8
 xa_nn_batch_to_space_nd_8_8
 xa_nn_space_to_batch_nd_8_8
 xa_nn_pad_8_8
+xa_nn_strided_slice_int16
+xa_nn_pad_16_16
 
 xa_nnlib_cnn_get_persistent_fast
 xa_nnlib_cnn_get_scratch_fast

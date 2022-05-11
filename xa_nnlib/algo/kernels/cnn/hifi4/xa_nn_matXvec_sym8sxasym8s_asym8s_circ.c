@@ -23,11 +23,6 @@
 #include "xa_nn_conv2d_std_state.h"
 #include "xa_nnlib_common_macros.h"
 
-#define MULTIPLYBYQUANTIZEDMULTIPLIER_X2(inp, multiplier, left_shift, right_shift) \
-  inp = AE_SLAA32S(inp, left_shift); \
-inp = AE_MULFP32X2RAS(inp, AE_MOVDA32(multiplier)); \
-inp = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(inp), right_shift), AE_SRAA64(AE_CVT64F32_L(inp), right_shift));
-
 #if XCHAL_HAVE_HIFI1
 #define MULTIPLYBYQUANTIZEDMULTIPLIER(inp, multiplier, left_shift, right_shift) \
   inp = AE_SLAA32S(inp, left_shift); \
@@ -647,7 +642,6 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
   ae_int32x2 min_int8 = AE_MOVDA32(-128);
   int out_stride = out_row_offset;
   int out_offset = out_col_offset;
-  int out_shift;
 
   int left_shift, right_shift;
   int m_itr, vec_itr;
@@ -661,12 +655,24 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
     for(vec_itr = 0; vec_itr < ((vec_count>>2)<<2); vec_itr+=4)
     {
       ae_int32x2 acc_row0_vec0, acc_row0_vec1, acc_row0_vec2, acc_row0_vec3;
-      WORD32 o_shift[4], l_shift[4], r_shift[4];
+      WORD32 l_shift[4], r_shift[4];
       WORD8* p_dst0 = (WORD8*)p_out + (vec_itr + 0) * out_offset;
       WORD8* p_dst1 = (WORD8*)p_out + (vec_itr + 1) * out_offset;
       WORD8* p_dst2 = (WORD8*)p_out + (vec_itr + 2) * out_offset;
       WORD8* p_dst3 = (WORD8*)p_out + (vec_itr + 3) * out_offset;
 
+#if TFLITE_SINGLE_ROUNDING
+      l_shift[0] = p_out_shift[vec_itr+0];
+      l_shift[1] = p_out_shift[vec_itr+1];
+      l_shift[2] = p_out_shift[vec_itr+2];
+      l_shift[3] = p_out_shift[vec_itr+3];
+      /* Single rounding macro doesn't need two shifts so this is not used */
+      (void)r_shift[0];
+      (void)r_shift[1];
+      (void)r_shift[2];
+      (void)r_shift[3];
+#else /* #if TFLITE_SINGLE_ROUNDING */
+      WORD32 o_shift[4];
       o_shift[0] = p_out_shift[vec_itr+0];
       l_shift[0] = o_shift[0]<0?0:o_shift[0];
       r_shift[0] = o_shift[0]>0?0:-o_shift[0];
@@ -679,6 +685,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
       o_shift[3] = p_out_shift[vec_itr+3];
       l_shift[3] = o_shift[3]<0?0:o_shift[3];
       r_shift[3] = o_shift[3]>0?0:-o_shift[3];
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
       WORD8* p_vec_0  = (WORD8*)(p_vec1 + (vec_itr+0) * vec_stride);
       for (m_itr = 0; m_itr < ((rows>>1)<<1); m_itr+=2)
@@ -705,10 +712,10 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
            ,cols1
            ,mat1_offset
           );
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec0, p_out_multiplier[vec_itr+0], l_shift[0], r_shift[0]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec2, p_out_multiplier[vec_itr+2], l_shift[2], r_shift[2]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec3, p_out_multiplier[vec_itr+3], l_shift[3], r_shift[3]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr+0], l_shift[0], r_shift[0]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec2, acc_row0_vec2, p_out_multiplier[vec_itr+2], l_shift[2], r_shift[2]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec3, acc_row0_vec3, p_out_multiplier[vec_itr+3], l_shift[3], r_shift[3]);
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         acc_row0_vec1 = AE_ADD32S(acc_row0_vec1, out_zero_bias);
         acc_row0_vec2 = AE_ADD32S(acc_row0_vec2, out_zero_bias);
@@ -762,10 +769,10 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec2, p_out_multiplier[vec_itr+2], l_shift[2], r_shift[2]);
         MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec3, p_out_multiplier[vec_itr+3], l_shift[3], r_shift[3]);
 #else
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec0, p_out_multiplier[vec_itr+0], l_shift[0], r_shift[0]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec2, p_out_multiplier[vec_itr+2], l_shift[2], r_shift[2]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec3, p_out_multiplier[vec_itr+3], l_shift[3], r_shift[3]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr+0], l_shift[0], r_shift[0]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec2, acc_row0_vec2, p_out_multiplier[vec_itr+2], l_shift[2], r_shift[2]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec3, acc_row0_vec3, p_out_multiplier[vec_itr+3], l_shift[3], r_shift[3]);
 #endif
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         acc_row0_vec1 = AE_ADD32S(acc_row0_vec1, out_zero_bias);
@@ -787,17 +794,26 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
     /* for vec_count=2 */
     if(vec_count&0x2)
     {
-      WORD32 o_shift[2], l_shift[2], r_shift[2];
+      WORD32 l_shift[2], r_shift[2];
       ae_int32x2 acc_row0_vec0;
       ae_int32x2 acc_row0_vec1;
       WORD8* p_dst0 = (WORD8*)p_out + (vec_itr + 0) * out_offset;
       WORD8* p_dst1 = (WORD8*)p_out + (vec_itr + 1) * out_offset;
+#if TFLITE_SINGLE_ROUNDING
+      l_shift[0] = p_out_shift[vec_itr];
+      l_shift[1] = p_out_shift[vec_itr+1];
+      /* Single rounding macro doesn't need two shifts so this is not used */
+      (void)r_shift[0];
+      (void)r_shift[1];
+#else /* #if TFLITE_SINGLE_ROUNDING */
+      WORD32 o_shift[2];
       o_shift[0] = p_out_shift[vec_itr];
       l_shift[0] = o_shift[0]<0?0:o_shift[0];
       r_shift[0] = o_shift[0]>0?0:-o_shift[0];
       o_shift[1] = p_out_shift[vec_itr+1];
       l_shift[1] = o_shift[1]<0?0:o_shift[1];
       r_shift[1] = o_shift[1]>0?0:-o_shift[1];
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
       WORD8* p_vec_0  = (WORD8*)(p_vec1 + vec_itr * vec_stride);
       for (m_itr = 0; m_itr < ((rows>>1)<<1); m_itr+=2)
@@ -819,8 +835,8 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
            ,cols1
            ,mat1_offset
           );
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec0, p_out_multiplier[vec_itr], l_shift[0], r_shift[0]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], l_shift[0], r_shift[0]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         acc_row0_vec1 = AE_ADD32S(acc_row0_vec1, out_zero_bias);
         AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
@@ -855,8 +871,8 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec0, p_out_multiplier[vec_itr], l_shift[0], r_shift[0]);
         MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
 #else
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec0, p_out_multiplier[vec_itr], l_shift[0], r_shift[0]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], l_shift[0], r_shift[0]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
 #endif
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         acc_row0_vec1 = AE_ADD32S(acc_row0_vec1, out_zero_bias);
@@ -875,9 +891,16 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
     {
       ae_int32x2 acc_row0_vec0;
       WORD8* p_dst0 = (WORD8*)p_out + (vec_itr + 0) * out_offset;
+#if TFLITE_SINGLE_ROUNDING
+      left_shift = p_out_shift[vec_itr];
+      /* Single rounding macro doesn't need two shifts so this is not used */
+      (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+      int out_shift;
       out_shift = p_out_shift[vec_itr];
       left_shift = out_shift<0?0:out_shift;
       right_shift = out_shift>0?0:-out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
       WORD8* p_vec_0  = (WORD8*)(p_vec1 + vec_itr * vec_stride);
       for (m_itr = 0; m_itr < ((rows>>1)<<1); m_itr+=2)
@@ -896,7 +919,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
            ,cols1
            ,mat1_offset
           );
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
 #if XCHAL_HAVE_HIFI1
@@ -922,7 +945,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
 #if XCHAL_HAVE_HIFI1
         MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
 #else
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
 #endif
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
@@ -939,20 +962,30 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
     for(; vec_itr < (vec_count&~3); vec_itr+=4)
     {
       WORD8* p_dst0 = (WORD8*)p_out + (vec_itr + 0) * out_offset;
+#if TFLITE_SINGLE_ROUNDING
+      int left_shift0 = p_out_shift[vec_itr];
+      int left_shift1 = p_out_shift[vec_itr+1];
+      int left_shift2 = p_out_shift[vec_itr+2];
+      int left_shift3 = p_out_shift[vec_itr+3];
+      /* Single rounding macro doesn't need two shifts so this is not used */
+      (void)right_shift0;
+      (void)right_shift1;
+      (void)right_shift2;
+      (void)right_shift3;
+#else /* #if TFLITE_SINGLE_ROUNDING */
       int left_shift0 = p_out_shift[vec_itr]<0?0:p_out_shift[vec_itr];
       int right_shift0 = p_out_shift[vec_itr]>0?0:-p_out_shift[vec_itr];
-
-      WORD8* p_dst1 = (WORD8*)p_out + (vec_itr + 1) * out_offset;
       int left_shift1 = p_out_shift[vec_itr+1]<0?0:p_out_shift[vec_itr+1];
       int right_shift1 = p_out_shift[vec_itr+1]>0?0:-p_out_shift[vec_itr+1];
-
-      WORD8* p_dst2 = (WORD8*)p_out + (vec_itr + 2) * out_offset;
       int left_shift2 = p_out_shift[vec_itr+2]<0?0:p_out_shift[vec_itr+2];
       int right_shift2 = p_out_shift[vec_itr+2]>0?0:-p_out_shift[vec_itr+2];
-
-      WORD8* p_dst3 = (WORD8*)p_out + (vec_itr + 3) * out_offset;
       int left_shift3 = p_out_shift[vec_itr+3]<0?0:p_out_shift[vec_itr+3];
       int right_shift3 = p_out_shift[vec_itr+3]>0?0:-p_out_shift[vec_itr+3];
+#endif /* #if TFLITE_SINGLE_ROUNDING */
+
+      WORD8* p_dst1 = (WORD8*)p_out + (vec_itr + 1) * out_offset;
+      WORD8* p_dst2 = (WORD8*)p_out + (vec_itr + 2) * out_offset;
+      WORD8* p_dst3 = (WORD8*)p_out + (vec_itr + 3) * out_offset;
 
       ae_int16x4 mat1_offset_dr = mat1_offset;
       m_itr = 0;
@@ -1028,8 +1061,8 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
           AE_MULAP32X16X2_L(acc_row23_vec3, d_vec3, d_mat);
         }
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row01_vec0, p_out_multiplier[vec_itr], left_shift0, right_shift0);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row23_vec0, p_out_multiplier[vec_itr], left_shift0, right_shift0);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row01_vec0, acc_row01_vec0, p_out_multiplier[vec_itr], left_shift0, right_shift0);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row23_vec0, acc_row23_vec0, p_out_multiplier[vec_itr], left_shift0, right_shift0);
         acc_row01_vec0 = AE_ADD32S(acc_row01_vec0, out_zero_bias);
         acc_row01_vec0 = AE_MAX32(acc_row01_vec0, min_int8);
         acc_row01_vec0 = AE_MIN32(acc_row01_vec0, max_int8);
@@ -1037,8 +1070,8 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         acc_row23_vec0 = AE_MAX32(acc_row23_vec0, min_int8);
         acc_row23_vec0 = AE_MIN32(acc_row23_vec0, max_int8);
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row01_vec1, p_out_multiplier[vec_itr+1], left_shift1, right_shift1);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row23_vec1, p_out_multiplier[vec_itr+1], left_shift1, right_shift1);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row01_vec1, acc_row01_vec1, p_out_multiplier[vec_itr+1], left_shift1, right_shift1);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row23_vec1, acc_row23_vec1, p_out_multiplier[vec_itr+1], left_shift1, right_shift1);
         acc_row01_vec1 = AE_ADD32S(acc_row01_vec1, out_zero_bias);
         acc_row01_vec1 = AE_MAX32(acc_row01_vec1, min_int8);
         acc_row01_vec1 = AE_MIN32(acc_row01_vec1, max_int8);
@@ -1046,8 +1079,8 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         acc_row23_vec1 = AE_MAX32(acc_row23_vec1, min_int8);
         acc_row23_vec1 = AE_MIN32(acc_row23_vec1, max_int8);
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row01_vec2, p_out_multiplier[vec_itr+2], left_shift2, right_shift2);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row23_vec2, p_out_multiplier[vec_itr+2], left_shift2, right_shift2);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row01_vec2, acc_row01_vec2, p_out_multiplier[vec_itr+2], left_shift2, right_shift2);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row23_vec2, acc_row23_vec2, p_out_multiplier[vec_itr+2], left_shift2, right_shift2);
         acc_row01_vec2 = AE_ADD32S(acc_row01_vec2, out_zero_bias);
         acc_row01_vec2 = AE_MAX32(acc_row01_vec2, min_int8);
         acc_row01_vec2 = AE_MIN32(acc_row01_vec2, max_int8);
@@ -1055,8 +1088,8 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         acc_row23_vec2 = AE_MAX32(acc_row23_vec2, min_int8);
         acc_row23_vec2 = AE_MIN32(acc_row23_vec2, max_int8);
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row01_vec3, p_out_multiplier[vec_itr+3], left_shift3, right_shift3);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row23_vec3, p_out_multiplier[vec_itr+3], left_shift3, right_shift3);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row01_vec3, acc_row01_vec3, p_out_multiplier[vec_itr+3], left_shift3, right_shift3);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row23_vec3, acc_row23_vec3, p_out_multiplier[vec_itr+3], left_shift3, right_shift3);
         acc_row01_vec3 = AE_ADD32S(acc_row01_vec3, out_zero_bias);
         acc_row01_vec3 = AE_MAX32(acc_row01_vec3, min_int8);
         acc_row01_vec3 = AE_MIN32(acc_row01_vec3, max_int8);
@@ -1122,22 +1155,22 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
           AE_MULA16X4(acc_row0_vec3, d_tmp, d_mat, d_vec3);
         }
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec0, p_out_multiplier[vec_itr], left_shift0, right_shift0);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], left_shift0, right_shift0);
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         acc_row0_vec0 = AE_MAX32(acc_row0_vec0, min_int8);
         acc_row0_vec0 = AE_MIN32(acc_row0_vec0, max_int8);
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec1, p_out_multiplier[vec_itr+1], left_shift1, right_shift1);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], left_shift1, right_shift1);
         acc_row0_vec1 = AE_ADD32S(acc_row0_vec1, out_zero_bias);
         acc_row0_vec1 = AE_MAX32(acc_row0_vec1, min_int8);
         acc_row0_vec1 = AE_MIN32(acc_row0_vec1, max_int8);
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec2, p_out_multiplier[vec_itr+2], left_shift2, right_shift2);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec2, acc_row0_vec2, p_out_multiplier[vec_itr+2], left_shift2, right_shift2);
         acc_row0_vec2 = AE_ADD32S(acc_row0_vec2, out_zero_bias);
         acc_row0_vec2 = AE_MAX32(acc_row0_vec2, min_int8);
         acc_row0_vec2 = AE_MIN32(acc_row0_vec2, max_int8);
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec3, p_out_multiplier[vec_itr+3], left_shift3, right_shift3);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec3, acc_row0_vec3, p_out_multiplier[vec_itr+3], left_shift3, right_shift3);
         acc_row0_vec3 = AE_ADD32S(acc_row0_vec3, out_zero_bias);
         acc_row0_vec3 = AE_MAX32(acc_row0_vec3, min_int8);
         acc_row0_vec3 = AE_MIN32(acc_row0_vec3, max_int8);
@@ -1151,8 +1184,14 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
     for(; vec_itr < vec_count; vec_itr++)
     {
       WORD8* p_dst0 = (WORD8*)p_out + (vec_itr + 0) * out_offset;
+#if TFLITE_SINGLE_ROUNDING
+      left_shift = p_out_shift[vec_itr];
+      /* Single rounding macro doesn't need two shifts so this is not used */
+      (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
       left_shift = p_out_shift[vec_itr]<0?0:p_out_shift[vec_itr];
       right_shift = p_out_shift[vec_itr]>0?0:-p_out_shift[vec_itr];
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
       ae_int16x4 mat1_offset_dr = mat1_offset;
       for (m_itr = 0; m_itr < (rows&~3); m_itr+=4)
@@ -1195,8 +1234,8 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
           AE_MULA16X4(acc_row01_vec0, acc_row23_vec0, d_mat, d_vec0);
         }
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row01_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row23_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row01_vec0, acc_row01_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row23_vec0, acc_row23_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
         acc_row01_vec0 = AE_ADD32S(acc_row01_vec0, out_zero_bias);
         acc_row01_vec0 = AE_MAX32(acc_row01_vec0, min_int8);
         acc_row01_vec0 = AE_MIN32(acc_row01_vec0, max_int8);
@@ -1232,7 +1271,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
           AE_MULA16X4(acc_row0_vec0, d_tmp, d_mat, d_vec);
         }
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         acc_row0_vec0 = AE_MAX32(acc_row0_vec0, min_int8);
         acc_row0_vec0 = AE_MIN32(acc_row0_vec0, max_int8);
@@ -1249,8 +1288,14 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
     for(vec_itr = 0; vec_itr < vec_count; vec_itr++)
     {
       WORD8* p_dst0 = (WORD8*)p_out + (vec_itr + 0) * out_offset;
+#if TFLITE_SINGLE_ROUNDING
+      left_shift = p_out_shift[vec_itr];
+      /* Single rounding macro doesn't need two shifts so this is not used */
+      (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
       left_shift = p_out_shift[vec_itr]<0?0:p_out_shift[vec_itr];
       right_shift = p_out_shift[vec_itr]>0?0:-p_out_shift[vec_itr];
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
       m_itr = 0;
       for (; m_itr < rows; m_itr++)
@@ -1279,7 +1324,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
           AE_MULA16X4(acc_row0_vec0, d_tmp, d_mat, d_vec);
         }
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         acc_row0_vec0 = AE_MAX32(acc_row0_vec0, min_int8);
         acc_row0_vec0 = AE_MIN32(acc_row0_vec0, max_int8);

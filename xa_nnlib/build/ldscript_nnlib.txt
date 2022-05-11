@@ -44,6 +44,8 @@ EXTERN(xa_nn_matmul_8x8_8)
 EXTERN(xa_nn_matmul_f32xf32_f32)
 EXTERN(xa_nn_matmul_asym8uxasym8u_asym8u)
 EXTERN(xa_nn_matmul_per_chan_sym8sxasym8s_asym8s)
+EXTERN(xa_nn_matXvec_sym8sxsym16s_sym16s_circ)
+EXTERN(xa_nn_matmul_per_chan_sym8sxsym16s_sym16s)
 
 /* Pooling kernels */
 EXTERN(xa_nn_maxpool_getsize_nchw)
@@ -120,6 +122,9 @@ EXTERN(xa_nn_conv1d_std_8x16)
 EXTERN(xa_nn_conv2d_depthwise_per_chan_sym8sxasym8s)
 EXTERN(xa_nn_conv2d_std_per_chan_sym8sxasym8s)
 EXTERN(xa_nn_dilated_conv2d_std_per_chan_sym8sxasym8s)
+EXTERN(xa_nn_transpose_conv_sym8sxsym16s)
+EXTERN(xa_nn_transpose_conv_getsize)
+EXTERN(xa_nn_conv2d_std_per_chan_sym8sxsym16s)
 
 /* Pointwise Convolution kernels */
 EXTERN(xa_nn_matXvec_batch_asym8_pointwise)
@@ -130,6 +135,7 @@ EXTERN(xa_nn_conv2d_pointwise_asym8uxasym8u)
 EXTERN(xa_nn_conv2d_pointwise_per_chan_sym8sxasym8s)
 EXTERN(xa_nn_conv2d_pointwise_f32)
 EXTERN(xa_nn_conv2d_pointwise_16x16)
+EXTERN(xa_nn_conv2d_pointwise_per_chan_sym8sxsym16s)
 
 /* Activation kernels */
 EXTERN(one_over_one_plus_x_for_x_in_0_1)
@@ -184,6 +190,7 @@ EXTERN(xa_nn_vec_prelu_asym8s_asym8s)
 EXTERN(xa_nn_vec_leaky_relu_asym8s_asym8s)
 EXTERN(xa_nn_vec_hard_swish_asym8s_asym8s)
 EXTERN(xa_nn_vec_tanh_asym8s_asym8s)
+EXTERN(xa_nn_vec_leaky_relu_asym16s_asym16s)
 
 /* Fully Connected kernels */
 EXTERN(xa_nn_fully_connected_8x8_8)
@@ -249,6 +256,8 @@ EXTERN(xa_nn_elm_rsqrt_f32_f32)
 EXTERN(xa_nn_elm_sqrt_f32_f32)
 EXTERN(xa_nn_memmove_8_8)
 EXTERN(xa_nn_memset_f32_f32)
+EXTERN(xa_nn_elm_add_asym16sxasym16s_asym16s)
+EXTERN(xa_nn_elm_sub_broadcast_asym16sxasym16s_asym16s)
 
 /* Normalization kernels */
 EXTERN(xa_nn_l2_norm_f32)
@@ -260,6 +269,8 @@ EXTERN(xa_nn_space_to_depth_8_8)
 EXTERN(xa_nn_batch_to_space_nd_8_8)
 EXTERN(xa_nn_space_to_batch_nd_8_8)
 EXTERN(xa_nn_pad_8_8)
+EXTERN(xa_nn_pad_16_16)
+EXTERN(xa_nn_strided_slice_int16)
 
 /* NN layers */
 EXTERN(lstm_output_kernel_16x16_16)

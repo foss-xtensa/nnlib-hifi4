@@ -21,6 +21,7 @@
 ******************************************************************************/
 #include "xa_nnlib_common.h"
 #include "xa_nn_basic_state.h"
+#include "xa_nnlib_common_macros.h"
 
 #if XCHAL_HAVE_HIFI1
 WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
@@ -97,10 +98,10 @@ WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     y32 = AE_SLAA32S(y32, left_shift);
     y10 = AE_SLAA32S(y10, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_mul, inp2_shift)
 
     b32 = AE_EQ32(dequantized_x32, dequantized_y32);
     b10 = AE_EQ32(dequantized_x10, dequantized_y10);
@@ -183,7 +184,6 @@ WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
   xtbool2 b32, b10;
   ae_int16x4 ONE_16X4 = AE_MOVDA16(1);
   ae_int32x2 ONE_32x2 = AE_MOVDA32(1);
-  ae_int32x2 ZERO = AE_ZERO32();
 
   ae_int16x4 inp1_z_b = AE_MOVDA16(inp1_zero_bias);
   ae_int16x4 inp2_z_b = AE_MOVDA16(inp2_zero_bias);
@@ -191,9 +191,6 @@ WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
   WORD8 *p_in1  = (WORD8 *)p_inp1;
   WORD8 *p_in2  = (WORD8 *)p_inp2;
   WORD8 *p_o    = (WORD8 *)p_out;
-
-  ae_int32x2 inp1_mul = AE_MOVDA32(inp1_multiplier);
-  ae_int32x2 inp2_mul = AE_MOVDA32(inp2_multiplier);
 
   ae_int32x2 out_32 = AE_ZERO32();
   ae_int32x2 out_10 = AE_ZERO32();
@@ -219,10 +216,10 @@ WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_EQ32(dequantized_x32, dequantized_y32);
       b10 = AE_EQ32(dequantized_x10, dequantized_y10);
@@ -263,10 +260,10 @@ WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_EQ32(dequantized_x32, dequantized_y32);
       b10 = AE_EQ32(dequantized_x10, dequantized_y10);
@@ -301,8 +298,8 @@ WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     x32 = AE_SLAA32S(x32, left_shift);
     y32 = AE_SLAA32S(y32, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
 
     b32 = AE_EQ32(dequantized_x32, dequantized_y32);
 
@@ -394,10 +391,10 @@ WORD32 xa_nn_elm_notequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     y32 = AE_SLAA32S(y32, left_shift);
     y10 = AE_SLAA32S(y10, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_mul, inp2_shift)
 
     b32 = AE_EQ32(dequantized_x32, dequantized_y32);
     b10 = AE_EQ32(dequantized_x10, dequantized_y10);
@@ -483,7 +480,6 @@ WORD32 xa_nn_elm_notequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
   xtbool2 b32, b10;
   ae_int16x4 ONE_16X4 = AE_MOVDA16(1);
   ae_int32x2 ONE_32x2 = AE_MOVDA32(1);
-  ae_int32x2 ZERO = AE_ZERO32();
 
   ae_int16x4 inp1_z_b = AE_MOVDA16(inp1_zero_bias);
   ae_int16x4 inp2_z_b = AE_MOVDA16(inp2_zero_bias);
@@ -491,9 +487,6 @@ WORD32 xa_nn_elm_notequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
   WORD8 *p_in1  = (WORD8 *)p_inp1;
   WORD8 *p_in2  = (WORD8 *)p_inp2;
   WORD8 *p_o    = (WORD8 *)p_out;
-
-  ae_int32x2 inp1_mul = AE_MOVDA32(inp1_multiplier);
-  ae_int32x2 inp2_mul = AE_MOVDA32(inp2_multiplier);
 
   ae_int32x2 out_32 = AE_ZERO32();
   ae_int32x2 out_10 = AE_ZERO32();
@@ -519,10 +512,10 @@ WORD32 xa_nn_elm_notequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_EQ32(dequantized_x32, dequantized_y32);
       b10 = AE_EQ32(dequantized_x10, dequantized_y10);
@@ -563,10 +556,10 @@ WORD32 xa_nn_elm_notequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_EQ32(dequantized_x32, dequantized_y32);
       b10 = AE_EQ32(dequantized_x10, dequantized_y10);
@@ -601,8 +594,8 @@ WORD32 xa_nn_elm_notequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     x32 = AE_SLAA32S(x32, left_shift);
     y32 = AE_SLAA32S(y32, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
 
     b32 = AE_EQ32(dequantized_x32, dequantized_y32);
 
@@ -693,10 +686,10 @@ WORD32 xa_nn_elm_greater_asym8sxasym8s(WORD8 * __restrict__ p_out,
     y32 = AE_SLAA32S(y32, left_shift);
     y10 = AE_SLAA32S(y10, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_mul, inp2_shift)
 
     b32 = AE_LE32(dequantized_x32, dequantized_y32);
     b10 = AE_LE32(dequantized_x10, dequantized_y10);
@@ -781,7 +774,6 @@ WORD32 xa_nn_elm_greater_asym8sxasym8s(WORD8 * __restrict__ p_out,
   xtbool2 b32, b10;
   ae_int16x4 ONE_16X4 = AE_MOVDA16(1);
   ae_int32x2 ONE_32x2 = AE_MOVDA32(1);
-  ae_int32x2 ZERO = AE_ZERO32();
 
   ae_int16x4 inp1_z_b = AE_MOVDA16(inp1_zero_bias);
   ae_int16x4 inp2_z_b = AE_MOVDA16(inp2_zero_bias);
@@ -789,9 +781,6 @@ WORD32 xa_nn_elm_greater_asym8sxasym8s(WORD8 * __restrict__ p_out,
   WORD8 *p_in1  = (WORD8 *)p_inp1;
   WORD8 *p_in2  = (WORD8 *)p_inp2;
   WORD8 *p_o    = (WORD8 *)p_out;
-
-  ae_int32x2 inp1_mul = AE_MOVDA32(inp1_multiplier);
-  ae_int32x2 inp2_mul = AE_MOVDA32(inp2_multiplier);
 
   ae_int32x2 out_32 = AE_ZERO32();
   ae_int32x2 out_10 = AE_ZERO32();
@@ -817,10 +806,10 @@ WORD32 xa_nn_elm_greater_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_LE32(dequantized_x32, dequantized_y32);
       b10 = AE_LE32(dequantized_x10, dequantized_y10);
@@ -861,10 +850,10 @@ WORD32 xa_nn_elm_greater_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_LE32(dequantized_x32, dequantized_y32);
       b10 = AE_LE32(dequantized_x10, dequantized_y10);
@@ -899,8 +888,8 @@ WORD32 xa_nn_elm_greater_asym8sxasym8s(WORD8 * __restrict__ p_out,
     x32 = AE_SLAA32S(x32, left_shift);
     y32 = AE_SLAA32S(y32, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
 
     b32 = AE_LE32(dequantized_x32, dequantized_y32);
 
@@ -992,10 +981,10 @@ WORD32 xa_nn_elm_greaterequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     y32 = AE_SLAA32S(y32, left_shift);
     y10 = AE_SLAA32S(y10, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_mul, inp2_shift)
 
     b32 = AE_LT32(dequantized_x32, dequantized_y32);
     b10 = AE_LT32(dequantized_x10, dequantized_y10);
@@ -1081,7 +1070,6 @@ WORD32 xa_nn_elm_greaterequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
   xtbool2 b32, b10;
   ae_int16x4 ONE_16X4 = AE_MOVDA16(1);
   ae_int32x2 ONE_32x2 = AE_MOVDA32(1);
-  ae_int32x2 ZERO = AE_ZERO32();
 
   ae_int16x4 inp1_z_b = AE_MOVDA16(inp1_zero_bias);
   ae_int16x4 inp2_z_b = AE_MOVDA16(inp2_zero_bias);
@@ -1089,9 +1077,6 @@ WORD32 xa_nn_elm_greaterequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
   WORD8 *p_in1  = (WORD8 *)p_inp1;
   WORD8 *p_in2  = (WORD8 *)p_inp2;
   WORD8 *p_o    = (WORD8 *)p_out;
-
-  ae_int32x2 inp1_mul = AE_MOVDA32(inp1_multiplier);
-  ae_int32x2 inp2_mul = AE_MOVDA32(inp2_multiplier);
 
   ae_int32x2 out_32 = AE_ZERO32();
   ae_int32x2 out_10 = AE_ZERO32();
@@ -1117,10 +1102,10 @@ WORD32 xa_nn_elm_greaterequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_LT32(dequantized_x32, dequantized_y32);
       b10 = AE_LT32(dequantized_x10, dequantized_y10);
@@ -1161,10 +1146,10 @@ WORD32 xa_nn_elm_greaterequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_LT32(dequantized_x32, dequantized_y32);
       b10 = AE_LT32(dequantized_x10, dequantized_y10);
@@ -1199,8 +1184,8 @@ WORD32 xa_nn_elm_greaterequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     x32 = AE_SLAA32S(x32, left_shift);
     y32 = AE_SLAA32S(y32, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
 
     b32 = AE_LT32(dequantized_x32, dequantized_y32);
 
@@ -1291,10 +1276,10 @@ WORD32 xa_nn_elm_less_asym8sxasym8s(WORD8 * __restrict__ p_out,
     y32 = AE_SLAA32S(y32, left_shift);
     y10 = AE_SLAA32S(y10, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_mul, inp2_shift)
 
     b32 = AE_LT32(dequantized_x32, dequantized_y32);
     b10 = AE_LT32(dequantized_x10, dequantized_y10);
@@ -1378,7 +1363,6 @@ WORD32 xa_nn_elm_less_asym8sxasym8s(WORD8 * __restrict__ p_out,
   xtbool2 b32, b10;
   ae_int16x4 ONE_16X4 = AE_MOVDA16(1);
   ae_int32x2 ONE_32x2 = AE_MOVDA32(1);
-  ae_int32x2 ZERO = AE_ZERO32();
 
   ae_int16x4 inp1_z_b = AE_MOVDA16(inp1_zero_bias);
   ae_int16x4 inp2_z_b = AE_MOVDA16(inp2_zero_bias);
@@ -1386,9 +1370,6 @@ WORD32 xa_nn_elm_less_asym8sxasym8s(WORD8 * __restrict__ p_out,
   WORD8 *p_in1  = (WORD8 *)p_inp1;
   WORD8 *p_in2  = (WORD8 *)p_inp2;
   WORD8 *p_o    = (WORD8 *)p_out;
-
-  ae_int32x2 inp1_mul = AE_MOVDA32(inp1_multiplier);
-  ae_int32x2 inp2_mul = AE_MOVDA32(inp2_multiplier);
 
   ae_int32x2 out_32 = AE_ZERO32();
   ae_int32x2 out_10 = AE_ZERO32();
@@ -1414,10 +1395,10 @@ WORD32 xa_nn_elm_less_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_LT32(dequantized_x32, dequantized_y32);
       b10 = AE_LT32(dequantized_x10, dequantized_y10);
@@ -1458,10 +1439,10 @@ WORD32 xa_nn_elm_less_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_LT32(dequantized_x32, dequantized_y32);
       b10 = AE_LT32(dequantized_x10, dequantized_y10);
@@ -1496,8 +1477,8 @@ WORD32 xa_nn_elm_less_asym8sxasym8s(WORD8 * __restrict__ p_out,
     x32 = AE_SLAA32S(x32, left_shift);
     y32 = AE_SLAA32S(y32, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
 
     b32 = AE_LT32(dequantized_x32, dequantized_y32);
 
@@ -1587,10 +1568,10 @@ WORD32 xa_nn_elm_lessequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     y32 = AE_SLAA32S(y32, left_shift);
     y10 = AE_SLAA32S(y10, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_mul, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_mul, inp2_shift)
 
     b32 = AE_LE32(dequantized_x32, dequantized_y32);
     b10 = AE_LE32(dequantized_x10, dequantized_y10);
@@ -1675,7 +1656,6 @@ WORD32 xa_nn_elm_lessequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
   xtbool2 b32, b10;
   ae_int16x4 ONE_16X4 = AE_MOVDA16(1);
   ae_int32x2 ONE_32x2 = AE_MOVDA32(1);
-  ae_int32x2 ZERO = AE_ZERO32();
 
   ae_int16x4 inp1_z_b = AE_MOVDA16(inp1_zero_bias);
   ae_int16x4 inp2_z_b = AE_MOVDA16(inp2_zero_bias);
@@ -1683,9 +1663,6 @@ WORD32 xa_nn_elm_lessequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
   WORD8 *p_in1  = (WORD8 *)p_inp1;
   WORD8 *p_in2  = (WORD8 *)p_inp2;
   WORD8 *p_o    = (WORD8 *)p_out;
-
-  ae_int32x2 inp1_mul = AE_MOVDA32(inp1_multiplier);
-  ae_int32x2 inp2_mul = AE_MOVDA32(inp2_multiplier);
 
   ae_int32x2 out_32 = AE_ZERO32();
   ae_int32x2 out_10 = AE_ZERO32();
@@ -1711,10 +1688,10 @@ WORD32 xa_nn_elm_lessequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_LE32(dequantized_x32, dequantized_y32);
       b10 = AE_LE32(dequantized_x10, dequantized_y10);
@@ -1755,10 +1732,10 @@ WORD32 xa_nn_elm_lessequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
       y32 = AE_SLAA32S(y32, left_shift);
       y10 = AE_SLAA32S(y10, left_shift);
 
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x10, x10, inp1_mul, inp1_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
-      MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y10, y10, inp2_mul, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x10, x10, inp1_multiplier, inp1_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
+      MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y10, y10, inp2_multiplier, inp2_shift)
 
       b32 = AE_LE32(dequantized_x32, dequantized_y32);
       b10 = AE_LE32(dequantized_x10, dequantized_y10);
@@ -1793,8 +1770,8 @@ WORD32 xa_nn_elm_lessequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     x32 = AE_SLAA32S(x32, left_shift);
     y32 = AE_SLAA32S(y32, left_shift);
 
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_x32, x32, inp1_mul, inp1_shift)
-    MultiplyByQuantizedMultiplierSmallerThanOneExp(dequantized_y32, y32, inp2_mul, inp2_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_x32, x32, inp1_multiplier, inp1_shift)
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(dequantized_y32, y32, inp2_multiplier, inp2_shift)
 
     b32 = AE_LE32(dequantized_x32, dequantized_y32);
 

@@ -68,6 +68,7 @@ buf1D_t *create_buf1D(int len, int precision)
     case ASYM8S_TYPE: pbuf->bytes_per_element = 1; break;
     case SYM8S_TYPE: pbuf->bytes_per_element = 1; break;
     case ASYM16S_TYPE: pbuf->bytes_per_element = 2; break;
+    case SYM16S_TYPE: pbuf->bytes_per_element = 2; break;
     case ASYM32S_TYPE: pbuf->bytes_per_element = 4; break;
     case  1: pbuf->bytes_per_element = 1; break;
     case  8: pbuf->bytes_per_element = 1; break;
@@ -117,6 +118,7 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
     case ASYM8S_TYPE: pbuf->bytes_per_element = 1; break;
     case SYM8S_TYPE: pbuf->bytes_per_element = 1; break;
     case ASYM16S_TYPE: pbuf->bytes_per_element = 2; break;
+    case SYM16S_TYPE: pbuf->bytes_per_element = 2; break;
     case 1: pbuf->bytes_per_element = 1; break;
     case 8: pbuf->bytes_per_element = 1;break;
     case 16:pbuf->bytes_per_element = 2; break;
@@ -344,6 +346,7 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
       }
       break;
     case ASYM16S_TYPE: 
+    case SYM16S_TYPE: 
     case 16:
       {
         short *p = (short *) ptr_buf1D->p;
@@ -416,6 +419,7 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
       }
       break;
     case ASYM16S_TYPE: 
+    case SYM16S_TYPE: 
     case 16:
       {
         short *p = (short *) ptr_buf2D->p;
@@ -495,6 +499,7 @@ void write_buf1D(buf1D_t *pbuf, FILE *file,int extensionIndicator, char * var_na
       case ASYM8S_TYPE:  length = sizeof(char)  * pbuf->length;   break;
       case SYM8S_TYPE:  length = sizeof(char)  * pbuf->length;   break;
       case ASYM16S_TYPE:  length = sizeof(short int)  * pbuf->length;   break;
+      case SYM16S_TYPE:  length = sizeof(short int)  * pbuf->length;   break;
 	    case 1:  length = sizeof(char)  * pbuf->length; break;
       case 8:  length = sizeof(char)  * pbuf->length;   break;
       case 16: length = sizeof(short) * pbuf->length;   break;
@@ -520,6 +525,7 @@ void write_buf2D(buf2D_t *pbuf, FILE *file,int extensionIndicator, char * var_na
       case ASYM8S_TYPE:  length = sizeof(char)  * pbuf->rows * pbuf->row_offset;   break;
       case SYM8S_TYPE:  length = sizeof(char)  * pbuf->rows * pbuf->row_offset;   break;
       case ASYM16S_TYPE:  length = sizeof(short int)  * pbuf->row_offset;   break;
+      case SYM16S_TYPE:  length = sizeof(short int)  * pbuf->row_offset;   break;
 	    case 1:  length = sizeof(char)  * pbuf->rows * pbuf->row_offset;   break;
       case 8:  length = sizeof(char)  * pbuf->rows * pbuf->row_offset;   break;
       case 16: length = sizeof(short) * pbuf->rows * pbuf->row_offset;   break;

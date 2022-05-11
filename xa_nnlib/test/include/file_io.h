@@ -35,6 +35,8 @@ int load_conv1d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, b
     int kernel_pad_val);
 int load_conv2d_ds_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel,
     buf1D_t *p_bias, buf1D_t *p_kernel_point, buf1D_t *p_bias_point, int kernel_pad_val);
+int load_conv2d_pt_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp,
+    buf1D_t *p_kernel_point, buf1D_t *p_bias_point);
 int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_inp_alpha, char *kernel_name); 
 int load_pool_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);
 int load_norm_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);

@@ -242,12 +242,31 @@ const WORD16 *__restrict__ p_inp,
         };
 
         WORD32 *ptr_out1 = (WORD32 *)((WORD32 *)p_scratch + total_out_width);
-        ae_int32x2 den_h, den_w, d_tmp32, d_out1;
+        ae_int32x2 d_tmp32, d_out1;
         ae_int64 d_tmp;
-        den_h = *(ae_int32 *)(&p_den_height[itr_oh]);
-        for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+        if(kernel_height * kernel_width <= 1024)
         {
-            den_w = *(ae_int32 *)(&p_den_width[itr_ow]);
+          WORD32 den_hw;
+          for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+          {
+            den_hw = inv_256_tbl[p_den_height[itr_oh] * p_den_width[itr_ow]];
+            d_out1 = *(ae_int32 *)(&ptr_out1[itr_ow*x_stride]);
+            d_tmp32 = AE_MOVDA32(den_hw);
+            #if XCHAL_HAVE_HIFI1
+            d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
+            #else
+            d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
+            #endif
+            p_out[itr_oh*out_width+itr_ow] = AE_SAT16X4(d_tmp32, d_tmp32);
+          }
+        }
+        else
+        {
+          ae_int32x2 den_h, den_w;
+          den_h = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh]]);
+          for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+          {
+            den_w = AE_MOVDA32(inv_256_tbl[p_den_width[itr_ow]]);
             d_out1 = *(ae_int32 *)(&ptr_out1[itr_ow*x_stride]);
             d_tmp = AE_MUL32U_LL(den_h, den_w);
             /* Max value of den_h or den_w is 0x80000000
@@ -259,6 +278,7 @@ const WORD16 *__restrict__ p_inp,
             d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
 #endif
             p_out[itr_oh*out_width+itr_ow] = AE_SAT16X4(d_tmp32, d_tmp32);
+          }
         }
     }
 }
@@ -341,16 +361,16 @@ const WORD16* __restrict__ p_inp,
             kernel_y_start = itr_oh*y_stride - y_padding;
             kernel_y_end = kernel_y_start + kernel_height;
             LIMIT(kernel_y_start, 0, input_height)
-                LIMIT(kernel_y_end, 0, input_height)
-                p_state->p_den_height[itr_oh] = inv_256_tbl[(kernel_y_end - kernel_y_start)];
+            LIMIT(kernel_y_end, 0, input_height)
+            p_state->p_den_height[itr_oh] = (kernel_y_end - kernel_y_start);
         }
         for(itr_ow = 0; itr_ow < out_width; itr_ow++)
         {
             kernel_x_start = itr_ow*x_stride - x_padding;
             kernel_x_end = kernel_x_start + kernel_width;
             LIMIT(kernel_x_start, 0, input_width)
-                LIMIT(kernel_x_end, 0, input_width)
-                p_state->p_den_width[itr_ow] = inv_256_tbl[(kernel_x_end - kernel_x_start)];
+            LIMIT(kernel_x_end, 0, input_width)
+            p_state->p_den_width[itr_ow] = (kernel_x_end - kernel_x_start);
         }
 
         for(itr_ic = 0; itr_ic < input_channels; itr_ic++)
@@ -399,7 +419,7 @@ const WORD16* __restrict__ p_inp,
             kernel_y_end = kernel_y_start + kernel_height;
             LIMIT(kernel_y_start, 0, input_height)
             LIMIT(kernel_y_end, 0, input_height)
-            *p_rec_den++ = inv_256_tbl[(kernel_y_end - kernel_y_start)];
+            *p_rec_den++ = (kernel_y_end - kernel_y_start);
         }
 
         p_den_width = (WORD32 *)((WORD8 *)p_scratch_aligned + ALIGNED_SIZE(sizeof(WORD32)*out_height, ALIGNMENT));
@@ -411,7 +431,7 @@ const WORD16* __restrict__ p_inp,
             kernel_x_end = kernel_x_start + kernel_width;
             LIMIT(kernel_x_start, 0, input_width)
             LIMIT(kernel_x_end, 0, input_width)
-            *p_rec_den++ = inv_256_tbl[(kernel_x_end - kernel_x_start)];
+            *p_rec_den++ = (kernel_x_end - kernel_x_start);
         }
 
         p_s = (WORD32 *)((WORD8 *)p_den_width + ALIGNED_SIZE(sizeof(WORD32)*out_width, ALIGNMENT));

@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #include <xtensa/config/core-isa.h>
 #include "xa_type_def.h"
 #include "nnlib/xa_nnlib_api.h"
@@ -40,13 +41,13 @@
 #define XA_MAX_ARGS 100
 #define SHAPE_ARGS_LENGTH 80
 #define MAX_DIMS 8
+#define MAX_DIMS_FOR_STRIDED_SLICE 5
 #define PARAMFILE "paramfilesimple_reorg.txt"
 
 #define VALIDATE_PTR(ptr) if(NULL == ptr) { printf("%s: allocation failed\n", #ptr); return -1;}
 
 #define PRINT_VAR(var)  // printf("%d: %s = %d\n", __LINE__, #var, (int) var); fflush(stdout); fflush(stderr);
 #define PRINT_PTR(ptr)  // printf("%d: %s = %p\n", __LINE__, #ptr, (void *) ptr); fflush(stdout); fflush(stderr);
-
 
 char pb_input_file_path[XA_MAX_CMD_LINE_LENGTH] = "";
 char pb_output_file_path[XA_MAX_CMD_LINE_LENGTH] = "";
@@ -61,6 +62,7 @@ typedef struct _test_config_t
   int num_pad_dims;
   int num_out_dims;
   int pad_value;
+  int input_shape_extended[MAX_DIMS_FOR_STRIDED_SLICE];
   int input_shape[MAX_DIMS];  
   int output_shape[MAX_DIMS];  
   int pad_shape[MAX_DIMS];
@@ -82,6 +84,12 @@ typedef struct _test_config_t
   int out_channels;
   int inp_precision;
   int out_precision;
+  int start_0,stop_0;
+  int start_1,stop_1;
+  int start_2,stop_2;
+  int start_3,stop_3;
+  int start_4,stop_4;
+  int stride_0,stride_1,stride_2,stride_3,stride_4;
   char kernel_name[MAX_KERNEL_NAME_LENGTH];
   int frames;
   int write_file;
@@ -96,7 +104,6 @@ int default_config(test_config_t *p_cfg)
 {
   if(p_cfg)
   {
-
     p_cfg->help     = 0;
     p_cfg->inp_data_format = 0;
     p_cfg->num_inp_dims  = 4;
@@ -112,6 +119,21 @@ int default_config(test_config_t *p_cfg)
     p_cfg->out_channels = 4;
     p_cfg->inp_precision = 8;
     p_cfg->out_precision = 8;
+    p_cfg->start_0 = 0;
+    p_cfg->start_1 = 0;
+    p_cfg->start_2 = 0;
+    p_cfg->start_3 = 0;
+    p_cfg->start_4 = 0;
+    p_cfg->stop_0 =  1;
+    p_cfg->stop_1 =  1;
+    p_cfg->stop_2 =  1;
+    p_cfg->stop_3 =  1;
+    p_cfg->stop_4 =  1;
+    p_cfg->stride_0 = 1;
+    p_cfg->stride_1 = 1;
+    p_cfg->stride_2 = 1;
+    p_cfg->stride_3 = 1;
+    p_cfg->stride_4 = 1;
     strcpy(p_cfg->kernel_name, "depth_to_space");
     p_cfg->frames   = 2;
     p_cfg->write_file = 0;
@@ -130,6 +152,10 @@ int default_config(test_config_t *p_cfg)
       p_cfg->input_shape[itr] = 1;
       p_cfg->output_shape[itr] = 1;
       p_cfg->pad_values[itr] = 0;
+    }
+    for(itr = 0; itr < MAX_DIMS_FOR_STRIDED_SLICE; itr++)
+    {
+      p_cfg->input_shape_extended[itr] = 1;
     }
     p_cfg->pad_shape[0] = 4;
     p_cfg->pad_shape[1] = 2;
@@ -166,10 +192,25 @@ void show_usage(void)
     printf("\t-out_height: output height; Default=16\n");
     printf("\t-out_width: output width; Default=16\n");
     printf("\t-out_channels: output channels; Default=4\n");
+    printf("\t-start_0: begin point for dimention 0; Default=0\n");
+    printf("\t-start_1: begin point for dimention 1; Default=0\n");
+    printf("\t-start_2: begin point for dimention 2; Default=0\n");
+    printf("\t-start_3: begin point for dimention 3; Default=0\n");
+    printf("\t-start_4: begin point for dimention 4; Default=0\n");
+    printf("\t-stop_0: end point for dimention 0; Default=1\n");
+    printf("\t-stop_1: end point for dimention 1; Default=1\n");
+    printf("\t-stop_2: end point for dimention 2; Default=1\n");
+    printf("\t-stop_3: end point for dimention 3; Default=1\n");
+    printf("\t-stop_4: end point for dimention 4; Default=1\n");
+    printf("\t-stride_0: stride for dimention 0; Default=1\n");
+    printf("\t-stride_1: stride for dimention 1; Default=1\n");
+    printf("\t-stride_2: stride for dimention 2; Default=1\n");
+    printf("\t-stride_3: stride for dimention 3; Default=1\n");
+    printf("\t-stride_4: stride for dimention 4; Default=1\n");
     printf("\t-inp_precision: 8; Default=8\n");
     printf("\t-out_precision: 8; Default=8\n");
     printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: depth_to_space, space_to_depth, pad, batch_to_space_nd, space_to_batch_nd; Default=""depth_to_space""\n");
+    printf("\t-kernel_name: depth_to_space, space_to_depth, pad, batch_to_space_nd, space_to_batch_nd, strided_slice; Default=""depth_to_space""\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp) \n");
     printf("\t-read_ref_file_name: Full filename for reading reference output \n");
@@ -211,6 +252,21 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-out_height",p_cfg->out_height);
     ARGTYPE_ONETIME_CONFIG("-out_width",p_cfg->out_width);
     ARGTYPE_ONETIME_CONFIG("-out_channels",p_cfg->out_channels);
+    ARGTYPE_ONETIME_CONFIG("-start_0",p_cfg->start_0);
+    ARGTYPE_ONETIME_CONFIG("-stop_0",p_cfg->stop_0);
+    ARGTYPE_ONETIME_CONFIG("-start_1",p_cfg->start_1);
+    ARGTYPE_ONETIME_CONFIG("-stop_1",p_cfg->stop_1);
+    ARGTYPE_ONETIME_CONFIG("-start_2",p_cfg->start_2);
+    ARGTYPE_ONETIME_CONFIG("-stop_2",p_cfg->stop_2);
+    ARGTYPE_ONETIME_CONFIG("-start_3",p_cfg->start_3);
+    ARGTYPE_ONETIME_CONFIG("-stop_3",p_cfg->stop_3);
+    ARGTYPE_ONETIME_CONFIG("-start_4",p_cfg->start_4);
+    ARGTYPE_ONETIME_CONFIG("-stop_4",p_cfg->stop_4);
+    ARGTYPE_ONETIME_CONFIG("-stride_0",p_cfg->stride_0);
+    ARGTYPE_ONETIME_CONFIG("-stride_1",p_cfg->stride_1);
+    ARGTYPE_ONETIME_CONFIG("-stride_2",p_cfg->stride_2);
+    ARGTYPE_ONETIME_CONFIG("-stride_3",p_cfg->stride_3);
+    ARGTYPE_ONETIME_CONFIG("-stride_4",p_cfg->stride_4);
     ARGTYPE_ONETIME_CONFIG("-inp_precision",p_cfg->inp_precision);
     ARGTYPE_ONETIME_CONFIG("-out_precision",p_cfg->out_precision);
     ARGTYPE_STRING("-kernel_name",p_cfg->kernel_name, MAX_KERNEL_NAME_LENGTH);
@@ -241,8 +297,16 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     exit(1);
   }
 }
-
-
+#define STRIDED_SLICE_INT16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) {\
+  XTPWR_PROFILER_START(0);\
+  err = xa_nn_##KERNEL##_int16( \
+        (WORD##OPREC *)p_out->p, (WORD##IPREC *) p_inp->p, \
+        cfg.start_0, cfg.stop_0, cfg.start_1, cfg.stop_1, cfg.start_2, cfg.stop_2, cfg.start_3, cfg.stop_3, cfg.start_4, cfg.stop_4, \
+        cfg.stride_0,cfg.stride_1,cfg.stride_2,cfg.stride_3,cfg.stride_4, \
+        cfg.input_shape_extended[1],cfg.input_shape_extended[2],cfg.input_shape_extended[3],cfg.input_shape_extended[4]);\
+        XTPWR_PROFILER_STOP(0);\
+  }
 
 #define DEPTH_SPACE_KERNEL_FN(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) {\
@@ -297,6 +361,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else BATCH_SPACE_ND_KERNEL_FN(batch_to_space_nd, 8, 8) \
     else SPACE_TO_BATCH_ND_KERNEL_FN(space_to_batch_nd, 8, 8) \
     else PAD_KERNEL_FN(pad, 8, 8) \
+    else PAD_KERNEL_FN(pad, 16, 16) \
+    else STRIDED_SLICE_INT16(strided_slice, 16, 16) \
     else {  printf("unsupported reorg operation\n"); return -1;}
 
 int xa_nn_main_process(int argc, char *argv[])
@@ -363,6 +429,39 @@ int xa_nn_main_process(int argc, char *argv[])
     {
       out_size *= cfg.output_shape[itr]; 
     }
+  }
+  else if(strcmp(cfg.kernel_name, "strided_slice") == 0)
+  {
+     int i,rev_itr;
+     float out_dim_calc;
+     rev_itr = cfg.num_inp_dims;
+     if(cfg.num_inp_dims > 4)
+     {
+	printf("\nIncorrect Arguments. Number of Input Dimentions must be less than or equal to 4. Exiting\n");
+        exit(1);
+     }
+     for(i = 4 ; i > 4 - cfg.num_inp_dims; i--)
+     {
+        cfg.input_shape_extended[i] = cfg.input_shape[rev_itr -1];
+	rev_itr--;
+     }
+     
+     out_dim_calc = (float)(cfg.stop_0 - cfg.start_0)/(float)cfg.stride_0;
+     cfg.output_shape[0] = (int)ceil(out_dim_calc);
+     out_dim_calc = (float)(cfg.stop_1 - cfg.start_1)/(float)cfg.stride_1;
+     cfg.output_shape[1] = (int)ceil(out_dim_calc);
+     out_dim_calc = (float)(cfg.stop_2 - cfg.start_2)/(float)cfg.stride_2;
+     cfg.output_shape[2] = (int)ceil(out_dim_calc);
+     out_dim_calc = (float)(cfg.stop_3 - cfg.start_3)/(float)cfg.stride_3;
+     cfg.output_shape[3] = (int)ceil(out_dim_calc);
+     out_dim_calc = (float)(cfg.stop_4 - cfg.start_4)/(float)cfg.stride_4;
+     cfg.output_shape[4] = (int)ceil(out_dim_calc);
+     inp_size = cfg.input_shape_extended[0]* cfg.input_shape_extended[1] *cfg.input_shape_extended[2] * cfg.input_shape_extended[3] * cfg.input_shape_extended[4] ;
+     out_size = cfg.output_shape[0] * cfg.output_shape[1] * cfg.output_shape[2] * cfg.output_shape[3] * cfg.output_shape[4];
+     if(cfg.output_shape[0] <= 0 || cfg.output_shape[1] <= 0 || cfg.output_shape[2] <= 0 || cfg.output_shape[3] <= 0 || cfg.output_shape[4] <= 0){
+       printf("\nInvalid Arguments. While computing output shape, one or more output shape dimentions are coming out to be zero or negative. Exiting\n");    
+       exit(1);
+     }
   }
   else if(strcmp(cfg.kernel_name, "batch_to_space_nd") == 0
           || strcmp(cfg.kernel_name, "space_to_batch_nd") == 0)
@@ -432,6 +531,10 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_params, "input_shape= %s block_sizes= %s pad_sizes= %s output_shape= %s\n", cfg.read_inp_shape_str, cfg.read_block_sizes_str, cfg.read_crop_or_pad_sizes_str, cfg.read_out_shape_str);
   }
+  else if(strcmp(cfg.kernel_name, "strided_slice") == 0)
+  {
+   sprintf(profiler_params,"start = [%d %d %d %d %d] stop = [%d %d %d %d %d] stride = [%d %d %d %d %d] input_shape=%s\n", cfg.start_0, cfg.start_1, cfg.start_2, cfg.start_3, cfg.start_4 , cfg.stop_0, cfg.stop_1, cfg.stop_2, cfg.stop_3, cfg.stop_4 , cfg.stride_0,cfg.stride_1,cfg.stride_2,cfg.stride_3,cfg.stride_4, cfg.read_inp_shape_str);
+  }
   else
   {
     sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, out_height=%d, out_width=%d, out_channels =%d",
@@ -480,7 +583,8 @@ int xa_nn_main_process(int argc, char *argv[])
   if(!strcmp(cfg.kernel_name,"depth_to_space")
      || !strcmp(cfg.kernel_name,"space_to_depth")
      || !strcmp(cfg.kernel_name,"batch_to_space_nd")
-     || !strcmp(cfg.kernel_name,"space_to_batch_nd"))
+     || !strcmp(cfg.kernel_name,"space_to_batch_nd")
+     || !strcmp(cfg.kernel_name,"strided_slice"))
   {
     num_pts = out_size;
   }

@@ -25,15 +25,12 @@
 
 #if 1
 
+#if XCHAL_HAVE_HIFI1
 #define MULTIPLYBYQUANTIZEDMULTIPLIER(inp, multiplier, left_shift, right_shift) \
     inp = AE_SLAA32S(inp, left_shift); \
     inp = AE_MULFP32X2RAS_L(inp, AE_MOVDA32(multiplier)); \
     inp = AE_ROUND32X2F64SSYM(0, AE_SRAA64(AE_CVT64F32_L(inp), right_shift));
-
-#define MULTIPLYBYQUANTIZEDMULTIPLIER_X2(inp, multiplier, left_shift, right_shift) \
-    inp = AE_SLAA32S(inp, left_shift); \
-    inp = AE_MULFP32X2RAS(inp, AE_MOVDA32(multiplier)); \
-    inp = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(inp), right_shift), AE_SRAA64(AE_CVT64F32_L(inp), right_shift));
+#endif
 
 static WORD32 conv_x_left_pad(
     WORD32 x_padding,
@@ -77,10 +74,16 @@ static WORD32 conv_x_left_pad(
         acc = AE_MIN32(acc, max_int8);
         AE_S8_0_X( AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i * out_height_offset + j * out_width_offset + k * out_channels_offset));
 #else
+#if TFLITE_SINGLE_ROUNDING
+        left_shift  = p_out_shift[k];
+        /* Single rounding macro doesn't need two shifts so this is not used */
+        (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
         left_shift  = p_out_shift[k] < 0 ? 0 : p_out_shift[k];
         right_shift = p_out_shift[k] > 0 ? 0 : -p_out_shift[k];
+#endif /* #if TFLITE_SINGLE_ROUNDING */
         ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc, p_out_multiplier[k], left_shift, right_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
 #if 0
         AE_MINMAX32(acc, min_int8, max_int8);
@@ -138,10 +141,16 @@ static WORD32 conv_x_right_pad(
         acc = AE_MIN32(acc, max_int8);
         AE_S8_0_X( AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i * out_height_offset + j * out_width_offset + k * out_channels_offset));
 #else
+#if TFLITE_SINGLE_ROUNDING
+        left_shift  = p_out_shift[k];
+        /* Single rounding macro doesn't need two shifts so this is not used */
+        (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
         left_shift  = p_out_shift[k] < 0 ? 0 : p_out_shift[k];
         right_shift = p_out_shift[k] > 0 ? 0 : -p_out_shift[k];
+#endif /* #if TFLITE_SINGLE_ROUNDING */
         ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER_X2(acc, p_out_multiplier[k], left_shift, right_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
 #if 0
         AE_MINMAX32(acc, min_int8, max_int8);

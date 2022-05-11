@@ -46,11 +46,11 @@ typedef struct bcast_expansion_struct_{
 static const void* broadcast_node(bcast_expansion_rule *step, unsigned int step_id, void *dest, const void *src );
 
 WORD32 xa_nn_broadcast_8_8( WORD8* __restrict__ p_out,      /* pointer to write broadcasted output data to */
-                        const int *const out_shape,         /* output shape resulting after broadcast */
-                        
-                        const  WORD8* __restrict__ p_in,    /* pointer to unextended input data */
-                        const int * const in_shape,         /* input shape */
-                        int num_dims)
+        const int *const out_shape,         /* output shape resulting after broadcast */
+
+        const  WORD8* __restrict__ p_in,    /* pointer to unextended input data */
+        const int * const in_shape,         /* input shape */
+        int num_dims)
 {
 
     /* NULL pointer checks */
@@ -73,7 +73,7 @@ WORD32 xa_nn_broadcast_8_8( WORD8* __restrict__ p_out,      /* pointer to write 
         XA_NNLIB_CHK_COND(in_shape[i]<=0, -1);
         XA_NNLIB_CHK_COND(out_shape[i]<=0, -1);
     }
-    
+
     /* Check if input shape can be broadcasted to requested output shape */
     for(i=0; i<num_dims; i++){
         if(in_shape[i] != out_shape[i]){
@@ -120,20 +120,20 @@ WORD32 xa_nn_broadcast_8_8( WORD8* __restrict__ p_out,      /* pointer to write 
         bcast_expansion_steps[k].replicate_loadedElm_times = num_copy_times;
         bcast_expansion_steps[k].repeat_operation = num_repeat;
         k++;
-        
+
         num_elem_load = num_elem_load*num_copy_times*num_repeat;
     }
 
     res = broadcast_node(bcast_expansion_steps, num_dims-1,
-                         p_out, p_in);
+            p_out, p_in);
 
     return 0;
 }
 
 static const void* broadcast_node(bcast_expansion_rule *steps, unsigned int step_id,
-                                    void *dst, const void *src) {
+        void *dst, const void *src) {
     int step_itr=0, rep_itr=0;
-    int i=0, j=0;
+    int i=0, j=0, k=0;
     bcast_expansion_rule *step = NULL;
 
     // ignore steps that are null
@@ -147,35 +147,79 @@ static const void* broadcast_node(bcast_expansion_rule *steps, unsigned int step
 
     void *cp_dst = dst;
     const void *cp_src = src;
+    char *cp_src_temp=NULL;
+    char *cp_dst_temp=NULL;
 
-    if(step_id > 0){
-        for(step_itr=0; step_itr<step->repeat_operation; step_itr++){
-            src = broadcast_node(steps, step_id-1, dst, src);
-            cp_src = dst;
-            cp_dst = dst + numLoadedElm;
-            for(rep_itr=1; rep_itr<step->replicate_loadedElm_times; rep_itr++){
-                memcpy(cp_dst, cp_src, numLoadedElm);
-                cp_dst += numLoadedElm;
-            }
-            dst = cp_dst;
-        }
-        return src;
-    } else {        
-        if(numLoadedElm == 1){
-            for(j=0; j<step->repeat_operation; j++){
-                memset(cp_dst, *(WORD8 *)cp_src, step->replicate_loadedElm_times);
-                cp_dst += step->replicate_loadedElm_times;
-                cp_src++;
-            }
-        } else {
-            for(j=0; j<step->repeat_operation; j++){
-                for(i=0; i<step->replicate_loadedElm_times; i++){
-                    memcpy(cp_dst, cp_src, numLoadedElm);
+    if(numLoadedElm>32){
+        if(step_id > 0){
+            for(step_itr=0; step_itr<step->repeat_operation; step_itr++){
+                src = broadcast_node(steps, step_id-1, dst, src);
+                cp_src = dst;
+                cp_dst = dst + numLoadedElm;
+                for(rep_itr=1; rep_itr<step->replicate_loadedElm_times; rep_itr++){
+                    xa_nn_memcpy(cp_dst, cp_src, numLoadedElm);
                     cp_dst += numLoadedElm;
                 }
-                cp_src += numLoadedElm;
+                dst = cp_dst;
             }
+            return src;
+        } else {        
+            if(numLoadedElm == 1){
+                for(j=0; j<step->repeat_operation; j++){
+                    memset(cp_dst, *(WORD8 *)cp_src, step->replicate_loadedElm_times);
+                    cp_dst += step->replicate_loadedElm_times;
+                    cp_src++;
+                }
+            } else {
+                for(j=0; j<step->repeat_operation; j++){
+                    for(i=0; i<step->replicate_loadedElm_times; i++){
+                        xa_nn_memcpy(cp_dst, cp_src, numLoadedElm);
+                        cp_dst += numLoadedElm;
+                    }
+                    cp_src += numLoadedElm;
+                }
+            }
+            return cp_src;
         }
-        return cp_src;
+    }
+    else{
+        if(step_id > 0){
+            for(step_itr=0; step_itr<step->repeat_operation; step_itr++){
+                src = broadcast_node(steps, step_id-1, dst, src);
+                cp_src = dst;
+                cp_dst = dst + numLoadedElm;
+                for(rep_itr=1; rep_itr<step->replicate_loadedElm_times; rep_itr++){
+                    for(k=0; k<(int)numLoadedElm; k++){
+                        cp_src_temp = (char *)cp_src;
+                        cp_dst_temp = (char *)cp_dst;
+                        cp_dst_temp[k] = cp_src_temp[k];
+                    }
+                    cp_dst += numLoadedElm;
+                }
+                dst = cp_dst;
+            }
+            return src;
+        } else {
+            if(numLoadedElm == 1){
+                for(j=0; j<step->repeat_operation; j++){
+                    memset(cp_dst, *(WORD8 *)cp_src, step->replicate_loadedElm_times);
+                    cp_dst += step->replicate_loadedElm_times;
+                    cp_src++;
+                }
+            } else {
+                for(j=0; j<step->repeat_operation; j++){
+                    for(i=0; i<step->replicate_loadedElm_times; i++){
+                        for(k=0; k<(int)numLoadedElm; k++){
+                            cp_src_temp = (char *)cp_src;
+                            cp_dst_temp = (char *)cp_dst;
+                            cp_dst_temp[k] = cp_src_temp[k];
+                        }
+                        cp_dst += numLoadedElm;
+                    }
+                    cp_src += numLoadedElm;
+                }
+            }
+            return cp_src;
+        }
     }
 }

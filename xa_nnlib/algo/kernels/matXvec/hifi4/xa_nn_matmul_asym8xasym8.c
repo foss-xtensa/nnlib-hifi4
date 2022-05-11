@@ -93,8 +93,14 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
     #define UNROLL_ROW_STORE_ACC                    STORE_ACC_BATCH_ROW_ASYM8bxASYM8b_AT_OUT_ASYM8b
     #define UNROLL_STORE_ACC_BATCH                  STORE_STRIDE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b
 
+#if TFLITE_SINGLE_ROUNDING
+    left_shift = out_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
     left_shift = out_shift<0?0:out_shift;
     right_shift = out_shift>0?0:-out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
   
     CHK_MATMUL_ALIGN(p_mat1, 1, p_vec1, 1, cols1, row_stride1, vec_offset, 4);
     

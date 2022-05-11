@@ -27,6 +27,42 @@ Cadence HiFi 4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
+Version 2.7.0 API 1.2: May 11, 2022
+
++ Intermediate Release of HiFi4 NN Library
++ Tested using RI.6 tools, xt-clang/xt-clang++ compiler.
++ Single Step Rounding support is added for all applicable quantize kernels.
+  (Except newly added SEANet kernels)
++ Added sigmoid/tanh TIE based optimizations for asym8s and 16-bit precisions.
++ Improved performance of conv2d_depth, conv1d_std, broadcast_8_8 and reduce_max_asym8s 
+  kernels through memcpy optimization.
++ Membank confict reduction in all variants of matXvec 8x8, 8x16 and 16x16 precisions.
++ Added support for SEANet kernels. This includes ->
+  conv2d_std_sym8sxsym16s
+  conv2d_pointwise_sym8sxsym16s
+  transpose_conv_sym8sxsym16s
+  leaky_relu_asym16s
+  elm_add_asym16s
+  strided_slice_int16
+  elm_sub_broadcast_asym16s
+  pad_16
+
+Note
+> Processor Configuration must be built with SP-VFP option in order to compile 
+  floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for C++11 standard. 
+  This is supported only with Xtensa C library. 
+
+Known issues
+> Compiler optimizations are disabled for ANN C++ source files
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
+
 Version 2.6.0, API 1.1: February 1, 2022
 
 + GA Release of HiFi4 NN Library

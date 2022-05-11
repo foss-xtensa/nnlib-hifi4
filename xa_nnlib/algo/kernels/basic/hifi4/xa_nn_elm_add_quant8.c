@@ -21,6 +21,7 @@
 ******************************************************************************/
 #include "xa_nnlib_common.h"
 #include "xa_nn_basic_state.h"
+#include "xa_nnlib_common_macros.h"
 
 #if XCHAL_HAVE_HIFI1
 WORD32 xa_nn_elm_add_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
@@ -125,18 +126,18 @@ WORD32 xa_nn_elm_add_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
         shifted_v4 = AE_SLAA32S(shifted_v4, left_shift);
 
 
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v1, shifted_v1, multiplier1, inp1_left_shift)
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v2, shifted_v2, multiplier1, inp1_left_shift)
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v3, shifted_v3, multiplier2, inp2_left_shift)
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v4, shifted_v4, multiplier2, inp2_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v1, shifted_v1, multiplier1, inp1_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v2, shifted_v2, multiplier1, inp1_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v3, shifted_v3, multiplier2, inp2_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v4, shifted_v4, multiplier2, inp2_left_shift)
 
         // Raw Sum
         raw_sum12 = AE_ADD32S(scaled_v1, scaled_v3);
         raw_sum34 = AE_ADD32S(scaled_v2, scaled_v4);
 
         // Raw Output
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(raw_out12, raw_sum12, op_multiplier, out_left_shift)
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(raw_out34, raw_sum34, op_multiplier, out_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out12, raw_sum12, op_multiplier, out_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out34, raw_sum34, op_multiplier, out_left_shift)
         raw_out12 = AE_ADD32S(raw_out12, op_zero_bias);
         raw_out34 = AE_ADD32S(raw_out34, op_zero_bias);
 
@@ -179,14 +180,14 @@ WORD32 xa_nn_elm_add_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
         shifted_v1 = AE_SLAA32S(shifted_v1, left_shift);
         shifted_v3 = AE_SLAA32S(shifted_v3, left_shift);
 
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v1, shifted_v1, multiplier1, inp1_left_shift)
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v3, shifted_v3, multiplier2, inp2_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v1, shifted_v1, multiplier1, inp1_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v3, shifted_v3, multiplier2, inp2_left_shift)
 
         // Raw Sum
         raw_sum12 = AE_ADD32S(scaled_v1, scaled_v3);
 
         // Raw Output
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(raw_out12, raw_sum12, op_multiplier, out_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out12, raw_sum12, op_multiplier, out_left_shift)
         raw_out12 = AE_ADD32S(raw_out12, op_zero_bias);
 
         // clamped_out
@@ -247,8 +248,7 @@ WORD32 xa_nn_elm_add_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
     ae_f16x4 x1, x2;
     ae_int32x2 temp;
     ae_f16x4 temp16X4, zero_bias1, zero_bias2;
-    ae_f32x2 multiplier1, multiplier2, op_multiplier, op_zero_bias, activation_min, activation_max;
-    ae_int32x2 ZERO = AE_ZERO32();
+    ae_f32x2 op_zero_bias, activation_min, activation_max;
 
     // Taking zero_bias into 16X4 variable
     temp = AE_MOVDA32(inp1_zero_bias);
@@ -260,11 +260,6 @@ WORD32 xa_nn_elm_add_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
     zero_bias2 = (ae_f16x4) AE_SEL16_6420(temp16X4, temp16X4);
 
     op_zero_bias = AE_MOVDA32(out_zero_bias);
-
-    // Taking multiplier into 32x2 variable
-    multiplier1 = AE_MOVDA32(inp1_multiplier);
-    multiplier2 = AE_MOVDA32(inp2_multiplier);
-    op_multiplier = AE_MOVDA32(out_multiplier);
 
     activation_min = AE_MOVDA32(out_activation_min);
     activation_max = AE_MOVDA32(out_activation_max);
@@ -303,18 +298,18 @@ WORD32 xa_nn_elm_add_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
             shifted_v4 = AE_SLAA32S(shifted_v4, left_shift);
 
 
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v1, shifted_v1, multiplier1, inp1_left_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v2, shifted_v2, multiplier1, inp1_left_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v3, shifted_v3, multiplier2, inp2_left_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v4, shifted_v4, multiplier2, inp2_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v1, shifted_v1, inp1_multiplier, inp1_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v2, shifted_v2, inp1_multiplier, inp1_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v3, shifted_v3, inp2_multiplier, inp2_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v4, shifted_v4, inp2_multiplier, inp2_left_shift)
 
             // Raw Sum
             raw_sum12 = AE_ADD32S(scaled_v1, scaled_v3);
             raw_sum34 = AE_ADD32S(scaled_v2, scaled_v4);
 
             // Raw Output
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(raw_out12, raw_sum12, op_multiplier, out_left_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(raw_out34, raw_sum34, op_multiplier, out_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out12, raw_sum12, out_multiplier, out_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out34, raw_sum34, out_multiplier, out_left_shift)
             raw_out12 = AE_ADD32S(raw_out12, op_zero_bias);
             raw_out34 = AE_ADD32S(raw_out34, op_zero_bias);
 
@@ -361,18 +356,18 @@ WORD32 xa_nn_elm_add_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
             shifted_v4 = AE_SLAA32S(shifted_v4, left_shift);
 
 
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v1, shifted_v1, multiplier1, inp1_left_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v2, shifted_v2, multiplier1, inp1_left_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v3, shifted_v3, multiplier2, inp2_left_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v4, shifted_v4, multiplier2, inp2_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v1, shifted_v1, inp1_multiplier, inp1_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v2, shifted_v2, inp1_multiplier, inp1_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v3, shifted_v3, inp2_multiplier, inp2_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v4, shifted_v4, inp2_multiplier, inp2_left_shift)
 
             // Raw Sum
             raw_sum12 = AE_ADD32S(scaled_v1, scaled_v3);
             raw_sum34 = AE_ADD32S(scaled_v2, scaled_v4);
 
             // Raw Output
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(raw_out12, raw_sum12, op_multiplier, out_left_shift)
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(raw_out34, raw_sum34, op_multiplier, out_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out12, raw_sum12, out_multiplier, out_left_shift)
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out34, raw_sum34, out_multiplier, out_left_shift)
             raw_out12 = AE_ADD32S(raw_out12, op_zero_bias);
             raw_out34 = AE_ADD32S(raw_out34, op_zero_bias);
 
@@ -413,14 +408,14 @@ WORD32 xa_nn_elm_add_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
         shifted_v1 = AE_SLAA32S(shifted_v1, left_shift);
         shifted_v3 = AE_SLAA32S(shifted_v3, left_shift);
 
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v1, shifted_v1, multiplier1, inp1_left_shift)
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_v3, shifted_v3, multiplier2, inp2_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v1, shifted_v1, inp1_multiplier, inp1_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v3, shifted_v3, inp2_multiplier, inp2_left_shift)
 
         // Raw Sum
         raw_sum12 = AE_ADD32S(scaled_v1, scaled_v3);
 
         // Raw Output
-        MultiplyByQuantizedMultiplierSmallerThanOneExp(raw_out12, raw_sum12, op_multiplier, out_left_shift)
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out12, raw_sum12, out_multiplier, out_left_shift)
         raw_out12 = AE_ADD32S(raw_out12, op_zero_bias);
 
         // clamped_out
@@ -545,15 +540,15 @@ WORD32 xa_nn_elm_add_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
             shifted_b4_5 = AE_SLAA32S(shifted_b4_5, left_shift);
             shifted_b6_7 = AE_SLAA32S(shifted_b6_7, left_shift);
 
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a0_1, shifted_a0_1, ma, inp1_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a2_3, shifted_a2_3, ma, inp1_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a4_5, shifted_a4_5, ma, inp1_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a6_7, shifted_a6_7, ma, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a0_1, shifted_a0_1, ma, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a2_3, shifted_a2_3, ma, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a4_5, shifted_a4_5, ma, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a6_7, shifted_a6_7, ma, inp1_left_shift);
             
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b0_1, shifted_b0_1, mb, inp2_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b2_3, shifted_b2_3, mb, inp2_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b4_5, shifted_b4_5, mb, inp2_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b6_7, shifted_b6_7, mb, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b0_1, shifted_b0_1, mb, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b2_3, shifted_b2_3, mb, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b4_5, shifted_b4_5, mb, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b6_7, shifted_b6_7, mb, inp2_left_shift);
             
             // Raw sum
             raw_sum0_1 = AE_ADD32S(scaled_a0_1, scaled_b0_1);
@@ -562,10 +557,10 @@ WORD32 xa_nn_elm_add_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
             raw_sum6_7 = AE_ADD32S(scaled_a6_7, scaled_b6_7);
             
             // Raw Output
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out0_1, raw_sum0_1, mc, out_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out2_3, raw_sum2_3, mc, out_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out4_5, raw_sum4_5, mc, out_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out6_7, raw_sum6_7, mc, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out0_1, raw_sum0_1, mc, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out2_3, raw_sum2_3, mc, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out4_5, raw_sum4_5, mc, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out6_7, raw_sum6_7, mc, out_left_shift);
             
             out0_1 = AE_ADD32S(out0_1, zc);
             out2_3 = AE_ADD32S(out2_3, zc);
@@ -676,16 +671,11 @@ WORD32 xa_nn_elm_add_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
     //ae_int8x8 a0_7, b0_7;
     const ae_int32x2 activation_min = AE_MOVDA32(out_activation_min);
     const ae_int32x2 activation_max = AE_MOVDA32(out_activation_max);
-    const ae_int32x2 ZERO = AE_ZERO32();
 
     const ae_int16x4  za = -inp1_zero_bias;
     const ae_int16x4  zb = -inp2_zero_bias;
     const ae_int32x2 zc = AE_MOVDA32( out_zero_bias);
     
-    const ae_int32x2 ma = AE_MOVDA32(inp1_multiplier);
-    const ae_int32x2 mb = AE_MOVDA32(inp2_multiplier);
-    const ae_int32x2 mc = AE_MOVDA32( out_multiplier);  // Multiplier into 32x2 variable
-
     xtbool io_pointers_aligned =    ((uintptr_t)p_a%8 == 0) &&
                                     ((uintptr_t)p_b%8 == 0) &&
                                     ((uintptr_t)p_c%8 == 0);
@@ -741,16 +731,16 @@ WORD32 xa_nn_elm_add_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
             shifted_b4_5 = AE_SLAA32S(shifted_b4_5, left_shift);
             shifted_b6_7 = AE_SLAA32S(shifted_b6_7, left_shift);
 
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a0_1, shifted_a0_1, ma, inp1_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a2_3, shifted_a2_3, ma, inp1_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a4_5, shifted_a4_5, ma, inp1_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a6_7, shifted_a6_7, ma, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a0_1, shifted_a0_1, inp1_multiplier, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a2_3, shifted_a2_3, inp1_multiplier, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a4_5, shifted_a4_5, inp1_multiplier, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a6_7, shifted_a6_7, inp1_multiplier, inp1_left_shift);
 
 
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b0_1, shifted_b0_1, mb, inp2_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b2_3, shifted_b2_3, mb, inp2_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b4_5, shifted_b4_5, mb, inp2_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b6_7, shifted_b6_7, mb, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b0_1, shifted_b0_1, inp2_multiplier, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b2_3, shifted_b2_3, inp2_multiplier, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b4_5, shifted_b4_5, inp2_multiplier, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b6_7, shifted_b6_7, inp2_multiplier, inp2_left_shift);
 
             // Raw Sum
             raw_sum0_1 = AE_ADD32S(scaled_a0_1, scaled_b0_1);
@@ -759,10 +749,10 @@ WORD32 xa_nn_elm_add_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
             raw_sum6_7 = AE_ADD32S(scaled_a6_7, scaled_b6_7);
 
             // Raw Output
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out0_1, raw_sum0_1, mc, out_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out2_3, raw_sum2_3, mc, out_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out4_5, raw_sum4_5, mc, out_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out6_7, raw_sum6_7, mc, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out0_1, raw_sum0_1, out_multiplier, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out2_3, raw_sum2_3, out_multiplier, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out4_5, raw_sum4_5, out_multiplier, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out6_7, raw_sum6_7, out_multiplier, out_left_shift);
 
             out0_1 = AE_ADD32S(out0_1, zc);
             out2_3 = AE_ADD32S(out2_3, zc);
@@ -818,15 +808,15 @@ WORD32 xa_nn_elm_add_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
             shifted_b4_5 = AE_SLAA32S(shifted_b4_5, left_shift);
             shifted_b6_7 = AE_SLAA32S(shifted_b6_7, left_shift);
 
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a0_1, shifted_a0_1, ma, inp1_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a2_3, shifted_a2_3, ma, inp1_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a4_5, shifted_a4_5, ma, inp1_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_a6_7, shifted_a6_7, ma, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a0_1, shifted_a0_1, inp1_multiplier, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a2_3, shifted_a2_3, inp1_multiplier, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a4_5, shifted_a4_5, inp1_multiplier, inp1_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_a6_7, shifted_a6_7, inp1_multiplier, inp1_left_shift);
             
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b0_1, shifted_b0_1, mb, inp2_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b2_3, shifted_b2_3, mb, inp2_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b4_5, shifted_b4_5, mb, inp2_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(scaled_b6_7, shifted_b6_7, mb, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b0_1, shifted_b0_1, inp2_multiplier, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b2_3, shifted_b2_3, inp2_multiplier, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b4_5, shifted_b4_5, inp2_multiplier, inp2_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b6_7, shifted_b6_7, inp2_multiplier, inp2_left_shift);
             
             // Raw sum
             raw_sum0_1 = AE_ADD32S(scaled_a0_1, scaled_b0_1);
@@ -835,10 +825,10 @@ WORD32 xa_nn_elm_add_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
             raw_sum6_7 = AE_ADD32S(scaled_a6_7, scaled_b6_7);
             
             // Raw Output
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out0_1, raw_sum0_1, mc, out_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out2_3, raw_sum2_3, mc, out_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out4_5, raw_sum4_5, mc, out_left_shift);
-            MultiplyByQuantizedMultiplierSmallerThanOneExp(out6_7, raw_sum6_7, mc, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out0_1, raw_sum0_1, out_multiplier, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out2_3, raw_sum2_3, out_multiplier, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out4_5, raw_sum4_5, out_multiplier, out_left_shift);
+            MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(out6_7, raw_sum6_7, out_multiplier, out_left_shift);
             
             out0_1 = AE_ADD32S(out0_1, zc);
             out2_3 = AE_ADD32S(out2_3, zc);
@@ -863,26 +853,20 @@ WORD32 xa_nn_elm_add_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
 
     for(i=0; i<num_scalar_ops; i++) {
         ae_int32 a, b;
-        ae_int32x2 res, res_ab, multiplier_ab;
+        ae_int32x2 res;
 
         a = (ae_int32)(p_a[i] + inp1_zero_bias);            // add input biases
         b = (ae_int32)(p_b[i] + inp2_zero_bias);
 
-        res_ab = AE_MOVDA32X2(a, b);
-        res_ab = AE_SLAA32S(res_ab, left_shift);            // shift both inputs by common left_shift
+        a = AE_SLAA32S(a, left_shift);
+        b = AE_SLAA32S(b, left_shift);
 
-        multiplier_ab = AE_MOVDA32X2(inp1_multiplier, inp2_multiplier);
-        res_ab = AE_MULFP32X2RAS(res_ab, multiplier_ab);    // multiply inputs with respective multipliers
-
-        a = AE_MOVAD32_H(res_ab);   b = AE_MOVAD32_L(res_ab);
-
-        a = AE_ROUND32X2F64SSYM(AE_SLAA64S(AE_MOVINT64_FROMINT32X2(AE_SEL32_HH((ae_int32x2)a, ZERO)), inp1_left_shift), AE_SLAA64S(AE_MOVINT64_FROMINT32X2(AE_SEL32_LL((ae_int32x2)a, ZERO)),inp1_left_shift ));
-        b = AE_ROUND32X2F64SSYM(AE_SLAA64S(AE_MOVINT64_FROMINT32X2(AE_SEL32_HH((ae_int32x2)b, ZERO)), inp2_left_shift), AE_SLAA64S(AE_MOVINT64_FROMINT32X2(AE_SEL32_LL((ae_int32x2)b, ZERO)), inp2_left_shift));
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(a, a, inp1_multiplier, inp1_left_shift);
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(b, b, inp2_multiplier, inp2_left_shift);
 
         res = AE_ADD32S(a, b);                              // add inputs to one 32-bit res
 
-        res = AE_MULFP32X2RAS(res, out_multiplier);         // multiply output multiplier
-        res = AE_ROUND32X2F64SSYM(AE_SLAA64S(AE_MOVINT64_FROMINT32X2(AE_SEL32_HH((ae_int32x2)res, ZERO)), out_left_shift), AE_SLAA64S(AE_MOVINT64_FROMINT32X2(AE_SEL32_LL((ae_int32x2)res, ZERO)), out_left_shift));
+        MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(res, res, out_multiplier, out_left_shift);
 
         res = AE_ADD32S(res, out_zero_bias);                // add out zero bias
 

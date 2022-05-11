@@ -23,6 +23,7 @@
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_err_chk.h"
 #include "xa_nnlib_kernels_api.h"
+#include "xa_nnlib_common_macros.h"
 
 #define ALIGNMENT   8   /* 8 bytes alignment */
 
@@ -83,27 +84,6 @@
 }
 
 #endif
-
-#define MultiplyByQuantizedMultiplierGreaterThanOne(y, x, multiplier, lsh) {\
-    y = AE_SLAA32(x, lsh);\
-    y = AE_MULFP32X2RAS(y, multiplier);\
-}
-
-#define MultiplyByQuantizedMultiplierSmallerThanOneExp(prod, val, multiplier, lsh) {\
-    ae_int64 temp64_h, temp64_l;\
-    prod = AE_MULFP32X2RAS(val, multiplier);\
-    temp64_h = AE_MOVINT64_FROMINT32X2(AE_SEL32_HH(prod, ZERO));\
-    temp64_l = AE_MOVINT64_FROMINT32X2(AE_SEL32_LL(prod, ZERO));\
-    temp64_h = AE_SLAA64S(temp64_h, lsh);\
-    temp64_l = AE_SLAA64S(temp64_l, lsh);\
-    prod = AE_ROUND32X2F64SSYM(temp64_h, temp64_l);\
-}
-
-#define MultiplyByQuantizedMultiplier(y, x, multiplier, lsh, rsh) {\
-    y = AE_SLAA32(x, lsh); \
-    y = AE_MULFP32X2RAS(y, AE_MOVDA32(multiplier)); \
-    y = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(y), rsh), AE_SRAA64(AE_CVT64F32_L(y), rsh)); \
-}
 
 #define ROUNDING_HALF_SUM(s, a){\
     ae_int64 max32;\
@@ -294,8 +274,15 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
     ae_valign align_out = AE_ZALIGN64();
 #endif
 
+#if TFLITE_SINGLE_ROUNDING
+    int left_shift  = input_left_shift;
+    int right_shift = input_left_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
     int left_shift  = input_left_shift<0?0: input_left_shift;
     int right_shift = input_left_shift>0?0:-input_left_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
     if(vec_length > 3)
     {
@@ -339,7 +326,7 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
 
         d32 = AE_LT32(x32, zero);
 
-        MultiplyByQuantizedMultiplier(y32, x32, mul, left_shift, right_shift)
+        MPY_BY_QUANT_MULT_X2_OUT32(y32, x32, mul, left_shift, right_shift)
 
         // Computing Absolute value
         x32 = AE_ABS32(y32);
@@ -361,11 +348,11 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         d32 = AE_EQ32(z32, CONST_256);
         AE_MOVT32X2(z32, CONST_255, d32);
 
-        // if(inp_centered <= -radius) output = 0
-        AE_MOVT32X2(z32, AE_ZERO32(), b32);
-
         // if(inp_centered >= radius) output = 255
         AE_MOVF32X2(z32, CONST_255, c32);
+
+        // if(inp_centered <= -radius) output = 0
+        AE_MOVT32X2(z32, AE_ZERO32(), b32);
 
         inp = AE_MOVAD32_H(z32);
         *p_o++ = (UWORD8)inp;
@@ -397,8 +384,8 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         d32 = AE_LT32(x32, zero);
         d10 = AE_LT32(x10, zero);
 
-        MultiplyByQuantizedMultiplier(y32, x32, mul, left_shift, right_shift)
-        MultiplyByQuantizedMultiplier(y10, x10, mul, left_shift, right_shift)
+        MPY_BY_QUANT_MULT_X2_OUT32(y32, x32, mul, left_shift, right_shift)
+        MPY_BY_QUANT_MULT_X2_OUT32(y10, x10, mul, left_shift, right_shift)
 
         // Computing Absolute value
         x32 = AE_ABS32(y32);
@@ -427,13 +414,13 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         AE_MOVT32X2(z32, CONST_255, d32);
         AE_MOVT32X2(z10, CONST_255, d10);
 
-        // if(inp_centered <= -radius) output = 0
-        AE_MOVT32X2(z32, AE_ZERO32(), b32);
-        AE_MOVT32X2(z10, AE_ZERO32(), b10);
-
         // if(inp_centered >= radius) output = 255
         AE_MOVF32X2(z32, CONST_255, c32);
         AE_MOVF32X2(z10, CONST_255, c10);
+
+        // if(inp_centered <= -radius) output = 0
+        AE_MOVT32X2(z32, AE_ZERO32(), b32);
+        AE_MOVT32X2(z10, AE_ZERO32(), b10);
 
 #if XCHAL_HAVE_HIFI1
         x = AE_CVT16X4(z32, z10);
@@ -465,7 +452,7 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
 
         d32 = AE_LT32(x32, zero);
 
-        MultiplyByQuantizedMultiplier(y32, x32, mul, left_shift, right_shift)
+        MPY_BY_QUANT_MULT_X2_OUT32(y32, x32, mul, left_shift, right_shift)
 
         // Computing Absolute value
         x32 = AE_ABS32(y32);
@@ -487,11 +474,11 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
         d32 = AE_EQ32(z32, CONST_256);
         AE_MOVT32X2(z32, CONST_255, d32);
 
-        // if(inp_centered <= -radius) output = 0
-        AE_MOVT32X2(z32, AE_ZERO32(), b32);
-
         // if(inp_centered >= radius) output = 255
         AE_MOVF32X2(z32, CONST_255, c32);
+
+        // if(inp_centered <= -radius) output = 0
+        AE_MOVT32X2(z32, AE_ZERO32(), b32);
 
         inp = AE_MOVAD32_H(z32);
         *p_o++ = (UWORD8)inp;
@@ -500,7 +487,9 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
     return 0;
 }
 
+#if !defined(USE_HIFI_ACT_TIE) || !defined(AE_TANH16X4) || !defined(AE_SIGMOID16X4)
 static const int Q31_minus_1 = 0x7fffffff;
+#endif
 
 #define SUB_128(inp){\
   ae_int64 temp;\
@@ -651,25 +640,35 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
   XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
   XA_NNLIB_ARG_CHK_COND(((input_left_shift < -31) || (input_left_shift > 31)), -1);
   XA_NNLIB_ARG_CHK_COND((input_multiplier < 0), -1);
-  XA_NNLIB_ARG_CHK_COND(((input_range_radius < 0) || (input_range_radius > 255)), -1);
+  XA_NNLIB_ARG_CHK_COND((input_range_radius < 0), -1);
 
-  int i;
-  int rem_length = (vec_length & 3);
-  ae_int32x2 x32, x10, m32, m10;
-  ae_int32x2 z, mul, zero;
+  /* Limit the input_range_radius value to int16, as we use ae_int16x4 data types for comparison */
+  input_range_radius = (input_range_radius>32767) ? 32767 : input_range_radius;
+
+#if defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4)
+  WUR_AE_SAR(4);
+#else
   ae_int32x2 mask_6fs = AE_MOVDA32(MASK);
   ae_int32x2 q_1_by_4 = AE_MOVDA32(ONE_QUATER_Q26);
   ae_int32x2 CT_1_BY_8 = AE_MOVDA32(CONSTANT_1_OVER_8);
   ae_int32x2 CT_1_BY_3 = AE_MOVDA32(CONSTANT_1_OVER_3);
   ae_int32x2 CT = AE_MOVDA32(CONSTANT_TERM);
   ae_int32x2 ONE = AE_MOVDA32(1);
-  ae_int16x4 CONST_255_16x4 = AE_MOVDA16(255);
   ae_int16x4 CONST_256_16x4 = AE_MOVDA16(256);
+  ae_int32x2 exp_x10, exp_x32;
+  xtbool4 f3210;
+  ae_int32x2 m32, m10;
+#endif /* defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4) */
+
+  int i;
+  int rem_length = (vec_length & 3);
+  ae_int32x2 x32, x10;
+  ae_int32x2 z, mul, zero;
+  ae_int16x4 CONST_255_16x4 = AE_MOVDA16(255);
   ae_int32x2 radius, minus_radius;
   ae_int16x4 radius_16, minus_radius_16;
-  xtbool4 b3210, d3210, f3210;
+  xtbool4 b3210, d3210;
   ae_int32x2 dequantized_x32, dequantized_x10;
-  ae_int32x2 exp_x10, exp_x32;
   ae_int16x4 m0, z_16x4; // m2, ;
   ae_int16x4 z10, zero_16x4;
 
@@ -700,8 +699,15 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
   zero = AE_ZERO32();
   zero_16x4 = AE_ZERO16();
 
-  int left_shift  = input_left_shift<0?0: input_left_shift;
-  int right_shift = input_left_shift>0?0:-input_left_shift;
+#if TFLITE_SINGLE_ROUNDING
+    int left_shift  = input_left_shift;
+    int right_shift = input_left_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+    int left_shift  = input_left_shift<0?0: input_left_shift;
+    int right_shift = input_left_shift>0?0:-input_left_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
   for(i=0; i<(vec_length >> 2); i++)
   {
@@ -719,16 +725,26 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
     // set flag if z < radius
     d3210 = AE_LT16(z10, radius_16);
 
-    //set flag if z < 0
-    f3210 = AE_LT16(z10, zero_16x4);
-
     x32 = AE_SEXT32X2D16_32(z10);
     x10 = AE_SEXT32X2D16_10(z10);
 
-    MultiplyByQuantizedMultiplier(dequantized_x32, x32, mul, left_shift, right_shift);
-    MultiplyByQuantizedMultiplier(dequantized_x10, x10, mul, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32(dequantized_x32, x32, mul, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32(dequantized_x10, x10, mul, left_shift, right_shift);
 
-    // Computing Absolute value
+#if defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4)
+    x32 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x32), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x32), 15));
+    x10 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x10), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x10), 15));
+
+    z10 = AE_SAT16X4(x32, x10);
+
+    z10 = AE_SIGMOID16X4(z10);
+
+    z10 = AE_SRAA16S(z10, 8);
+    z10 = AE_AND16(z10, AE_MOVDA16(0x00ff));
+#else
+    //set flag if z < 0
+    f3210 = AE_LT16(z10, zero_16x4);
+
     x32 = AE_ABS32(dequantized_x32);
     x10 = AE_ABS32(dequantized_x10);
     x32 = AE_NEG32(x32);
@@ -752,11 +768,14 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
     // if(inp_centered < 0) output = 1 - sigmoid(abs(dequantized_input))
     AE_MOVT16X4(z10, AE_SUB16S(CONST_256_16x4, z10), f3210);
 
-    // if(inp_centered <= -radius) output = 0
-    AE_MOVT16X4(z10, AE_ZERO16(), b3210);
+#endif /* defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4) */
 
+    // Computing Absolute value
     // if(inp_centered >= radius) output = 255
     AE_MOVF16X4(z10, CONST_255_16x4, d3210);
+
+    // if(inp_centered <= -radius) output = 0
+    AE_MOVT16X4(z10, AE_ZERO16(), b3210);
 
 #if XCHAL_HAVE_HIFI1
     m0 = AE_SAT8U(z10);
@@ -794,12 +813,22 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
     // set flag if z < radius
     d3210 = AE_LT16(z10, radius_16);
 
-    //set flag if z < 0
-    f3210 = AE_LT16(z10, zero_16x4);
-
     x10 = AE_SEXT32X2D16_10(z10);
 
-    MultiplyByQuantizedMultiplier(dequantized_x10, x10, mul, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32(dequantized_x10, x10, mul, left_shift, right_shift);
+
+#if defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4)
+    x10 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x10), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x10), 15));
+
+    z10 = AE_SAT16X4(x10, x10);
+
+    z10 = AE_SIGMOID16X4(z10);
+
+    z10 = AE_SRAA16S(z10, 8);
+    z10 = AE_AND16(z10, AE_MOVDA16(0x00ff));
+#else
+    //set flag if z < 0
+    f3210 = AE_LT16(z10, zero_16x4);
 
     // Computing Absolute value
     x10 = AE_ABS32(dequantized_x10);
@@ -820,12 +849,13 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
 
     // if(inp_centered < 0) output = 1 - sigmoid(abs(dequantized_input))
     AE_MOVT16X4(z10, AE_SUB16S(CONST_256_16x4, z10), f3210);
-
-    // if(inp_centered <= -radius) output = 0
-    AE_MOVT16X4(z10, AE_ZERO16(), b3210);
+#endif /* defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4) */
 
     // if(inp_centered >= radius) output = 255
     AE_MOVF16X4(z10, CONST_255_16x4, d3210);
+
+    // if(inp_centered <= -radius) output = 0
+    AE_MOVT16X4(z10, AE_ZERO16(), b3210);
 
 #if XCHAL_HAVE_HIFI1
     m0 = AE_SAT8U(z10);
@@ -1026,19 +1056,8 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
     return 0;
 }
 
-#define MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out, inp1, inp2, multiplier, left_shift, right_shift) \
-{\
-  inp1 = AE_SLAA32S(inp1, left_shift); \
-  inp1 = AE_MULFP32X2RAS(inp1, AE_NEG32(AE_MOVDA32(multiplier))); \
-  inp1 = AE_MULFP32X2RS(inp1, right_shift); \
-  inp2 = AE_SLAA32S(inp2, left_shift); \
-  inp2 = AE_MULFP32X2RAS(inp2, AE_NEG32(AE_MOVDA32(multiplier))); \
-  inp2 = AE_MULFP32X2RS(inp2, right_shift); \
-  out = AE_SAT16X4(inp1, inp2); \
-}
-
 #if XCHAL_HAVE_HIFI1
-#define MULTIPLYBYQUANTIZEDMULTIPLIER_X4(out, inp1, inp2, multiplier, left_shift, right_shift) \
+#define MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out, inp1, inp2, multiplier, left_shift, right_shift) \
 {\
   ae_int64 acc1 = AE_MUL32_HH(inp1, left_shift); \
   ae_int64 acc2 = AE_MUL32_LL(inp1, left_shift); \
@@ -1099,9 +1118,15 @@ WORD32 xa_nn_vec_relu_asym8u_asym8u( UWORD8 * __restrict__ p_out,
   ae_int16x4 act_max = AE_MOVDA16(quantized_activation_max);
   ae_int16x4 one = AE_MOVDA16(1);
   
-  int left_shift  = out_shift<0?0: out_shift;
-  int right_shift = out_shift>0?0:-out_shift;
-  right_shift = (0XFFFFFFFF << (31 - right_shift));
+#if TFLITE_SINGLE_ROUNDING
+    int left_shift  = out_shift;
+    int right_shift = out_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+    int left_shift  = out_shift<0?0: out_shift;
+    int right_shift = out_shift>0?0:-out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
   ALIGN_REGISTER_TYPE align_src;
   PRIME_8X4U(p_v, align_src);
@@ -1119,7 +1144,7 @@ WORD32 xa_nn_vec_relu_asym8u_asym8u( UWORD8 * __restrict__ p_out,
     // Multiply with out multiplier
     AE_MUL16X4(d_w0_0, d_w0_1, d_v0_0, one); 
     ae_int16x4 out0, out_minmax;
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift); 
+    MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift); 
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
     //Clamp the output in the quantized activation range
     LIMIT(out_minmax, out0, act_min, act_max)
@@ -1147,7 +1172,7 @@ WORD32 xa_nn_vec_relu_asym8u_asym8u( UWORD8 * __restrict__ p_out,
     // Multiply with out multiplier
     AE_MUL16X4(d_w0_0, d_w0_1, d_v0_0, one); 
     ae_int16x4 out0, out_minmax;
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift); 
+    MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift); 
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
     //Clamp the output in the quantized activation range
     LIMIT(out_minmax, out0, act_min, act_max)
@@ -1194,15 +1219,22 @@ WORD32 xa_nn_vec_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
   ae_int16x4 act_max = AE_MOVDA16(quantized_activation_max);
   ae_int16x4 one = AE_MOVDA16(1);
   
-  int left_shift  = out_shift<0?0: out_shift;
-  int right_shift = out_shift>0?0:-out_shift;
-  right_shift = (0XFFFFFFFF << (31 - right_shift));
+#if TFLITE_SINGLE_ROUNDING
+    int left_shift  = out_shift;
+    int right_shift = out_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+    int left_shift  = out_shift<0?0: out_shift;
+    int right_shift = out_shift>0?0:-out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
   ALIGN_REGISTER_TYPE align_src;
   PRIME_8X4F(p_v, align_src);
 #if XCHAL_HAVE_HIFI1
   ALIGN_REGISTER_TYPE align_dst = AE_ZALIGN64();
   left_shift = (1 << left_shift);
+  right_shift = (0XFFFFFFFF << (31 - right_shift));
 #else
   xtbool4 b0;
 #endif
@@ -1226,9 +1258,9 @@ WORD32 xa_nn_vec_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     AE_MUL16X4(d_w0_0, d_w0_1, d_v0_0, one); 
     ae_int16x4 out0, out_minmax;
 #if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift); 
-#else
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+#else 
+    MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
 #endif
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
     //Clamp the output in the quantized activation range
@@ -1261,9 +1293,9 @@ WORD32 xa_nn_vec_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     AE_MUL16X4(d_w0_0, d_w0_1, d_v0_0, one); 
     ae_int16x4 out0, out_minmax;
 #if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#else
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+#else 
+    MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
 #endif
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
     //Clamp the output in the quantized activation range
@@ -1320,13 +1352,24 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
   ae_int16x4 one = AE_MOVDA16(1);
   ae_int16x4 zero = AE_ZERO16();
   
-  int left_shift  = out_shift<0?0: out_shift;
-  int right_shift = out_shift>0?0:-out_shift;
-  right_shift = (0XFFFFFFFF << (31 - right_shift));
-  
-  int a_left_shift  = alpha_shift<0?0: alpha_shift;
-  int a_right_shift = alpha_shift>0?0:-alpha_shift;
-  a_right_shift = (0XFFFFFFFF << (31 - a_right_shift));
+#if TFLITE_SINGLE_ROUNDING
+    int left_shift  = out_shift;
+    int right_shift = out_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)right_shift;
+
+    int a_left_shift  = alpha_shift;
+    int a_right_shift = alpha_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)a_right_shift;
+
+#else /* #if TFLITE_SINGLE_ROUNDING */
+    int left_shift  = out_shift<0?0: out_shift;
+    int right_shift = out_shift>0?0:-out_shift;
+
+    int a_left_shift  = alpha_shift<0?0: alpha_shift;
+    int a_right_shift = alpha_shift>0?0:-alpha_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
   ALIGN_REGISTER_TYPE align_src, align_src1;
   PRIME_8X4F(p_v, align_src);
@@ -1335,6 +1378,8 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
   ALIGN_REGISTER_TYPE align_dst = AE_ZALIGN64();
   left_shift = (1 << left_shift);
   a_left_shift = (1 << a_left_shift);
+  right_shift = (0XFFFFFFFF << (31 - right_shift));
+  a_right_shift = (0XFFFFFFFF << (31 - a_right_shift));
 #else
   ae_int16x4 CONST_127_16x4 = AE_MOVDA16(127);
   ae_int16x4 CONST_MINUS_128_16x4 = AE_MOVDA16(-128);
@@ -1367,9 +1412,9 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
     ae_int16x4 out0;
 #if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#else
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+#else 
+    MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
 #endif
 
     // Add alpha zero bias and multiply with alpha multiplier for input values < 0
@@ -1382,9 +1427,9 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
     ae_int16x4 a_out0;
 #if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
-#else
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
+    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
+#else 
+    MPY_BY_QUANT_MULT_X2X2_OUT16(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
 #endif
 
     AE_MOVT16X4(out0, a_out0, sel0);
@@ -1433,9 +1478,9 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
     ae_int16x4 out0;
 #if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#else
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+#else 
+    MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
 #endif
 
     // Add alpha zero bias and multiply with alpha multiplier for input values < 0
@@ -1448,9 +1493,9 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
     ae_int16x4 a_out0;
 #if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X4(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
-#else
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
+    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
+#else 
+    MPY_BY_QUANT_MULT_X2X2_OUT16(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
 #endif
 
     AE_MOVT16X4(out0, a_out0, sel0);
@@ -1490,7 +1535,7 @@ WORD32 xa_nn_vec_leaky_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
-  XA_NNLIB_ARG_CHK_COND(((inp_zero_bias < -127) || (inp_zero_bias > 128)), -1);
+  XA_NNLIB_ARG_CHK_COND(((inp_zero_bias < -128) || (inp_zero_bias > 127)), -1);
   XA_NNLIB_ARG_CHK_COND(((out_shift < -31) || (out_shift > 31)), -1);
   XA_NNLIB_ARG_CHK_COND(((alpha_shift < -31) || (alpha_shift > 31)), -1);
   XA_NNLIB_ARG_CHK_COND((alpha_multiplier < 0), -1);
@@ -1502,17 +1547,28 @@ WORD32 xa_nn_vec_leaky_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
   WORD8 *p_o = p_out;
   WORD8 *p_v = (WORD8 *)p_vec;
 
-  ae_int16x4 inp_zb = AE_MOVDA16(-inp_zero_bias);
+  ae_int16x4 inp_zb = AE_MOVDA16(inp_zero_bias);
   ae_int16x4 one = AE_MOVDA16(1);
   ae_int16x4 zero = AE_ZERO16();
 
-  int left_shift  = out_shift<0?0: out_shift;
-  int right_shift = out_shift>0?0:-out_shift;
-  right_shift = (0XFFFFFFFF << (31 - right_shift));
+#if TFLITE_SINGLE_ROUNDING
+    int left_shift  = out_shift;
+    int right_shift = out_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)right_shift;
 
-  int a_left_shift  = alpha_shift<0?0: alpha_shift;
-  int a_right_shift = alpha_shift>0?0:-alpha_shift;
-  a_right_shift = (0XFFFFFFFF << (31 - a_right_shift));
+    int a_left_shift  = alpha_shift;
+    int a_right_shift = alpha_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)a_right_shift;
+
+#else /* #if TFLITE_SINGLE_ROUNDING */
+    int left_shift  = out_shift<0?0: out_shift;
+    int right_shift = out_shift>0?0:-out_shift;
+
+    int a_left_shift  = alpha_shift<0?0: alpha_shift;
+    int a_right_shift = alpha_shift>0?0:-alpha_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
 #if XCHAL_HAVE_HIFI1
   ae_valign align_src  = AE_LA64_PP((ae_int16x4 *)p_v);
@@ -1550,11 +1606,11 @@ WORD32 xa_nn_vec_leaky_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     d_alpha_w0_0 = d_w0_0; d_alpha_w0_1 = d_w0_1;
 
     ae_int16x4 out0;
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
 
     // Multiply with alpha multiplier for input values < 0
     ae_int16x4 a_out0;
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
+    MPY_BY_QUANT_MULT_X2X2_OUT16(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
 
     AE_MOVT16X4(out0, a_out0, sel0);
 
@@ -1600,11 +1656,11 @@ WORD32 xa_nn_vec_leaky_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     d_alpha_w0_0 = d_w0_0; d_alpha_w0_1 = d_w0_1;
 
     ae_int16x4 out0;
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
 
     // Multiply with alpha multiplier for input values < 0
     ae_int16x4 a_out0;
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
+    MPY_BY_QUANT_MULT_X2X2_OUT16(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
 
     AE_MOVT16X4(out0, a_out0, sel0);
 
@@ -1899,25 +1955,34 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
   XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
   XA_NNLIB_ARG_CHK_COND(((input_left_shift < -31) || (input_left_shift > 31)), -1);
   XA_NNLIB_ARG_CHK_COND((input_multiplier < 0), -1);
-  XA_NNLIB_ARG_CHK_COND(((input_range_radius < 0) || (input_range_radius > 255)), -1);
+  XA_NNLIB_ARG_CHK_COND((input_range_radius < 0), -1);
 
-  int i;
-  int rem_length = (vec_length & 3);
-  ae_int32x2 x32, x10, m32, m10;
-  ae_int32x2 z, mul, zero;
+  /* Limit the input_range_radius value to int16, as we use ae_int16x4 data types for comparison */
+  input_range_radius = (input_range_radius>32767) ? 32767 : input_range_radius;
+
+#if defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4)
+  WUR_AE_SAR(4);
+#else
   ae_int32x2 mask_6fs = AE_MOVDA32(MASK);
   ae_int32x2 q_1_by_4 = AE_MOVDA32(ONE_QUATER_Q26);
   ae_int32x2 CT_1_BY_8 = AE_MOVDA32(CONSTANT_1_OVER_8);
   ae_int32x2 CT_1_BY_3 = AE_MOVDA32(CONSTANT_1_OVER_3);
   ae_int32x2 CT = AE_MOVDA32(CONSTANT_TERM);
   ae_int32x2 ONE = AE_MOVDA32(1);
+  xtbool4 f3210;
+  ae_int32x2 exp_x32, exp_x10;
+  ae_int32x2 m32, m10;
+#endif /* defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4) */
+  int i;
+  int rem_length = (vec_length & 3);
+  ae_int32x2 x32, x10;
+  ae_int32x2 z, mul, zero;
   ae_int16x4 CONST_127_16x4 = AE_MOVDA16(127);
   ae_int16x4 CONST_MINUS_128_16x4 = AE_MOVDA16(-128);
   ae_int32x2 radius, minus_radius;
   ae_int16x4 radius_16, minus_radius_16;
-  xtbool4 b3210, d3210, f3210;
+  xtbool4 b3210, d3210;
   ae_int32x2  dequantized_x32, dequantized_x10;
-  ae_int32x2 exp_x32, exp_x10;
   ae_int16x4 m0, z_16x4;
   ae_int16x4 z10, zero_16x4;
 
@@ -1945,8 +2010,15 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
   zero = AE_ZERO32();
   zero_16x4 = AE_ZERO16();
 
-  int left_shift  = input_left_shift<0?0: input_left_shift;
-  int right_shift = input_left_shift>0?0:-input_left_shift;
+#if TFLITE_SINGLE_ROUNDING
+    int left_shift  = input_left_shift;
+    int right_shift = input_left_shift;
+    /* Single rounding macro doesn't need two shifts so this is not used */
+    (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+    int left_shift  = input_left_shift<0?0: input_left_shift;
+    int right_shift = input_left_shift>0?0:-input_left_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
   for(i=0; i<(vec_length >> 2); i++)
   {
@@ -1964,14 +2036,24 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
     // set flag if z < radius
     d3210 = AE_LT16(z10, radius_16);
 
-    //set flag if z < 0
-    f3210 = AE_LT16(z10, zero_16x4);
-
     x32 = AE_SEXT32X2D16_32(z10);
     x10 = AE_SEXT32X2D16_10(z10);
 
-    MultiplyByQuantizedMultiplier(dequantized_x32, x32, mul, left_shift, right_shift)
-    MultiplyByQuantizedMultiplier(dequantized_x10, x10, mul, left_shift, right_shift)
+    MPY_BY_QUANT_MULT_X2_OUT32(dequantized_x32, x32, mul, left_shift, right_shift)
+    MPY_BY_QUANT_MULT_X2_OUT32(dequantized_x10, x10, mul, left_shift, right_shift)
+
+#if defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4)
+    x32 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x32), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x32), 15));
+    x10 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x10), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x10), 15));
+
+    z10 = AE_SAT16X4(x32, x10);
+
+    z10 = AE_TANH16X4(z10);
+
+    z10 = AE_SRAI16(z10, 8);
+#else
+    //set flag if z < 0
+    f3210 = AE_LT16(z10, zero_16x4);
 
     // Computing Absolute value
     x32 = AE_ABS32(dequantized_x32);
@@ -1999,12 +2081,13 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
 
     // if(inp_centered < 0) output = - tanh(abs(dequantized_input))
     AE_MOVT16X4(z10, AE_NEG16S(z10), f3210);
-
-    // if(inp_centered <= -radius) output = -128
-    AE_MOVT16X4(z10, CONST_MINUS_128_16x4, b3210);
+#endif /* defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4) */
 
     // if(inp_centered >= radius) output = 127
     AE_MOVF16X4(z10, CONST_127_16x4, d3210);
+
+    // if(inp_centered <= -radius) output = -128
+    AE_MOVT16X4(z10, CONST_MINUS_128_16x4, b3210);
 
 #if XCHAL_HAVE_HIFI1
     m0 = AE_SAT8S(z10);
@@ -2039,12 +2122,21 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
     // set flag if z < radius
     d3210 = AE_LT16(z10, radius_16);
 
-    //set flag if z < 0
-    f3210 = AE_LT16(z10, zero_16x4);
-
     x10 = AE_SEXT32X2D16_10(z10);
 
-    MultiplyByQuantizedMultiplier(dequantized_x10, x10, mul, left_shift, right_shift)
+    MPY_BY_QUANT_MULT_X2_OUT32(dequantized_x10, x10, mul, left_shift, right_shift)
+
+#if defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4)
+    x10 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x10), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x10), 15));
+
+    z10 = AE_SAT16X4(x10, x10);
+
+    z10 = AE_TANH16X4(z10);
+
+    z10 = AE_SRAI16(z10, 8);
+#else
+    //set flag if z < 0
+    f3210 = AE_LT16(z10, zero_16x4);
 
     // Computing Absolute value
     x10 = AE_ABS32(dequantized_x10);
@@ -2068,12 +2160,12 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
 
     // if(inp_centered < 0) output = - tanh(abs(dequantized_input))
     AE_MOVT16X4(z10, AE_NEG16S(z10), f3210);
+#endif /* defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4) */
+    // if(inp_centered >= radius) output = 127
+    AE_MOVF16X4(z10, CONST_127_16x4, d3210);
 
     // if(inp_centered <= -radius) output = -128
     AE_MOVT16X4(z10, CONST_MINUS_128_16x4, b3210);
-
-    // if(inp_centered >= radius) output = 127
-    AE_MOVF16X4(z10, CONST_127_16x4, d3210);
 
 #if XCHAL_HAVE_HIFI1
     m0 = AE_SAT8S(z10);

@@ -35,6 +35,15 @@ ifeq ($(DISABLE_ARG_CHK), 1)
 CFLAGS += -DDISABLE_ARG_CHK
 endif
 
+ifneq ($(DISABLE_ACT_TIE), 1)
+CFLAGS += -DUSE_HIFI_ACT_TIE
+endif
+
+ifeq ($(SINGLE_ROUNDING), 1)
+CFLAGS += -DTFLITE_SINGLE_ROUNDING=1
+else
+CFLAGS += -DTFLITE_SINGLE_ROUNDING=0
+endif
 
 vpath %.c $(ROOTDIR)/algo/kernels/matXvec/hifi4
 vpath %.c $(ROOTDIR)/algo/kernels/activations/hifi4
@@ -69,7 +78,8 @@ MATXVECO2OBJS = \
     xa_nn_matmul_16x16.o \
     xa_nn_matmul_f32.o \
     xa_nn_matmul_asym8xasym8.o \
-    xa_nn_matmul_sym8sxasym8s.o 
+    xa_nn_matmul_sym8sxasym8s.o \
+    xa_nn_matmul_sym8sxsym16s.o
 
 ACTIVATIONSO2OBJS = \
   xa_nn_activations_32_32.o \
@@ -79,7 +89,8 @@ ACTIVATIONSO2OBJS = \
   xa_nn_activations_asym8_asym8.o\
   xa_nn_softmax_asym8_asym8.o \
   xa_nn_activations_8_8.o \
-  xa_nn_activations_16_16.o
+  xa_nn_activations_16_16.o \
+  xa_nn_activations_asym16_asym16.o
 
 
 NDSPO2OBJS = \
@@ -146,7 +157,11 @@ CONVO2OBJS = \
     xa_nn_conv2d_depthwise_sym8sxasym8s.o \
     xa_nn_conv2d_pointwise_sym8sxasym8s.o \
     xa_nn_conv2d_depthwise_f32.o \
-    xa_nn_conv2d_pointwise_f32.o
+    xa_nn_conv2d_pointwise_f32.o \
+    xa_nn_conv2d_std_sym8sxsym16s.o \
+    xa_nn_conv2d_pointwise_sym8sxsym16s.o \
+    xa_nn_matXvec_sym8sxsym16s_sym16s_circ.o \
+    xa_nn_transpose_conv_sym8sxsym16s.o
 
 FCO2OBJS = \
   xa_nn_fully_connected.o
@@ -216,8 +231,9 @@ BASICOBJS = \
     xa_nn_elm_sqrt_f32.o \
     xa_nn_memmove.o \
     xa_nn_broadcast_8_8.o \
-    xa_nn_memset_f32.o 
-
+    xa_nn_memset_f32.o \
+    xa_nn_elm_sub_broadcast_quant16.o \
+    xa_nn_elm_add_quant16.o
 
 NORMO2OBJS = \
   xa_nn_l2_norm_f32.o \
@@ -228,7 +244,9 @@ REORGO2OBJS = \
   xa_nn_space_to_depth_8.o \
   xa_nn_batch_to_space_nd_8.o \
   xa_nn_space_to_batch_nd_8.o \
-  xa_nn_pad_8.o
+  xa_nn_pad_8.o \
+  xa_nn_pad_16.o \
+  xa_nn_stride_slice_int16.o
 
 
 LIBO2OBJS = $(MATXVECO2OBJS) $(ACTIVATIONSO2OBJS) $(NDSPO2OBJS) $(CONVO2OBJS) $(FCO2OBJS) $(POOLO2OBJS) $(GRUO2OBJS) $(LSTMO2OBJS) $(CNNO2OBJS) $(BASICOBJS) $(NORMO2OBJS) $(REORGO2OBJS)

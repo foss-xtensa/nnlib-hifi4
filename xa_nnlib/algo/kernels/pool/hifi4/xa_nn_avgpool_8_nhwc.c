@@ -417,13 +417,20 @@ const WORD8* __restrict__ p_inp,
 
                 p_out1 = (WORD32 *)p_dst;
 
-                den_h = AE_MOVDA32(p_den_height[itr_oh]);
-                den_w = AE_MOVDA32(p_den_width[itr_ow]);
-                d_tmp = AE_MUL32U_LL(den_h, den_w);
+                if(kernel_height * kernel_width <= 1024)
+                {
+                    d_tmp32hw = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh] * p_den_width[itr_ow]]);
+                }
+                else
+                {
+                    den_h = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh]]);
+                    den_w = AE_MOVDA32(inv_256_tbl[p_den_width[itr_ow]]);
+                    d_tmp = AE_MUL32U_LL(den_h, den_w);
 
-                /* Max value of den_h or den_w is 0x80000000
-                   so 1 left shift is possible without overflow */
-                d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
+                    /* Max value of den_h or den_w is 0x80000000
+                       so 1 left shift is possible without overflow */
+                    d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
+                }
 
                 for(i=0; i<input_channels; i++)
                 {
@@ -748,14 +755,20 @@ const WORD8* __restrict__ p_inp,
 
                 p_out1 = (WORD32 *)p_dst;
 
-                den_h = AE_MOVDA32(p_den_height[itr_oh]);
-                den_w = AE_MOVDA32(p_den_width[itr_ow]);
-                d_tmp = AE_MUL32U_LL(den_h, den_w);
+                if(kernel_height * kernel_width <= 1024)
+                {
+                    d_tmp32hw = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh] * p_den_width[itr_ow]]);
+                }
+                else
+                {
+                    den_h = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh]]);
+                    den_w = AE_MOVDA32(inv_256_tbl[p_den_width[itr_ow]]);
+                    d_tmp = AE_MUL32U_LL(den_h, den_w);
 
-                /* Max value of den_h or den_w is 0x80000000
-                   so 1 left shift is possible without overflow */
-
-                d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
+                    /* Max value of den_h or den_w is 0x80000000
+                       so 1 left shift is possible without overflow */
+                    d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
+                }
 
                 for(i=0; i<input_channels; i++)
                 {

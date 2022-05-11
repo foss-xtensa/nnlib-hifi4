@@ -22,6 +22,7 @@
 #include "common_fpu.h"
 #include "xa_nnlib_common.h"
 #include "xa_nn_basic_state.h"
+#include "xa_nnlib_common_macros.h"
 
 WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
                                     const WORD16 * __restrict__ p_inp,
@@ -49,8 +50,14 @@ WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
   WORD16 *p_i = (WORD16 *)p_inp;
 
   int left_shift, right_shift;
+#if TFLITE_SINGLE_ROUNDING
+  left_shift = out_shift;
+  /* Single rounding doesn't need two shifts */
+  (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
   left_shift  = (out_shift < 0)?0:out_shift;
   right_shift = (out_shift > 0)?0:-out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
   ae_valign align_inp = AE_LA64_PP(p_inp);
 
@@ -79,8 +86,8 @@ WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
     inp10 = AE_SUB32S(inp10, inp_z_b);
 
     // unclamped result
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(unclamped_out32, inp32, out_mult, left_shift, right_shift)
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(unclamped_out10, inp10, out_mult, left_shift, right_shift)
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(unclamped_out32, inp32, out_mult, left_shift, right_shift)
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(unclamped_out10, inp10, out_mult, left_shift, right_shift)
     unclamped_out32 = AE_ADD32(unclamped_out32, out_zero_bias);
     unclamped_out10 = AE_ADD32(unclamped_out10, out_zero_bias);
 
@@ -113,7 +120,7 @@ WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
     inp_HL = AE_MOVDA32(inp);
     inp_HL = AE_SUB32S(inp_HL, inp_z_b);
 
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(unclamped_out_HL, inp_HL, out_mult, left_shift, right_shift)
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(unclamped_out_HL, inp_HL, out_mult, left_shift, right_shift)
     unclamped_out_HL = AE_ADD32(unclamped_out_HL, out_zero_bias);
     
     // clamped_out
@@ -151,8 +158,14 @@ WORD32 xa_nn_elm_requantize_asym16s_asym32s(WORD32 * __restrict__ p_out,
   WORD16 *p_i = (WORD16 *)p_inp;
 
   int left_shift, right_shift;
+#if TFLITE_SINGLE_ROUNDING
+  left_shift = out_shift;
+  /* Single rounding doesn't need two shifts */
+  (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
   left_shift  = (out_shift < 0)?0:out_shift;
   right_shift = (out_shift > 0)?0:-out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
   ae_valign align_inp = AE_LA64_PP(p_inp);
   ae_valign align_dst = AE_ZALIGN64();
@@ -182,8 +195,8 @@ WORD32 xa_nn_elm_requantize_asym16s_asym32s(WORD32 * __restrict__ p_out,
     d_inp32_0 = AE_SUB32S(d_inp32_0, d_inp_zero_bias);
     d_inp32_1 = AE_SUB32S(d_inp32_1, d_inp_zero_bias);
 
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_inp32_0, d_inp32_0, d_out_multiplier, left_shift, right_shift);
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_inp32_1, d_inp32_1, d_out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_inp32_0, d_inp32_0, d_out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_inp32_1, d_inp32_1, d_out_multiplier, left_shift, right_shift);
 
     d_out0 = AE_ADD32S(d_inp32_0, d_out_zero_bias);
     d_out1 = AE_ADD32S(d_inp32_1, d_out_zero_bias);
@@ -205,7 +218,7 @@ WORD32 xa_nn_elm_requantize_asym16s_asym32s(WORD32 * __restrict__ p_out,
 #endif
     d_inp32_0 = AE_SUB32S(d_inp32_0, d_inp_zero_bias);
 
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_inp32_0, d_inp32_0, d_out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_inp32_0, d_inp32_0, d_out_multiplier, left_shift, right_shift);
     d_out0 = AE_ADD32S(d_inp32_0, d_out_zero_bias);
     AE_S32_L_IP(d_out0, (ae_int32*)p_o, 4);
   }
@@ -243,8 +256,15 @@ WORD32 xa_nn_elm_requantize_asym8s_asym32s(WORD32 * __restrict__ p_out,
   ae_int32x2 *p_o = (ae_int32x2 *)p_out;
   WORD8 *p_i = (WORD8 *)p_inp;
 
-  int  left_shift = (out_shift<0) ? 0 : out_shift;
-  int right_shift = (out_shift>0) ? 0 : -out_shift;
+  int left_shift, right_shift;
+#if TFLITE_SINGLE_ROUNDING
+  left_shift = out_shift;
+  /* Single rounding doesn't need two shifts */
+  (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+  left_shift  = (out_shift < 0)?0:out_shift;
+  right_shift = (out_shift > 0)?0:-out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
 #if XCHAL_HAVE_HIFI1
   ae_valign align_inp;
@@ -296,10 +316,10 @@ WORD32 xa_nn_elm_requantize_asym8s_asym32s(WORD32 * __restrict__ p_out,
     AE_MUL16X4(d_inp32_2, d_inp32_3, d_inp1, ONE);
 #endif
 
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_inp32_0, d_inp32_0, d_out_multiplier, left_shift, right_shift);
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_inp32_1, d_inp32_1, d_out_multiplier, left_shift, right_shift);
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_inp32_2, d_inp32_2, d_out_multiplier, left_shift, right_shift);
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_inp32_3, d_inp32_3, d_out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_inp32_0, d_inp32_0, d_out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_inp32_1, d_inp32_1, d_out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_inp32_2, d_inp32_2, d_out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_inp32_3, d_inp32_3, d_out_multiplier, left_shift, right_shift);
 
     d_out0 = AE_ADD32S(d_inp32_0, d_out_zero_bias);
     d_out1 = AE_ADD32S(d_inp32_1, d_out_zero_bias);
@@ -329,7 +349,7 @@ WORD32 xa_nn_elm_requantize_asym8s_asym32s(WORD32 * __restrict__ p_out,
     AE_MUL16X4(d_inp32_0, d_inp32_0, d_inp0, ONE); 
 #endif
 
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_inp32_0, d_inp32_0, d_out_multiplier, left_shift, right_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_inp32_0, d_inp32_0, d_out_multiplier, left_shift, right_shift);
 
     d_out0 = AE_ADD32S(d_inp32_0, d_out_zero_bias);
     AE_S32_L_IP(d_out0, (ae_int32*)p_o, 4);

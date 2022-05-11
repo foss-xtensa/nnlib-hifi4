@@ -119,6 +119,88 @@ WORD32 xa_nn_memmove_8_8( void *pdst,
   return 0;
 }
 #else
+#include <string.h>
+void *xa_nn_memcpy(void * dest1,const void *src1, size_t n1)
+{
+  char *dest = (char *)dest1;
+  char *src = (char *)src1;
+  int n = (int)n1;
+  ae_int16x4 * __restrict d_align_addr, * __restrict s_align_addr;
+  int i;
+  void *orig_dest = dest;
+
+  if (n < 32) {
+    return memcpy(dest, src, n);
+  }
+
+  if ( !(((int) dest) %8) && !(((int) src) %8)) { // 64-bit aligned
+    s_align_addr = (ae_int16x4 *) src;
+    d_align_addr = (ae_int16x4 *) dest;
+    for (i=0; i<n>>3; i++) {
+        d_align_addr[i] = s_align_addr[i];
+    }
+
+    for (i=(n&~7); i<n; i++) {
+      dest[i] = src[i];
+    }
+    return orig_dest;
+  }
+
+  if ( (((int) dest) %2) || (((int) src) %2)) { // 16-bit aligned
+    if ( (((int) dest) %2) && (((int) src) %2)) { // 16-bit aligned
+      *dest++ = *src++;
+       n--;
+    } else {
+      #if 0
+      return memcpy(dest, src, n);
+      #else
+        ae_int24x2 *pOut = (ae_int24x2 *)dest;
+        ae_int24x2 *pInp = (ae_int24x2 *)src;
+        ae_valign alignIn, alignOut;
+        alignIn = AE_LA64_PP(pInp);
+        alignOut = AE_ZALIGN64();
+        ae_int24x2 d0;
+        int Nby6 =  AE_MOVAD32_H(AE_MOVINT32X2_FROMINT64(AE_MUL32_LL(n, 0x2AAAAAAB)));
+        int remainder_start = 6*Nby6;
+
+        for(i=0;i<Nby6;i++)
+        {
+          AE_LA24X2_IP(d0, alignIn, pInp);
+          AE_SA24X2_IP(d0, alignOut, pOut);
+        }
+        AE_SA64POS_FP(alignOut, pOut);
+        /* remainder loop */
+        for(i=remainder_start; i < n; i++){
+          dest[i] = src[i];
+      }
+      return orig_dest;
+      #endif
+    }
+  }
+  int n2 = n/2;
+  ae_valign d_align = AE_ZALIGN64();
+  d_align_addr = (ae_int16x4 *) dest;
+  s_align_addr = (ae_int16x4 *) src;
+  ae_valign s_align = AE_LA64_PP(s_align_addr);
+  ae_int16x4 t,t2;
+  for (i=0; i<n2>>3; i++) {
+      AE_LA16X4_IP(t, s_align, s_align_addr);
+      AE_LA16X4_IP(t2, s_align, s_align_addr);
+      AE_SA16X4_IP(t, d_align, d_align_addr);
+      AE_SA16X4_IP(t2, d_align, d_align_addr);
+  }
+  AE_SA64POS_FP(d_align, d_align_addr);
+  ae_int16 *s_src = (ae_int16 *) src;
+  ae_int16 *s_dest = (ae_int16 *) dest;
+  for (i=8*i; i<n2; i++) {
+    s_dest[i] = s_src[i];
+  }
+  if (n % 2) {
+    dest[n-1] = src[n-1];
+  }
+  return orig_dest;
+} /* xa_nn_memcpy */
+
 WORD32 xa_nn_memmove_8_8( void *pdst,
     const void *psrc,
     WORD32 n)

@@ -136,8 +136,8 @@ void show_usage(void)
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-num_elements : number of elements; Default=32\n");
     printf("\t-relu_threshold : threshold for relu in Q16.15; Default=32768 (=1 in Q16.15)\n");
-    printf("\t-inp_precision : 16, 32 or -1(single prec float); Default=32\n");
-    printf("\t-out_precision : 16, 32, or -1(single prec float); Default=32\n");
+    printf("\t-inp_precision : 16, 32, -1(single prec float) or -7 (asym16s); Default=32\n");
+    printf("\t-out_precision : 16, 32, -1(single prec float) or -7 (asym16s); Default=32\n");
     printf("\t-integer_bits : number of integer bits in input for tanh_16_16 (0-6); Default=3\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-activation: sigmoid, tanh, relu, relu_std, relu1, relu6, leaky_relu, prelu, hard_swish, activation_min_max or softmax; Default=sigmoid\n");
@@ -332,6 +332,18 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define LEAKY_RELU_ASYM16S_FN(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_vec_leaky_relu_asym16s_asym16s ( \
+                (WORD16 *)p_out->p, (WORD16 *)p_inp->p,\
+                cfg.inp_zero_bias,\
+                cfg.alpha_multiplier, cfg.alpha_shift, \
+                cfg.out_multiplier, cfg.out_shift, \
+                cfg.out_zero_bias, cfg.num_elements);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define HSWISH_ASYM8S_FN(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
@@ -511,6 +523,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else RELU_ASYM8S_FN(-4, -4, relu)\
     else PRELU_ASYM8S_FN(-4, -4, prelu)\
     else LEAKY_RELU_ASYM8S_FN(-4, -4, leaky_relu)\
+    else LEAKY_RELU_ASYM16S_FN(-7, -7, leaky_relu)\
     else HSWISH_ASYM8S_FN(-4, -4, hard_swish)\
     else SOFTMAX_ASYM8(softmax, -3, -3) \
     else SOFTMAX_ASYM8s(softmax, -4, -4) \
@@ -593,6 +606,10 @@ int xa_nn_main_process(int argc, char *argv[])
   else if((cfg.inp_precision == -4) && (cfg.out_precision == -4))
   {
     sprintf(profiler_name, "%s_asym8sxasym8s", cfg.activation);
+  }
+  else if((cfg.inp_precision == -7) && (cfg.out_precision == -7))
+  {
+    sprintf(profiler_name, "%s_asym16sxasym16s", cfg.activation);
   }
   else if((cfg.inp_precision == -4) && (cfg.out_precision == 16))
   {

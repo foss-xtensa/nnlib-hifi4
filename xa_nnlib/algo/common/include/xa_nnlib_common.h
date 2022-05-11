@@ -28,5 +28,5 @@
 #include "xa_nnlib_err_chk.h"
 #include "xa_nnlib_hifi_isa_compat.h"
 #include "common.h"
-
+#include "xa_nnlib_common_internal.h"
 #endif /* __XA_NNLIB_LEGACY_COMPAT_H__ */
