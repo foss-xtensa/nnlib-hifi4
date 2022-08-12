@@ -524,4 +524,3 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s_circ(
 
   return 0;
 }
-

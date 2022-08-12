@@ -123,6 +123,52 @@ void print_buf3d(void *buf, int height, int width, int depth, int bitwidth)
     }
 }
 
+static inline void error_code_parse(int error_code)
+{
+  switch (error_code) 
+  {
+    case XA_NNLIB_FATAL_MEM_ALLOC:
+      printf("\nError in memory allocation, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_ALGO:
+      printf("\nInvalid Algorithm name, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_PRECISION:
+      printf("\nInvalid Preceision, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_BIAS_SHIFT:
+      printf("\nInvalid bias shift, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_ACC_SHIFT:
+      printf("\nInvalid acc shift, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_STRIDE:
+      printf("\nInvalid stride, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_PADDING:
+      printf("\nInvalid padding, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_BIAS_SHAPE:
+      printf("\nInvalid bias shape, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_PARAM_COMBINATION:
+      printf("\nInvalid param combination, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_KERNEL_SHAPE:
+      printf("\nInvalid kernel shape, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_OUTPUT_SHAPE:
+      printf("\nInvalid output shape, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_INPUT_SHAPE:
+      printf("\nInvalid input shape, Exiting\n");
+      break;
+    default:
+      printf("\nUnknown error condition, Exiting\n");
+      break;
+  }
+}
+
 char pb_input_file_path[XA_MAX_CMD_LINE_LENGTH] = "";
 char pb_output_file_path[XA_MAX_CMD_LINE_LENGTH] = "";
 char pb_ref_file_path[XA_MAX_CMD_LINE_LENGTH] = "";
@@ -589,13 +635,13 @@ int xa_nn_main_process(int argc, char *argv[])
     persistent_size = xa_nnlib_cnn_get_persistent_fast(&cnn_cfg);  
     if(persistent_size < 0)
     {
-      fprintf(stderr, "Invalid Config, failed with error code: 0x%x \n", persistent_size);
+      error_code_parse(persistent_size);
       return persistent_size;
     }
     scratch_size = xa_nnlib_cnn_get_scratch_fast(&cnn_cfg);   
     if(scratch_size < 0)
     {
-      fprintf(stderr, "Invalid Config, failed with error code: 0x%x \n", scratch_size);
+      error_code_parse(scratch_size);
       return scratch_size;
     }
 
@@ -620,7 +666,7 @@ int xa_nn_main_process(int argc, char *argv[])
 
     if(XA_NNLIB_NO_ERROR != err)
     {
-      fprintf(stderr, "Invalid Config, failed with error code: 0x%x \n", err);
+      error_code_parse(err);
       return err;
     }
   }
@@ -671,7 +717,7 @@ int xa_nn_main_process(int argc, char *argv[])
 
       if(XA_NNLIB_NO_ERROR != err)
       {
-        fprintf(stderr, "Runtime Error, failed with error code: 0x%x \n", err);
+        error_code_parse(err);
         return err;
       }
 

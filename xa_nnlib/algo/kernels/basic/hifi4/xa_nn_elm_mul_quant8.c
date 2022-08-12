@@ -22,6 +22,7 @@
 #include "xa_nnlib_common.h"
 #include "xa_nn_basic_state.h"
 #include "xa_nnlib_common_macros.h"
+#include "xa_nnlib_quant_macros.h"
 
 #if XCHAL_HAVE_HIFI1
 WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
@@ -64,8 +65,15 @@ WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
     ae_int32x2 temp;
     ae_f16x4 temp16X4, zero_bias1, zero_bias2;
     ae_f32x2 op_zero_bias, activation_min, activation_max;
+#if TFLITE_SINGLE_ROUNDING
+    int left_shift = out_shift;
+    int right_shift = out_shift;
+    /* Single rounding doesn't need two shifts */
+    (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
     int left_shift = out_shift < 0 ? 0 : out_shift;
     int right_shift = out_shift > 0 ? 0 : -out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
     // Taking input zero_bias into 16X4 variable
     temp = AE_MOVDA32X2(inp1_zero_bias, inp1_zero_bias);
@@ -107,8 +115,8 @@ WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
         // unclamped result
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(unclamped_out32, prod32, out_multiplier, left_shift, right_shift)
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(unclamped_out10, prod10, out_multiplier, left_shift, right_shift)
-        unclamped_out32 = AE_ADD32(unclamped_out32, op_zero_bias);
-        unclamped_out10 = AE_ADD32(unclamped_out10, op_zero_bias);
+        unclamped_out32 = AE_ADD32S(unclamped_out32, op_zero_bias);
+        unclamped_out10 = AE_ADD32S(unclamped_out10, op_zero_bias);
 
         // clamped_out
         CLAMP_VAL(clamped_out32, unclamped_out32, activation_min, activation_max)
@@ -147,7 +155,7 @@ WORD32 xa_nn_elm_mul_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
 
         // unclamped result
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(unclamped_out32, prod32, out_multiplier, left_shift, right_shift)
-        unclamped_out32 = AE_ADD32(unclamped_out32, op_zero_bias);
+        unclamped_out32 = AE_ADD32S(unclamped_out32, op_zero_bias);
 
         // clamped_out
         CLAMP_VAL(clamped_out32, unclamped_out32, activation_min, activation_max)
@@ -383,10 +391,16 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
     ae_int16x4 zb = AE_MOVDA16(inp2_zero_bias);     // zero_bias is already signed, no need for ZE
     ae_int32x2 zc = AE_MOVDA32( out_zero_bias);
 
-    ae_f32x2 multiplier = AE_MOVDA32(out_multiplier);
 
+#if TFLITE_SINGLE_ROUNDING
+    int l_shift = out_shift;
+    int r_shift = out_shift;
+    /* Single rounding doesn't need two shifts */
+    (void)r_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
     int l_shift = out_shift >= 0 ?   out_shift : 0;
     int r_shift = out_shift <  0 ?  -out_shift : 0;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
 
     ae_int32x2 activation_max = AE_MOVDA32(out_activation_max);
     ae_int32x2 activation_min = AE_MOVDA32(out_activation_min);
@@ -413,20 +427,12 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
 
         AE_MUL16X4(res0_1, res2_3, a0_3, b0_3);                     // a & b are 9-bit vals in 16-bit containers.
         AE_MUL16X4(res4_5, res6_7, a4_7, b4_7);                     // res, therefore is 18-bit val in 32-bit container.
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res0_1, res0_1, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res2_3, res2_3, out_multiplier, l_shift, r_shift);
 
-        res0_1 = AE_SLAA32S(res0_1, l_shift);
-        res2_3 = AE_SLAA32S(res2_3, l_shift);
-        res0_1 = AE_MULFP32X2RAS(res0_1, multiplier);
-        res2_3 = AE_MULFP32X2RAS(res2_3, multiplier);
-        res0_1 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(res0_1), r_shift), AE_SRAA64(AE_CVT64F32_L(res0_1), r_shift));
-        res2_3 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(res2_3), r_shift), AE_SRAA64(AE_CVT64F32_L(res2_3), r_shift));
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res4_5, res4_5, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res6_7, res6_7, out_multiplier, l_shift, r_shift);
 
-        res4_5 = AE_SLAA32S(res4_5, l_shift);
-        res6_7 = AE_SLAA32S(res6_7, l_shift);
-        res4_5 = AE_MULFP32X2RAS(res4_5, multiplier);
-        res6_7 = AE_MULFP32X2RAS(res6_7, multiplier);
-        res4_5 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(res4_5), r_shift), AE_SRAA64(AE_CVT64F32_L(res4_5), r_shift));
-        res6_7 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(res6_7), r_shift), AE_SRAA64(AE_CVT64F32_L(res6_7), r_shift));
 
         /* add output zero bias */
         res0_1 = AE_ADD32S(res0_1, zc);     res2_3 = AE_ADD32S(res2_3, zc);
@@ -458,9 +464,7 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
 
         ae_int32x2 res = tmp;
 
-        res = AE_SLAA32S(res, l_shift);
-        res = AE_MULFP32X2RAS(res, multiplier);
-        res = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(res), r_shift), AE_SRAA64(AE_CVT64F32_L(res), r_shift));
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res, res, out_multiplier, l_shift, r_shift);
 
         res = AE_ADD32S(res, zc);
 
@@ -642,4 +646,504 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
 }
 
 #endif
+
+static void internal_elm_mul_broadcast_2D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+                            WORD32  out_zero_bias,
+                            WORD32  out_shift,
+                            WORD32  out_multiplier,
+                            WORD32  out_activation_min,
+                            WORD32  out_activation_max,
+                    const    WORD8 * __restrict__ p_inp1,
+                            WORD32  inp1_zero_bias,
+                    const    WORD8 * __restrict__ p_inp2,
+                            WORD32  inp2_zero_bias,
+                            WORD32  out_lc,
+                            WORD32  in_lc)
+
+{
+  int i, j;
+  WORD8 * __restrict__ p_a; 
+  WORD8 * __restrict__ p_b; 
+  WORD8 *__restrict__ p_c;
+
+#if TFLITE_SINGLE_ROUNDING
+  int l_shift = out_shift;
+  int r_shift = out_shift;
+  /* Single rounding doesn't need two shifts */
+  (void)r_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+  int l_shift = out_shift >= 0 ?   out_shift : 0;
+  int r_shift = out_shift <  0 ?  -out_shift : 0;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
+
+  const ae_int16x4 za = AE_MOVDA16(-inp1_zero_bias);
+  const ae_int16x4 zb = AE_MOVDA16(-inp2_zero_bias);
+
+  // intermediate results and scratch registers
+  ae_int16x4 a0_3, a4_7, b0_3, b4_7;
+
+  ae_int32x2 raw_mul0_1, raw_mul2_3, raw_mul4_5, raw_mul6_7;
+  ae_int32x2 out_mul0_1, out_mul2_3, out_mul4_5, out_mul6_7;
+
+  int num_simd8_ops;
+  int num_scalar_ops;
+
+  if(out_lc == 1)
+  {
+    num_simd8_ops = in_lc >> 3;
+    num_scalar_ops = in_lc & 7;
+  }
+  else
+  {
+    num_simd8_ops = (in_lc >> 4) << 1;
+    num_scalar_ops = in_lc & 15;
+  }
+
+  for(i = 0; i < out_lc; i++)
+  {
+    p_a = (WORD8 *)&p_inp1[i * in_lc];
+    p_b = (WORD8 *)p_inp2;
+    p_c = (WORD8 *)&p_out[i * in_lc];
+
+    xtbool io_pointers_aligned = ((uintptr_t)p_a%4 == 0) && ((uintptr_t)p_b%4==0) && ((uintptr_t)p_c%4==0);
+
+    if (io_pointers_aligned)
+    {
+      for(j = 0; j < num_simd8_ops; j++)
+      {
+        AE_L8X4F_IP(a0_3, p_a, 4);
+        AE_L8X4F_IP(a4_7, p_a, 4);
+        AE_L8X4F_IP(b0_3, p_b, 4);
+        AE_L8X4F_IP(b4_7, p_b, 4);
+        a0_3 = AE_SRAI16(a0_3, 8);
+        a4_7 = AE_SRAI16(a4_7, 8);
+        b0_3 = AE_SRAI16(b0_3, 8);
+        b4_7 = AE_SRAI16(b4_7, 8);
+        // Add input zero bias
+        a0_3 = AE_SUB16S(a0_3, za);
+        a4_7 = AE_SUB16S(a4_7, za);
+        b0_3 = AE_SUB16S(b0_3, zb);
+        b4_7 = AE_SUB16S(b4_7, zb);
+        // LSH (and promote to 32-bit)
+        AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
+        AE_MUL16X4(raw_mul4_5, raw_mul6_7, a4_7, b4_7);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+
+        out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+        out_mul2_3 = AE_ADD32S(out_mul2_3, AE_MOVDA32(out_zero_bias));
+        out_mul4_5 = AE_ADD32S(out_mul4_5, AE_MOVDA32(out_zero_bias));
+        out_mul6_7 = AE_ADD32S(out_mul6_7, AE_MOVDA32(out_zero_bias));
+
+        CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+        CLAMP_VAL(out_mul2_3, out_mul2_3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+        CLAMP_VAL(out_mul4_5, out_mul4_5, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+        CLAMP_VAL(out_mul6_7, out_mul6_7, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+
+        STORE_8X4_FROM_32X4(p_c, out_mul0_1, out_mul2_3);
+        STORE_8X4_FROM_32X4(p_c, out_mul4_5, out_mul6_7);
+
+     }
+   }
+   else
+   {
+     ALIGN_REGISTER_TYPE va_a, va_b;
+     PRIME_8X4F(p_a, va_a);
+     PRIME_8X4F(p_b, va_b);
+     
+     for(j = 0; j < num_simd8_ops; j++)
+     {
+       AE_LA8X4F_IP(a0_3, va_a, p_a);
+       AE_LA8X4F_IP(a4_7, va_a, p_a);
+       AE_LA8X4F_IP(b0_3, va_b, p_b);
+       AE_LA8X4F_IP(b4_7, va_b, p_b);
+
+       a0_3 = AE_SRAI16(a0_3, 8);
+       a4_7 = AE_SRAI16(a4_7, 8);
+       b0_3 = AE_SRAI16(b0_3, 8);
+       b4_7 = AE_SRAI16(b4_7, 8);
+       // Add input zero bias
+       a0_3 = AE_SUB16S(a0_3, za);
+       a4_7 = AE_SUB16S(a4_7, za);
+       b0_3 = AE_SUB16S(b0_3, zb);
+       b4_7 = AE_SUB16S(b4_7, zb);
+
+       AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
+       AE_MUL16X4(raw_mul4_5, raw_mul6_7, a4_7, b4_7);
+
+       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+
+       out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+       out_mul2_3 = AE_ADD32S(out_mul2_3, AE_MOVDA32(out_zero_bias));
+       out_mul4_5 = AE_ADD32S(out_mul4_5, AE_MOVDA32(out_zero_bias));
+       out_mul6_7 = AE_ADD32S(out_mul6_7, AE_MOVDA32(out_zero_bias));
+
+       CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+       CLAMP_VAL(out_mul2_3, out_mul2_3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+       CLAMP_VAL(out_mul4_5, out_mul4_5, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+       CLAMP_VAL(out_mul6_7, out_mul6_7, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+
+       STORE_8X4_FROM_32X4(p_c, out_mul0_1, out_mul2_3);
+       STORE_8X4_FROM_32X4(p_c, out_mul4_5, out_mul6_7);
+    }
+   }
+  }
+
+  if(num_scalar_ops!=0){
+    for(i = 0; i < out_lc; i++)
+    {
+      p_a = (WORD8 *)&p_inp1[i * in_lc + (num_simd8_ops << 3)];
+      p_c = (WORD8 *)&p_out[i * in_lc + (num_simd8_ops << 3)];
+      p_b = (WORD8 *)&p_inp2[num_simd8_ops << 3];
+      for(j = 0; j< num_scalar_ops; j++)
+      {
+        b0_3 = AE_MOVDA16(p_b[j]);
+        a0_3 = AE_MOVDA16(p_a[j]);
+        a0_3 = AE_SUB16S(a0_3, za);
+        b0_3 = AE_SUB16S(b0_3, zb);
+        AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+        out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+        CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+        *(WORD8 *)p_c = (WORD8)AE_MOVAD32_H(out_mul0_1);
+        p_c++;
+     }
+   }
+  }
+}
+
+static void internal_elm_mul_broadcast_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+                            WORD32  out_zero_bias,
+                            WORD32  out_shift,
+                            WORD32  out_multiplier,
+                            WORD32  out_activation_min,
+                            WORD32  out_activation_max,
+                    const    WORD8 * __restrict__ p_inp1,
+                            WORD32  inp1_zero_bias,
+                    const    WORD8 * __restrict__ p_inp2,
+                            WORD32  inp2_zero_bias,
+                            WORD32  num_elm)
+
+{
+#if TFLITE_SINGLE_ROUNDING
+  int l_shift = out_shift;
+  int r_shift = out_shift;
+  /* Single rounding doesn't need two shifts */
+  (void)r_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+  int l_shift = out_shift >= 0 ?   out_shift : 0;
+  int r_shift = out_shift <  0 ?  -out_shift : 0;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
+
+  int i;
+  WORD8 * __restrict__ p_a = (WORD8 *)p_inp1;
+  WORD8 * __restrict__ p_b = (WORD8 *)p_inp2;
+  WORD8 *__restrict__ p_c =          p_out;
+
+  ae_int16x4 a0_7, b;
+
+  ae_int16x4  za = AE_MOVDA16(-inp1_zero_bias);
+  ae_int16x4  zb = AE_MOVDA16(-inp2_zero_bias);
+
+  ae_int16x4 a0_3, b0;
+
+  ae_int32x2 raw_mul0_1, raw_mul2_3;
+  ae_int32x2 out_mul0_1, out_mul2_3;
+
+  const int num_simd4_ops = num_elm >> 2;
+  const int num_scalar_ops = num_elm & 3;
+  
+  b = AE_MOVDA16(p_b[0]);
+  b0 = AE_SUB16(b, zb);
+
+  xtbool io_pointers_aligned = ((uintptr_t)p_inp1%4 == 0) && ((uintptr_t)p_inp2%4==0) && ((uintptr_t)p_out%4==0);
+
+  if(io_pointers_aligned)
+  {
+
+    for(i=0; i<num_simd4_ops; i++)
+    {
+      AE_L8X4F_IP(a0_7, p_a, 4);
+      // Add input zero bias
+      a0_7 = AE_SRAI16(a0_7, 8);
+      a0_3 = AE_SUB16(a0_7, za);
+
+      // LSH (and promote to 32-bit)
+      AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0);
+
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+      out_mul2_3 = AE_ADD32S(out_mul2_3, AE_MOVDA32(out_zero_bias));
+      CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+      CLAMP_VAL(out_mul2_3, out_mul2_3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+
+      STORE_8X4_FROM_32X4(p_c, out_mul0_1, out_mul2_3);
+    }
+  }
+  else
+  {
+    ALIGN_REGISTER_TYPE va_a;
+    PRIME_8X4F(p_a, va_a);
+
+    for(i=0; i<num_simd4_ops; i++)
+    {
+      AE_LA8X4F_IP(a0_7, va_a, p_a);
+      // Add input zero bias
+      a0_7 = AE_SRAI16(a0_7, 8);
+      a0_3 = AE_SUB16(a0_7, za);
+
+      // LSH (and promote to 32-bit)
+      AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+      out_mul2_3 = AE_ADD32S(out_mul2_3, AE_MOVDA32(out_zero_bias));
+      CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+      CLAMP_VAL(out_mul2_3, out_mul2_3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+
+      STORE_8X4_FROM_32X4(p_c, out_mul0_1, out_mul2_3);
+    }
+  }
+  for(i=0; i<num_scalar_ops; i++)
+  {
+    a0_7 = AE_MOVDA16(p_a[i]);
+    a0_3 = AE_SUB16(a0_7, za);
+    AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+    CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+    *p_c = (WORD8)AE_MOVAD32_L(out_mul0_1);
+    p_c++;
+  }
+}
+
+WORD32 xa_nn_elm_mul_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+                      const WORD32 *const p_out_shape,
+                            WORD32  out_zero_bias,
+                            WORD32  out_shift,
+                            WORD32  out_multiplier,
+                            WORD32  out_activation_min,
+                            WORD32  out_activation_max,
+                      const WORD8 * __restrict__ p_inp1,
+                      const WORD32 *const p_inp1_shape,
+                            WORD32  inp1_zero_bias,
+                      const WORD8 * __restrict__ p_inp2,
+                      const WORD32 *const p_inp2_shape,
+                            WORD32  inp2_zero_bias)
+{
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp1, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp2, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_out_shape, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp1_shape, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp2_shape, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp1, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp2, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_out_shape, sizeof(WORD32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp1_shape, sizeof(WORD32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp2_shape, sizeof(WORD32), -1);
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND(((out_zero_bias < -128) || (out_zero_bias > 127)), -1);
+  XA_NNLIB_ARG_CHK_COND(((out_shift < -31) || (out_shift > 31)), -1);
+  XA_NNLIB_ARG_CHK_COND(((inp1_zero_bias < -127) || (inp1_zero_bias > 128)), -1);
+  XA_NNLIB_ARG_CHK_COND(((inp2_zero_bias < -127) || (inp2_zero_bias > 128)), -1);
+  XA_NNLIB_ARG_CHK_COND(((out_activation_min < -128) || (out_activation_min > 127)), -1);
+  XA_NNLIB_ARG_CHK_COND(((out_activation_max < -128) || (out_activation_max > 127)), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < out_activation_min), -1);
+
+  /* Check shapes */
+  int i;
+  for(i = 0; i < 4; i++)
+  {
+    if((p_inp1_shape[i] != p_inp2_shape[i] && p_inp1_shape[i] != 1 && p_inp2_shape[i] != 1) ||
+       (p_out_shape[i] != (p_inp1_shape[i] > p_inp2_shape[i] ? p_inp1_shape[i] : p_inp2_shape[i])))
+    {
+      return -1;
+    }
+  }
+
+  WORD32 inp1_strides[4], inp2_strides[4];
+  inp1_strides[3] = 1;
+  inp2_strides[3] = 1;
+  for(i = 2; i >= 0; i--)
+  {
+    // inp1_strides[i] = inp1_strides[i + 1] * p_inp1_shape[i + 1];
+    // inp2_strides[i] = inp2_strides[i + 1] * p_inp2_shape[i + 1];
+    ae_int32x2 d_str, d_shape;
+    d_str = AE_MOVDA32X2(inp1_strides[i + 1], inp2_strides[i + 1]);
+    d_shape = AE_MOVDA32X2(p_inp1_shape[i + 1], p_inp2_shape[i + 1]);
+    d_str = AE_MULP32X2(d_str, d_shape);
+    inp1_strides[i] = AE_MOVAD32_H(d_str);
+    inp2_strides[i] = AE_MOVAD32_L(d_str);
+  }
+
+  int need_broadcast = 0;
+  for(i = 0; i < 4; i++)
+  {
+    if(p_inp1_shape[i] != p_inp2_shape[i])
+    {
+      if(p_inp1_shape[i] == 1)
+        inp1_strides[i] = 0;
+      else
+        inp2_strides[i] = 0;
+
+      need_broadcast = 1;
+    }
+  }
+  int itr0, itr1, itr2;
+
+  WORD8 *p_out_tmp = p_out;
+  const WORD8 *__restrict__ p_inp1_tmp = p_inp1;
+  const WORD8 *__restrict__ p_inp2_tmp = p_inp2;
+  if(need_broadcast == 0)
+  {
+    internal_elm_mul_broadcast_2D_asym8sxasym8s_asym8s(
+                p_out,
+                out_zero_bias,
+                out_shift,
+                out_multiplier,
+                out_activation_min,
+                out_activation_max,
+                p_inp1,
+                inp1_zero_bias,
+                p_inp2,
+                inp2_zero_bias,
+                1,
+                p_out_shape[0] * inp1_strides[0]);
+  }
+  else if(inp1_strides[3] == inp2_strides[3])
+  {
+    WORD32 in_lc, out_lc;
+    WORD32 inp1_zb;
+    WORD32 inp2_zb;
+
+    inp1_zb = inp1_zero_bias;
+    inp2_zb = inp2_zero_bias;
+
+    in_lc = p_out_shape[2] * p_out_shape[3];
+    out_lc = 1;
+    if(inp1_strides[2] == 0)
+    {
+      inp2_zb = inp1_zero_bias;
+      inp1_zb = inp2_zero_bias;
+      const WORD8 *tmp;
+      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
+
+      int tmp_strides[2];
+      tmp_strides[0] = inp1_strides[0];
+      tmp_strides[1] = inp1_strides[1];
+
+      inp1_strides[0] = inp2_strides[0];
+      inp1_strides[1] = inp2_strides[1];
+
+      inp2_strides[0] = tmp_strides[0];
+      inp2_strides[1] = tmp_strides[1];
+      in_lc = p_out_shape[3];
+      out_lc = p_out_shape[2];
+    }
+    else if(inp2_strides[2] == 0)
+    {
+      in_lc = p_out_shape[3];
+      out_lc = p_out_shape[2];
+    }
+
+    for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
+    {
+      const WORD8 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
+      const WORD8 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
+      for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
+      {
+        internal_elm_mul_broadcast_2D_asym8sxasym8s_asym8s(
+            p_out_tmp,
+            out_zero_bias,
+            out_shift,
+            out_multiplier,
+            out_activation_min,
+            out_activation_max,
+            p_inp1_tmp0,
+            inp1_zb,
+            p_inp2_tmp0,
+            inp2_zb,
+            out_lc,
+            in_lc);
+        p_out_tmp += in_lc * out_lc;
+        p_inp1_tmp0 += inp1_strides[1];
+        p_inp2_tmp0 += inp2_strides[1];
+      }
+      p_inp1_tmp += inp1_strides[0];
+      p_inp2_tmp += inp2_strides[0];
+    }
+  }
+  else
+  {
+    WORD32 inp1_zb;
+    WORD32 inp2_zb;
+    inp1_zb = inp1_zero_bias;
+    inp2_zb = inp2_zero_bias;
+    if(inp1_strides[3] == 0)
+    {
+      inp2_zb = inp1_zero_bias;
+      inp1_zb = inp2_zero_bias;
+      const WORD8 *tmp;
+      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
+
+      int tmp_strides[3];
+      tmp_strides[0] = inp1_strides[0];
+      tmp_strides[1] = inp1_strides[1];
+      tmp_strides[2] = inp1_strides[2];
+
+      inp1_strides[0] = inp2_strides[0];
+      inp1_strides[1] = inp2_strides[1];
+      inp1_strides[2] = inp2_strides[2];
+
+      inp2_strides[0] = tmp_strides[0];
+      inp2_strides[1] = tmp_strides[1];
+      inp2_strides[2] = tmp_strides[2];
+    }
+    for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
+    {
+      const WORD8 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
+      const WORD8 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
+      for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
+      {
+        const WORD8 *__restrict__ p_inp1_tmp1 = p_inp1_tmp0;
+        const WORD8 *__restrict__ p_inp2_tmp1 = p_inp2_tmp0;
+        for(itr2 = 0; itr2 < p_out_shape[2]; itr2++)
+        {
+          {
+            internal_elm_mul_broadcast_asym8sxasym8s_asym8s(
+                p_out_tmp,
+                out_zero_bias,
+                out_shift,
+                out_multiplier,
+                out_activation_min,
+                out_activation_max,
+                p_inp1_tmp1,
+                inp1_zb,
+                p_inp2_tmp1,
+                inp2_zb,
+                p_out_shape[3]);
+          }
+          p_out_tmp += p_out_shape[3];
+          p_inp1_tmp1 += inp1_strides[2];
+          p_inp2_tmp1 += inp2_strides[2];
+        }
+        p_inp1_tmp0 += inp1_strides[1];
+        p_inp2_tmp0 += inp2_strides[1];
+      }
+      p_inp1_tmp += inp1_strides[0];
+      p_inp2_tmp += inp2_strides[0];
+    }
+  }
+  return 0;
+}
 

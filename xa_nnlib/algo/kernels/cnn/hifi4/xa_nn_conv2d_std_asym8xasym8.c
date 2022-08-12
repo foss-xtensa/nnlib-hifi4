@@ -47,6 +47,7 @@ static WORD32 conv_x_left_pad(
 
 #if TFLITE_SINGLE_ROUNDING
   left_shift = out_shift;
+  right_shift = out_shift;
   /* Single rounding macro doesn't need two shifts so this is not used */
   (void)right_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
@@ -63,14 +64,11 @@ static WORD32 conv_x_left_pad(
       {
 #if XCHAL_HAVE_HIFI1
         ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
-        acc = AE_SLAA32(acc, left_shift);
-        acc = AE_MULFP32X2RAS_L(acc, AE_MOVDA32(out_multiplier));
-        ae_int64 acc64 = AE_SLAI64(AE_MOVINT64_FROMINT32X2(acc), 32);
-        acc64 = AE_SRAA64(acc64, right_shift);
-        acc = AE_ROUND32F64SSYM(acc64);
+
+        MPY_BY_QUANT_MULT_X2_OUT32(acc, acc, out_multiplier, left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
         acc = AE_MAX32(AE_MIN32(acc, AE_MOVDA32(255)), AE_ZERO32());
-        AE_S8_0_X(AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i*out_height_offset+j*out_width_offset+k*out_channels_offset));
+        AE_S8_0_X_HIFI1(AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i*out_height_offset+j*out_width_offset+k*out_channels_offset));
 #else
         ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
         MPY_BY_QUANT_MULT_X2_OUT32(acc, acc, out_multiplier, left_shift, right_shift);
@@ -107,6 +105,7 @@ static WORD32 conv_x_right_pad(
 
 #if TFLITE_SINGLE_ROUNDING
   left_shift = out_shift;
+  right_shift = out_shift;
   /* Single rounding macro doesn't need two shifts so this is not used */
   (void)right_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
@@ -123,14 +122,11 @@ static WORD32 conv_x_right_pad(
       {
 #if XCHAL_HAVE_HIFI1
         ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
-        acc = AE_SLAA32(acc, left_shift);
-        acc = AE_MULFP32X2RAS_L(acc, AE_MOVDA32(out_multiplier));
-        ae_int64 acc64 = AE_SLAI64(AE_MOVINT64_FROMINT32X2(acc), 32);
-        acc64 = AE_SRAA64(acc64, right_shift);
-        acc = AE_ROUND32F64SSYM(acc64);
+
+        MPY_BY_QUANT_MULT_X2_OUT32(acc, acc, out_multiplier, left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
         acc = AE_MAX32(AE_MIN32(acc, AE_MOVDA32(255)), AE_ZERO32());
-        AE_S8_0_X(AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i*out_height_offset+j*out_width_offset+k*out_channels_offset));
+        AE_S8_0_X_HIFI1(AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i*out_height_offset+j*out_width_offset+k*out_channels_offset));
 #else
         ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
         MPY_BY_QUANT_MULT_X2_OUT32(acc, acc, out_multiplier, left_shift, right_shift);

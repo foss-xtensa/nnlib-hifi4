@@ -49,10 +49,10 @@ static const int F2_ONE = 0x20000000;
     id1 = AE_MAX16(id1, id0);
 
 #define STORE_8X4_FROM_32X4(out_ptr, val12, val34){\
-    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(AE_SEL32_LH(val12, val12)), (WORD8 *)out_ptr, sizeof(WORD8));\
-    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(val12), (WORD8 *)out_ptr, sizeof(WORD8));\
-    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(AE_SEL32_LH(val34, val34)), (WORD8 *)out_ptr, sizeof(WORD8));\
-    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(val34), (WORD8 *)out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP_HIFI1(AE_MOVINT16X4_FROMINT32X2(AE_SEL32_LH(val12, val12)), (WORD8 *)out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP_HIFI1(AE_MOVINT16X4_FROMINT32X2(val12), (WORD8 *)out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP_HIFI1(AE_MOVINT16X4_FROMINT32X2(AE_SEL32_LH(val34, val34)), (WORD8 *)out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP_HIFI1(AE_MOVINT16X4_FROMINT32X2(val34), (WORD8 *)out_ptr, sizeof(WORD8));\
 }
 #else
 #define MAX_16X4(id1, id0) \

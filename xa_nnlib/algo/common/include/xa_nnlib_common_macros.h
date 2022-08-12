@@ -26,6 +26,7 @@
 #include <xtensa/config/core-isa.h>
 #include <stddef.h>
 #include "xa_nnlib_quant_macros.h"
+#include "xa_nnlib_common_internal.h"
 
 #ifndef NULL
 #define NULL (void *)0
@@ -61,7 +62,7 @@
     if(rem&0x1)\
     {\
       AE_L8S_IP(di0, (WORD8 *)pae_i, 1);\
-      AE_S8_0_IP(di0, (WORD8 *)pae_o, 1);\
+      AE_S8_0_IP_HIFI1(di0, (WORD8 *)pae_o, 1);\
     }\
   }\
   else\
@@ -80,7 +81,7 @@
   for(itr = 0; itr < (unsigned int)(N&3); itr++) \
   { \
     AE_L8S_IP(di0, pae_i, 1); \
-    AE_S8_0_IP(di0, pae_o, 1); \
+    AE_S8_0_IP_HIFI1(di0, pae_o, 1); \
   } \
   }\
 }
@@ -113,7 +114,7 @@
       if(rem&0x1)\
       {\
         AE_L8S_IP(di0_0, (WORD8 *)pae_in0, 1);\
-        AE_S8_0_IP(di0_0, (WORD8 *)pae_out0, 1);\
+        AE_S8_0_IP_HIFI1(di0_0, (WORD8 *)pae_out0, 1);\
       }\
     }\
     else\
@@ -127,7 +128,7 @@
     for(itr_c = 0; itr_c < (cols&3); itr_c++) \
     { \
       AE_L8S_IP(di0_0, pae_in0, 1); \
-      AE_S8_0_IP(di0_0, pae_out0, 1); \
+      AE_S8_0_IP_HIFI1(di0_0, pae_out0, 1); \
     } \
   } \
   } \
@@ -165,9 +166,9 @@ __Pragma("no_unroll") \
     for(itr_c = 0; itr_c < (cols&3); itr_c++) \
     { \
       AE_L8S_IP(di0_0, pae_in0, 1); \
-      AE_S8_0_IP(di0_0, pae_out0, 1); \
+      AE_S8_0_IP_HIFI1(di0_0, pae_out0, 1); \
       AE_L8S_IP(di1_0, pae_in1, 1); \
-      AE_S8_0_IP(di1_0, pae_out1, 1); \
+      AE_S8_0_IP_HIFI1(di1_0, pae_out1, 1); \
     } \
   } \
 }
@@ -194,7 +195,7 @@ __Pragma("no_unroll") \
     for(itr_c = 0; itr_c < (cols&3); itr_c++) \
     { \
       AE_L8S_IP(di0_0, pae_in0, 1); \
-      AE_S8_0_IP(di0_0, pae_out0, 1); \
+      AE_S8_0_IP_HIFI1(di0_0, pae_out0, 1); \
     } \
   } \
 }
@@ -233,9 +234,9 @@ __Pragma("no_unroll") \
     for(itr_c = 0; itr_c < (cols&3); itr_c++) \
     { \
       AE_L8S_IP(di0_0, pae_in0, 1); \
-      AE_S8_0_IP(di0_0, pae_out0, 1); \
+      AE_S8_0_IP_HIFI1(di0_0, pae_out0, 1); \
       AE_L8S_IP(di1_0, pae_in1, 1); \
-      AE_S8_0_IP(di1_0, pae_out1, 1); \
+      AE_S8_0_IP_HIFI1(di1_0, pae_out1, 1); \
     } \
   } \
 }
@@ -805,10 +806,19 @@ __Pragma("no_unroll") \
   AE_L8X4U_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, INCREMENT_IN_BYTES_FOR_WORD8X4); \
   _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
 
+#define LOAD_VEC_BATCH_ASYM8bs(idx_vec) \
+  AE_L8X4S_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
+
 #else
 #define LOAD_VEC_BATCH_ASYM8b(idx_vec) \
   AE_L8X4F_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, INCREMENT_IN_BYTES_FOR_WORD8X4); \
   _ae_int16x4_vec_batch_ ##idx_vec  = AE_MOVF16X4_FROMF64(AE_SRLI64(AE_MOVF64_FROMF16X4(_ae_int16x4_vec_batch_ ##idx_vec), 8)); \
+  _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
+
+#define LOAD_VEC_BATCH_ASYM8bs(idx_vec) \
+  AE_L8X4F_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  _ae_int16x4_vec_batch_ ##idx_vec  = AE_SRAI16(_ae_int16x4_vec_batch_ ##idx_vec, 8); \
   _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
 
 #endif
@@ -818,11 +828,21 @@ __Pragma("no_unroll") \
   AE_LA8X4U_IP(_ae_int16x4_vec_batch_ ##idx_vec, _align_WORD8_p_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec); \
   _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
 
+#define LOAD_VEC_BATCH_ASYM8bs_UNALIGNED(idx_vec) \
+  AE_LA8X4S_IP(_ae_int16x4_vec_batch_ ##idx_vec, _align_WORD8_p_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec); \
+  _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
+
 #else
 #define LOAD_VEC_BATCH_ASYM8b_UNALIGNED(idx_vec) \
   AE_LA8X4F_IP(_ae_int16x4_vec_batch_ ##idx_vec, _align_WORD8_p_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec); \
   _ae_int16x4_vec_batch_ ##idx_vec  = AE_MOVF16X4_FROMF64(AE_SRLI64(AE_MOVF64_FROMF16X4(_ae_int16x4_vec_batch_ ##idx_vec), 8)); \
   _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
+
+#define LOAD_VEC_BATCH_ASYM8bs_UNALIGNED(idx_vec) \
+  AE_LA8X4F_IP(_ae_int16x4_vec_batch_ ##idx_vec, _align_WORD8_p_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec); \
+  _ae_int16x4_vec_batch_ ##idx_vec  = AE_SRAI16(_ae_int16x4_vec_batch_ ##idx_vec, 8); \
+  _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
+
 
 #endif
 
@@ -831,11 +851,22 @@ __Pragma("no_unroll") \
   AE_L8U_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, INCREMENT_IN_BYTES_FOR_WORD8 ); \
   _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
 
+#define LOAD_VEC_BATCH_ASYM8bs_SINGLE_UNALIGNED(idx_vec) \
+  AE_L8S_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, INCREMENT_IN_BYTES_FOR_WORD8 ); \
+  _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
+
+
 #else
 #define LOAD_VEC_BATCH_ASYM8b_SINGLE_UNALIGNED(idx_vec) \
   _ae_int16x4_vec_batch_ ##idx_vec = AE_MOVDA16(((short)*(_WORD8_p_vec_batch_ ##idx_vec)) << 8); \
   _WORD8_p_vec_batch_ ##idx_vec++;\
   _ae_int16x4_vec_batch_ ##idx_vec  = AE_MOVF16X4_FROMF64(AE_SRLI64(AE_MOVF64_FROMF16X4(_ae_int16x4_vec_batch_ ##idx_vec), 8)); \
+  _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
+
+#define LOAD_VEC_BATCH_ASYM8bs_SINGLE_UNALIGNED(idx_vec) \
+  _ae_int16x4_vec_batch_ ##idx_vec = AE_MOVDA16(((short)*(_WORD8_p_vec_batch_ ##idx_vec)) << 8); \
+  _WORD8_p_vec_batch_ ##idx_vec++;\
+  _ae_int16x4_vec_batch_ ##idx_vec  = AE_SRAI16(_ae_int16x4_vec_batch_ ##idx_vec, 8); \
   _ae_int16x4_vec_batch_ ##idx_vec = AE_ADD16(_ae_int16x4_vec_batch_ ##idx_vec, AE_MOVDA16(vec1_zero_bias)); \
 
 #endif
@@ -975,10 +1006,19 @@ __Pragma("no_unroll") \
   AE_L8X4U_IP(_ae_int16x4_mat1_ ##idx, _WORD8_p_mat1_ ##idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
   _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
 
+#define LOAD_ROW_MAT1_ASYM8bs(idx) \
+  AE_L8X4S_IP(_ae_int16x4_mat1_ ##idx, _WORD8_p_mat1_ ##idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
+
 #else
 #define LOAD_ROW_MAT1_ASYM8b(idx) \
   AE_L8X4F_IP(_ae_int16x4_mat1_ ##idx, _WORD8_p_mat1_ ##idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
   _ae_int16x4_mat1_ ##idx = AE_MOVF16X4_FROMF64(AE_SRLI64(AE_MOVF64_FROMF16X4(_ae_int16x4_mat1_ ##idx), 8)); \
+  _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
+
+#define LOAD_ROW_MAT1_ASYM8bs(idx) \
+  AE_L8X4F_IP(_ae_int16x4_mat1_ ##idx, _WORD8_p_mat1_ ##idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  _ae_int16x4_mat1_ ##idx = AE_SRAI16(_ae_int16x4_mat1_ ##idx, 8); \
   _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
 
 #endif
@@ -988,10 +1028,19 @@ __Pragma("no_unroll") \
   AE_LA8X4U_IP(_ae_int16x4_mat1_ ## idx, _align_WORD8_p_mat1_ ## idx, _WORD8_p_mat1_ ## idx); \
   _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
 
+#define LOAD_ROW_MAT1_ASYM8bs_UNALIGNED(idx) \
+  AE_LA8X4S_IP(_ae_int16x4_mat1_ ## idx, _align_WORD8_p_mat1_ ## idx, _WORD8_p_mat1_ ## idx); \
+  _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
+
 #else //HIFI_LE
 #define LOAD_ROW_MAT1_ASYM8b_UNALIGNED(idx) \
   AE_LA8X4F_IP(_ae_int16x4_mat1_ ## idx, _align_WORD8_p_mat1_ ## idx, _WORD8_p_mat1_ ## idx); \
   _ae_int16x4_mat1_ ##idx = AE_MOVF16X4_FROMF64(AE_SRLI64(AE_MOVF64_FROMF16X4(_ae_int16x4_mat1_ ##idx), 8)); \
+  _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
+
+#define LOAD_ROW_MAT1_ASYM8bs_UNALIGNED(idx) \
+  AE_LA8X4F_IP(_ae_int16x4_mat1_ ## idx, _align_WORD8_p_mat1_ ## idx, _WORD8_p_mat1_ ## idx); \
+  _ae_int16x4_mat1_ ##idx = AE_SRAI16(_ae_int16x4_mat1_ ##idx, 8); \
   _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
 
 #endif //HIFI_LE
@@ -1001,11 +1050,21 @@ __Pragma("no_unroll") \
   AE_L8U_IP(_ae_int16x4_mat1_ ##idx , (_WORD8_p_mat1_ ## idx), INCREMENT_IN_BYTES_FOR_WORD8);\
   _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
 
+#define LOAD_ROW_MAT1_ASYM8bs_SINGLE_UNALIGNED(idx) \
+  AE_L8S_IP(_ae_int16x4_mat1_ ##idx , (_WORD8_p_mat1_ ## idx), INCREMENT_IN_BYTES_FOR_WORD8);\
+  _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
+
 #else //HIFI_LE
 #define LOAD_ROW_MAT1_ASYM8b_SINGLE_UNALIGNED(idx) \
   _ae_int16x4_mat1_ ## idx = AE_MOVDA16(((short)*(_WORD8_p_mat1_ ## idx)) << 8); \
   _WORD8_p_mat1_ ## idx++;\
   _ae_int16x4_mat1_ ##idx = AE_MOVF16X4_FROMF64(AE_SRLI64(AE_MOVF64_FROMF16X4(_ae_int16x4_mat1_ ##idx), 8)); \
+  _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
+
+#define LOAD_ROW_MAT1_ASYM8bs_SINGLE_UNALIGNED(idx) \
+  _ae_int16x4_mat1_ ## idx = AE_MOVDA16(((short)*(_WORD8_p_mat1_ ## idx)) << 8); \
+  _WORD8_p_mat1_ ## idx++;\
+  _ae_int16x4_mat1_ ##idx = AE_SRAI16(_ae_int16x4_mat1_ ##idx, 8); \
   _ae_int16x4_mat1_ ##idx = AE_ADD16(_ae_int16x4_mat1_ ##idx, AE_MOVDA16(mat1_zero_bias)); \
 
 #endif //HIFI_LE
@@ -1312,7 +1371,7 @@ __Pragma("no_unroll") \
 	AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)); \
   _ae_int16x4_tmp_var_ ## idx = AE_SAT16X4( _ae_f32x2_tmp_var_ ## idx, _ae_f32x2_tmp_var_ ## idx ); \
   _ae_int16x4_tmp_var_ ## idx = AE_SAT8S( _ae_int16x4_tmp_var_ ## idx ); \
-  AE_S8_0_I( _ae_int16x4_tmp_var_ ## idx, (WORD8 *)(p_out + m_itr + idx), 0 ); \
+  AE_S8_0_I_HIFI1( _ae_int16x4_tmp_var_ ## idx, (WORD8 *)(p_out + m_itr + idx), 0 ); \
 
 #else
 #define STORE_ACC_8bx8b_AT_OUT_8b(idx) \
@@ -1349,7 +1408,7 @@ __Pragma("no_unroll") \
 #if XCHAL_HAVE_HIFI1
 #define STORE_ACC_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx) \
   _ae_int32x2_acc_ ## idx = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ## idx, AE_MOVDA32(0)), AE_MOVDA32(255)); \
-  AE_S8_0_I(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ## idx), (WORD8 *)p_out+m_itr+idx, 0); \
+  AE_S8_0_I_HIFI1(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ## idx), (WORD8 *)p_out+m_itr+idx, 0); \
 
 #else
 #define STORE_ACC_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx) \
@@ -1446,7 +1505,7 @@ __Pragma("no_unroll") \
   AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)); \
   _ae_int16x4_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SAT16X4(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, _ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec); \
   _ae_int16x4_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SAT8S(_ae_int16x4_tmp_var_ ## idx_row ##_ ##idx_vec); \
-  AE_S8_0_X( _ae_int16x4_tmp_var_ ## idx_row ##_ ##idx_vec, (WORD8 *)p_out, ((vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride) ); \
+  AE_S8_0_X_HIFI1( _ae_int16x4_tmp_var_ ## idx_row ##_ ##idx_vec, (WORD8 *)p_out, ((vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride) ); \
 
 #else
 #define STORE_STRIDE_ACC_BATCH_8bx8b_AT_OUT_8b(idx_row,idx_vec) \
@@ -1528,7 +1587,7 @@ __Pragma("no_unroll") \
 #if XCHAL_HAVE_HIFI1
 #define STORE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row,idx_vec) \
   _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(0)), AE_MOVDA32(255)); \
-  AE_S8_0_I(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ## idx_row ##_ ##idx_vec), ((WORD8 *) (p_out[vec_itr + idx_vec] + m_itr + idx_row)) , 0); \
+  AE_S8_0_I_HIFI1(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ## idx_row ##_ ##idx_vec), ((WORD8 *) (p_out[vec_itr + idx_vec] + m_itr + idx_row)) , 0); \
 
 #else //HIFI_LE
 #define STORE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row,idx_vec) \
@@ -1540,12 +1599,21 @@ __Pragma("no_unroll") \
 #if XCHAL_HAVE_HIFI1
 #define STORE_STRIDE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row,idx_vec) \
   _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(0)), AE_MOVDA32(255)); \
-  AE_S8_0_I(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec), ((WORD8 *) (p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)), 0); \
+  AE_S8_0_I_HIFI1(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec), ((WORD8 *) (p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)), 0); \
+
+#define STORE_STRIDE_ACC_BATCH_ASYM8bsxASYM8bs_AT_OUT_ASYM8bs(idx_row,idx_vec) \
+  _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(-128)), AE_MOVDA32(127)); \
+  AE_S8_0_I_HIFI1(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec), ((WORD8 *) (p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)), 0); \
 
 #else //HIFI_LE
 #define STORE_STRIDE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row,idx_vec) \
   _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(0)), AE_MOVDA32(255)); \
   (*((UWORD8 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) = (UWORD8)AE_MOVAD32_L(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec); \
+
+#define STORE_STRIDE_ACC_BATCH_ASYM8bsxASYM8bs_AT_OUT_ASYM8bs(idx_row,idx_vec) \
+  _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(-128)), AE_MOVDA32(127)); \
+  (*((WORD8 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) = (WORD8)AE_MOVAD32_L(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec); \
+
 
 #endif //HIFI_LE
 /*---------------------------------------------------------*/
@@ -1553,19 +1621,6 @@ __Pragma("no_unroll") \
   for ASYM8b */
 
 /* This is written to match with Tensorflow */
-#if XCHAL_HAVE_HIFI1
-#define ADJUST_ACC_ASYM8b(idx) \
-  /* Multiply accumulator with 'out_multiplier', same as Tensorflow */ \
-  ae_int32x2 _ae_int32x2_acc_ ## idx = AE_SLAA32(AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ## idx), left_shift); \
-  _ae_int32x2_acc_ ## idx = AE_MULFP32X2RAS_L(_ae_int32x2_acc_ ## idx, AE_MOVDA32(out_multiplier)); \
-  /* Shift by out_shift, same as Tensorflow */ \
-  _ae_int64_acc_ ## idx = AE_SLAI64(AE_MOVINT64_FROMINT32X2(_ae_int32x2_acc_ ## idx), 32); \
-  _ae_int64_acc_ ## idx = AE_SRAA64(_ae_int64_acc_ ## idx, right_shift); \
-  _ae_int32x2_acc_ ## idx = AE_ROUND32F64SSYM(_ae_int64_acc_ ## idx); \
-  /* Add output zero point */ \
-  (_ae_int32x2_acc_ ## idx) = AE_ADD32S(_ae_int32x2_acc_ ## idx, AE_MOVDA32(out_zero_bias)); \
-
-#else
 #define ADJUST_ACC_ASYM8b(idx) \
   /* Multiply accumulator with 'out_multiplier', same as Tensorflow */ \
   ae_int32x2 _ae_int32x2_acc_ ## idx; \
@@ -1573,26 +1628,13 @@ __Pragma("no_unroll") \
   /* Add output zero point */ \
   (_ae_int32x2_acc_ ## idx) = AE_ADD32S(_ae_int32x2_acc_ ## idx, AE_MOVDA32(out_zero_bias)); \
 
-#endif
 
 /* For time batching */
 #define ADJUST_ACC_BATCH_ROW_ASYM8b(idx_row) \
   ADJUST_ACC_BATCH_VEC_UNROLL(idx_row); \
 
 /* For time batching */
-#if XCHAL_HAVE_HIFI1
-#define ADJUST_ACC_BATCH_ASYM8b(idx_row, idx_vec) \
-  /* Multiply accumulator with 'out_multiplier', same as Tensorflow */ \
-  ae_int32x2 _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_SLAA32(AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec), left_shift); \
-  _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MULFP32X2RAS_L(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(out_multiplier)); \
-  /* Shift by out_shift, same as Tensorflow */ \
-  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SLAI64(AE_MOVINT64_FROMINT32X2(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec), 32); \
-  _ae_int64_acc_ ##idx_row ##_ ##idx_vec = AE_SRAA64(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, right_shift); \
-  _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_ROUND32F64SSYM(_ae_int64_acc_ ##idx_row ##_ ##idx_vec); \
-  /* Add output zero point */ \
-  (_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec) = AE_ADD32S(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(out_zero_bias)); \
 
-#else
 #define ADJUST_ACC_BATCH_ASYM8b(idx_row, idx_vec) \
   /* Multiply accumulator with 'out_multiplier', same as Tensorflow */ \
   ae_int32x2 _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec; \
@@ -1600,7 +1642,6 @@ __Pragma("no_unroll") \
   /* Add output zero point */ \
   (_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec) = AE_ADD32S(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(out_zero_bias)); \
 
-#endif
 /*---------------------------------------------------------*/
 /* ==================================================================================================== */
 #if (ROW_UNROLL == 1)

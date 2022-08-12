@@ -46,8 +46,8 @@
         rounded = AE_SAT8S(rounded);\
 	/* We can use any one of the three select patterns: 4321, 2301, 7531 below */ \
 	ae_int16x4 tmp1 = AE_SEL16_4321(rounded,rounded);\
-	AE_S8_0_IP(tmp1, ptr, 1);\
-	AE_S8_0_IP(rounded, ptr, 1); \
+	AE_S8_0_IP_HIFI1(tmp1, ptr, 1);\
+	AE_S8_0_IP_HIFI1(rounded, ptr, 1); \
 }
 
 

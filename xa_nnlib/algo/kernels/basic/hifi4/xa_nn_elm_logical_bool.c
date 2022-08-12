@@ -90,7 +90,7 @@ WORD32 xa_nn_elm_logicaland_boolxbool_bool(WORD8 * __restrict__ p_out,
       AE_L8S_IP(vi1, pin1, 1);
       AE_L8S_IP(vi2, pin2, 1);
       vo = AE_AND16(vi1,vi2);
-      AE_S8_0_IP(vo, pout, 1);
+      AE_S8_0_IP_HIFI1(vo, pout, 1);
     }
 
     return 0;
@@ -214,7 +214,7 @@ WORD32 xa_nn_elm_logicalor_boolxbool_bool(WORD8 * __restrict__ p_out,
       AE_L8S_IP(vi1, pin1, 1);
       AE_L8S_IP(vi2, pin2, 1);
       vo = AE_OR16(vi1,vi2);
-      AE_S8_0_IP(vo, pout, 1);
+      AE_S8_0_IP_HIFI1(vo, pout, 1);
     }
 
     return 0;
@@ -333,7 +333,7 @@ WORD32 xa_nn_elm_logicalnot_bool_bool(WORD8 * __restrict__ p_out,
     {
       AE_L8S_IP(vi1, pin, 1);
       vo = AE_XOR16(vi1,cnst_notbit);
-      AE_S8_0_IP(vo, pout, 1);
+      AE_S8_0_IP_HIFI1(vo, pout, 1);
     }
 
     return 0;

@@ -67,6 +67,7 @@ MATXVECO2OBJS = \
     xa_nn_matXvec_16x16.o \
     xa_nn_matXvec_asym8xasym8.o \
     xa_nn_matXvec_sym8sxasym8s.o \
+    xa_nn_matXvec_asym8sxasym8s.o \
     xa_nn_matXvec_asym8xasym8_batch.o \
     xa_nn_matXvec_8x8_batch.o \
     xa_nn_matXvec_8x16_batch.o \
@@ -79,7 +80,8 @@ MATXVECO2OBJS = \
     xa_nn_matmul_f32.o \
     xa_nn_matmul_asym8xasym8.o \
     xa_nn_matmul_sym8sxasym8s.o \
-    xa_nn_matmul_sym8sxsym16s.o
+    xa_nn_matmul_sym8sxsym16s.o \
+    xa_nn_matmul_asym8sxasym8s.o
 
 ACTIVATIONSO2OBJS = \
   xa_nn_activations_32_32.o \
@@ -232,8 +234,9 @@ BASICOBJS = \
     xa_nn_memmove.o \
     xa_nn_broadcast_8_8.o \
     xa_nn_memset_f32.o \
-    xa_nn_elm_sub_broadcast_quant16.o \
-    xa_nn_elm_add_quant16.o
+    xa_nn_elm_sub_quant16.o \
+    xa_nn_elm_add_quant16.o \
+	xa_nn_elm_squared_diff_quant8.o
 
 NORMO2OBJS = \
   xa_nn_l2_norm_f32.o \

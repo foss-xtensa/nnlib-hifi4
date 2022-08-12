@@ -136,8 +136,8 @@ void show_usage(void)
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-num_elements : number of elements; Default=32\n");
     printf("\t-relu_threshold : threshold for relu in Q16.15; Default=32768 (=1 in Q16.15)\n");
-    printf("\t-inp_precision : 16, 32, -1(single prec float) or -7 (asym16s); Default=32\n");
-    printf("\t-out_precision : 16, 32, -1(single prec float) or -7 (asym16s); Default=32\n");
+    printf("\t-inp_precision : 16, 32, -1(single prec float), -3 (asym8u), -4 (asym8s) or -7 (asym16s); Default=32\n");
+    printf("\t-out_precision : 16, 32, -1(single prec float), -3 (asym8u), -4 (asym8s) or -7 (asym16s); Default=32\n");
     printf("\t-integer_bits : number of integer bits in input for tanh_16_16 (0-6); Default=3\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-activation: sigmoid, tanh, relu, relu_std, relu1, relu6, leaky_relu, prelu, hard_swish, activation_min_max or softmax; Default=sigmoid\n");

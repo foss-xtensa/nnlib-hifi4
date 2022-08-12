@@ -60,7 +60,7 @@ static WORD32 conv_x_left_pad(
         ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
         acc16 = AE_SAT16X4(sat_acc, sat_acc);
         sat_acc16 = AE_SAT8S(acc16);
-        AE_S8_0_I(sat_acc16,((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset), 0);
+        AE_S8_0_I_HIFI1(sat_acc16,((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset), 0);
 #else
         ae_int64 acc = AE_MOVINT64_FROMINT16X4(AE_MOVDA16(p_bias[k]));
         acc = AE_SLAA64S(acc, 8);
@@ -112,7 +112,7 @@ static WORD32 conv_x_right_pad(
         ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
         acc16 = AE_SAT16X4(sat_acc, sat_acc);
         sat_acc16 = AE_SAT8S(acc16);
-        AE_S8_0_I(sat_acc16,((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset), 0);
+        AE_S8_0_I_HIFI1(sat_acc16,((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset), 0);
 #else
         ae_int64 acc = AE_MOVINT64_FROMINT16X4(AE_MOVDA16(p_bias[k]));
         acc = AE_SLAA64S(acc, 8);

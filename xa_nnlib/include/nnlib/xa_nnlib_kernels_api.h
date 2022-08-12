@@ -588,6 +588,26 @@
 			WORD32 out_multiplier,
 			WORD32 out_shift);
 
+  WORD32 xa_nn_matXvec_asym8sxasym8s_asym8s(
+      WORD8 * __restrict__ p_out,
+      const WORD8 * __restrict__ p_mat1,
+      const WORD8 * __restrict__ p_mat2,
+      const WORD8 * __restrict__ p_vec1,
+      const WORD8 * __restrict__ p_vec2,
+      const WORD32 * __restrict__ p_bias,
+      WORD32 rows,
+      WORD32 cols1,
+      WORD32 cols2,
+      WORD32 row_stride1,
+      WORD32 row_stride2,
+      WORD32 mat1_zero_bias,
+      WORD32 mat2_zero_bias,
+      WORD32 vec1_zero_bias,
+      WORD32 vec2_zero_bias,
+      WORD32 out_multiplier,
+      WORD32 out_shift,
+      WORD32 out_zero_bias);
+
 	WORD32 xa_nn_vec_sigmoid_32_32(
 			WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
 			const WORD32 * __restrict__ p_vec,         /*!< [in] input data: vec_length x 1, Q6.25 */
@@ -740,11 +760,21 @@
 			WORD32       num_elements                    /*!< [in] length of vectors */
 			);
 
-	WORD32 xa_nn_transpose_conv_getsize(
-			WORD32 output_height,
- 			WORD32 output_width,
- 			WORD32 output_channels,
- 			WORD32 output_pecision);
+  WORD32 xa_nn_transpose_conv_getsize(
+      WORD32 input_height,
+      WORD32 input_width,
+      WORD32 input_channels,
+      WORD32 kernel_height,
+      WORD32 kernel_width,
+      WORD32 x_stride,
+      WORD32 y_stride,
+      WORD32 x_pad,
+      WORD32 y_pad,
+      WORD32 output_height,
+      WORD32 output_width,
+      WORD32 output_channels,
+      WORD32 kernel_precision,
+      WORD32 output_precision);
 
 	WORD32 xa_nn_transpose_conv_sym8sxsym16s(
 			WORD16* output_data,
@@ -1358,6 +1388,20 @@
 		 ,WORD32  out_zero_bias
 		);
 
+  WORD32 xa_nn_fully_connected_asym8sxasym8s_asym8s
+    (WORD8 *__restrict__ p_out
+     ,const WORD8 *__restrict__ p_weight
+     ,const WORD8 *__restrict__ p_inp
+     ,const WORD32 *__restrict__ p_bias
+     ,WORD32  weight_depth
+     ,WORD32  out_depth
+     ,WORD32  input_zero_bias
+     ,WORD32  weight_zero_bias
+     ,WORD32  out_multiplier
+     ,WORD32  out_shift
+     ,WORD32  out_zero_bias
+    );
+
 	WORD32 xa_nn_vec_activation_min_max_asym8u_asym8u(
 			UWORD8 * __restrict__ p_out,
 			const  UWORD8 * __restrict__ p_vec,
@@ -1648,6 +1692,24 @@
 			WORD32 out_shift,
 			WORD32 out_zero_bias);
 
+	WORD32 xa_nn_matmul_asym8sxasym8s_asym8s(
+			WORD8 * __restrict__ p_out,
+			const WORD8 * __restrict__ p_mat1,
+			const WORD8 * __restrict__ p_mat2,
+			const WORD32 * __restrict__ p_bias,
+			WORD32 rows,
+			WORD32 cols,
+			WORD32 row_stride,
+			WORD32 vec_count,
+			WORD32 vec_offset,
+			WORD32 out_offset,
+			WORD32 out_stride,
+			WORD32 mat1_zero_bias,
+			WORD32 vec1_zero_bias,
+			WORD32 out_multiplier,
+			WORD32 out_shift,
+			WORD32 out_zero_bias);
+
 	WORD32 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s(
 			WORD8 * __restrict__ p_out,
 			const WORD8 * __restrict__ p_mat1,
@@ -1792,6 +1854,19 @@
 			WORD32 out_zero_bias,						       /* out zero bias for quantization */
 			WORD32 vec_count);                     /* number of vectors */
 
+	WORD32 xa_nn_matXvec_acc_batch_sym8sx8_asym16s_hU(
+			WORD16 * __restrict__ p_out,           /* output pointer */
+			const WORD8 *  __restrict__ p_mat1,    /* matrix1: rows x cols1 */
+			const WORD8 * __restrict__ p_vec1,     /* vec1: cols1 x vec_count */
+			const WORD32 *  __restrict__ p_bias,   /* bias: rows x 1 */
+			WORD32 rows,
+			WORD32 cols1,
+			WORD32 row_stride1,                    /* row stride for matrix1 */
+			WORD32 out_multiplier,                 /* out multiplier for quantization */
+			WORD32 out_shift,                      /* out shift for quantization */
+			WORD32 out_zero_bias,						       /* out zero bias for quantization */
+			WORD32 vec_count);                     /* number of vectors */
+
 	WORD32 xa_nn_elm_mul_f32xf32_f32(FLOAT32 * __restrict__ p_out,
 			const FLOAT32 * __restrict__ p_inp1,
 			const FLOAT32 * __restrict__ p_inp2,
@@ -1855,40 +1930,62 @@
 			WORD32  left_shift,
 			WORD32  num_elm);
 
-	WORD32 xa_nn_elm_add_asym16sxasym16s_asym16s(WORD16 * __restrict__ p_out,
-			WORD32  out_zero_bias,
-			WORD32  out_left_shift,
-			WORD32  out_multiplier,
-			WORD32  out_activation_min,
-			WORD32  out_activation_max,
-			const   WORD16 * __restrict__ p_inp1,
-			WORD32  inp1_zero_bias,
-			WORD32  inp1_left_shift,
-			WORD32  inp1_multiplier,
-			const   WORD16 * __restrict__ p_inp2,
-			WORD32  inp2_zero_bias,
-			WORD32  inp2_left_shift,
-			WORD32  inp2_multiplier,
-			WORD32  left_shift,
-			WORD32  num_elm);
+    WORD32 xa_nn_elm_add_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+            const WORD32 *const p_out_shape,
+            WORD32  out_zero_bias,
+            WORD32  out_left_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const WORD8 * __restrict__ p_inp1,
+            const WORD32 *const p_inp1_shape,
+            WORD32  inp1_zero_bias,
+            WORD32  inp1_left_shift,
+            WORD32  inp1_multiplier,
+            const WORD8 * __restrict__ p_inp2,
+            const WORD32 *const p_inp2_shape,
+            WORD32  inp2_zero_bias,
+            WORD32  inp2_left_shift,
+            WORD32  inp2_multiplier,
+            WORD32  left_shift);
 
-	WORD32 xa_nn_elm_sub_broadcast_asym16sxasym16s_asym16s(WORD16 * __restrict__ p_out,
-			WORD32  out_zero_bias,
-			WORD32  out_left_shift,
-			WORD32  out_multiplier,
-			WORD32  out_activation_min,
-			WORD32  out_activation_max,
-			const   WORD16 * __restrict__ p_inp1,
-			WORD32  inp1_zero_bias,
-			WORD32  inp1_left_shift,
-			WORD32  inp1_multiplier,
-			const   WORD16 * __restrict__ p_inp2,
-			WORD32  inp2_zero_bias,
-			WORD32  inp2_left_shift,
-			WORD32  inp2_multiplier,
-			WORD32  left_shift,
-			WORD32  outerloop_count,
-			WORD32  innerloop_count);
+    WORD32 xa_nn_elm_add_broadcast_4D_asym16sxasym16s_asym16s(WORD16 * __restrict__ p_out,
+            const WORD32 *const p_out_shape,
+            WORD32  out_zero_bias,
+            WORD32  out_left_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const WORD16 * __restrict__ p_inp1,
+            const WORD32 *const p_inp1_shape,
+            WORD32  inp1_zero_bias,
+            WORD32  inp1_left_shift,
+            WORD32  inp1_multiplier,
+            const WORD16 * __restrict__ p_inp2,
+            const WORD32 *const p_inp2_shape,
+            WORD32  inp2_zero_bias,
+            WORD32  inp2_left_shift,
+            WORD32  inp2_multiplier,
+            WORD32  left_shift);
+
+    WORD32 xa_nn_elm_sub_broadcast_4D_asym16sxasym16s_asym16s(WORD16 * __restrict__ p_out,
+            const WORD32 *const p_out_shape,
+            WORD32  out_zero_bias,
+            WORD32  out_left_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const WORD16 * __restrict__ p_inp1,
+            const WORD32 *const p_inp1_shape,
+            WORD32  inp1_zero_bias,
+            WORD32  inp1_left_shift,
+            WORD32  inp1_multiplier,
+            const WORD16 * __restrict__ p_inp2,
+            const WORD32 *const p_inp2_shape,
+            WORD32  inp2_zero_bias,
+            WORD32  inp2_left_shift,
+            WORD32  inp2_multiplier,
+            WORD32  left_shift);
 
 	WORD32 xa_nn_elm_sub_asym8uxasym8u_asym8u(UWORD8 * __restrict__ p_out,
 			WORD32  out_zero_bias,
@@ -1924,29 +2021,81 @@
 			WORD32  left_shift,
 			WORD32  num_elm);
 
+    WORD32 xa_nn_elm_sub_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+            const WORD32 *const p_out_shape,
+            WORD32  out_zero_bias,
+            WORD32  out_left_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const WORD8 * __restrict__ p_inp1,
+            const WORD32 *const p_inp1_shape,
+            WORD32  inp1_zero_bias,
+            WORD32  inp1_left_shift,
+            WORD32  inp1_multiplier,
+            const WORD8 * __restrict__ p_inp2,
+            const WORD32 *const p_inp2_shape,
+            WORD32  inp2_zero_bias,
+            WORD32  inp2_left_shift,
+            WORD32  inp2_multiplier,
+            WORD32  left_shift);
+
 	WORD32 xa_nn_elm_mul_asym8uxasym8u_asym8u(UWORD8 * __restrict__ p_out,
-			WORD32  out_zero_bias,
-			WORD32  out_shift,
-			WORD32  out_multiplier,
-			WORD32  out_activation_min,
-			WORD32  out_activation_max,
-			const   UWORD8 * __restrict__ p_inp1,
-			WORD32  inp1_zero_bias,
-			const   UWORD8 * __restrict__ p_inp2,
-			WORD32  inp2_zero_bias,
-			WORD32  num_elm);
+            WORD32  out_zero_bias,
+            WORD32  out_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const   UWORD8 * __restrict__ p_inp1,
+            WORD32  inp1_zero_bias,
+            const   UWORD8 * __restrict__ p_inp2,
+            WORD32  inp2_zero_bias,
+            WORD32  num_elm);
 
 	WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
-			WORD32  out_zero_bias,
-			WORD32  out_shift,
-			WORD32  out_multiplier,
-			WORD32  out_activation_min,
-			WORD32  out_activation_max,
-			const    WORD8 * __restrict__ p_inp1,
-			WORD32  inp1_zero_bias,
-			const    WORD8 * __restrict__ p_inp2,
-			WORD32  inp2_zero_bias,
-			WORD32  num_elm);
+            WORD32  out_zero_bias,
+            WORD32  out_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const    WORD8 * __restrict__ p_inp1,
+            WORD32  inp1_zero_bias,
+            const    WORD8 * __restrict__ p_inp2,
+            WORD32  inp2_zero_bias,
+            WORD32  num_elm);
+
+	WORD32 xa_nn_elm_mul_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+            const WORD32 *const p_out_shape,
+            WORD32  out_zero_bias,
+            WORD32  out_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const    WORD8 * __restrict__ p_inp1,
+            const WORD32 *const p_inp1_shape,
+            WORD32  inp1_zero_bias,
+            const    WORD8 * __restrict__ p_inp2,
+            const WORD32 *const p_inp2_shape,
+            WORD32  inp2_zero_bias);
+
+    WORD32 xa_nn_elm_squared_diff_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+            const WORD32 *const p_out_shape,
+            WORD32  out_zero_bias,
+            WORD32  out_left_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const WORD8 * __restrict__ p_inp1,
+            const WORD32 *const p_inp1_shape,
+            WORD32  inp1_zero_bias,
+            WORD32  inp1_left_shift,
+            WORD32  inp1_multiplier,
+            const WORD8 * __restrict__ p_inp2,
+            const WORD32 *const p_inp2_shape,
+            WORD32  inp2_zero_bias,
+            WORD32  inp2_left_shift,
+            WORD32  inp2_multiplier,
+            WORD32  left_shift);
 
 	WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
 			const WORD16 * __restrict__ p_inp,
@@ -1972,10 +2121,24 @@
 			WORD32  out_multiplier,
 			WORD32  num_elm);
 
+	WORD32 xa_nn_elm_requantize_asym8s_asym8s(WORD8 * __restrict__ p_out,
+			const WORD8 * __restrict__ p_inp,
+			WORD32  inp_zero_bias,
+			WORD32  out_zero_bias,
+			WORD32  out_shift,
+			WORD32  out_multiplier,
+			WORD32  num_elm);
+
 	WORD32 xa_nn_elm_dequantize_asym8s_f32(FLOAT32 * __restrict__ p_out,
 			const WORD8 * __restrict__ p_inp,
 			WORD32   inp_zero_bias,
 			FLOAT32  inp_scale,
+			WORD32   num_elm);
+	
+    WORD32 xa_nn_elm_quantize_f32_asym8s(WORD8 * __restrict__ p_out,
+			const FLOAT32 * __restrict__ p_inp,
+			FLOAT32  out_scale,
+			WORD32   out_zero_bias,
 			WORD32   num_elm);
 
 	WORD32 xa_nn_elm_max_8x8_8(  WORD8* __restrict__ p_out,
@@ -2313,6 +2476,8 @@
 			WORD16 stride_2, WORD16 stride_3, WORD16 stride_4,
 			WORD16 dims_1, WORD16 dims_2,
 			WORD16 dims_3, WORD16 dims_4);
+
+
 
 	/* Mapping the functions names from previous naming convension for backward compatibility */
 #define xa_nn_matXvec_asym8xasym8_asym8 xa_nn_matXvec_asym8uxasym8u_asym8u

@@ -41,10 +41,10 @@
 }
 
 #define STORE_8X4_FROM_16X4(out_ptr, val){\
-    AE_S8_0_IP(AE_SEL16_6543(val, val), out_ptr, sizeof(WORD8));\
-    AE_S8_0_IP(AE_SEL16_5432(val, val), out_ptr, sizeof(WORD8));\
-    AE_S8_0_IP(AE_SEL16_4321(val, val), out_ptr, sizeof(WORD8));\
-    AE_S8_0_IP(val, out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP_HIFI1(AE_SEL16_6543(val, val), out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP_HIFI1(AE_SEL16_5432(val, val), out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP_HIFI1(AE_SEL16_4321(val, val), out_ptr, sizeof(WORD8));\
+    AE_S8_0_IP_HIFI1(val, out_ptr, sizeof(WORD8));\
 }
 
 #else
@@ -120,7 +120,7 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
     {
         AE_L8S_IP(x, p_v, 1);
         LIMIT(y, x, min, max)
-        AE_S8_0_IP(y, p_o, 1);
+        AE_S8_0_IP_HIFI1(y, p_o, 1);
     }
   
     if((activation_max >= (int)MAX_WORD8) && (activation_min <= (int)MIN_WORD8))
@@ -135,7 +135,7 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
         for(i=0; i < (vec_length & 3); i++)
         {
             AE_L8S_IP(x, p_v, sizeof(WORD8));
-            AE_S8_0_IP(x, p_o, sizeof(WORD8));
+            AE_S8_0_IP_HIFI1(x, p_o, sizeof(WORD8));
         }
     }
     else if((activation_max < (int)MAX_WORD8) && (activation_min <= MIN_WORD8))
@@ -152,7 +152,7 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
         {
             AE_L8S_IP(x, p_v, sizeof(WORD8));
             x = AE_MIN16(x, max);
-            AE_S8_0_IP(x, p_o, sizeof(WORD8));
+            AE_S8_0_IP_HIFI1(x, p_o, sizeof(WORD8));
         }
     }
     else if((activation_max >= (int)MAX_WORD8) && (activation_min > MIN_WORD8))
@@ -169,7 +169,7 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
         {
             AE_L8S_IP(x, p_v, sizeof(WORD8));
             x = AE_MAX16(x, min);
-            AE_S8_0_IP(x, p_o, sizeof(WORD8));
+            AE_S8_0_IP_HIFI1(x, p_o, sizeof(WORD8));
         }
     }
     else
@@ -186,7 +186,7 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
         {
             AE_L8S_IP(x, p_v, sizeof(WORD8));
             LIMIT(y, x, min, max)
-            AE_S8_0_IP(y, p_o, sizeof(WORD8));
+            AE_S8_0_IP_HIFI1(y, p_o, sizeof(WORD8));
         }
     }
 

@@ -429,10 +429,10 @@ WORD32 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s(
         ae_int16x4 temp23 = AE_SAT16X4(acc_row2_vec0, acc_row3_vec0);
         temp23 = AE_SAT8S(temp23);
 
-        AE_S8_0_XP(AE_SEL16_5432(temp01, temp01), (WORD8 *)p_dst0, out_offset);
-        AE_S8_0_XP(temp01, (WORD8 *)p_dst1, out_offset);
-        AE_S8_0_XP(AE_SEL16_5432(temp23, temp23), (WORD8 *)p_dst0, out_offset);
-        AE_S8_0_XP(temp23, (WORD8 *)p_dst1, out_offset);
+        AE_S8_0_XP_HIFI1(AE_SEL16_5432(temp01, temp01), (WORD8 *)p_dst0, out_offset);
+        AE_S8_0_XP_HIFI1(temp01, (WORD8 *)p_dst1, out_offset);
+        AE_S8_0_XP_HIFI1(AE_SEL16_5432(temp23, temp23), (WORD8 *)p_dst0, out_offset);
+        AE_S8_0_XP_HIFI1(temp23, (WORD8 *)p_dst1, out_offset);
 #else
         AE_MINMAX32_HF4(acc_row1_vec0, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row3_vec0, min_int8, max_int8);
@@ -531,14 +531,14 @@ WORD32 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s(
         ae_int16x4 temp67 = AE_SAT16X4(acc_row2_vec1, acc_row3_vec1);
         temp67 = AE_SAT8S(temp67);
         
-        AE_S8_0_XP(AE_SEL16_5432(temp01, temp01), (WORD8 *)p_dst0, out_offset);
-        AE_S8_0_XP(temp01, (WORD8 *)p_dst1, out_offset);
-        AE_S8_0_XP(AE_SEL16_5432(temp23, temp23), (WORD8 *)p_dst2, out_offset);
-        AE_S8_0_XP(temp23, (WORD8 *)p_dst3, out_offset);
-        AE_S8_0_XP(AE_SEL16_5432(temp45, temp45), (WORD8 *)p_dst0, out_offset);
-        AE_S8_0_XP(temp45, (WORD8 *)p_dst1, out_offset);
-        AE_S8_0_XP(AE_SEL16_5432(temp67, temp67), (WORD8 *)p_dst2, out_offset);
-        AE_S8_0_XP(temp67, (WORD8 *)p_dst3, out_offset);
+        AE_S8_0_XP_HIFI1(AE_SEL16_5432(temp01, temp01), (WORD8 *)p_dst0, out_offset);
+        AE_S8_0_XP_HIFI1(temp01, (WORD8 *)p_dst1, out_offset);
+        AE_S8_0_XP_HIFI1(AE_SEL16_5432(temp23, temp23), (WORD8 *)p_dst2, out_offset);
+        AE_S8_0_XP_HIFI1(temp23, (WORD8 *)p_dst3, out_offset);
+        AE_S8_0_XP_HIFI1(AE_SEL16_5432(temp45, temp45), (WORD8 *)p_dst0, out_offset);
+        AE_S8_0_XP_HIFI1(temp45, (WORD8 *)p_dst1, out_offset);
+        AE_S8_0_XP_HIFI1(AE_SEL16_5432(temp67, temp67), (WORD8 *)p_dst2, out_offset);
+        AE_S8_0_XP_HIFI1(temp67, (WORD8 *)p_dst3, out_offset);
 #else
         AE_MINMAX32_HF4(acc_row1_vec0, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row3_vec0, min_int8, max_int8);
@@ -585,10 +585,10 @@ WORD32 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s(
         ae_int16x4 temp23 = AE_SAT16X4(acc_row2_vec0, acc_row3_vec0);
         temp23 = AE_SAT8S(temp23);
         
-        AE_S8_0_XP(AE_SEL16_5432(temp01, temp01), (WORD8 *)p_dst0, out_offset);
-        AE_S8_0_XP(temp01, (WORD8 *)p_dst1, out_offset);
-        AE_S8_0_XP(AE_SEL16_5432(temp23, temp23), (WORD8 *)p_dst2, out_offset);
-        AE_S8_0_XP(temp23, (WORD8 *)p_dst3, out_offset);
+        AE_S8_0_XP_HIFI1(AE_SEL16_5432(temp01, temp01), (WORD8 *)p_dst0, out_offset);
+        AE_S8_0_XP_HIFI1(temp01, (WORD8 *)p_dst1, out_offset);
+        AE_S8_0_XP_HIFI1(AE_SEL16_5432(temp23, temp23), (WORD8 *)p_dst2, out_offset);
+        AE_S8_0_XP_HIFI1(temp23, (WORD8 *)p_dst3, out_offset);
 #else
         AE_MINMAX32_HF4(acc_row1_vec0, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row3_vec0, min_int8, max_int8);
@@ -631,11 +631,9 @@ WORD32 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s(
            ,cols1
            ,vec1_zero_bias
           );
-#if XCHAL_HAVE_HIFI1
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec0, p_out_multiplier[m_itr], l_shift[0], r_shift[0]);
-#else
+
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[m_itr], l_shift[0], r_shift[0]);
-#endif
+
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec0), p_dst0, out_offset);

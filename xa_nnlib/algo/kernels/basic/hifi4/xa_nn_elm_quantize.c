@@ -23,6 +23,7 @@
 #include "xa_nnlib_common.h"
 #include "xa_nn_basic_state.h"
 #include "xa_nnlib_common_macros.h"
+#include <math.h>
 
 WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
                                     const WORD16 * __restrict__ p_inp,
@@ -360,6 +361,122 @@ WORD32 xa_nn_elm_requantize_asym8s_asym32s(WORD32 * __restrict__ p_out,
 }
 
 
+WORD32 xa_nn_elm_requantize_asym8s_asym8s(WORD8 * __restrict__ p_out,
+                                    const WORD8 * __restrict__ p_inp,
+                                    WORD32  inp_zero_bias,
+                                    WORD32  out_zero_bias,
+                                    WORD32  out_shift,
+                                    WORD32  out_multiplier,
+                                    WORD32  num_elm)
+{
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD8), -1);
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND((num_elm <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND(((out_zero_bias < -128) || (out_zero_bias > 127)), -1);
+  XA_NNLIB_ARG_CHK_COND(((inp_zero_bias < -128) || (inp_zero_bias > 127)), -1);
+  XA_NNLIB_ARG_CHK_COND(((out_shift < -31) || (out_shift > 31)), -1);
+  XA_NNLIB_ARG_CHK_COND((out_multiplier < 0), -1);
+
+  int i;
+  int left_shift, right_shift;
+#if TFLITE_SINGLE_ROUNDING
+  left_shift = out_shift;
+  /* Single rounding doesn't need two shifts */
+  (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+  left_shift  = (out_shift < 0)?0:out_shift;
+  right_shift = (out_shift > 0)?0:-out_shift;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
+
+  WORD8 *p_i = (WORD8 *)p_inp;
+  WORD8 *p_o = (WORD8 *)p_out;
+
+  ae_int16x4 d_inp_zero_bias  = AE_MOVDA16(inp_zero_bias);
+  ae_int32x2 d_out_multiplier = AE_MOVDA32(out_multiplier);
+  ae_int16x4 d_inp0, d_inp1;
+  ae_int16x4 ONE = AE_MOVDA16(1);
+  ae_int32x2 d_inp32_0, d_inp32_1;
+  ae_int32x2 d_inp32_2, d_inp32_3;
+  ae_int32x2 d_out0_32, d_out1_32;
+  ae_int32x2 d_out2_32, d_out3_32;
+  ae_int32x2 quant_min = AE_MOVDA32(-128);
+  ae_int32x2 quant_max = AE_MOVDA32(127);
+
+  xtbool io_pointers_aligned = ((uintptr_t)p_inp%4 == 0);
+
+  if(io_pointers_aligned){
+    for(i = 0; i < num_elm >> 3; i++)
+    {
+      AE_L8X4F_IP(d_inp0, p_i, 4);
+      AE_L8X4F_IP(d_inp1, p_i, 4);
+      d_inp0 = AE_SRAI16(d_inp0, 8);
+      d_inp1 = AE_SRAI16(d_inp1, 8);
+      d_inp0 = AE_SUB16S(d_inp0, d_inp_zero_bias);
+      d_inp1 = AE_SUB16S(d_inp1, d_inp_zero_bias);
+      AE_MUL16X4(d_inp32_0 , d_inp32_1 , d_inp0 , ONE);
+      AE_MUL16X4(d_inp32_2 , d_inp32_3 , d_inp1 , ONE);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_out0_32, d_inp32_0, d_out_multiplier, left_shift, right_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_out1_32, d_inp32_1, d_out_multiplier, left_shift, right_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_out2_32, d_inp32_2, d_out_multiplier, left_shift, right_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_out3_32, d_inp32_3, d_out_multiplier, left_shift, right_shift);
+      d_out0_32 = AE_ADD32S(d_out0_32, AE_MOVDA32(out_zero_bias));
+      d_out1_32 = AE_ADD32S(d_out1_32, AE_MOVDA32(out_zero_bias));
+      d_out2_32 = AE_ADD32S(d_out2_32, AE_MOVDA32(out_zero_bias));
+      d_out3_32 = AE_ADD32S(d_out3_32, AE_MOVDA32(out_zero_bias));
+      CLAMP_VAL(d_out0_32, d_out0_32, quant_min, quant_max)
+      CLAMP_VAL(d_out1_32, d_out1_32, quant_min, quant_max)
+      CLAMP_VAL(d_out2_32, d_out2_32, quant_min, quant_max)
+      CLAMP_VAL(d_out3_32, d_out3_32, quant_min, quant_max)
+      STORE_8X4_FROM_32X4(p_o, d_out0_32, d_out1_32);
+      STORE_8X4_FROM_32X4(p_o, d_out2_32, d_out3_32);
+    }
+  }
+  else{
+    ALIGN_REGISTER_TYPE align_inp;
+    PRIME_8X4F(p_i, align_inp);
+    for(i = 0; i < num_elm >> 3; i++)
+    {
+      AE_LA8X4F_IP(d_inp0, align_inp, p_i);
+      AE_LA8X4F_IP(d_inp1, align_inp, p_i);
+      d_inp0 = AE_SRAI16(d_inp0, 8);
+      d_inp1 = AE_SRAI16(d_inp1, 8);
+      d_inp0 = AE_SUB16S(d_inp0, d_inp_zero_bias);
+      d_inp1 = AE_SUB16S(d_inp1, d_inp_zero_bias);
+      AE_MUL16X4(d_inp32_0 , d_inp32_1 , d_inp0 , ONE);
+      AE_MUL16X4(d_inp32_2 , d_inp32_3 , d_inp1 , ONE);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_out0_32, d_inp32_0, d_out_multiplier, left_shift, right_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_out1_32, d_inp32_1, d_out_multiplier, left_shift, right_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_out2_32, d_inp32_2, d_out_multiplier, left_shift, right_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(d_out3_32, d_inp32_3, d_out_multiplier, left_shift, right_shift);
+      d_out0_32 = AE_ADD32S(d_out0_32, AE_MOVDA32(out_zero_bias));
+      d_out1_32 = AE_ADD32S(d_out1_32, AE_MOVDA32(out_zero_bias));
+      d_out2_32 = AE_ADD32S(d_out2_32, AE_MOVDA32(out_zero_bias));
+      d_out3_32 = AE_ADD32S(d_out3_32, AE_MOVDA32(out_zero_bias));
+      CLAMP_VAL(d_out0_32, d_out0_32, quant_min, quant_max)
+      CLAMP_VAL(d_out1_32, d_out1_32, quant_min, quant_max)
+      CLAMP_VAL(d_out2_32, d_out2_32, quant_min, quant_max)
+      CLAMP_VAL(d_out3_32, d_out3_32, quant_min, quant_max)
+      STORE_8X4_FROM_32X4(p_o, d_out0_32, d_out1_32);
+      STORE_8X4_FROM_32X4(p_o, d_out2_32, d_out3_32);
+    }
+  }
+  for(i = 0; i < num_elm % 8 ; i++)
+  {
+    ae_int32 tmp = (p_i[i] - inp_zero_bias);
+    ae_int32x2 res = tmp;
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(res, res, d_out_multiplier, left_shift, right_shift);
+    res = AE_ADD32S(res, AE_MOVDA32(out_zero_bias));
+    CLAMP_VAL(res, res, quant_min, quant_max)
+    *p_o = (WORD8)AE_MOVAD32_L(res);
+    p_o++;
+  }
+  return 0;
+}
 
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_elm_dequantize_asym8s_f32,
@@ -507,3 +624,91 @@ WORD32 xa_nn_elm_dequantize_asym8s_f32(FLOAT32 * __restrict__ p_out,
   return 0;
 }
 #endif
+
+#define CVT_FLOAT_TO_INT_X2(out, inp) \
+{ \
+  FLOAT32 d_i0, d_i1; \
+  FLOAT32 *ptr = (FLOAT32 *)&inp; \
+  d_i0 = ptr[0]; \
+  d_i1 = ptr[1]; \
+  out = AE_MOVDA32X2((WORD32)d_i0, (WORD32)d_i1); \
+}
+
+#define CVT_FLOAT_TO_INT(out, inp) \
+{ \
+  out = AE_MOVDA32((WORD32)inp); \
+}
+
+#if !HAVE_VFPU
+DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_elm_quantize_f32_asym8s,
+                               (WORD8 * __restrict__ p_out,
+                               const FLOAT32 * __restrict__ p_inp,
+                               FLOAT32 out_scale,
+                               WORD32  out_zero_bias,
+                               WORD32  num_elm))
+#else /* #if !HAVE_VFPU */
+WORD32 xa_nn_elm_quantize_f32_asym8s(WORD8 * __restrict__ p_out,
+                                     const FLOAT32 * __restrict__ p_inp,
+                                     FLOAT32 out_scale,
+                                     WORD32  out_zero_bias,
+                                     WORD32  num_elm)
+{
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(FLOAT32), -1);
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND((num_elm <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND((out_scale == 0.0f || !isfinite(out_scale)), -1);
+  XA_NNLIB_ARG_CHK_COND(((out_zero_bias < -128) || (out_zero_bias > 127)), -1);
+
+  int i;
+  xtfloatx2 *p_i = (xtfloatx2 *)p_inp;
+  WORD8 *p_o = (WORD8 *)p_out;
+  ae_int32x2 d_out_zero_bias = AE_MOVDA32(out_zero_bias);
+  xtfloat *out_scale_ptr = &out_scale;
+  ae_valign align_inp = AE_LA64_PP(p_inp);
+  ae_int32x2 quant_max = AE_MOVDA32(127);
+  ae_int32x2 quant_min = AE_MOVDA32(-128);
+
+  for(i = 0; i < (num_elm >> 2); i++)
+  {
+    xtfloatx2 d_inp0, d_inp1;
+    xtfloatx2 d_inp0_t, d_inp1_t;
+    ae_int32x2 d_out32_0, d_out32_1;
+    xtfloatx2 d_out_scale = (xtfloatx2)*out_scale_ptr;
+
+    XT_LASX2IP(d_inp0, align_inp, p_i);
+    XT_LASX2IP(d_inp1, align_inp, p_i);
+    d_inp0_t = XT_DIV_SX2(d_inp0, d_out_scale);
+    d_inp1_t = XT_DIV_SX2(d_inp1, d_out_scale);
+    CVT_FLOAT_TO_INT_X2(d_out32_0, d_inp0_t);
+    CVT_FLOAT_TO_INT_X2(d_out32_1, d_inp1_t);
+    d_out32_0 = AE_ADD32S(d_out32_0, d_out_zero_bias);
+    d_out32_1 = AE_ADD32S(d_out32_1, d_out_zero_bias);
+    CLAMP_VAL(d_out32_0, d_out32_0, quant_min, quant_max);
+    CLAMP_VAL(d_out32_1, d_out32_1, quant_min, quant_max);
+    STORE_8X4_FROM_32X4(p_o, d_out32_0, d_out32_1)
+  }
+
+  for(i = 0; i < (num_elm & 3) ; i++)
+  {
+    xtfloat d_out_scale = (xtfloat)*out_scale_ptr;
+    xtfloat d_inp0;
+    xtfloat d_inp0_t;
+    ae_int32x2 d_out32_0;
+    XT_LSIP(d_inp0, (xtfloat *)p_i, sizeof(FLOAT32));
+    d_inp0_t = XT_DIV_S(d_inp0, d_out_scale);
+    CVT_FLOAT_TO_INT(d_out32_0, d_inp0_t);
+    d_out32_0 = AE_ADD32S(d_out32_0, d_out_zero_bias);
+    CLAMP_VAL(d_out32_0, d_out32_0, quant_min, quant_max);
+    *p_o = (WORD8)AE_MOVAD32_L(d_out32_0);
+    p_o++;
+  }
+
+  return 0;
+}
+#endif /* #if !HAVE_VFPU */
+

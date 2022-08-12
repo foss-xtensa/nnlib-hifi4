@@ -1642,14 +1642,14 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
   XA_NNLIB_ARG_CHK_COND((out_shift < -31 || out_shift > 31), -1);
   XA_NNLIB_ARG_CHK_COND((out_multiplier < 0), -1);
 
-  extern const unsigned int inv_256_tbl[257];
+  extern const unsigned int inv_256_tbl[1025];
   ae_int32x2 inv_mult = AE_MOVDA32(inv_256_tbl[1]);
   int axis_itr = 0, inp_itr = 0, out_itr = 0;
   int num_elm_in_axis = 1;
   for(axis_itr=0; axis_itr < num_axis_dims; axis_itr++)
   {
     XA_NNLIB_ARG_CHK_COND(((p_axis[axis_itr] < 0) || (p_axis[axis_itr] > (num_inp_dims - 1))), -1);
-    XA_NNLIB_ARG_CHK_COND((p_inp_shape[p_axis[axis_itr]] > 256), -1);
+    XA_NNLIB_ARG_CHK_COND((p_inp_shape[p_axis[axis_itr]] > 1024), -1);
    
     int current = p_inp_shape[p_axis[axis_itr]];
     ae_int32x2 current_inv_mult = AE_MOVDA32(inv_256_tbl[current]);

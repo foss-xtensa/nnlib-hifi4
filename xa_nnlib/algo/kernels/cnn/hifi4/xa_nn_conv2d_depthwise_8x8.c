@@ -503,7 +503,7 @@ static inline void conv2d_nchw_8x8_hf4_convmul
             accu_int64_0 = AE_SLAA64S(accu_int64_0, acc_shift);
             ae_int32 accu_int32_0 = AE_SRAA32(AE_SLAI32S(AE_ROUND32F64SSYM(accu_int64_0), 24),24);
 #if XCHAL_HAVE_HIFI1
-            AE_S8_0_XP(AE_MOVINT16X4_FROMINT32X2(accu_int32_0), (WORD8 *)out_ptr, out_stride);
+            AE_S8_0_XP_HIFI1(AE_MOVINT16X4_FROMINT32X2(accu_int32_0), (WORD8 *)out_ptr, out_stride);
 #else
             out_ptr[(j * out_stride)] = (WORD8)AE_MOVAD32_L(accu_int32_0);
 #endif

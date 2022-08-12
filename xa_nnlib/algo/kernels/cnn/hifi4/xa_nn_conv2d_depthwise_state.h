@@ -71,7 +71,7 @@ VOID xa_nn_conv2d_depthwise_init
     AE_SA64POS_FP(alignOut, pae_out); \
     for(itr_kw=0; itr_kw < (kw & 0x3); itr_kw++){ \
       AE_L8S_IP(d_tmp, pae_in, 1); \
-      AE_S8_0_IP(d_tmp, pae_out, 1);\
+      AE_S8_0_IP_HIFI1(d_tmp, pae_out, 1);\
     } \
   } \
 }

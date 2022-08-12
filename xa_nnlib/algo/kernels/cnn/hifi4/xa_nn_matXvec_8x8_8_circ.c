@@ -75,8 +75,8 @@
   _ae_int16x4_temp1_var_ ##N = AE_SAT16X4( _ae_f32x2_temp1_var_ ##N, _ae_f32x2_temp1_var_ ##N ); \
   _ae_int16x4_temp_var_ ##N = AE_SAT8S( _ae_int16x4_temp_var_ ##N ); \
   _ae_int16x4_temp1_var_ ##N = AE_SAT8S( _ae_int16x4_temp1_var_ ##N ); \
-  AE_S8_0_I(_ae_int16x4_temp_var_ ##N, (WORD8 *)p_dst1 + (row+N) * out_row_offset, 0 ); \
-  AE_S8_0_I(_ae_int16x4_temp1_var_ ##N, (WORD8 *)p_dst2 + (row+N) * out_row_offset, 0 );
+  AE_S8_0_I_HIFI1(_ae_int16x4_temp_var_ ##N, (WORD8 *)p_dst1 + (row+N) * out_row_offset, 0 ); \
+  AE_S8_0_I_HIFI1(_ae_int16x4_temp1_var_ ##N, (WORD8 *)p_dst2 + (row+N) * out_row_offset, 0 );
 #else
 #define KERNEL_ROW_D(N) \
 {\
@@ -178,7 +178,7 @@
   ae_f32x2  _ae_f32x2_temp_var_ ##N = AE_ROUND32F64SSYM(accu1_ ##N); \
   _ae_int16x4_temp_var_ ##N = AE_SAT16X4( _ae_f32x2_temp_var_ ##N, _ae_f32x2_temp_var_ ##N ); \
   _ae_int16x4_temp_var_ ##N = AE_SAT8S( _ae_int16x4_temp_var_ ##N ); \
-  AE_S8_0_I(_ae_int16x4_temp_var_ ##N, (WORD8 *) p_dst1 + (row+N) * out_row_offset, 0 );
+  AE_S8_0_I_HIFI1(_ae_int16x4_temp_var_ ##N, (WORD8 *) p_dst1 + (row+N) * out_row_offset, 0 );
 #else
 #define KERNEL_ROW_S(N) \
 { \

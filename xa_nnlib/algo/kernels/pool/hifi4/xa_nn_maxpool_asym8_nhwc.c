@@ -347,10 +347,10 @@ const UWORD8* __restrict__ p_inp,
                 AE_L16_IP(temp, (ae_int16*)p_dst_pad, 2);
                 for(i=0; i<input_channels-1; i++)
                 {
-                    AE_S8_0_IP(temp, (WORD8*)p_out_temp, 1);
+                    AE_S8_0_IP_HIFI1(temp, (WORD8*)p_out_temp, 1);
                     AE_L16_IP(temp, (ae_int16*)p_dst_pad, 2);
                 }
-                AE_S8_0_IP(temp, (WORD8*)p_out_temp, 1);
+                AE_S8_0_IP_HIFI1(temp, (WORD8*)p_out_temp, 1);
 #else
                 for(i=0; i<input_channels; i++)
                 {

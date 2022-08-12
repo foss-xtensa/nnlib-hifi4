@@ -114,7 +114,48 @@ const char *coef_files[12] =
   "/b_o.bin"
 };
 
-
+static inline void error_code_parse(int error_code)
+{
+  switch (error_code)
+  {
+    case XA_NNLIB_FATAL_MEM_ALLOC:
+      printf("\nError in memory allocation, Exiting\n");
+      break;
+    case XA_NNLIB_FATAL_MEM_ALIGN:
+      printf("\nError in memory aignment, Exiting\n");
+      break;
+    case XA_NNLIB_LSTM_CONFIG_FATAL_INVALID_IN_FEATS:
+      printf("\nInvalid input features, Exiting\n");
+      break;
+    case XA_NNLIB_LSTM_CONFIG_FATAL_INVALID_OUT_FEATS:
+      printf("\nInvalid output features, Exiting\n");
+      break;
+    case XA_NNLIB_LSTM_CONFIG_FATAL_INVALID_PRECISION:
+      printf("\nInvalid Precision, Exiting\n");
+      break;
+    case XA_NNLIB_LSTM_CONFIG_FATAL_INVALID_COEFF_QFORMAT:
+      printf("\nInvalid coefficient QFormat, Exiting\n");
+      break;
+    case XA_NNLIB_LSTM_CONFIG_FATAL_INVALID_CELL_QFORMAT:
+      printf("\nInvalid cell QFormat, Exiting\n");
+      break;
+    case XA_NNLIB_LSTM_CONFIG_FATAL_INVALID_IO_QFORMAT:
+      printf("\nInvalid input/output QFormat, Exiting\n");
+      break;
+    case XA_NNLIB_LSTM_CONFIG_FATAL_INVALID_MEMBANK_PADDING:
+      printf("\nInvalid memory padding, Exiting\n");
+      break;
+    case XA_NNLIB_LSTM_EXECUTE_FATAL_INSUFFICIENT_OUTPUT_BUFFER_SPACE:
+      printf("\nInvalid output buffer space, Exiting\n");
+      break;
+    case XA_NNLIB_LSTM_EXECUTE_FATAL_INSUFFICIENT_DATA:
+      printf("\nInsufficient data, Exiting\n");
+      break;
+    default:
+      printf("\nUnknown error condition, Exiting\n");
+      break;
+  }
+}
 
 void show_usage(void)
 {
@@ -580,13 +621,13 @@ int xa_nn_main_process(int argc, char *argv[])
     persistent_size = xa_nnlib_lstm_get_persistent_fast(&config);  PRINT_VAR(persistent_size)
     if(persistent_size < 0)
     {
-      fprintf(stderr, "Invalid Config, failed with error code: 0x%x \n", persistent_size);
+      error_code_parse(persistent_size);
       return persistent_size;
     }
     scratch_size = xa_nnlib_lstm_get_scratch_fast(&config);   PRINT_VAR(scratch_size)
     if(scratch_size < 0)
     {
-      fprintf(stderr, "Invalid Config, failed with error code: 0x%x \n", scratch_size);
+      error_code_parse(scratch_size);
       return scratch_size;
     }
 
@@ -600,7 +641,7 @@ int xa_nn_main_process(int argc, char *argv[])
 
     if(XA_NNLIB_NO_ERROR != err)
     {
-      fprintf(stderr, "Invalid Config, failed with error code: 0x%x \n", err);
+      error_code_parse(err);
       return err;
     }
   }
@@ -782,7 +823,7 @@ int xa_nn_main_process(int argc, char *argv[])
 
       if(XA_NNLIB_NO_ERROR != err)
       {
-        fprintf(stderr, "Runtime Error, failed with error code: 0x%x \n", err);
+        error_code_parse(err);
         return err;
       }
 

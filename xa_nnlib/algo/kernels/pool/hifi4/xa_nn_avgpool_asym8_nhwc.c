@@ -433,7 +433,7 @@ const UWORD8* __restrict__ p_inp,
                     d_out1 = AE_MOVDA32(p_out1[i]);
 #if XCHAL_HAVE_HIFI1
                     d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32hw);
-                    AE_S8_0_IP(AE_MOVINT16X4_FROMINT32X2(d_tmp32),(WORD8*)p_out_temp, 1);
+                    AE_S8_0_IP_HIFI1(AE_MOVINT16X4_FROMINT32X2(d_tmp32),(WORD8*)p_out_temp, 1);
 #else
                     d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
                     p_out_temp[i] = (UWORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));

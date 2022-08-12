@@ -311,7 +311,7 @@ const UWORD8* __restrict__ p_inp,
         for(itr_ow = 0; itr_ow < out_width; itr_ow++)
         {   ae_int16x4 temp;
             temp = AE_L16_X((ae_int16*)ptr_out1, (itr_ow * x_stride<<1));
-            AE_S8_0_I(temp, ((WORD8*)p_out + (itr_oh * out_width) + itr_ow), 0);
+            AE_S8_0_I_HIFI1(temp, ((WORD8*)p_out + (itr_oh * out_width) + itr_ow), 0);
         }
 #else
 

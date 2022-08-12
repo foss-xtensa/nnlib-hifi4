@@ -176,11 +176,11 @@ void show_usage(void)
     printf("\t-kernel_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit), -5(Symmetric 8-bit signed); Default=8\n");
     printf("\t-out_precision: 8, 16, -1(single prec float), -3(Asymmetric 8-bit), -4(Asymmetric 8-bit signed), -8(Symmetric 16-bit signed); Default=16\n");
     printf("\t-bias_precision: 8, 16, 32, 64, -1(single prec float); Default=16\n");
-    printf("\t-input_zero_bias: input zero zero bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), -127 to 128 (for Asymmetric 8-bit signed); Default=-127\n");
+    printf("\t-input_zero_bias: input zero zero bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), -127 to 128 (for Asymmetric 8-bit signed), ignored for symmetric 16-bit signed; Default=-127\n");
     printf("\t-kernel_zero_bias: kernel zero zero_bias for quantized 8-bit, -255 to 0 (for Asymmetric 8-bit unsigned), ignored for symmetric 8-bit signed ; Default=-127\n");
     printf("\t-out_multiplier : Output multiplier in Q31 format for quantized 8-bit, 0x0 to 0x7fffffff; Default=0x40000000\n");
     printf("\t-out_shift : Output shift for quantized 8-bit(asym8u and asym8s), 31 to -31; Default=-8\n");
-    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s; Default=128\n");
+    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s, ignored for symmetric 16-bit signed ; Default=128\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-kernel_name: conv2d_std, dilated_conv2d_std, conv2d_depth, conv2d_point, conv1d_std, transpose_conv; Default="" : conv2d_std\n");
     printf("\t-pointwise_profile_only: Applicable only when kernel_name is conv2d_depth, 0 (print conv2d depthwise and pointwise profile info), 1(print only conv2d pointwise profile info); Default=0\n");
@@ -296,7 +296,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
         cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
         cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+        0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
         cfg.out_data_format, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
   }
@@ -481,7 +481,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     err = xa_nn_conv2d_pointwise_per_chan_sym8sxsym16s ( \
         (WORD16 *) p_out->p, (WORD8 *) p_kernel_point->p, (WORD16 *) p_inp->p, (WORD64 *)p_bias_point->p, \
         cfg.input_height, cfg.input_width, cfg.input_channels, cfg.out_channels, \
-        cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+        0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
         cfg.out_data_format); \
     XTPWR_PROFILER_STOP(0);\
   }
@@ -965,7 +965,7 @@ int xa_nn_main_process(int argc, char *argv[])
   }
   else if(!strcmp(cfg.kernel_name,"transpose_conv"))
   {
-    scratch_size = xa_nn_transpose_conv_getsize(cfg.out_height,cfg.out_width,cfg.out_channels,cfg.out_precision); PRINT_VAR(scratch_size)
+    scratch_size = xa_nn_transpose_conv_getsize(cfg.input_height,cfg.input_width,cfg.input_channels,cfg.kernel_height,cfg.kernel_width,cfg.x_stride,cfg.y_stride,cfg.x_padding,cfg.y_padding,cfg.out_height,cfg.out_width,cfg.out_channels,cfg.kernel_precision,cfg.out_precision); PRINT_VAR(scratch_size)
   }
 
   if(strcmp(cfg.kernel_name,"conv2d_point"))

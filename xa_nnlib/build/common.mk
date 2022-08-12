@@ -26,6 +26,9 @@ LDSCRIPT = ldscript_$(CODEC_NAME).txt
 SYMFILE  = symbols_$(CODEC_NAME).txt
 DETECTED_CORE?=
 
+has_mul16 = $(shell grep -w "IsaUseMul16" "$$XTENSA_SYSTEM/$$XTENSA_CORE"-params | awk  -- '{ print $$3 }')
+has_mul32 = $(shell grep -w "IsaUse32bitMul" "$$XTENSA_SYSTEM/$$XTENSA_CORE"-params | awk  -- '{ print $$3 }')
+
 ifeq ($(CPU), x86)
     S = /
     AR = ar
@@ -59,7 +62,13 @@ else
        CFLAGS += -Wno-parentheses-equality
       endif
     endif
-    CFLAGS += -mno-mul16 -mno-mul32 -mno-div32 -fsigned-char -fno-exceptions -mlongcalls -INLINE:requested -mcoproc -fno-zero-initialized-in-bss
+    ifeq "$(has_mul16)" "0"
+        CFLAGS += -mno-mul16
+    endif
+    ifeq "$(has_mul32)" "0"
+        CFLAGS += -mno-mul32 -mno-div32
+    endif
+    CFLAGS += -fsigned-char -fno-exceptions -mlongcalls -INLINE:requested -mcoproc -fno-zero-initialized-in-bss
     CFLAGS += -mtext-section-literals 
     CFLAGS += -Wsign-compare
 endif

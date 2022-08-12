@@ -24,13 +24,6 @@
 #include "xa_nnlib_common_macros.h"
 
 #if XCHAL_HAVE_HIFI1
-#define MULTIPLYBYQUANTIZEDMULTIPLIER(inp, multiplier, left_shift, right_shift) \
-  inp = AE_SLAA32S(inp, left_shift); \
-  inp = AE_MULFP32X2RAS_L(inp, AE_MOVDA32(multiplier)); \
-  inp = AE_ROUND32F64SSYM(AE_SRAA64(AE_CVT64F32_L(inp), right_shift));
-#endif
-
-#if XCHAL_HAVE_HIFI1
 #define AE_L8X4S_I_HIFI4(d, ptr, inc) \
   d = AE_L8X4S_I(ptr, inc);
 #else
@@ -45,8 +38,8 @@ acc = AE_MIN32(acc, max);
 
 #if XCHAL_HAVE_HIFI1
 #define AE_S8_FROM32X2_WITHSTRIDE(val32, dst, stride) \
-  AE_S8_0_XP(AE_MOVINT16X4_FROMINT32X2(AE_SEL32_LH(val32, val32)), dst, stride);\
-AE_S8_0_XP(AE_MOVINT16X4_FROMINT32X2(val32), dst, stride);\
+  AE_S8_0_XP_HIFI1(AE_MOVINT16X4_FROMINT32X2(AE_SEL32_LH(val32, val32)), dst, stride);\
+AE_S8_0_XP_HIFI1(AE_MOVINT16X4_FROMINT32X2(val32), dst, stride);\
 
 #endif
 
@@ -764,10 +757,12 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
           );
 
 #if XCHAL_HAVE_HIFI1
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec0, p_out_multiplier[vec_itr+0], l_shift[0], r_shift[0]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec2, p_out_multiplier[vec_itr+2], l_shift[2], r_shift[2]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec3, p_out_multiplier[vec_itr+3], l_shift[3], r_shift[3]);
+
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr+0], l_shift[0], r_shift[0]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec2, acc_row0_vec2, p_out_multiplier[vec_itr+2], l_shift[2], r_shift[2]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec3, acc_row0_vec3, p_out_multiplier[vec_itr+3], l_shift[3], r_shift[3]);
+        
 #else
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr+0], l_shift[0], r_shift[0]);
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
@@ -868,8 +863,8 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
            ,mat1_offset
           );
 #if XCHAL_HAVE_HIFI1
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec0, p_out_multiplier[vec_itr], l_shift[0], r_shift[0]);
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], l_shift[0], r_shift[0]);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
 #else
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], l_shift[0], r_shift[0]);
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
@@ -893,6 +888,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
       WORD8* p_dst0 = (WORD8*)p_out + (vec_itr + 0) * out_offset;
 #if TFLITE_SINGLE_ROUNDING
       left_shift = p_out_shift[vec_itr];
+      right_shift = p_out_shift[vec_itr];
       /* Single rounding macro doesn't need two shifts so this is not used */
       (void)right_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
@@ -943,7 +939,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
            ,mat1_offset
           );
 #if XCHAL_HAVE_HIFI1
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
 #else
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
 #endif
@@ -1186,6 +1182,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
       WORD8* p_dst0 = (WORD8*)p_out + (vec_itr + 0) * out_offset;
 #if TFLITE_SINGLE_ROUNDING
       left_shift = p_out_shift[vec_itr];
+      right_shift = p_out_shift[vec_itr];
       /* Single rounding macro doesn't need two shifts so this is not used */
       (void)right_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
@@ -1290,6 +1287,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
       WORD8* p_dst0 = (WORD8*)p_out + (vec_itr + 0) * out_offset;
 #if TFLITE_SINGLE_ROUNDING
       left_shift = p_out_shift[vec_itr];
+      right_shift = p_out_shift[vec_itr];
       /* Single rounding macro doesn't need two shifts so this is not used */
       (void)right_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */

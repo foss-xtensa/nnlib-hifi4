@@ -27,6 +27,50 @@ Cadence HiFi 4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
+Version 2.8.0 API 1.3: August 11, 2022
+
++ Intermediate Release of HiFi4 NN Library
++ Tested using RI.6 tools, xt-clang/xt-clang++ compiler.
++ For HiFi1 core, the library has been tested using RI.8 tools,
+  xt-clang/xt-clang++ compiler.
++ Adds Single Step Rounding support for applicable SEANet kernels
++ Adds support for matmul, matXvec and fully connected kernels
+  for asym8s datatype.
++ Adds support for 4D broadcast for following TFLM operators:
+  ADD (asymmetric quantized int8 and int16)
+  SUB (asymmetric quantized int8 and int16)
+  MUL (asymmetric quantized int8)
+  SQUARED_DIFF (asymmetric quantized int8)
++ Adds support for new datatypes for quantize TFLM operator:
+  QUANTIZE (single precision float to asymmetric quantized int8, 
+            asymmetric quantized int8 to asymmetric quantized int8)
++ Increases support for axis dimensions upto 1024 from 127 in kernel
+  xa_nn_reduce_mean_4D_asym8s_asym8s
++ Fixes mismatch w.r.t to TFLM in kernel xa_nn_vec_hard_swish_asym8s_asym8s.
++ Fixes range of input, output shifts in element wise add/sub kernels from 
+  -31 to 31 to -31 to 0.
++ Fixes input_range_radius check in xa_nn_vec_tanh_asym8s_asym8s,
+  xa_nn_vec_sigmoid_asym8u_asym8u and xa_nn_vec_sigmoid_asym8s_asym8s.
++ Fixes input_zero_bias range in xa_nn_vec_leaky_relu_asym8s_asym8s to match
+  with TFLM Ref.
++ Modifies CNN,LSTM and GRU testbenches to give more detalied error descriptions.
+
+Note
+> Processor Configuration must be built with SP-VFP option in order to compile 
+  floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for C++11 standard. 
+  This is supported only with Xtensa C library. 
+
+Known issues
+> Compiler optimizations are disabled for ANN C++ source files
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
+
 Version 2.7.0 API 1.2: May 11, 2022
 
 + Intermediate Release of HiFi4 NN Library

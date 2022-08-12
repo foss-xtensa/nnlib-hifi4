@@ -414,19 +414,13 @@ static inline void conv2d_nchw_asym8xasym8_hf4_convmul
             accu_int32_0 = scratch_ptr1[(j * x_stride)];
 
             accu_int32_0 = AE_ADD32S(accu_int32_0, _ae_int32_sat_bias);
-#if XCHAL_HAVE_HIFI1
-            accu_int32_0 = AE_SLAA32(accu_int32_0, left_shift);
-            accu_int32_0 = AE_MULFP32X2RAS_L(accu_int32_0, AE_MOVDA32(out_multiplier));
-            accu_int64_0 = AE_SLAI64(AE_MOVINT64_FROMINT32X2(accu_int32_0), 32);
-            accu_int64_0 = AE_SRAA64(accu_int64_0, right_shift);
-            accu_int32_0 = AE_ROUND32F64SSYM(accu_int64_0);
-#else
+
             MPY_BY_QUANT_MULT_X2_OUT32(accu_int32_0, accu_int32_0, out_multiplier, left_shift, right_shift);
-#endif
+
             accu_int32_0 = AE_ADD32S(accu_int32_0, AE_MOVDA32X2(out_zero_bias, out_zero_bias));
             accu_int32_0 = AE_MAX32(AE_MIN32(accu_int32_0, AE_MOVDA32(255)), AE_ZERO32());
 #if XCHAL_HAVE_HIFI1
-            AE_S8_0_XP(AE_MOVINT16X4_FROMINT32X2(accu_int32_0), out_ptr, out_stride);
+            AE_S8_0_XP_HIFI1(AE_MOVINT16X4_FROMINT32X2(accu_int32_0), out_ptr, out_stride);
 #else
             out_ptr[(j * out_stride)] = (UWORD8)AE_MOVAD32_L(accu_int32_0);
 #endif

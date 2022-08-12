@@ -298,7 +298,7 @@ const WORD8 *__restrict__ p_inp,
                 d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
                 ae_int16x4 d_tmp16 = AE_SAT16X4(d_tmp32, d_tmp32);
                 d_tmp16 = AE_SAT8S(d_tmp16);
-                AE_S8_0_I(d_tmp16, p_out+(itr_oh*out_width)+itr_ow, 0);
+                AE_S8_0_I_HIFI1(d_tmp16, p_out+(itr_oh*out_width)+itr_ow, 0);
                 #else
                 d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
                 d_tmp32 = AE_SLAI32S(d_tmp32, 24);
@@ -324,7 +324,7 @@ const WORD8 *__restrict__ p_inp,
                 d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
                 ae_int16x4 d_tmp16 = AE_SAT16X4(d_tmp32, d_tmp32);
                 d_tmp16 = AE_SAT8S(d_tmp16);
-                AE_S8_0_I(d_tmp16, p_out+(itr_oh*out_width)+itr_ow, 0);
+                AE_S8_0_I_HIFI1(d_tmp16, p_out+(itr_oh*out_width)+itr_ow, 0);
                 #else
                 d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
                 d_tmp32 = AE_SLAI32S(d_tmp32, 24);

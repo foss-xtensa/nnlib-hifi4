@@ -139,7 +139,7 @@ WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     flag = vbool2_join_vbool4(b32, b32);
     AE_MOVT16X4(out, ONE_16X4, flag);
     
-    AE_S8_0_IP(out, p_o, 1);
+    AE_S8_0_IP_HIFI1(out, p_o, 1);
     
     out = AE_ZERO16();
   }
@@ -435,7 +435,7 @@ WORD32 xa_nn_elm_notequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     flag = vbool2_join_vbool4(b32, b32);
     AE_MOVF16X4(out, ONE_16X4, flag);
     
-    AE_S8_0_IP(out, p_o, 1);
+    AE_S8_0_IP_HIFI1(out, p_o, 1);
     
     out=AE_ZERO16();
   }
@@ -729,7 +729,7 @@ WORD32 xa_nn_elm_greater_asym8sxasym8s(WORD8 * __restrict__ p_out,
     flag = vbool2_join_vbool4(b32, b32);
     AE_MOVF16X4(out, ONE_16X4, flag);
     
-    AE_S8_0_IP(out, p_o, 1);
+    AE_S8_0_IP_HIFI1(out, p_o, 1);
     
     out=AE_ZERO16();
   }
@@ -1025,7 +1025,7 @@ WORD32 xa_nn_elm_greaterequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     flag = vbool2_join_vbool4(b32, b32);
     AE_MOVF16X4(out, ONE_16X4, flag);
     
-    AE_S8_0_IP(out, p_o, 1);
+    AE_S8_0_IP_HIFI1(out, p_o, 1);
     
     out = AE_ZERO16();
   }
@@ -1318,7 +1318,7 @@ WORD32 xa_nn_elm_less_asym8sxasym8s(WORD8 * __restrict__ p_out,
     flag = vbool2_join_vbool4(b32, b32);
     AE_MOVT16X4(out, ONE_16X4, flag);
     
-    AE_S8_0_IP(out, p_o, 1);
+    AE_S8_0_IP_HIFI1(out, p_o, 1);
     
     out=AE_ZERO16();
   }
@@ -1611,7 +1611,7 @@ WORD32 xa_nn_elm_lessequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
     flag = vbool2_join_vbool4(b32, b32);
     AE_MOVT16X4(out, ONE_16X4, flag);
     
-    AE_S8_0_IP(out, p_o, 1);
+    AE_S8_0_IP_HIFI1(out, p_o, 1);
     
     out=AE_ZERO16();
   }

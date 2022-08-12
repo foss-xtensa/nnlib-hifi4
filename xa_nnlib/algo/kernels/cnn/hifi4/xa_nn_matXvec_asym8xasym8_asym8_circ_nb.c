@@ -80,17 +80,14 @@
     4. Add out_offset */
 #if XCHAL_HAVE_HIFI1
 #define ADJUST_ACC_ASYM8b(idx_row) \
-  ae_int32x2 _ae_int32x2_acc_ ##idx_row = AE_SLAA32(AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ##idx_row), left_shift); \
-  _ae_int32x2_acc_ ##idx_row = AE_MULFP32X2RAS_L(_ae_int32x2_acc_ ##idx_row, AE_MOVDA32(out_multiplier)); \
-  _ae_int64_acc_ ##idx_row = AE_SLAI64(AE_MOVINT64_FROMINT32X2(_ae_int32x2_acc_ ##idx_row), 32); \
-  _ae_int64_acc_ ##idx_row = AE_SRAA64(_ae_int64_acc_ ##idx_row, right_shift); \
-  _ae_int32x2_acc_ ##idx_row = AE_ROUND32F64SSYM(_ae_int64_acc_ ##idx_row); \
+  ae_int32x2 _ae_int32x2_acc_ ##idx_row; \
+  MPY_BY_QUANT_MULT_X2_OUT32(_ae_int32x2_acc_ ##idx_row, AE_MOVINT32X2_FROMINT64(_ae_int64_acc_ ##idx_row), out_multiplier, left_shift, right_shift); \
   (_ae_int32x2_acc_ ##idx_row) = AE_ADD32S(_ae_int32x2_acc_ ##idx_row, AE_MOVDA32(out_offset)); \
 
 /* Saturate result to unsigned 8 bit (0-255) and store */
 #define STORE_ACC_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row) \
   _ae_int32x2_acc_ ##idx_row = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row, AE_MOVDA32(0)), AE_MOVDA32(255)); \
-  AE_S8_0_I(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ##idx_row), ((WORD8 *)p_out + (m_itr + idx_row)*out_stride), 0); \
+  AE_S8_0_I_HIFI1(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ##idx_row), ((WORD8 *)p_out + (m_itr + idx_row)*out_stride), 0); \
 
 #else
 #define ADJUST_ACC_ASYM8b(idx_row) \
@@ -184,6 +181,7 @@ WORD32 xa_nn_matXvec_asym8xasym8_asym8_circ_nb(
 
 #if TFLITE_SINGLE_ROUNDING
   left_shift = out_shift;
+  right_shift = out_shift;
   /* Single rounding macro doesn't need two shifts so this is not used */
   (void)right_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */

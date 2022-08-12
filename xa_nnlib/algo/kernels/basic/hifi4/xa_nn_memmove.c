@@ -76,7 +76,7 @@ WORD32 xa_nn_memmove_8_8( void *pdst,
     for(;i<n;i++)
     {
         AE_L8S_IP(d0, pInp, sizeof(WORD8));
-        AE_S8_0_IP(d0, pOut, sizeof(WORD8));
+        AE_S8_0_IP_HIFI1(d0, pOut, sizeof(WORD8));
     }
   }
   else
@@ -105,7 +105,7 @@ WORD32 xa_nn_memmove_8_8( void *pdst,
             for(i=0; i<n; i++)
             {
                 AE_L8S_IP(d0, pInp, -1);
-                AE_S8_0_IP(d0, pOut, -1);
+                AE_S8_0_IP_HIFI1(d0, pOut, -1);
             }
         }
         for(;i<n;i++)

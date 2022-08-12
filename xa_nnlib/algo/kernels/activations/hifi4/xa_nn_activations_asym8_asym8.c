@@ -868,7 +868,7 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
     SUB_128(m0)
 
 #if XCHAL_HAVE_HIFI1
-    AE_S8_0_IP(m0, p_o, sizeof(WORD8));
+    AE_S8_0_IP_HIFI1(m0, p_o, sizeof(WORD8));
 #else
     WORD16 m0_out8 = m0;
     *p_o++ = (WORD8)m0_out8;
@@ -1056,22 +1056,6 @@ WORD32 xa_nn_vec_activation_min_max_asym8_asym8(UWORD8 * __restrict__ p_out,
     return 0;
 }
 
-#if XCHAL_HAVE_HIFI1
-#define MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out, inp1, inp2, multiplier, left_shift, right_shift) \
-{\
-  ae_int64 acc1 = AE_MUL32_HH(inp1, left_shift); \
-  ae_int64 acc2 = AE_MUL32_LL(inp1, left_shift); \
-  ae_int64 acc3 = AE_MUL32_HH(inp2, left_shift); \
-  ae_int64 acc4 = AE_MUL32_LL(inp2, left_shift); \
-  inp1 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(acc1, 32)), AE_MOVINT32X2_FROMINT64(AE_SLAI64S(acc2, 32)));\
-  inp2 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(acc3, 32)), AE_MOVINT32X2_FROMINT64(AE_SLAI64S(acc4, 32)));\
-  inp1 = AE_MULFP32X2RAS(inp1, AE_NEG32(AE_MOVDA32(multiplier))); \
-  inp2 = AE_MULFP32X2RAS(inp2, AE_NEG32(AE_MOVDA32(multiplier))); \
-  inp1 = AE_MULFP32X2RS(inp1, right_shift); \
-  inp2 = AE_MULFP32X2RS(inp2, right_shift); \
-  out = AE_SAT16X4(inp1, inp2); \
-}
-#endif
 
 WORD32 xa_nn_vec_relu_asym8u_asym8u( UWORD8 * __restrict__ p_out,
                     const   UWORD8 * __restrict__ p_vec,
@@ -1233,8 +1217,6 @@ WORD32 xa_nn_vec_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
   PRIME_8X4F(p_v, align_src);
 #if XCHAL_HAVE_HIFI1
   ALIGN_REGISTER_TYPE align_dst = AE_ZALIGN64();
-  left_shift = (1 << left_shift);
-  right_shift = (0XFFFFFFFF << (31 - right_shift));
 #else
   xtbool4 b0;
 #endif
@@ -1257,11 +1239,7 @@ WORD32 xa_nn_vec_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     // Multiply with out multiplier
     AE_MUL16X4(d_w0_0, d_w0_1, d_v0_0, one); 
     ae_int16x4 out0, out_minmax;
-#if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#else 
     MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#endif
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
     //Clamp the output in the quantized activation range
     LIMIT(out_minmax, out0, act_min, act_max)
@@ -1292,17 +1270,13 @@ WORD32 xa_nn_vec_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     // Multiply with out multiplier
     AE_MUL16X4(d_w0_0, d_w0_1, d_v0_0, one); 
     ae_int16x4 out0, out_minmax;
-#if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#else 
     MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#endif
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
     //Clamp the output in the quantized activation range
     LIMIT(out_minmax, out0, act_min, act_max)
 #if XCHAL_HAVE_HIFI1
     ae_int16x4 out8_0 = AE_SAT8S(out_minmax);
-    AE_S8_0_IP(out8_0, p_o, sizeof(WORD8));
+    AE_S8_0_IP_HIFI1(out8_0, p_o, sizeof(WORD8));
 #else
     WORD16 out8_0 = out_minmax;
     *p_o++ = (WORD8)out8_0;
@@ -1376,10 +1350,6 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
   PRIME_8X4F(p_v_a, align_src1);
 #if XCHAL_HAVE_HIFI1
   ALIGN_REGISTER_TYPE align_dst = AE_ZALIGN64();
-  left_shift = (1 << left_shift);
-  a_left_shift = (1 << a_left_shift);
-  right_shift = (0XFFFFFFFF << (31 - right_shift));
-  a_right_shift = (0XFFFFFFFF << (31 - a_right_shift));
 #else
   ae_int16x4 CONST_127_16x4 = AE_MOVDA16(127);
   ae_int16x4 CONST_MINUS_128_16x4 = AE_MOVDA16(-128);
@@ -1411,11 +1381,7 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     AE_MUL16X4(d_w0_0, d_w0_1, d_v0_0, one); 
 
     ae_int16x4 out0;
-#if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#else 
     MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#endif
 
     // Add alpha zero bias and multiply with alpha multiplier for input values < 0
     ae_int32x2 d_alpha_w0_0, d_alpha_w0_1;
@@ -1426,11 +1392,7 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     AE_MUL16X4(d_alpha_w0_0, d_alpha_w0_1, d_v0_0, d_alpha_v0_0);
 
     ae_int16x4 a_out0;
-#if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
-#else 
     MPY_BY_QUANT_MULT_X2X2_OUT16(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
-#endif
 
     AE_MOVT16X4(out0, a_out0, sel0);
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
@@ -1477,11 +1439,7 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     AE_MUL16X4(d_w0_0, d_w0_1, d_v0_0, one); 
 
     ae_int16x4 out0;
-#if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#else 
     MPY_BY_QUANT_MULT_X2X2_OUT16(out0, d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
-#endif
 
     // Add alpha zero bias and multiply with alpha multiplier for input values < 0
     ae_int32x2 d_alpha_w0_0, d_alpha_w0_1;
@@ -1492,18 +1450,13 @@ WORD32 xa_nn_vec_prelu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     AE_MUL16X4(d_alpha_w0_0, d_alpha_w0_1, d_v0_0, d_alpha_v0_0);
 
     ae_int16x4 a_out0;
-#if XCHAL_HAVE_HIFI1
-    MULTIPLYBYQUANTIZEDMULTIPLIER_X2X2_OUT16_HIFI1(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
-#else 
     MPY_BY_QUANT_MULT_X2X2_OUT16(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
-#endif
-
     AE_MOVT16X4(out0, a_out0, sel0);
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
   
 #if XCHAL_HAVE_HIFI1
     ae_int16x4 out8_0 = AE_SAT8S(out0);
-    AE_S8_0_IP(out8_0, p_o, sizeof(WORD8));
+    AE_S8_0_IP_HIFI1(out8_0, p_o, sizeof(WORD8));
 #else
     xtbool4 bsat4 = AE_LT16(CONST_127_16x4, out0);
     AE_MOVT16X4(out0, CONST_127_16x4 , bsat4);
@@ -1668,7 +1621,7 @@ WORD32 xa_nn_vec_leaky_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
 #if XCHAL_HAVE_HIFI1
     ae_int16x4 out8_0 = AE_SAT8S(out0);
-    AE_S8_0_IP(out8_0, (WORD8 *)p_o, 1);
+    AE_S8_0_IP_HIFI1(out8_0, (WORD8 *)p_o, 1);
 #else
     xtbool4 bsat4 = AE_LT16(CONST_127_16x4, out0);
     AE_MOVT16X4(out0, CONST_127_16x4 , bsat4);
@@ -1797,9 +1750,11 @@ WORD32 xa_nn_vec_hard_swish_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
 
     // Multiply inp*relu6(inp+3)
-    ae_int16x4 out0;
+    ae_int16x4 out0, out0_rsh_val;
     out0 = AE_MULFP16X4S(d_w0_0, d_r0_0); 
-
+    out0_rsh_val = AE_SRAI16(out0, 15);
+    out0_rsh_val = AE_AND16(out0_rsh_val, AE_MOVDA16(1));
+    out0 = AE_ADD16S(out0, out0_rsh_val);
     out0 = AE_SRAA16SYMS_LE(out0, -out_shift); 
 
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
@@ -1851,16 +1806,18 @@ WORD32 xa_nn_vec_hard_swish_asym8s_asym8s( WORD8 * __restrict__ p_out,
     d_r0_0 = AE_AND16(d_r0_0, AE_MOVDA16(0x7fff));
 
     // Multiply inp*relu6(inp+3)
-    ae_int16x4 out0;
+    ae_int16x4 out0, out0_rsh_val;
     out0 = AE_MULFP16X4S(d_w0_0, d_r0_0); 
-
+    out0_rsh_val = AE_SRAI16(out0, 15);
+    out0_rsh_val = AE_AND16(out0_rsh_val, AE_MOVDA16(1));
+    out0 = AE_ADD16S(out0, out0_rsh_val);
     out0 = AE_SRAA16SYMS_LE(out0, -out_shift); 
 
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
   
 #if XCHAL_HAVE_HIFI1
     ae_int16x4 out8_0 = AE_SAT8S(out0);
-    AE_S8_0_IP(out8_0, p_o, sizeof(WORD8));
+    AE_S8_0_IP_HIFI1(out8_0, p_o, sizeof(WORD8));
 #else
     xtbool4 bsat4 = AE_LT16(CONST_127_16x4, out0);
     AE_MOVT16X4(out0, CONST_127_16x4 , bsat4);
@@ -2169,7 +2126,7 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
 
 #if XCHAL_HAVE_HIFI1
     m0 = AE_SAT8S(z10);
-    AE_S8_0_IP(m0, p_o, sizeof(WORD8));
+    AE_S8_0_IP_HIFI1(m0, p_o, sizeof(WORD8));
 #else
     m0 = z10;
     xtbool4 bsat4 = AE_LT16(CONST_127_16x4, m0);

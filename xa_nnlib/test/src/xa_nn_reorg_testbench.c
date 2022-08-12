@@ -207,8 +207,8 @@ void show_usage(void)
     printf("\t-stride_2: stride for dimention 2; Default=1\n");
     printf("\t-stride_3: stride for dimention 3; Default=1\n");
     printf("\t-stride_4: stride for dimention 4; Default=1\n");
-    printf("\t-inp_precision: 8; Default=8\n");
-    printf("\t-out_precision: 8; Default=8\n");
+    printf("\t-inp_precision: 8, 16; Default=8\n");
+    printf("\t-out_precision: 8, 16; Default=8\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-kernel_name: depth_to_space, space_to_depth, pad, batch_to_space_nd, space_to_batch_nd, strided_slice; Default=""depth_to_space""\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");

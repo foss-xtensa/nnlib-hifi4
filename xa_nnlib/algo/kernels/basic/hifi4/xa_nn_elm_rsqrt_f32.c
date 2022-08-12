@@ -54,7 +54,6 @@ WORD32 xa_nn_elm_rsqrt_f32_f32(FLOAT32 * __restrict__ p_out,
 
   if(((((unsigned)p_out) & 7) == 0) && ((((unsigned)p_inp) & 7) == 0))
   {
-#pragma loop_count factor=2
     for(i=0;i < num_elm>>1;i++)
     {
       AE_LSX2IP(x1, inp, 2*sizeof(FLOAT32));
@@ -69,7 +68,6 @@ WORD32 xa_nn_elm_rsqrt_f32_f32(FLOAT32 * __restrict__ p_out,
     inp_a = AE_LA64_PP(inp);
     out_a = AE_ZALIGN64();
 #pragma concurrent
-#pragma loop_count factor=2
     for(i=0;i < num_elm>>1;i++)
     {
       AE_LASX2IP(x1, inp_a, inp);

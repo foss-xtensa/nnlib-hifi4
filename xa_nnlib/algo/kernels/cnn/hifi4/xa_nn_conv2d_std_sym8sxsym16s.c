@@ -279,4 +279,3 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s(
 
   return 0;
 }
-

@@ -25,12 +25,6 @@
 
 #if 1
 
-#if XCHAL_HAVE_HIFI1
-#define MULTIPLYBYQUANTIZEDMULTIPLIER(inp, multiplier, left_shift, right_shift) \
-    inp = AE_SLAA32S(inp, left_shift); \
-    inp = AE_MULFP32X2RAS_L(inp, AE_MOVDA32(multiplier)); \
-    inp = AE_ROUND32X2F64SSYM(0, AE_SRAA64(AE_CVT64F32_L(inp), right_shift));
-#endif
 
 static WORD32 conv_x_left_pad(
     WORD32 x_padding,
@@ -63,17 +57,6 @@ static WORD32 conv_x_left_pad(
     {
       for(k = 0; k < out_channels; k++)
       {
-#if XCHAL_HAVE_HIFI1
-        WORD32 out_shift = p_out_shift[k];
-        left_shift  = XT_MAX(out_shift, 0);
-        right_shift = -XT_MIN(out_shift, 0);
-        ae_int32x2 acc = AE_L32_I((ae_int32*)&p_bias[k], 0);
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc, p_out_multiplier[k], left_shift, right_shift);
-        acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
-        acc = AE_MAX32(acc, min_int8);
-        acc = AE_MIN32(acc, max_int8);
-        AE_S8_0_X( AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i * out_height_offset + j * out_width_offset + k * out_channels_offset));
-#else
 #if TFLITE_SINGLE_ROUNDING
         left_shift  = p_out_shift[k];
         /* Single rounding macro doesn't need two shifts so this is not used */
@@ -81,7 +64,16 @@ static WORD32 conv_x_left_pad(
 #else /* #if TFLITE_SINGLE_ROUNDING */
         left_shift  = p_out_shift[k] < 0 ? 0 : p_out_shift[k];
         right_shift = p_out_shift[k] > 0 ? 0 : -p_out_shift[k];
-#endif /* #if TFLITE_SINGLE_ROUNDING */
+#endif /* #if TFLITE_SINGLE_ROUNDING */          
+#if XCHAL_HAVE_HIFI1
+        ae_int32x2 acc = AE_L32_I((ae_int32*)&p_bias[k], 0);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
+        acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
+        acc = AE_MAX32(acc, min_int8);
+        acc = AE_MIN32(acc, max_int8);
+        AE_S8_0_X_HIFI1( AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i * out_height_offset + j * out_width_offset + k * out_channels_offset));
+#else
+
         ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
@@ -130,17 +122,6 @@ static WORD32 conv_x_right_pad(
     {
       for(k = 0; k < out_channels; k++)
       {
-#if XCHAL_HAVE_HIFI1
-        WORD32 out_shift = p_out_shift[k];
-        left_shift  = XT_MAX(out_shift, 0);
-        right_shift = -XT_MIN(out_shift, 0);
-        ae_int32x2 acc = AE_L32_I((ae_int32*)&p_bias[k], 0);
-        MULTIPLYBYQUANTIZEDMULTIPLIER(acc, p_out_multiplier[k], left_shift, right_shift);
-        acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
-        acc = AE_MAX32(acc, min_int8);
-        acc = AE_MIN32(acc, max_int8);
-        AE_S8_0_X( AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i * out_height_offset + j * out_width_offset + k * out_channels_offset));
-#else
 #if TFLITE_SINGLE_ROUNDING
         left_shift  = p_out_shift[k];
         /* Single rounding macro doesn't need two shifts so this is not used */
@@ -148,7 +129,15 @@ static WORD32 conv_x_right_pad(
 #else /* #if TFLITE_SINGLE_ROUNDING */
         left_shift  = p_out_shift[k] < 0 ? 0 : p_out_shift[k];
         right_shift = p_out_shift[k] > 0 ? 0 : -p_out_shift[k];
-#endif /* #if TFLITE_SINGLE_ROUNDING */
+#endif /* #if TFLITE_SINGLE_ROUNDING */          
+#if XCHAL_HAVE_HIFI1
+        ae_int32x2 acc = AE_L32_I((ae_int32*)&p_bias[k], 0);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
+        acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
+        acc = AE_MAX32(acc, min_int8);
+        acc = AE_MIN32(acc, max_int8);
+        AE_S8_0_X_HIFI1( AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i * out_height_offset + j * out_width_offset + k * out_channels_offset));
+#else
         ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));

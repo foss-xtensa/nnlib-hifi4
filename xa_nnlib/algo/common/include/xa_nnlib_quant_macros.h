@@ -75,6 +75,89 @@
 #define MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(prod, val, multiplier, lsh) \
   MPY_BY_QUANT_MULT_X2_OUT32(prod, val, multiplier, lsh, lsh)
 
+#define MPY_BY_QUANT_MACC_ST_ONE_EXP_X2X2_OUT32(acc0, acc1, val0, val1, multiplier, lsh) \
+{ \
+  ae_int32x2 mult_ls0, mult_ls1; \
+  ae_int32x2 out0, out1; \
+  xtbool2 b0 = AE_EQ32(AE_MOVDA32(lsh), AE_ZERO32()); \
+  mult_ls0 = mult_ls1 = AE_MOVDA32(multiplier); \
+  AE_MOVF32X2(mult_ls0, AE_ZERO32(), b0); \
+  AE_MOVT32X2(mult_ls1, AE_ZERO32(), b0); \
+  out0 = AE_SEL32_HH( AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(val0, mult_ls1), 1)),  AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(val0, mult_ls1), 1))); \
+  out1 = AE_SEL32_HH( AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(val1, mult_ls1), 1)),  AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(val1, mult_ls1), 1))); \
+  AE_MULSFP32X2RAS(out0, val0, mult_ls0);\
+  AE_MULSFP32X2RAS(out1, val1, mult_ls0);\
+  AE_MULAFP32X2RAS(acc0, out0, AE_SRLA32(AE_MOVDA32(0x80000000), -lsh));\
+  AE_MULAFP32X2RAS(acc1, out1, AE_SRLA32(AE_MOVDA32(0x80000000), -lsh));\
+}
+
+#define MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2X2_OUT32(acc0, acc1, val0, val1, multiplier, lsh) \
+{ \
+  ae_int32x2 mult_ls0, mult_ls1; \
+  ae_int32x2 out0, out1; \
+  xtbool2 b0 = AE_EQ32(AE_MOVDA32(lsh), AE_ZERO32()); \
+  mult_ls0 = mult_ls1 = AE_MOVDA32(multiplier); \
+  AE_MOVF32X2(mult_ls0, AE_ZERO32(), b0); \
+  AE_MOVT32X2(mult_ls1, AE_ZERO32(), b0); \
+  out0 = AE_SEL32_HH( AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(val0, mult_ls1), 1)),  AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(val0, mult_ls1), 1))); \
+  out1 = AE_SEL32_HH( AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(val1, mult_ls1), 1)),  AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(val1, mult_ls1), 1))); \
+  AE_MULSFP32X2RAS(out0, val0, mult_ls0);\
+  AE_MULSFP32X2RAS(out1, val1, mult_ls0);\
+  AE_MULSFP32X2RAS(acc0, out0, AE_SRLA32(AE_MOVDA32(0x80000000), -lsh));\
+  AE_MULSFP32X2RAS(acc1, out1, AE_SRLA32(AE_MOVDA32(0x80000000), -lsh));\
+}
+
+#define MPY_BY_QUANT_MULT_X2X2_OUT16_ZB(out, inp1, inp2, multiplier, l_shift, r_shift, out_off) \
+{ \
+  MPY_BY_QUANT_MULT_X2X2_OUT16(out, inp1, inp2, multiplier, l_shift, r_shift) \
+  out = AE_ADD16S(AE_MOVDA16(out_off), out); \
+}
+#define MPY_BY_QUANT_MULT_ST_ONE_EXP_X2X2_OUT16_ZB(out0, val0, val1, multiplier, lsh, out_off) \
+    MPY_BY_QUANT_MULT_X2X2_OUT16_ZB(out0, val0, val1, multiplier, lsh, lsh, out_off)
+
+#define MPY_BY_QUANT_MACC_ST_ONE_EXP_X2_OUT32(acc0, val0, multiplier, lsh) \
+{ \
+  ae_int32x2 mult_ls0, mult_ls1; \
+  ae_int32x2 out0; \
+  xtbool2 b0 = AE_EQ32(AE_MOVDA32(lsh), AE_ZERO32()); \
+  mult_ls0 = mult_ls1 = AE_MOVDA32(multiplier); \
+  AE_MOVF32X2(mult_ls0, AE_ZERO32(), b0); \
+  AE_MOVT32X2(mult_ls1, AE_ZERO32(), b0); \
+  out0 = AE_SEL32_HH( AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(val0, mult_ls1), 1)),  AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(val0, mult_ls1), 1))); \
+  AE_MULSFP32X2RAS(out0, val0, mult_ls0); \
+  AE_MULAFP32X2RAS(acc0, out0, AE_SRLA32(AE_MOVDA32(0x80000000), -lsh) ); \
+}
+
+#define MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2_OUT32(acc0, val0, multiplier, lsh) \
+{ \
+  ae_int32x2 mult_ls0, mult_ls1; \
+  ae_int32x2 out0; \
+  xtbool2 b0 = AE_EQ32(AE_MOVDA32(lsh), AE_ZERO32()); \
+  mult_ls0 = mult_ls1 = AE_MOVDA32(multiplier); \
+  AE_MOVF32X2(mult_ls0, AE_ZERO32(), b0); \
+  AE_MOVT32X2(mult_ls1, AE_ZERO32(), b0); \
+  out0 = AE_SEL32_HH( AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(val0, mult_ls1), 1)),  AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(val0, mult_ls1), 1))); \
+  AE_MULSFP32X2RAS(out0, val0, mult_ls0); \
+  AE_MULSFP32X2RAS(acc0, out0, AE_SRLA32(AE_MOVDA32(0x80000000), -lsh) ); \
+}
+
+#define MPY_BY_QUANT_MULT_X2_OUT16(out, inp, multiplier, left_shift, right_shift) \
+{ \
+  ae_int64 out64_0, out64_1; \
+  ae_int32x2 out32_0; \
+  out64_0 = AE_MUL32_HH(inp, AE_MOVDA32(multiplier));\
+  out64_1 = AE_MUL32_LL(inp, AE_MOVDA32(multiplier));\
+  out32_0 = AE_TRUNCA32X2F64S(out64_0, out64_1, left_shift + 17); \
+  out = AE_ROUND16X4F32SASYM(out32_0, out32_0); \
+}
+#define MPY_BY_QUANT_MULT_X2_OUT16_ZB(out, inp1, multiplier, l_shift, r_shift, out_off) \
+{ \
+  MPY_BY_QUANT_MULT_X2_OUT16(out, inp1, multiplier, l_shift, r_shift) \
+  out = AE_ADD16S(AE_MOVDA16(out_off), out); \
+}
+#define MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT16_ZB(out0, val0, multiplier, lsh, out_off) \
+    MPY_BY_QUANT_MULT_X2_OUT16_ZB(out0, val0, multiplier, lsh, lsh, out_off)
+
 #else /* #if TFLITE_SINGLE_ROUNDING */
 
 #define MPY_BY_QUANT_MULT_X2_OUT32(out, inp, multiplier, l_shift, r_shift) \
@@ -148,6 +231,43 @@
     prod = AE_ROUND32X2F64SSYM(temp64_h, temp64_l);\
 }
 #endif /* #if XCHAL_HAVE_HIFI1 */
+
+#define MPY_BY_QUANT_MACC_ST_ONE_EXP_X2X2_OUT32(acc0, acc1, val0, val1, multiplier, lsh) { \
+    val0 = AE_MULFP32X2RAS(val0, AE_MOVDA32(multiplier)); \
+    val1 = AE_MULFP32X2RAS(val1, AE_MOVDA32(multiplier)); \
+    AE_MULSFP32X2RS(acc0, val0, AE_SLAA32S(AE_MOVDA32(0x80000000), lsh) ); \
+    AE_MULSFP32X2RS(acc1, val1, AE_SLAA32S(AE_MOVDA32(0x80000000), lsh) ); \
+}
+
+#define MPY_BY_QUANT_MULT_ST_ONE_EXP_X2X2_OUT16_ZB(out1, inp1, inp2, multiplier, l_shift, out_off) {\
+  inp1 = AE_MULFP32X2RAS(inp1, AE_MOVDA32(multiplier)); \
+  inp2 = AE_MULFP32X2RAS(inp2, AE_MOVDA32(multiplier)); \
+  inp1 = AE_MULFP32X2RS(inp1, AE_SLAA32S(AE_MOVDA32(0x80000000), l_shift)); \
+  inp2 = AE_MULFP32X2RS(inp2, AE_SLAA32S(AE_MOVDA32(0x80000000), l_shift)); \
+  out1 = AE_SAT16X4(inp1, inp2); \
+  out1 = AE_SUB16S(AE_MOVDA16(out_off), out1);\
+}
+#define MPY_BY_QUANT_MACC_ST_ONE_EXP_X2_OUT32(acc0, val0, multiplier, lsh) { \
+    val0 = AE_MULFP32X2RAS(val0, AE_MOVDA32(multiplier)); \
+    AE_MULSFP32X2RS(acc0, val0, AE_SLAA32S(AE_MOVDA32(0x80000000), lsh) ); \
+}
+#define MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT16_ZB(out1, inp1, multiplier, l_shift, out_off) {\
+  inp1 = AE_MULFP32X2RAS(inp1, AE_MOVDA32(multiplier)); \
+  inp1 = AE_MULFP32X2RS(inp1, AE_SLAA32S(AE_MOVDA32(0x80000000), l_shift)); \
+  out1 = AE_SAT16X4(inp1, inp1); \
+  out1 = AE_SUB16S(AE_MOVDA16(out_off), out1); \
+}
+
+#define MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2X2_OUT32(acc0, acc1, val0, val1, multiplier, lsh) { \
+    val0 = AE_MULFP32X2RAS(val0, AE_MOVDA32(multiplier)); \
+    val1 = AE_MULFP32X2RAS(val1, AE_MOVDA32(multiplier)); \
+    AE_MULAFP32X2RS(acc0, val0, AE_SLAA32S(AE_MOVDA32(0x80000000), lsh)); \
+    AE_MULAFP32X2RS(acc1, val1, AE_SLAA32S(AE_MOVDA32(0x80000000), lsh)); \
+}
+#define MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2_OUT32(acc0, val0, multiplier, lsh) { \
+    val0 = AE_MULFP32X2RAS(val0, AE_MOVDA32(multiplier)); \
+    AE_MULAFP32X2RS(acc0, val0, AE_SLAA32S(AE_MOVDA32(0x80000000), lsh)); \
+}
 
 #endif /* #if TFLITE_SINGLE_ROUNDING */
 

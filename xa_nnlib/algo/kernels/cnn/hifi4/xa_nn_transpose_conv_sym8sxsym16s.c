@@ -23,16 +23,37 @@
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_common_macros.h"
 
-WORD32 xa_nn_transpose_conv_getsize
-(WORD32 output_height
- ,WORD32 output_width
- ,WORD32 output_channels
- ,WORD32 output_precision
- )
+WORD32 xa_nn_transpose_conv_getsize(
+    WORD32 input_height, 
+    WORD32 input_width, 
+    WORD32 input_channels,
+    WORD32 kernel_height,
+    WORD32 kernel_width,
+    WORD32 x_stride,
+    WORD32 y_stride,
+    WORD32 x_pad,
+    WORD32 y_pad,
+    WORD32 output_height,
+    WORD32 output_width,
+    WORD32 output_channels,
+    WORD32 kernel_precision,
+    WORD32 output_precision)
 {
     XA_NNLIB_CHK_COND((output_height <= 0), -1);
     XA_NNLIB_CHK_COND((output_width <= 0), -1);
     XA_NNLIB_CHK_COND((output_channels <= 0), -1);
+
+    /* Unused arguments, HiFi5 API compatibility */
+    (void)input_height; 
+    (void)input_width; 
+    (void)input_channels; 
+    (void)kernel_height; 
+    (void)kernel_width; 
+    (void)x_stride; 
+    (void)y_stride; 
+    (void)x_pad; 
+    (void)y_pad; 
+    (void)kernel_precision; 
 
     WORD32 scratch_bytewidth = 0;
     WORD32 total_size = 0;
@@ -186,6 +207,7 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 								AE_L8X4F_IP(d_fil1, pfilt, sizeof(WORD32));
 								AE_L8X4F_IP(d_fil2, pfilt, sizeof(WORD32));
 								AE_L8X4F_XP(d_fil3, pfilt, (stride1-12));
+
 								for (int out_channel = 0; out_channel < output_depth; ++out_channel)
 								{
 									d_scr = AE_L64_I(pscratch_src, 0);
@@ -193,10 +215,11 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 									AE_MULAAAAQ16(d_scr, d_inp1, d_fil1);
 									AE_MULAAAAQ16(d_scr, d_inp2, d_fil2);
 									AE_MULAAAAQ16(d_scr, d_inp3, d_fil3);
-									AE_L8X4F_IP(d_fil, pfilt, sizeof(WORD32));
-									AE_L8X4F_IP(d_fil1, pfilt, sizeof(WORD32));
-									AE_L8X4F_IP(d_fil2, pfilt, sizeof(WORD32));
-									AE_L8X4F_XP(d_fil3, pfilt, (stride1-12));
+									d_fil  = AE_L8X4F_I( pfilt, 0*sizeof(WORD32));
+									d_fil1 = AE_L8X4F_I( pfilt, 1*sizeof(WORD32));
+									d_fil2 = AE_L8X4F_I( pfilt, 2*sizeof(WORD32));
+									d_fil3 = AE_L8X4F_I( pfilt, 3*sizeof(WORD32));
+                  pfilt += stride1;
 									AE_S64_IP(d_scr, pscratch_src, sizeof(WORD64));
 								}
 							}

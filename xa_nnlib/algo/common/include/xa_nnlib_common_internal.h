@@ -28,4 +28,18 @@
 void *xa_nn_memcpy(void * dest,const void *src, size_t n);
 #endif
 
+#if XCHAL_HAVE_HIFI1
+#if ( XCHAL_HW_VERSION >= 281090 )
+#define AE_S8_0_IP_HIFI1(dr, ptr, size) AE_S8_0_IP(AE_MOVINT8X8_FROMINT16X4((dr)), (ae_int8 *)(ptr), (size))
+#define AE_S8_0_I_HIFI1(dr, ptr, size)   AE_S8_0_I(AE_MOVINT8X8_FROMINT16X4((dr)), (ae_int8 *)(ptr), (size))
+#define AE_S8_0_X_HIFI1(dr, ptr, size)   AE_S8_0_X(AE_MOVINT8X8_FROMINT16X4((dr)), (ae_int8 *)(ptr), (size))
+#define AE_S8_0_XP_HIFI1(dr, ptr, size) AE_S8_0_XP(AE_MOVINT8X8_FROMINT16X4((dr)), (ae_int8 *)(ptr), (size))
+#else
+#define AE_S8_0_IP_HIFI1(dr, ptr, size) AE_S8_0_IP((dr), (WORD8 *)(ptr), (size))
+#define AE_S8_0_I_HIFI1(dr, ptr, size)   AE_S8_0_I((dr), (WORD8 *)(ptr), (size))
+#define AE_S8_0_X_HIFI1(dr, ptr, size)   AE_S8_0_X((dr), (WORD8 *)(ptr), (size))
+#define AE_S8_0_XP_HIFI1(dr, ptr, size) AE_S8_0_XP((dr), (WORD8 *)(ptr), (size))
+#endif
+#endif
+
 #endif /* XA_NNLIB_COMMON_INTERNAL_H */

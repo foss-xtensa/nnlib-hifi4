@@ -300,7 +300,7 @@ WORD32 xa_nn_l2_norm_asym8s_asym8s(WORD8 *p_out,
 
 #if XCHAL_HAVE_HIFI1
     m1 = AE_SAT8S(z10);
-    AE_S8_0_IP(m1, p_o, sizeof(WORD8));
+    AE_S8_0_IP_HIFI1(m1, p_o, sizeof(WORD8));
 #else
     xtbool4 bsat4 = AE_LT16(CONST_127_16x4, z10);
     AE_MOVT16X4(z10, CONST_127_16x4 , bsat4);
