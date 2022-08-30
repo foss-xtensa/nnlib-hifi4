@@ -27,6 +27,29 @@ Cadence HiFi 4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
+Version 2.8.1 API 1.3: August 30, 2022
+
++ Patch Release of HiFi4 NN Library
++ Fixed issue with p_bias == NULL support in following kernels:
+  xa_nn_matmul_asym8xasym8_asym8
+  xa_nn_matmul_asym8sxasym8s_asym8s
+
+Note
+> Processor Configuration must be built with SP-VFP option in order to compile 
+  floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for C++11 standard. 
+  This is supported only with Xtensa C library. 
+
+Known issues
+> Compiler optimizations are disabled for ANN C++ source files
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
+
 Version 2.8.0 API 1.3: August 11, 2022
 
 + Intermediate Release of HiFi4 NN Library

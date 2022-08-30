@@ -102,7 +102,7 @@ WORD32 xa_nn_matmul_asym8sxasym8s_asym8s(
     right_shift = out_shift>0?0:-out_shift;
 #endif /* #if TFLITE_SINGLE_ROUNDING */
   
-    CHK_MATMUL_ALIGN(p_mat1, 1, p_vec1, 1, cols1, row_stride1, vec_offset, 4);
+    CHK_MATMUL_ALIGN(p_mat1, (ALIGNMENT>>1), p_vec1, (ALIGNMENT>>1), cols1, row_stride1, vec_offset, 4);
     
     if(chk_align)
     {
@@ -258,8 +258,8 @@ WORD32 xa_nn_matmul_asym8sxasym8s_asym8s(
                     KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b_SINGLE_UNALIGNED(1,1);
                 }
 
-                ADD_BIAS_BATCH_ROW_ASYM8b_ACC_FOR_ASYM8bxASYM8b(0);
-                ADD_BIAS_BATCH_ROW_ASYM8b_ACC_FOR_ASYM8bxASYM8b(1);
+                ADD_BIAS_BATCH_ROW_ASYM8b_ACC_FOR_ASYM8bxASYM8b_MATMUL(0);
+                ADD_BIAS_BATCH_ROW_ASYM8b_ACC_FOR_ASYM8bxASYM8b_MATMUL(1);
                 ADJUST_ACC_BATCH_ROW_ASYM8b(0);
                 ADJUST_ACC_BATCH_ROW_ASYM8b(1);
                 STORE_STRIDE_ACC_BATCH_ASYM8bsxASYM8bs_AT_OUT_ASYM8bs(0,0);
@@ -294,7 +294,7 @@ WORD32 xa_nn_matmul_asym8sxasym8s_asym8s(
                     KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b_SINGLE_UNALIGNED(0,0);
                     KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b_SINGLE_UNALIGNED(0,1);
                 }
-                ADD_BIAS_BATCH_ROW_ASYM8b_ACC_FOR_ASYM8bxASYM8b(0);
+                ADD_BIAS_BATCH_ROW_ASYM8b_ACC_FOR_ASYM8bxASYM8b_MATMUL(0);
                 ADJUST_ACC_BATCH_ROW_ASYM8b(0);
                 STORE_STRIDE_ACC_BATCH_ASYM8bsxASYM8bs_AT_OUT_ASYM8bs(0,0);
                 STORE_STRIDE_ACC_BATCH_ASYM8bsxASYM8bs_AT_OUT_ASYM8bs(0,1);
