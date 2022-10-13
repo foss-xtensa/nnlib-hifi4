@@ -101,9 +101,9 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
     left_shift = out_shift<0?0:out_shift;
     right_shift = out_shift>0?0:-out_shift;
 #endif /* #if TFLITE_SINGLE_ROUNDING */
-  
-    CHK_MATMUL_ALIGN(p_mat1, (ALIGNMENT>>1), p_vec1, (ALIGNMENT>>1), cols1, row_stride1, vec_offset, 4);
-    
+
+    int chk_align = 0;  
+    CHK_MATMUL_ALIGN(chk_align, p_mat1, (ALIGNMENT>>1), p_vec1, (ALIGNMENT>>1), cols1, row_stride1, vec_offset, 4);
     if(chk_align)
     {
         for(vec_itr = 0; vec_itr < (vec_count & ~(VEC_UNROLL-1)); vec_itr+=VEC_UNROLL)

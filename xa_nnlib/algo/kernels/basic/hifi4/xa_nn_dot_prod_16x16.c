@@ -71,12 +71,12 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
   }
 
 #if TFLITE_SINGLE_ROUNDING
-	left_shift = out_shift;
+    left_shift = out_shift;
     /* Single rounding requires only original shift value */
-	(void)right_shift;
+    (void)right_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
-	left_shift = out_shift < 0 ? 0 : out_shift;
-	right_shift = out_shift > 0 ? 0 : -out_shift;
+    left_shift = out_shift < 0 ? 0 : out_shift;
+    right_shift = out_shift > 0 ? 0 : -out_shift;
 #endif /* #if TFLITE_SINGLE_ROUNDING */
   
   ae_int32x2 max_int8 = AE_MOVDA32(127);
@@ -275,13 +275,21 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
         AE_LA16X4_IP(d_inp2_0, align_inp2, pt_inp2);
         AE_MULAAAAQ16(d_out64_0, d_inp1_0, d_inp2_0);
       }
+#if (( XCHAL_HW_VERSION >= RI9_HWVERSION )& (XCHAL_HAVE_HIFI1))
+       int rem_len = (vec_length & 3);
+       {
+        AE_LAV16X4_XP(d_inp1_0, align_inp1, pt_inp1, (rem_len<<1));
+        AE_LAV16X4_XP(d_inp2_0, align_inp2, pt_inp2, (rem_len<<1));
+        AE_MULAAAAQ16(d_out64_0, d_inp1_0, d_inp2_0);
+       }
+#else
       for(i = 0; i < (vec_length & 3); i++)
       {
         AE_L16_IP(d_inp1_0, (ae_int16 *)pt_inp1, 2);
         AE_L16_IP(d_inp2_0, (ae_int16 *)pt_inp2, 2);
         AE_MULA16_00(d_out64_0, d_inp1_0, d_inp2_0);
       }
-
+#endif
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
 

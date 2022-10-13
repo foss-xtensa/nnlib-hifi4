@@ -21,8 +21,94 @@
 ******************************************************************************/
 #include "xa_nnlib_common.h"
 #include "xa_nn_basic_state.h"
+#include "xtensa/xtensa-versions.h"
 
 #if XCHAL_HAVE_HIFI1
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+WORD32 xa_nn_memmove_8_8( void *pdst,
+    const void *psrc,
+    WORD32 n)
+{
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(pdst, -1);
+  XA_NNLIB_ARG_CHK_PTR(psrc, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(pdst, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(psrc, sizeof(WORD8), -1);
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND((n <= 0), -1);
+
+  const WORD8 *x = (const WORD8*)psrc;
+  WORD8 *y = (WORD8*)pdst;
+  int i;
+  ae_int8x8 d0;
+  ae_int16x4 d1;
+  WORD8 *pOut;
+  const WORD8 *pInp;
+  if(y == x) //no copy needed
+    return 0;
+
+  if (y < x)
+  {
+    pInp = (const  WORD8 *)&x[0];
+    pOut = (WORD8 *)&y[0];
+    ae_valign alignIn, alignOut;
+    alignIn = AE_LA64_PP(pInp);
+    alignOut = AE_ZALIGN64();
+
+    for(i=0;i<n>>3;i++)
+    {
+        AE_LA8X8_IP(d0, alignIn, (const ae_int8x8 *)pInp);
+        AE_SA8X8_IP(d0, alignOut, ( ae_int8x8 *)pOut);
+    }
+    //Reminder Loop
+    {
+        AE_LAV8X8_XP(d0, alignIn, (const ae_int8x8 *)pInp, (n&7));
+        AE_SAV8X8_XP(d0, alignOut, (ae_int8x8 *)pOut, (n&7));
+    }
+    AE_SA64POS_FP(alignOut, pOut);
+  }
+  else
+  {
+    pOut = ( WORD8 *)&y[n-2];
+    pInp = (WORD8 *)&x[n-2];
+
+    ///check for aligned part
+    if(( (((unsigned)pOut)&1)==0  ) &&  ( (((unsigned)pInp)&1)==0  ) &&(n>7))
+    {
+        ae_valign alignIn, alignOut;
+        alignIn = AE_LA64_PP(pInp);
+        alignOut = AE_ZALIGN64();
+        for(i=0;i<(n>>3);i++)
+        {
+            AE_LA16X4_RIP(d1, alignIn, (ae_int16x4 *)pInp);
+            AE_SA16X4_RIP(d1, alignOut, (ae_int16x4 *)pOut);
+        }
+        AE_SA64NEG_FP(alignOut, pOut);
+        //Reminder Loop
+        pInp = ((WORD8*)pInp + 1);
+        pOut = ((WORD8*)pOut + 1);
+        for(i=0 ;i< (n&7);i++)
+        {
+            *(WORD8*)pOut = *(WORD8*)pInp;
+            pInp = ((WORD8*)pInp - 1);
+            pOut = ((WORD8*)pOut - 1);
+        }
+    }
+    else
+    {
+    pOut = ( WORD8 *)&y[n-1];
+    pInp = (WORD8 *)&x[n-1];
+        for(i=0; i<n; i++)
+        {
+            AE_L8_IP(d0, (const ae_int8 *)pInp, -1);
+            AE_S8_0_IP(d0, ( ae_int8 *)pOut, -1);
+        }
+    }
+  }
+  return 0;
+}
+#else
 WORD32 xa_nn_memmove_8_8( void *pdst,
     const void *psrc,
     WORD32 n)
@@ -81,43 +167,45 @@ WORD32 xa_nn_memmove_8_8( void *pdst,
   }
   else
   {
-      pInp = (const  WORD8 *)&x[n-4];
-      pOut = (WORD8 *)&y[n-4];
+    pOut = ( WORD8 *)&y[n-2];
+    pInp = (WORD8 *)&x[n-2];
 
-        ///check for aligned part
-        if( ( (((unsigned)pInp)&3)==0  ) &&  ( (((unsigned)pOut)&3)==0  )   )
+    ///check for aligned part
+    if(( (((unsigned)pOut)&1)==0  ) &&  ( (((unsigned)pInp)&1)==0  ) &&(n>7))
+    {
+        ae_valign alignIn, alignOut;
+        alignIn = AE_LA64_PP(pInp);
+        alignOut = AE_ZALIGN64();
+        for(i=0;i<(n>>3);i++)
         {
-
-            for(i=0;i<(n>>2);i++)
-            {
-                AE_L8X4S_IP(d0, pInp, -4*sizeof(WORD8));
-                AE_S8X4_IP(d0, pOut, -4*sizeof(WORD8));
-            }
-            i<<=2;//Reminder Loop
-            pInp = ((WORD8*)pInp + 3);
-            pOut = ((WORD8*)pOut + 3);
-
+            AE_LA16X4_RIP(d0, alignIn, (ae_int16x4 *)pInp);
+            AE_SA16X4_RIP(d0, alignOut, (ae_int16x4 *)pOut);
         }
-        else
-        {
-            pInp = (const  WORD8 *)&x[n-1];
-            pOut = (WORD8 *)&y[n-1];
-            for(i=0; i<n; i++)
-            {
-                AE_L8S_IP(d0, pInp, -1);
-                AE_S8_0_IP_HIFI1(d0, pOut, -1);
-            }
-        }
-        for(;i<n;i++)
+        AE_SA64NEG_FP(alignOut, pOut);
+        //Reminder Loop
+        pInp = ((WORD8*)pInp + 1);
+        pOut = ((WORD8*)pOut + 1);
+        for(i=0 ;i< (n&7);i++)
         {
             *(WORD8*)pOut = *(WORD8*)pInp;
             pInp = ((WORD8*)pInp - 1);
             pOut = ((WORD8*)pOut - 1);
         }
-
+    }
+    else
+    {
+    pOut = ( WORD8 *)&y[n-1];
+    pInp = (WORD8 *)&x[n-1];
+        for(i=0; i<n; i++)
+        {
+            AE_L8S_IP(d0, (WORD8 *)pInp, -1);
+            AE_S8_0_IP_HIFI1(d0, (WORD8 *)pOut, -1);
+        }
+    }
   }
   return 0;
 }
+#endif
 #else
 #include <string.h>
 void *xa_nn_memcpy(void * dest1,const void *src1, size_t n1)

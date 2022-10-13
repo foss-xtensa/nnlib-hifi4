@@ -167,8 +167,6 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s(
   XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((kernel_height <= 0 || kernel_width <= 0), -1);
-  XA_NNLIB_ARG_CHK_COND((kernel_height > input_height), -1);
-  XA_NNLIB_ARG_CHK_COND((kernel_width > input_width), -1);
   XA_NNLIB_ARG_CHK_COND((out_channels <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
@@ -240,7 +238,7 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s(
   WORD32 y_b_pad = kernel_height + (out_height - 1) * y_stride - (y_padding + input_height);
   y_b_pad = y_b_pad < 0 ? 0 : y_b_pad;
 
-  conv2d_std_init_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, p_state, -input_zero_bias);
+  conv2d_std_init_cir_buf(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, p_state);
 
   // Index to padded input width
   WORD32 idx_beg_inp_width_pad = kernel_width - x_stride;
@@ -251,7 +249,7 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s(
   for(j=0;j<out_width-out_width_over_x_pad-out_width_over_x_r_pad;j++)
   {
     // Add x_stride x (input_height x input_channels) new planes to circular buffer
-    conv2d_std_update_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, idx_beg_inp_width_pad, p_state, -input_zero_bias);
+    conv2d_std_update_cir_buf(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, idx_beg_inp_width_pad, p_state);
 
     // Update index to input width padded
     idx_beg_inp_width_pad += x_stride;

@@ -30,3 +30,5 @@
 #include "common.h"
 #include "xa_nnlib_common_internal.h"
 #endif /* __XA_NNLIB_LEGACY_COMPAT_H__ */
+
+#define RI9_HWVERSION 281090

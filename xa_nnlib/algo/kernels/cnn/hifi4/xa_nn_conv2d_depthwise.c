@@ -271,6 +271,11 @@ WORD32 xa_nn_conv2d_depthwise_getsize
             circ_buf_bytewidth = (circ_buf_precision/8); /* bytewidth as per precision */
             break;
 
+        case -8: /* For sym16s */
+            scratch_bytewidth = 8; /* 64b scratch */
+            circ_buf_bytewidth = 2; /* bytewidth for sym16s */
+            break;
+            
         case -1: /* For f32 */
             scratch_bytewidth = 4; /* f32 scratch */
             circ_buf_bytewidth = 4; /* bytewidth for f32 */

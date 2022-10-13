@@ -713,17 +713,38 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         acc_row0_vec1 = AE_ADD32S(acc_row0_vec1, out_zero_bias);
         acc_row0_vec2 = AE_ADD32S(acc_row0_vec2, out_zero_bias);
         acc_row0_vec3 = AE_ADD32S(acc_row0_vec3, out_zero_bias);
+
+#if XCHAL_HAVE_HIFI1
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+        // clamped_out
+        ae_int8x8 clamped_1 = AE_SAT8X4X32_L(acc_row0_vec0, acc_row0_vec1);
+        ae_int8x8 clamped_3 = AE_SAT8X4X32_L(acc_row0_vec2, acc_row0_vec3);
+        ae_int8x8 clamped_0 = AE_MOVINT8X8_FROMINT16X4(AE_SEL16_2301(AE_MOVF16X4_FROMINT8X8(clamped_1), AE_MOVF16X4_FROMINT8X8(clamped_1)));
+        ae_int8x8 clamped_2 = AE_MOVINT8X8_FROMINT16X4(AE_SEL16_2301(AE_MOVF16X4_FROMINT8X8(clamped_3), AE_MOVF16X4_FROMINT8X8(clamped_3)));
+        // Store Output
+        AE_S8_0_XP(AE_MOVINT8X8_FROMINT16X4(AE_SRAI16(AE_MOVF16X4_FROMINT8X8(clamped_0),8)), (ae_int8 *)p_dst0, out_stride);
+        AE_S8_0_XP(clamped_0, (ae_int8 *)p_dst0, out_stride);
+        AE_S8_0_XP(AE_MOVINT8X8_FROMINT16X4(AE_SRAI16(AE_MOVF16X4_FROMINT8X8(clamped_1),8)), (ae_int8 *)p_dst1, out_stride);
+        AE_S8_0_XP(clamped_1, (ae_int8 *)p_dst1, out_stride);
+        AE_S8_0_XP(AE_MOVINT8X8_FROMINT16X4(AE_SRAI16(AE_MOVF16X4_FROMINT8X8(clamped_2),8)), (ae_int8 *)p_dst2, out_stride);
+        AE_S8_0_XP(clamped_2, (ae_int8 *)p_dst2, out_stride);
+        AE_S8_0_XP(AE_MOVINT8X8_FROMINT16X4(AE_SRAI16(AE_MOVF16X4_FROMINT8X8(clamped_3),8)), (ae_int8 *)p_dst3, out_stride);
+        AE_S8_0_XP(clamped_3, (ae_int8 *)p_dst3, out_stride);
+#else
         AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row0_vec1, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row0_vec2, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row0_vec3, min_int8, max_int8);
-
-#if XCHAL_HAVE_HIFI1
         AE_S8_FROM32X2_WITHSTRIDE(acc_row0_vec0, p_dst0, out_stride);
         AE_S8_FROM32X2_WITHSTRIDE(acc_row0_vec1, p_dst1, out_stride);
         AE_S8_FROM32X2_WITHSTRIDE(acc_row0_vec2, p_dst2, out_stride);
         AE_S8_FROM32X2_WITHSTRIDE(acc_row0_vec3, p_dst3, out_stride);
+#endif
 #else
+        AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
+        AE_MINMAX32_HF4(acc_row0_vec1, min_int8, max_int8);
+        AE_MINMAX32_HF4(acc_row0_vec2, min_int8, max_int8);
+        AE_MINMAX32_HF4(acc_row0_vec3, min_int8, max_int8);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_H(acc_row0_vec0), p_dst0, out_stride);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec0), p_dst0, out_stride);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_H(acc_row0_vec1), p_dst1, out_stride);
@@ -773,6 +794,18 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         acc_row0_vec1 = AE_ADD32S(acc_row0_vec1, out_zero_bias);
         acc_row0_vec2 = AE_ADD32S(acc_row0_vec2, out_zero_bias);
         acc_row0_vec3 = AE_ADD32S(acc_row0_vec3, out_zero_bias);
+#if (XCHAL_HAVE_HIFI1 & ( XCHAL_HW_VERSION >= RI9_HWVERSION ))
+        // clamped_out
+        ae_int8x8 clamped_1 = AE_SAT8X4X32_L(acc_row0_vec0, acc_row0_vec1);
+        ae_int8x8 clamped_3 = AE_SAT8X4X32_L(acc_row0_vec2, acc_row0_vec3);
+        ae_int8x8 clamped_0 = AE_MOVINT8X8_FROMINT16X4(AE_SEL16_2301(AE_MOVF16X4_FROMINT8X8(clamped_1), AE_MOVF16X4_FROMINT8X8(clamped_1)));
+        ae_int8x8 clamped_2 = AE_MOVINT8X8_FROMINT16X4(AE_SEL16_2301(AE_MOVF16X4_FROMINT8X8(clamped_3), AE_MOVF16X4_FROMINT8X8(clamped_3)));
+        // Store Output
+        AE_S8_0_XP(clamped_0, (ae_int8 *)p_dst0, out_stride);
+        AE_S8_0_XP(clamped_1, (ae_int8 *)p_dst1, out_stride);
+        AE_S8_0_XP(clamped_2, (ae_int8 *)p_dst2, out_stride);
+        AE_S8_0_XP(clamped_3, (ae_int8 *)p_dst3, out_stride);
+#else
         AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row0_vec1, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row0_vec2, min_int8, max_int8);
@@ -781,6 +814,7 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec1), p_dst1, out_stride);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec2), p_dst2, out_stride);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec3), p_dst3, out_stride);
+#endif
       }
       /* dummy load, just to increment the pointer */
       AE_L32_IP(acc_row0_vec0, bias_ptr, 16);
@@ -834,12 +868,25 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec1, acc_row0_vec1, p_out_multiplier[vec_itr+1], l_shift[1], r_shift[1]);
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         acc_row0_vec1 = AE_ADD32S(acc_row0_vec1, out_zero_bias);
+#if XCHAL_HAVE_HIFI1
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+        // clamped_out
+        ae_int8x8 clamped_1 = AE_SAT8X4X32_L(acc_row0_vec0, acc_row0_vec1);
+        ae_int8x8 clamped_0 = AE_MOVINT8X8_FROMINT16X4(AE_SEL16_2301(AE_MOVF16X4_FROMINT8X8(clamped_1), AE_MOVF16X4_FROMINT8X8(clamped_1)));
+        // Store Output
+        AE_S8_0_XP(AE_MOVINT8X8_FROMINT16X4(AE_SRAI16(AE_MOVF16X4_FROMINT8X8(clamped_0),8)), (ae_int8 *)p_dst0, out_stride);
+        AE_S8_0_XP(clamped_0, (ae_int8 *)p_dst0, out_stride);
+        AE_S8_0_XP(AE_MOVINT8X8_FROMINT16X4(AE_SRAI16(AE_MOVF16X4_FROMINT8X8(clamped_1),8)), (ae_int8 *)p_dst1, out_stride);
+        AE_S8_0_XP(clamped_1, (ae_int8 *)p_dst1, out_stride);
+#else
         AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row0_vec1, min_int8, max_int8);
-#if XCHAL_HAVE_HIFI1
         AE_S8_FROM32X2_WITHSTRIDE(acc_row0_vec0, p_dst0, out_stride);
         AE_S8_FROM32X2_WITHSTRIDE(acc_row0_vec1, p_dst1, out_stride);
+#endif
 #else
+        AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
+        AE_MINMAX32_HF4(acc_row0_vec1, min_int8, max_int8);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_H(acc_row0_vec0), p_dst0, out_stride);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec0), p_dst0, out_stride);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_H(acc_row0_vec1), p_dst1, out_stride);
@@ -871,10 +918,19 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
 #endif
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
         acc_row0_vec1 = AE_ADD32S(acc_row0_vec1, out_zero_bias);
+#if (XCHAL_HAVE_HIFI1 & ( XCHAL_HW_VERSION >= RI9_HWVERSION ))
+        // clamped_out
+        ae_int8x8 clamped_1 = AE_SAT8X4X32_L(acc_row0_vec0, acc_row0_vec1);
+        ae_int8x8 clamped_0 = AE_MOVINT8X8_FROMINT16X4(AE_SEL16_2301(AE_MOVF16X4_FROMINT8X8(clamped_1), AE_MOVF16X4_FROMINT8X8(clamped_1)));
+        // Store Output
+        AE_S8_0_XP(clamped_0, (ae_int8 *)p_dst0, out_stride);
+        AE_S8_0_XP(clamped_1, (ae_int8 *)p_dst1, out_stride);
+#else
         AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
         AE_MINMAX32_HF4(acc_row0_vec1, min_int8, max_int8);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec0), p_dst0, out_stride);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec1), p_dst1, out_stride);
+#endif
       }
       /* dummy load, just to increment the pointer */
       vec_itr+=2;
@@ -917,10 +973,19 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
           );
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
-        AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
 #if XCHAL_HAVE_HIFI1
-        AE_S8_FROM32X2_WITHSTRIDE(acc_row0_vec0, p_dst0, out_stride);
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+        // clamped_out
+        ae_int8x8 clamped_0 = AE_SAT8X4X32_L(acc_row0_vec0, acc_row0_vec0);
+        // Store Output
+        AE_S8_0_XP(AE_MOVINT8X8_FROMINT16X4(AE_SRAI16(AE_MOVF16X4_FROMINT8X8(clamped_0),8)), (ae_int8 *)p_dst0, out_stride);
+        AE_S8_0_XP(clamped_0, (ae_int8 *)p_dst0, out_stride);
 #else
+        AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
+        AE_S8_FROM32X2_WITHSTRIDE(acc_row0_vec0, p_dst0, out_stride);
+#endif
+#else
+        AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_H(acc_row0_vec0), p_dst0, out_stride);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec0), p_dst0, out_stride);
 #endif
@@ -944,8 +1009,13 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc_row0_vec0, acc_row0_vec0, p_out_multiplier[vec_itr], left_shift, right_shift);
 #endif
         acc_row0_vec0 = AE_ADD32S(acc_row0_vec0, out_zero_bias);
+#if (XCHAL_HAVE_HIFI1 & ( XCHAL_HW_VERSION >= RI9_HWVERSION ))
+        ae_int8x8 clamped_0 = AE_SAT8X4X32_L(acc_row0_vec0, acc_row0_vec0);
+        AE_S8_0_XP(clamped_0, (ae_int8 *)p_dst0, out_stride);
+#else
         AE_MINMAX32_HF4(acc_row0_vec0, min_int8, max_int8);
         AE_S8_FROM32_WITHSTRIDE(AE_MOVAD32_L(acc_row0_vec0), p_dst0, out_stride);
+#endif
       }
       /* dummy load, just to increment the pointer */
       AE_L32_IP(acc_row0_vec0, bias_ptr, 4);

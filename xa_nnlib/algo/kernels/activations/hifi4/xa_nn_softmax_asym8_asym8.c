@@ -239,7 +239,10 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
     WORD32 *p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
     ae_int32x2 y32, y10, diff_min;
     ae_int32x2 dequantized_y32, dequantized_y10, a_min, a_max;
-    ae_int32x2 exp_y32, exp_y10, sum_exp, recip_sum_exp, unsat_out32, unsat_out10, out32, out10, ONE;
+    ae_int32x2 exp_y32, exp_y10, sum_exp, recip_sum_exp, unsat_out32, unsat_out10, ONE;
+#if !(XCHAL_HAVE_HIFI1 &( XCHAL_HW_VERSION >= RI9_HWVERSION ))
+    ae_int32x2 out32, out10;
+#endif
     ae_f16x4 x;
     ae_int16x4 temp16X4, m0, max;
     ae_int64 sum_exp_64;
@@ -411,19 +414,26 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
     {
         AE_L32X2_IP(exp_y32, (ae_int32x2 *)p_exp, 2*sizeof(WORD32));
         AE_L32X2_IP(exp_y10, (ae_int32x2 *)p_exp, 2*sizeof(WORD32));
-
-
         unsat_out32 = AE_MULFP32X2RAS(exp_y32, recip_sum_exp);
         unsat_out32 = AE_SRAA32RS(unsat_out32, shift_bits_reciprocal + 31 - 8);
-        CLAMP_VAL(out32, unsat_out32, a_min, a_max);
-
         unsat_out10 = AE_MULFP32X2RAS(exp_y10, recip_sum_exp);
         unsat_out10 = AE_SRAA32RS(unsat_out10, shift_bits_reciprocal + 31 - 8);
-        CLAMP_VAL(out10, unsat_out10, a_min, a_max);
+
 #if XCHAL_HAVE_HIFI1
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+        // clamped_out
+        ae_int8x8 clamped = AE_SATU8X4X32_H(unsat_out32, unsat_out10);
+        // Store Output
+        AE_SAV8X8_XP(clamped, align_out, (ae_int8x8 *)p_out, 4);
+#else
+        CLAMP_VAL(out32, unsat_out32, a_min, a_max);
+        CLAMP_VAL(out10, unsat_out10, a_min, a_max);
         ae_f16x4 x_temp = AE_CVT16X4(out32, out10);
         AE_SA8X4U_IP(x_temp, align_out, (ae_int32*)p_out);
+#endif
 #else
+        CLAMP_VAL(out32, unsat_out32, a_min, a_max);
+        CLAMP_VAL(out10, unsat_out10, a_min, a_max);
         STORE_8X4_FROM_32X4(p_out, out32, out10)
 #endif
     }
@@ -435,15 +445,23 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
     __Pragma("no_unroll");
     for(i=0; i < (vec_length & 3); i++)
     {
+#if !(XCHAL_HAVE_HIFI1 &( XCHAL_HW_VERSION >= RI9_HWVERSION ))
         int o1;
+#endif
         AE_L32_IP(exp_y32, (ae_int32 *)p_exp, sizeof(WORD32));
 
         unsat_out32 = AE_MULFP32X2RAS(exp_y32, recip_sum_exp);
         unsat_out32 = AE_SRAA32RS(unsat_out32, shift_bits_reciprocal + 31 - 8);
+#if (XCHAL_HAVE_HIFI1 &( XCHAL_HW_VERSION >= RI9_HWVERSION ))
+        // clamped_out
+        ae_int8x8 clamped = AE_SATU8X4X32_L(unsat_out32, unsat_out32);
+        // Store Output
+        AE_S8_0_IP(clamped, (ae_int8 *)p_out, 1);
+#else
         CLAMP_VAL(out32, unsat_out32, a_min, a_max);
-
         o1 = AE_MOVAD32_H(out32);
         *p_out++ = (UWORD8)o1;
+#endif
     }
 
     return 0;
@@ -589,8 +607,12 @@ WORD32 xa_nn_vec_softmax_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
     for(i=0; i < main_loop_count; i++)
     {
-        AE_L8X4F_IP(x, p_in, 4*sizeof(WORD8));
-        x = AE_SRAI16(x,8);
+#if XCHAL_HAVE_HIFI1
+         AE_L8X4S_IP(x, p_in, 4*sizeof(WORD8));
+#else
+         AE_L8X4F_IP(x, p_in, 4*sizeof(WORD8));
+         x = AE_SRAI16(x,8);
+#endif
         x = AE_SUB16S(x, max);
 
         y32 = AE_SEXT32X2D16_32(x);

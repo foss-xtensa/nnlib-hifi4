@@ -87,8 +87,8 @@ WORD32 xa_nn_matmul_8x16_16(
 
     ADJUST_ACC_LSH_AND_BIAS_LSH_AxB_C(WORD8, WORD16, WORD16);
 
-    CHK_MATMUL_ALIGN(p_mat1, (ALIGNMENT>>1), p_vec1, ALIGNMENT, cols1, row_stride1, vec_offset, 4);
-    
+    int chk_align = 0;
+    CHK_MATMUL_ALIGN(chk_align, p_mat1, (ALIGNMENT>>1), p_vec1, ALIGNMENT, cols1, row_stride1, vec_offset, 4);
     if(chk_align)
     {
         if(vec_count > VEC_UNROLL)

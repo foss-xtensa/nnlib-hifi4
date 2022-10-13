@@ -67,6 +67,7 @@ MATXVECO2OBJS = \
     xa_nn_matXvec_16x16.o \
     xa_nn_matXvec_asym8xasym8.o \
     xa_nn_matXvec_sym8sxasym8s.o \
+    xa_nn_matXvec_sym8sxsym16s.o \
     xa_nn_matXvec_asym8sxasym8s.o \
     xa_nn_matXvec_asym8xasym8_batch.o \
     xa_nn_matXvec_8x8_batch.o \
@@ -158,6 +159,7 @@ CONVO2OBJS = \
     xa_nn_conv2d_pointwise_asym8xasym8.o \
     xa_nn_conv2d_depthwise_sym8sxasym8s.o \
     xa_nn_conv2d_pointwise_sym8sxasym8s.o \
+    xa_nn_conv2d_depthwise_sym8sxsym16s.o \
     xa_nn_conv2d_depthwise_f32.o \
     xa_nn_conv2d_pointwise_f32.o \
     xa_nn_conv2d_std_sym8sxsym16s.o \
@@ -249,7 +251,8 @@ REORGO2OBJS = \
   xa_nn_space_to_batch_nd_8.o \
   xa_nn_pad_8.o \
   xa_nn_pad_16.o \
-  xa_nn_stride_slice_int16.o
+  xa_nn_stride_slice_int16.o \
+  xa_nn_stride_slice_int8.o
 
 
 LIBO2OBJS = $(MATXVECO2OBJS) $(ACTIVATIONSO2OBJS) $(NDSPO2OBJS) $(CONVO2OBJS) $(FCO2OBJS) $(POOLO2OBJS) $(GRUO2OBJS) $(LSTMO2OBJS) $(CNNO2OBJS) $(BASICOBJS) $(NORMO2OBJS) $(REORGO2OBJS)

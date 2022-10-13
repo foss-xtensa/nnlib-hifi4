@@ -27,12 +27,32 @@ Cadence HiFi 4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
-Version 2.8.1 API 1.3: August 30, 2022
+Version 2.9.0 API 1.4: October 14, 2022
 
-+ Patch Release of HiFi4 NN Library
-+ Fixed issue with p_bias == NULL support in following kernels:
-  xa_nn_matmul_asym8xasym8_asym8
-  xa_nn_matmul_asym8sxasym8s_asym8s
++ Intermediate Release of HiFi4 NN Library
++ Tested using RI.9 tools, xt-clang/xt-clang++ compiler
++ Adds support for depthwise-conv2d, matXvec and fully connected kernels for
+  sym8sxsym16s datatype
++ Adds support for new datatype for TFLM operator:
+  REQUANTIZE (asym16s to asym16s)
+  STRIDED_SLICE (int8)
++ Adds support for kernel-dimension greater than input-dimension for standard 
+  convolution quantized datatypes (TENA-3528)
++ Fixes unexpected behaviour for null bias data pointer for kernel
+  matmul_asym8sxasym8s_asym8s (TENA-3526)
++ Changes input_left_shift handling for returning error to clipping between -31 to +31
+  for sigmoid_asym8s, sigmoid_asym8 & tanh_asym8s kernels (TENA-3615)
++ Fine tunes relevant kernels for HiFi1-enhanced core (RI.9 HiFi1e) for 
+  cycles and code size
++ Removes membank conflict issues to improve performance for kernels
+  conv1d_std_8x8,conv1d_std_8x16, conv2d_std_sym8sxsym16s,
+  conv1d_std_f32xf32, conv1d_std_16x16, conv1d_std_asym8xasym8,
+  conv2d_std_sym8sxsym16s, matXvec_batch_8x8_32,
+  fully_connected_asym8xasym8_asym8
++ Optimizes performance for following kernels
+  quant8 compare kernels,
+  conv2d_point_sym8sxasym8s,
+  broadcast_4D (cases when one input is constant)
 
 Note
 > Processor Configuration must be built with SP-VFP option in order to compile 

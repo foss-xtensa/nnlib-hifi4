@@ -136,7 +136,58 @@ WORD32 xa_nn_vec_leaky_relu_asym16s_asym16s( WORD16 * __restrict__ p_out,
 
     AE_SA16X4_IP(out0, align_dst, (ae_int16x4 *)p_o);
   }
+#if (( XCHAL_HW_VERSION >= RI9_HWVERSION )& (XCHAL_HAVE_HIFI1))
+{
+    ae_int16x4 d_inp0;
+    ae_int32x2 d_w0_0, d_w0_1;
+    ae_int32x2 d_alpha_w0_0, d_alpha_w0_1;
 
+    AE_LAV16X4_XP(d_inp0, align_src, (ae_int16x4 *)p_v, (rem_length<<1));
+
+    d_w0_0 = AE_SEXT32X2D16_32(d_inp0);
+    d_w0_1 = AE_SEXT32X2D16_10(d_inp0);
+
+    d_w0_0 = AE_SUB32(d_w0_0, inp_zb);
+    d_w0_1 = AE_SUB32(d_w0_1, inp_zb);
+
+    //Checking for input values less than zero
+    xtbool2 sel0 = AE_LT32(d_w0_0, AE_ZERO32());
+    xtbool2 sel1 = AE_LT32(d_w0_1, AE_ZERO32());
+
+    d_alpha_w0_0 = d_w0_0; d_alpha_w0_1 = d_w0_1;
+
+#if TFLITE_SINGLE_ROUNDING
+    (void)right_shift; (void)a_right_shift;
+    d_w0_0 = AE_SLAA32S(d_w0_0, left_shift);
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(d_w0_0, d_w0_0, out_multiplier, -right_shift_orig);
+    d_w0_1 = AE_SLAA32S(d_w0_1, left_shift);
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(d_w0_1, d_w0_1, out_multiplier, -right_shift_orig);
+
+    d_alpha_w0_0 = AE_SLAA32S(d_alpha_w0_0, a_left_shift);
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(d_alpha_w0_0, d_alpha_w0_0, alpha_multiplier, -a_right_shift_orig);
+    d_alpha_w0_1 = AE_SLAA32S(d_alpha_w0_1, a_left_shift);
+    MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(d_alpha_w0_1, d_alpha_w0_1, alpha_multiplier, -a_right_shift_orig);
+#else
+    // Multiply with out multiplier for input values >= 0
+    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_w0_0, d_w0_1, out_multiplier, left_shift, right_shift);
+
+    // Multiply with alpha multiplier for input values < 0
+    MULTIPLYBYQUANTIZEDMULTIPLIER_X2(d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
+#endif
+
+    AE_MOVT32X2(d_w0_0, d_alpha_w0_0, sel0);
+    AE_MOVT32X2(d_w0_1, d_alpha_w0_1, sel1);
+
+    d_w0_0 = AE_ADD32S(AE_MOVDA32(out_zero_bias), d_w0_0);
+    d_w0_1 = AE_ADD32S(AE_MOVDA32(out_zero_bias), d_w0_1);
+
+    ae_int16x4 out0;
+    out0 = AE_SAT16X4(d_w0_0, d_w0_1);
+
+    AE_SAV16X4_XP(out0, align_dst, (ae_int16x4 *)p_o, (rem_length<<1));
+}
+  AE_SA64POS_FP(align_dst, p_o); // finalize the stream
+#else
   AE_SA64POS_FP(align_dst, p_o); // finalize the stream
 
   //remainder loop for 3 elms
@@ -179,6 +230,6 @@ WORD32 xa_nn_vec_leaky_relu_asym16s_asym16s( WORD16 * __restrict__ p_out,
 
     AE_S16_0_IP(out0, (ae_int16 *)p_o, sizeof(ae_int16));
   }
-
+#endif
   return 0;
 }

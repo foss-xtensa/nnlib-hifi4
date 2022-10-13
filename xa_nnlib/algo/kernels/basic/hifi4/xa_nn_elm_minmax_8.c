@@ -73,6 +73,7 @@ WORD32 xa_nn_elm_max_8x8_8( WORD8* __restrict__ p_out,
 
     PRIME_8X4F(p_a, va_a);
     PRIME_8X4F(p_b, va_b);
+    int rem_itr = (num_element& 3);
 
     for(i = 0; i<(num_element&(~3)); i+=num_elm_per_iter){
 
@@ -83,14 +84,24 @@ WORD32 xa_nn_elm_max_8x8_8( WORD8* __restrict__ p_out,
 
            AE_SA8X4U_IP(a0_3,out_a,(ae_int32 *) p_c);
         }
-        AE_SA64POS_FP(out_a, p_c);
-
-
     /* process remaining scalar elements */
-    for(; i<num_element; i++){
-        p_out[i] = (p_in1[i] > p_in2[i]) ? p_in1[i] : p_in2[i];
-    }
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+    if(rem_itr)
+    {
+        AE_LAV8X4S_XP(a0_3, va_a, (ae_int8x4 *)p_a, rem_itr);
+        AE_LAV8X4S_XP(b0_3, va_b, (ae_int8x4 *)p_b, rem_itr);
 
+        a0_3=AE_MAX16(a0_3,b0_3);
+
+        AE_SAV8X4U_XP(a0_3,out_a,(ae_int8x4u *) p_c, rem_itr);
+    }
+    AE_SA64POS_FP(out_a, p_c);  
+#else
+    AE_SA64POS_FP(out_a, p_c);
+    for(i=0 ; i < rem_itr; i++){
+        p_c[i] = (p_a[i] > p_b[i]) ? p_a[i] : p_b[i];
+    }
+#endif
     return 0;
 }
 
@@ -237,7 +248,7 @@ WORD32 xa_nn_elm_min_8x8_8( WORD8* __restrict__ p_out,
 
         PRIME_8X4F(p_a, va_a);
         PRIME_8X4F(p_b, va_b);
-
+    int rem_itr = (num_element& 3);
     for(i = 0; i<(num_element&(~3)); i+=num_elm_per_iter){
             AE_LA8X4S_IP(a0_3, va_a, p_a);
             AE_LA8X4S_IP(b0_3, va_b, p_b);
@@ -246,13 +257,25 @@ WORD32 xa_nn_elm_min_8x8_8( WORD8* __restrict__ p_out,
 
             AE_SA8X4U_IP(b0_3,out_a,(ae_int32 *) p_c);
         }
-        AE_SA64POS_FP(out_a, p_c);
-
     /* process remaining scalar elements */
-    for(; i<num_element; i++){
-        p_out[i] = (p_in1[i] < p_in2[i]) ? p_in1[i] : p_in2[i];
-    }
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+    if(rem_itr)
+    {
+        AE_LAV8X4S_XP(a0_3, va_a, (ae_int8x4 *)p_a, rem_itr);
+        AE_LAV8X4S_XP(b0_3, va_b, (ae_int8x4 *)p_b, rem_itr);
 
+        b0_3=AE_MIN16(a0_3,b0_3);
+
+        AE_SAV8X4U_XP(b0_3,out_a,(ae_int8x4u *) p_c, rem_itr);  
+    }
+    AE_SA64POS_FP(out_a, p_c);  
+#else
+    AE_SA64POS_FP(out_a, p_c);
+
+    for(i=0 ; i < rem_itr; i++){
+        p_c[i] = (p_a[i] < p_b[i]) ? p_a[i] : p_b[i];
+    }
+#endif
     return 0;
 
 }
@@ -427,6 +450,9 @@ WORD32 xa_nn_elm_min_4D_Bcast_8x8_8(
             for(dim[2]=0; dim[2]<out_extents[2]; dim[2]++){
                 index[3][in1] = index[2][in1];
                 index[3][in2] = index[2][in2];
+#if XCHAL_HAVE_HIFI3Z
+#pragma no_unroll
+#endif
                 for(dim[3]=0; dim[3]<out_extents[3]; dim[3]++){
 
                     /*
@@ -513,6 +539,9 @@ WORD32 xa_nn_elm_max_4D_Bcast_8x8_8(
             for(dim[2]=0; dim[2]<out_extents[2]; dim[2]++){
                 index[3][in1] = index[2][in1];
                 index[3][in2] = index[2][in2];
+#if XCHAL_HAVE_HIFI3Z
+#pragma no_unroll
+#endif
                 for(dim[3]=0; dim[3]<out_extents[3]; dim[3]++){
     
                     /*
@@ -617,6 +646,9 @@ WORD32 xa_nn_elm_min_8D_Bcast_8x8_8(
                                 index[in1][6] = index[in1][5] + dim[6]*in1_strides[6];
                                 index[in2][6] = index[in2][5] + dim[6]*in2_strides[6];
 
+#if XCHAL_HAVE_HIFI3Z
+#pragma no_unroll
+#endif
                                 for(dim[7]=0; dim[7]<out_extents[7]; dim[7]++){
 
                                     index[in1][7] = index[in1][6] + dim[7]*in1_strides[7];
@@ -718,6 +750,9 @@ WORD32 xa_nn_elm_max_8D_Bcast_8x8_8(
                                 index[in1][6] = index[in1][5] + dim[6]*in1_strides[6];
                                 index[in2][6] = index[in2][5] + dim[6]*in2_strides[6];
 
+#if XCHAL_HAVE_HIFI3Z
+#pragma no_unroll
+#endif
                                 for(dim[7]=0; dim[7]<out_extents[7]; dim[7]++){
                                     index[in1][7] = index[in1][6] + dim[7]*in1_strides[7];
                                     index[in2][7] = index[in2][6] + dim[7]*in2_strides[7];

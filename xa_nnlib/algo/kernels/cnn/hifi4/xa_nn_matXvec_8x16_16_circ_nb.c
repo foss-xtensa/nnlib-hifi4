@@ -59,18 +59,37 @@
   p_out[(row+N)*out_offset] = AE_MOVINT16_FROMINT16X4(AE_SAT16X4(sat_acc1_ ##N, sat_acc1_ ##N)); \
 
 #else
-#define KERNEL_ROW_S(N) \
+#define KERNEL_ROW_S_TAIL(N) \
 { \
   ae_int16x4 temp_in1; \
   AE_L8X4F_IP(temp_in1, p_mat1_ ##N, 4); \
   AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
 }
-#define KERNEL_ROW_S_I(N) \
+#define KERNEL_ROW_S_I_TAIL(N) \
 { \
   ae_int16x4 temp_in1; \
   AE_L8X4F_IP(temp_in1, p_mat1_ ##N, 4); \
   AE_L16X4_XC(temp_src1, p_src1, 8); \
   AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
+}
+
+#define KERNEL_ROW_S(N) \
+{ \
+  ae_int16x4 temp_in1, temp_in1_I; \
+  temp_in1_I = AE_L8X4F_I(p_mat1_ ##N, 4); \
+  AE_L8X4F_IP(temp_in1, p_mat1_ ##N, 8); \
+  AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
+  AE_MULAAAAQ16(accu1_ ##N, temp_src2, temp_in1_I);\
+}
+#define KERNEL_ROW_S_I(N) \
+{ \
+  ae_int16x4 temp_in1, temp_in1_I; \
+  temp_in1_I = AE_L8X4F_I(p_mat1_ ##N, 4); \
+  AE_L8X4F_IP(temp_in1, p_mat1_ ##N, 8); \
+  AE_L16X4_XC(temp_src1, p_src1, 8); \
+  AE_L16X4_XC(temp_src2, p_src1, 8); \
+  AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
+  AE_MULAAAAQ16(accu1_ ##N, temp_src2, temp_in1_I);\
 }
 #define STORE_ROW_S(N) \
   accu1_ ##N = AE_SLAA64S(accu1_ ##N , -8);\
@@ -85,20 +104,24 @@
 #if (UNROLL_S == 1)
 #define SETUP_S SETUP_ROW_S(0)
 #define KERNEL_S KERNEL_ROW_S_I(0)
+#define KERNEL_S_TAIL KERNEL_ROW_S_I_TAIL(0)
 #define STORE_S STORE_ROW_S(0)
 
 #elif (UNROLL_S == 2)
 #define SETUP_S  SETUP_ROW_S(0)  SETUP_ROW_S(1)
 #define KERNEL_S KERNEL_ROW_S_I(0) KERNEL_ROW_S(1)
+#define KERNEL_S_TAIL KERNEL_ROW_S_I_TAIL(0) KERNEL_ROW_S_TAIL(1)
 #define STORE_S  STORE_ROW_S(0)  STORE_ROW_S(1)
 
 #elif (UNROLL_S == 4)
 #define SETUP_S  SETUP_ROW_S(0)  SETUP_ROW_S(1)  SETUP_ROW_S(2)  SETUP_ROW_S(3)
 #define KERNEL_S KERNEL_ROW_S_I(0) KERNEL_ROW_S(1) KERNEL_ROW_S(2) KERNEL_ROW_S(3)
+#define KERNEL_S_TAIL KERNEL_ROW_S_I_TAIL(0) KERNEL_ROW_S_TAIL(1) KERNEL_ROW_S_TAIL(2) KERNEL_ROW_S_TAIL(3)
 #define STORE_S  STORE_ROW_S(0)  STORE_ROW_S(1)  STORE_ROW_S(2)  STORE_ROW_S(3)
 #elif (UNROLL_S == 8)
 #define SETUP_S   SETUP_ROW_S(0)  SETUP_ROW_S(1)  SETUP_ROW_S(2)  SETUP_ROW_S(3)  SETUP_ROW_S(4)  SETUP_ROW_S(5)  SETUP_ROW_S(6)  SETUP_ROW_S(7)
 #define KERNEL_S KERNEL_ROW_S_I(0) KERNEL_ROW_S(1) KERNEL_ROW_S(2) KERNEL_ROW_S(3) KERNEL_ROW_S(4) KERNEL_ROW_S(5) KERNEL_ROW_S(6) KERNEL_ROW_S(7)
+#define KERNEL_S_TAIL KERNEL_ROW_S_I_TAIL(0) KERNEL_ROW_S_TAIL(1) KERNEL_ROW_S_TAIL(2) KERNEL_ROW_S_TAIL(3) KERNEL_ROW_S_TAIL(4) KERNEL_ROW_S_TAIL(5) KERNEL_ROW_S_TAIL(6) KERNEL_ROW_S_TAIL(7)
 #define STORE_S   STORE_ROW_S(0)  STORE_ROW_S(1)  STORE_ROW_S(2)  STORE_ROW_S(3)  STORE_ROW_S(4)  STORE_ROW_S(5)  STORE_ROW_S(6)  STORE_ROW_S(7)
 
 #endif
@@ -114,6 +137,7 @@ WORD32 xa_nn_matXvec_8x16_16_circ_nb(
   WORD32 bias_shift,
   WORD32 acc_shift)
 {
+#if XCHAL_HAVE_HIFI1
   WORD32 row, col;
   ae_int16x4 temp_src1;
 
@@ -157,5 +181,48 @@ WORD32 xa_nn_matXvec_8x16_16_circ_nb(
   }
 
   return 0;
+#else
+  WORD32 row, col;
+  ae_int16x4 temp_src1, temp_src2;
+
+  if ((NULL == p_out) || (NULL == p_mat) || (NULL == p_vec))
+  {
+    return -1;
+  }
+
+  if ((0 >= rows ) || (0 >= cols ) || (cols & 0x3))
+  {
+    return -2;
+  }
+
+  row = 0;
+
+  if(rows >= UNROLL_S)
+  {
+    for (row = 0; row < ( rows & ~(UNROLL_S-1)) ; row+=UNROLL_S)
+    {
+      ae_int16x4 *p_src1 = (ae_int16x4*)p_vec;
+      SETUP_S;
+      for (col = 0; col < (cols >> 3); col++) {
+        KERNEL_S;
+      }
+      if((cols & (7)) !=0){
+        KERNEL_S_TAIL;
+      }
+      STORE_S;
+    }
+  }
+  // Handle remaining rows
+  for (; row < rows ; row++)
+  {
+    ae_int16x4 *p_src1 = (ae_int16x4*)p_vec;
+    SETUP_ROW_S(0);
+    for (col = 0; col < (cols>>2); col++) {
+      KERNEL_ROW_S_I_TAIL(0);
+    }
+    STORE_ROW_S(0);
+  }
+  return 0;
+#endif
 }
 

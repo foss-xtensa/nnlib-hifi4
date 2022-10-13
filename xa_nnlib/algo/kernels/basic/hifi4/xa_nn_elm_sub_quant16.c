@@ -609,6 +609,7 @@ WORD32 xa_nn_elm_sub_broadcast_4D_asym16sxasym16s_asym16s(WORD16 * __restrict__ 
   }
 
   int need_broadcast = 0;
+  int inp1_const = 1, inp2_const = 1;
   for(i = 0; i < 4; i++)
   {
     if(p_inp1_shape[i] != p_inp2_shape[i])
@@ -620,6 +621,10 @@ WORD32 xa_nn_elm_sub_broadcast_4D_asym16sxasym16s_asym16s(WORD16 * __restrict__ 
 
       need_broadcast = 1;
     }
+    if(p_inp1_shape[i] != 1)
+      inp1_const &= 0;
+    if(p_inp2_shape[i] != 1)
+      inp2_const &= 0;
   }
   int itr0, itr1, itr2;
 
@@ -726,6 +731,48 @@ WORD32 xa_nn_elm_sub_broadcast_4D_asym16sxasym16s_asym16s(WORD16 * __restrict__ 
       p_inp1_tmp += inp1_strides[0];
       p_inp2_tmp += inp2_strides[0];
     }
+  }
+  else if(inp1_const == 1 || inp2_const == 1)
+  {
+    WORD32 inp1_zb, inp1_ls, inp1_mult;
+    WORD32 inp2_zb, inp2_ls, inp2_mult;
+    WORD32 out_mult;
+    inp1_zb = inp1_zero_bias;
+    inp1_ls = inp1_left_shift;
+    inp1_mult = inp1_multiplier;
+    inp2_zb = inp2_zero_bias;
+    inp2_ls = inp2_left_shift;
+    inp2_mult = inp2_multiplier;
+    out_mult = out_multiplier;
+    if(inp1_strides[3] == 0)
+    {
+      inp2_zb = inp1_zero_bias;
+      inp2_ls = inp1_left_shift;
+      inp2_mult = inp1_multiplier;
+      inp1_zb = inp2_zero_bias;
+      inp1_ls = inp2_left_shift;
+      inp1_mult = inp2_multiplier;
+      out_mult = -out_multiplier;
+      const WORD16 *tmp;
+      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
+    }
+    internal_elm_sub_broadcast_asym16sxasym16s_asym16s(
+        p_out_tmp,
+        out_zero_bias,
+        out_left_shift,
+        out_mult,
+        out_activation_min,
+        out_activation_max,
+        p_inp1_tmp,
+        inp1_zb,
+        inp1_ls,
+        inp1_mult,
+        p_inp2_tmp,
+        inp2_zb,
+        inp2_ls,
+        inp2_mult,
+        left_shift,
+        p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3]);
   }
   else
   {

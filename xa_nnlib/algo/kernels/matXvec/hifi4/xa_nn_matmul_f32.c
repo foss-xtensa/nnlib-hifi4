@@ -100,8 +100,8 @@ WORD32 xa_nn_matmul_f32xf32_f32(
     #define UNROLL_ROW_STORE_ACC                STORE_ACC_BATCH_ROW_AT_OUT_f32
     #define UNROLL_STORE_ACC_BATCH              STORE_STRIDE_ACC_BATCH_AT_OUT_f32
 
-    CHK_MATMUL_ALIGN(p_mat1, sizeof(FLOAT32), p_vec1, sizeof(FLOAT32), cols1, row_stride1, vec_offset, 2);
-    
+    int chk_align = 0;
+    CHK_MATMUL_ALIGN(chk_align, p_mat1, 2 * sizeof(FLOAT32), p_vec1, 2 * sizeof(FLOAT32), cols1, row_stride1, vec_offset, 2);
     if(chk_align)
     {
         if(vec_count > VEC_UNROLL)

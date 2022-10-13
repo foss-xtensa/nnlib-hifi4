@@ -33,6 +33,116 @@
 #endif /* NULL */
 
 #if XCHAL_HAVE_HIFI1
+
+#if (XCHAL_HW_VERSION >= 281090)
+
+#define MEMCPY_8b(out, inp, N) \
+{ \
+    unsigned int itr; \
+    ae_int8x8 di0; \
+    ae_int8x8 *pae_i = (ae_int8x8 *) inp ;\
+    ae_int8x8 *pae_o = (ae_int8x8 *) out ;\
+    ae_valign o_a = AE_ZALIGN64();        \
+    ae_valign i_a = AE_LA64_PP(pae_i);    \
+                                          \
+    for(itr = 0; itr < (unsigned int)(N>>3); itr++) { \
+        AE_LA8X8_IP(di0, i_a, pae_i);     \
+        AE_SA8X8_IP(di0, o_a, pae_o);     \
+    }                                     \
+    AE_LAV8X8_XP(di0, i_a, pae_i, (N&7)); \
+    AE_SAV8X8_XP(di0, o_a, pae_o, (N&7)); \
+    AE_SA64POS_FP(o_a, pae_o);            \
+}
+#define MEMCPY_8bx2(out0, out1, inp0, inp1, N) \
+{ \
+    unsigned int itr; \
+    ae_int8x8 di0_0,di0_1; \
+    ae_int8x8 *pae0_i = (ae_int8x8 *) inp0 ;\
+    ae_int8x8 *pae0_o = (ae_int8x8 *) out0 ;\
+    ae_int8x8 *pae1_i = (ae_int8x8 *) inp1 ;\
+    ae_int8x8 *pae1_o = (ae_int8x8 *) out1 ;\
+    ae_valign o0_a = AE_ZALIGN64();      \
+    ae_valign i0_a = AE_LA64_PP(pae0_i); \
+    ae_valign o1_a = AE_ZALIGN64();      \
+    ae_valign i1_a = AE_LA64_PP(pae1_i); \
+                                         \
+    for(itr = 0; itr < (unsigned int)(N>>3); itr++) { \
+        AE_LA8X8_IP(di0_0, i0_a, pae0_i);     \
+        AE_SA8X8_IP(di0_0, o0_a, pae0_o);     \
+        AE_LA8X8_IP(di0_1, i1_a, pae1_i);     \
+        AE_SA8X8_IP(di0_1, o1_a, pae1_o);     \
+    }                                         \
+    AE_LAV8X8_XP(di0_0, i0_a, pae0_i, (N&7)); \
+    AE_SAV8X8_XP(di0_0, o0_a, pae0_o, (N&7)); \
+    AE_SA64POS_FP(o0_a, pae0_o);              \
+    AE_LAV8X8_XP(di0_1, i1_a, pae1_i, (N&7)); \
+    AE_SAV8X8_XP(di0_1, o1_a, pae1_o, (N&7)); \
+    AE_SA64POS_FP(o1_a, pae1_o);              \
+}
+
+#define MEMCPY_2D_8b_CONT_OUT(dst, src, rows, cols, inp_row_stride){    \
+                                                                        \
+    void *p_src = src;                                                  \
+    void *p_dst = dst;                                                  \
+                                                                        \
+    for(int row = 0; row < rows; row++){                                \
+        MEMCPY_8b(p_dst, p_src, cols);                                  \
+        p_src += inp_row_stride;                                        \
+        p_dst += cols;                                                  \
+    }                                                                   \
+}
+
+#define DUAL_MEMCPY_2D_8b_CONT_OUT(dst0, dst1, src0, src1, rows, cols, inp_row_stride){ \
+                                                                                        \
+    void *p_src0 = src0;                                                                \
+    void *p_src1 = src1;                                                                \
+                                                                                        \
+    void *p_dst0 = dst0;                                                                \
+    void *p_dst1 = dst1;                                                                \
+                                                                                        \
+    for(int row = 0; row < rows; row++){                                                \
+        MEMCPY_8bx2(p_dst0, p_dst1, p_src0, p_src1, cols);                              \
+                                                                                        \
+        p_src0 += inp_row_stride;                                                       \
+        p_src1 += inp_row_stride;                                                       \
+                                                                                        \
+        p_dst0 += cols;                                                                 \
+        p_dst1 += cols;                                                                 \
+    }                                                                                   \
+}
+
+#define MEMCPY_2D_8b_CONT_INP(dst, src, rows, cols, out_row_stride){    \
+                                                                        \
+    void *p_src = src;                                                  \
+    void *p_dst = dst;                                                  \
+                                                                        \
+    for(int row = 0; row < rows; row++){                                \
+        MEMCPY_8b(p_dst, p_src, cols);                                  \
+        p_src += cols;                                                  \
+        p_dst += out_row_stride;                                        \
+    }                                                                   \
+}
+
+#define DUAL_MEMCPY_2D_8b_CONT_INP(dst0, dst1, src0, src1, rows, cols, out_row_stride){ \
+                                                                                        \
+    void *p_src0 = src0;                                                                \
+    void *p_src1 = src1;                                                                \
+                                                                                        \
+    void *p_dst0 = dst0;                                                                \
+    void *p_dst1 = dst1;                                                                \
+                                                                                        \
+    for(int row = 0; row < rows; row++){                                                \
+        MEMCPY_8bx2(p_dst0, p_dst1, p_src0, p_src1, cols);                              \
+                                                                                        \
+        p_src0 += cols;                                                                 \
+        p_src1 += cols;                                                                 \
+                                                                                        \
+        p_dst0 += out_row_stride;                                                       \
+        p_dst1 += out_row_stride;                                                       \
+    }                                                                                   \
+}
+
+#else //(XCHAL_HW_VERSION >= 281090)
 /* Macros for memcpy */
 #define MEMCPY_8b(out, inp, N) \
 { \
@@ -240,9 +350,9 @@ __Pragma("no_unroll") \
     } \
   } \
 }
+#endif //(XCHAL_HW_VERSION >= 281090)
 
-
-#else
+#else // XCHAL_HAVE_HIFI1
 
 #ifdef XCHAL_HAVE_HIFI4
   #define MEMCPY_8b(MEMCPY_8b_cp_dst, MEMCPY_8b_cp_src, MEMCPY_8b_num_elements)                           \
@@ -392,12 +502,12 @@ __Pragma("no_unroll") \
     }                                                                                   \
 }
 
-#endif
+#endif // XCHAL_HAVE_HIFI1
 
 #define ALIGNMENT   8
 /*Macro checking matmul kernels alignment */
-#define CHK_MATMUL_ALIGN(mat, algn_m, vec, algn_v, cols, row_str, vec_off, unr) \
-  int chk_align = 0; \
+#define CHK_MATMUL_ALIGN(chk_align, mat, algn_m, vec, algn_v, cols, row_str, vec_off, unr) \
+  chk_align = 0; \
   if(!((unsigned int)(mat) & (algn_m-1)) && !((unsigned int)(vec) & (algn_v - 1)) && (cols%unr==0) && (row_str%unr==0) && (vec_off%unr==0)) \
   { \
     chk_align = 1; \
@@ -612,6 +722,11 @@ __Pragma("no_unroll") \
   ae_int16x4 _ae_int16x4_vec_batch_ ##idx_vec  = ZERO16X4; \
   WORD8 *_WORD8_p_vec_batch_ ##idx_vec  = (WORD8 *)(p_vec1[vec_itr + idx_vec]); \
 
+#define SETUP_VEC_BATCH_8b_x2(idx_vec)\
+  ae_int16x4 _ae_int16x4_vec_batch_ ##idx_vec  = ZERO16X4; \
+  ae_int16x4 _ae_int16x4_vec_batch_ ##idx_vec ##_I  = ZERO16X4; \
+  WORD8 *_WORD8_p_vec_batch_ ##idx_vec  = (WORD8 *)(p_vec1[vec_itr + idx_vec]); \
+
 #define SETUP_VEC_OFFSET_BATCH_8b(idx_vec)\
   ae_int16x4 _ae_int16x4_vec_batch_ ##idx_vec  = ZERO16X4; \
   WORD8 *_WORD8_p_vec_batch_ ##idx_vec  = (WORD8 *)(p_vec1 + (vec_itr + idx_vec)*vec_offset); \
@@ -784,6 +899,10 @@ __Pragma("no_unroll") \
 
 #define LOAD_VEC_BATCH_8b(idx_vec) \
   AE_L8X4F_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+
+#define LOAD_VEC_BATCH_8b_x2(idx_vec) \
+  _ae_int16x4_vec_batch_ ##idx_vec ##_I = AE_L8X4F_I(_WORD8_p_vec_batch_ ##idx_vec, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  AE_L8X4F_IP(_ae_int16x4_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec, 2 * INCREMENT_IN_BYTES_FOR_WORD8X4); \
 
 #define LOAD_VEC_BATCH_8b_UNALIGNED(idx_vec) \
   AE_LA8X4F_IP(_ae_int16x4_vec_batch_ ##idx_vec, _align_WORD8_p_vec_batch_ ##idx_vec, _WORD8_p_vec_batch_ ##idx_vec); \
@@ -968,6 +1087,10 @@ __Pragma("no_unroll") \
 /*---------------------------------------------------------*/
 #define LOAD_ROW_MAT1_8b(idx) \
   AE_L8X4F_IP(_ae_int16x4_mat1_ ## idx, _WORD8_p_mat1_ ## idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+
+#define LOAD_ROW_MAT1_8b_x2(idx) \
+  _ae_int16x4_mat1_ ## idx ##_I = AE_L8X4F_I(_WORD8_p_mat1_ ## idx, INCREMENT_IN_BYTES_FOR_WORD8X4); \
+  AE_L8X4F_IP(_ae_int16x4_mat1_ ## idx, _WORD8_p_mat1_ ## idx, 2 * INCREMENT_IN_BYTES_FOR_WORD8X4); \
 
 #define LOAD_ROW_MAT1_8b_UNALIGNED(idx) \
   AE_LA8X4F_IP(_ae_int16x4_mat1_ ## idx, _align_WORD8_p_mat1_ ## idx, _WORD8_p_mat1_ ## idx); \
@@ -1161,10 +1284,12 @@ __Pragma("no_unroll") \
 /*------------------ time batching macros ----------------- */
 
 #define KERNEL_MAT1_VEC_BATCH_ROW_8b_8b             KERNEL_MAT1_VEC_BATCH_ROW_16b_16b
+#define KERNEL_MAT1_VEC_BATCH_ROW_8b_8b_X2          KERNEL_MAT1_VEC_BATCH_ROW_16b_16b_X2
 #define KERNEL_MAT1_VEC_BATCH_ROW_16b_8b            KERNEL_MAT1_VEC_BATCH_ROW_16b_16b
 #define KERNEL_MAT1_VEC_BATCH_ROW_8b_16b            KERNEL_MAT1_VEC_BATCH_ROW_16b_16b
 #define KERNEL_MAT1_VEC_BATCH_ROW_ASYM8b_ASYM8b     KERNEL_MAT1_VEC_BATCH_ROW_16b_16b
 #define KERNEL_MAT1_VEC_BATCH_8b_8b                 KERNEL_MAT1_VEC_BATCH_16b_16b
+#define KERNEL_MAT1_VEC_BATCH_8b_8b_x2              KERNEL_MAT1_VEC_BATCH_16b_16b_x2
 #define KERNEL_MAT1_VEC_BATCH_16b_8b                KERNEL_MAT1_VEC_BATCH_16b_16b
 #define KERNEL_MAT1_VEC_BATCH_8b_16b                KERNEL_MAT1_VEC_BATCH_16b_16b
 #define KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b         KERNEL_MAT1_VEC_BATCH_16b_16b
@@ -1172,8 +1297,15 @@ __Pragma("no_unroll") \
 #define KERNEL_MAT1_VEC_BATCH_ROW_16b_16b(idx_row)\
   KERNEL_MAT1_VEC_BATCH_VEC_UNROLL(idx_row);\
 
+#define KERNEL_MAT1_VEC_BATCH_ROW_16b_16b_X2(idx_row)\
+  KERNEL_MAT1_VEC_BATCH_VEC_UNROLL_X2(idx_row);\
+
 #define KERNEL_MAT1_VEC_BATCH_16b_16b(idx_row,idx_vec) \
   AE_MULAAAAQ16(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, _ae_int16x4_vec_batch_ ##idx_vec, _ae_int16x4_mat1_ ##idx_row); \
+
+#define KERNEL_MAT1_VEC_BATCH_16b_16b_x2(idx_row,idx_vec) \
+  AE_MULAAAAQ16(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, _ae_int16x4_vec_batch_ ##idx_vec, _ae_int16x4_mat1_ ##idx_row); \
+  AE_MULAAAAQ16(_ae_int64_acc_ ##idx_row ##_ ##idx_vec, _ae_int16x4_vec_batch_ ##idx_vec ##_I, _ae_int16x4_mat1_ ##idx_row ##_I); \
 
 #define KERNEL_MAT1_VEC_BATCH_8b_16b_SINGLE_UNALIGNED                KERNEL_MAT1_VEC_BATCH_16b_16b_SINGLE_UNALIGNED
 #define KERNEL_MAT1_VEC_BATCH_8b_8b_SINGLE_UNALIGNED                 KERNEL_MAT1_VEC_BATCH_16b_16b_SINGLE_UNALIGNED
@@ -1491,6 +1623,19 @@ __Pragma("no_unroll") \
   (*((ae_int32 *) p_out[vec_itr + idx_vec] + m_itr + idx_row)) = \
   AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)); \
 
+#if XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= 281090)
+#define STORE_ACC_BATCH_8bx8b_AT_OUT_32bx2(idx_row) \
+  _ae_int64_acc_ ## idx_row ##_0 = AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_0, acc_shift); \
+  _ae_int64_acc_ ## idx_row ##_1 = AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_1, acc_shift); \
+  ae_f32x2 _ae_f32x2_tmp_var_ ##idx_row = AE_ROUND32X2F64SSYM(_ae_int64_acc_ ## idx_row ##_0, _ae_int64_acc_ ## idx_row ##_1); \
+  AE_S32_H_I(_ae_f32x2_tmp_var_ ##idx_row, ((ae_int32 *) p_out[vec_itr + 0] + m_itr + idx_row), 0); \
+  AE_S32_L_I(_ae_f32x2_tmp_var_ ##idx_row, ((ae_int32 *) p_out[vec_itr + 1] + m_itr + idx_row), 0); \
+
+#define STORE_ACC_BATCH_ROW_8bx8b_AT_OUT_32bx2(idx_row)\
+  STORE_ACC_BATCH_8bx8b_AT_OUT_32bx2(idx_row);\
+
+#endif
+
 #define STORE_ACC_BATCH_8bx8b_AT_OUT_8b(idx_row,idx_vec) \
   ae_int32 _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec; \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec = \
@@ -1601,11 +1746,19 @@ __Pragma("no_unroll") \
   _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(0)), AE_MOVDA32(255)); \
   AE_S8_0_I_HIFI1(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec), ((WORD8 *) (p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)), 0); \
 
+#if (XCHAL_HW_VERSION >= 281090)
+#define STORE_STRIDE_ACC_BATCH_ASYM8bsxASYM8bs_AT_OUT_ASYM8bs(idx_row,idx_vec) \
+  ae_int8x8  _ae_int8x8_acc_ ##idx_row ##_ ##idx_vec = AE_SAT8X4X32_L(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec); \
+  AE_S8_0_I(_ae_int8x8_acc_ ##idx_row ##_ ##idx_vec, ((ae_int8  *) (p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)), 0); \
+
+#else //XCHAL_HW_VERSION
 #define STORE_STRIDE_ACC_BATCH_ASYM8bsxASYM8bs_AT_OUT_ASYM8bs(idx_row,idx_vec) \
   _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(-128)), AE_MOVDA32(127)); \
   AE_S8_0_I_HIFI1(AE_MOVINT16X4_FROMINT32X2(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec), ((WORD8 *) (p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)), 0); \
 
-#else //HIFI_LE
+#endif //XCHAL_HW_VERSION
+
+#else //XCHAL_HAVE_HIFI1
 #define STORE_STRIDE_ACC_BATCH_ASYM8bxASYM8b_AT_OUT_ASYM8b(idx_row,idx_vec) \
   _ae_int32x2_acc_ ##idx_row ##_ ##idx_vec = AE_MIN32(AE_MAX32(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec, AE_MOVDA32(0)), AE_MOVDA32(255)); \
   (*((UWORD8 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) = (UWORD8)AE_MOVAD32_L(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec); \
@@ -1615,7 +1768,7 @@ __Pragma("no_unroll") \
   (*((WORD8 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) = (WORD8)AE_MOVAD32_L(_ae_int32x2_acc_ ##idx_row ##_ ##idx_vec); \
 
 
-#endif //HIFI_LE
+#endif //XCHAL_HAVE_HIFI1
 /*---------------------------------------------------------*/
 /* Specific macros needed for extra calculations involved
   for ASYM8b */
@@ -1707,16 +1860,21 @@ __Pragma("no_unroll") \
 #if (ROW_UNROLL == 4 && VEC_UNROLL == 2)
 
 #define SETUP_VEC_BATCH                           UNROLL_SETUP_VEC_BATCH(0)               UNROLL_SETUP_VEC_BATCH(1)
+#define SETUP_VEC_BATCH_X2                        UNROLL_SETUP_VEC_BATCH_X2(0)            UNROLL_SETUP_VEC_BATCH_X2(1)
 
 #define SETUP_ACC_BATCH                           UNROLL_ROW_SETUP_ACC_BATCH(0)           UNROLL_ROW_SETUP_ACC_BATCH(1)       UNROLL_ROW_SETUP_ACC_BATCH(2)       UNROLL_ROW_SETUP_ACC_BATCH(3)
 #define SETUP_ACC_BATCH_VEC_UNROLL(idx_row)       UNROLL_SETUP_ACC_BATCH(idx_row,0)       UNROLL_SETUP_ACC_BATCH(idx_row,1)
 #define SETUP_ACC_BATCH_TAIL                      UNROLL_SETUP_ACC_BATCH(0,0)             UNROLL_SETUP_ACC_BATCH(1,0)         UNROLL_SETUP_ACC_BATCH(2,0)         UNROLL_SETUP_ACC_BATCH(3,0)
 
 #define LOAD_VEC_BATCH                            UNROLL_LOAD_VEC_BATCH(0)                UNROLL_LOAD_VEC_BATCH(1)
+#define LOAD_VEC_BATCH_X2                         UNROLL_LOAD_VEC_BATCH_X2(0)             UNROLL_LOAD_VEC_BATCH_X2(1)
 #define LOAD_MAT1                                 UNROLL_LOAD_ROW_MAT1(0)                 UNROLL_LOAD_ROW_MAT1(1)             UNROLL_LOAD_ROW_MAT1(2)             UNROLL_LOAD_ROW_MAT1(3)
+#define LOAD_MAT1_X2                              UNROLL_LOAD_ROW_MAT1_X2(0)              UNROLL_LOAD_ROW_MAT1_X2(1)          UNROLL_LOAD_ROW_MAT1_X2(2)          UNROLL_LOAD_ROW_MAT1_X2(3)
 
 #define KERNEL_MAT1_VEC_BATCH                     UNROLL_ROW_KERNEL_MAT1_VEC_BATCH(0)     UNROLL_ROW_KERNEL_MAT1_VEC_BATCH(1) UNROLL_ROW_KERNEL_MAT1_VEC_BATCH(2) UNROLL_ROW_KERNEL_MAT1_VEC_BATCH(3)
+#define KERNEL_MAT1_VEC_BATCH_X2                  UNROLL_ROW_KERNEL_MAT1_VEC_BATCH_X2(0)  UNROLL_ROW_KERNEL_MAT1_VEC_BATCH_X2(1) UNROLL_ROW_KERNEL_MAT1_VEC_BATCH_X2(2) UNROLL_ROW_KERNEL_MAT1_VEC_BATCH_X2(3)
 #define KERNEL_MAT1_VEC_BATCH_VEC_UNROLL(idx_row) UNROLL_KERNEL_MAT1_VEC_BATCH(idx_row,0) UNROLL_KERNEL_MAT1_VEC_BATCH(idx_row,1)
+#define KERNEL_MAT1_VEC_BATCH_VEC_UNROLL_X2(idx_row) UNROLL_KERNEL_MAT1_VEC_BATCH_X2(idx_row,0) UNROLL_KERNEL_MAT1_VEC_BATCH_X2(idx_row,1)
 #define KERNEL_MAT1_VEC_BATCH_TAIL                UNROLL_KERNEL_MAT1_VEC_BATCH(0,0)       UNROLL_KERNEL_MAT1_VEC_BATCH(1,0)   UNROLL_KERNEL_MAT1_VEC_BATCH(2,0)   UNROLL_KERNEL_MAT1_VEC_BATCH(3,0)
 
 #define ADD_BIAS_ACC_BATCH                        UNROLL_ROW_ADD_BIAS_ACC(0)              UNROLL_ROW_ADD_BIAS_ACC(1)          UNROLL_ROW_ADD_BIAS_ACC(2)          UNROLL_ROW_ADD_BIAS_ACC(3)

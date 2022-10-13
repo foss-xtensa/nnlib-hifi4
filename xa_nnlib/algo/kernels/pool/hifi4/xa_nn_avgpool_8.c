@@ -294,16 +294,21 @@ const WORD8 *__restrict__ p_inp,
                 d_tmp32 = AE_MOVDA32(den_hw);
                 /* Remove left shift of 8 introduced by L8X4F loads */
                 d_out1 = AE_SRAI32(d_out1, 8);
-                #if XCHAL_HAVE_HIFI1
+#if XCHAL_HAVE_HIFI1
                 d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+                ae_int8x8 d_tmp8 = AE_SAT8X4X32_L(d_tmp32, d_tmp32);
+                AE_S8_0_I(d_tmp8, (ae_int8 *)(p_out+(itr_oh*out_width)+itr_ow), 0);
+#else
                 ae_int16x4 d_tmp16 = AE_SAT16X4(d_tmp32, d_tmp32);
                 d_tmp16 = AE_SAT8S(d_tmp16);
                 AE_S8_0_I_HIFI1(d_tmp16, p_out+(itr_oh*out_width)+itr_ow, 0);
-                #else
+#endif
+#else
                 d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
                 d_tmp32 = AE_SLAI32S(d_tmp32, 24);
                 p_out[itr_oh*out_width+itr_ow] = (WORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 24));
-                #endif
+#endif
             }
         }
         else
@@ -320,16 +325,21 @@ const WORD8 *__restrict__ p_inp,
                 /* Max value of den_h or den_w is 0x80000000
                 so 1 left shift is possible without overflow */
                 d_tmp32 = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
-                #if XCHAL_HAVE_HIFI1
+#if XCHAL_HAVE_HIFI1
                 d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+                ae_int8x8 d_tmp8 = AE_SAT8X4X32_L(d_tmp32, d_tmp32);
+                AE_S8_0_I(d_tmp8, (ae_int8 *)(p_out+(itr_oh*out_width)+itr_ow), 0);
+#else
                 ae_int16x4 d_tmp16 = AE_SAT16X4(d_tmp32, d_tmp32);
                 d_tmp16 = AE_SAT8S(d_tmp16);
                 AE_S8_0_I_HIFI1(d_tmp16, p_out+(itr_oh*out_width)+itr_ow, 0);
-                #else
+#endif
+#else
                 d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
                 d_tmp32 = AE_SLAI32S(d_tmp32, 24);
                 p_out[itr_oh*out_width+itr_ow] = (WORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 24));
-                #endif
+#endif
             }
         }
     }

@@ -54,15 +54,15 @@ return 0;
 
 WORD32 xa_nn_strided_slice_int16(WORD16 * __restrict__ p_out,
 		const   WORD16 * __restrict__ p_inp,
-		WORD16 start_0, WORD16 stop_0,
-		WORD16 start_1, WORD16 stop_1,
-		WORD16 start_2, WORD16 stop_2,
-		WORD16 start_3, WORD16 stop_3,
-		WORD16 start_4, WORD16 stop_4,
-		WORD16 stride_0, WORD16 stride_1,
-		WORD16 stride_2, WORD16 stride_3, WORD16 stride_4,
-		WORD16 dims_1, WORD16 dims_2,
-		WORD16 dims_3, WORD16 dims_4)
+		WORD32 start_0, WORD32 stop_0,
+		WORD32 start_1, WORD32 stop_1,
+		WORD32 start_2, WORD32 stop_2,
+		WORD32 start_3, WORD32 stop_3,
+		WORD32 start_4, WORD32 stop_4,
+		WORD32 stride_0, WORD32 stride_1,
+		WORD32 stride_2, WORD32 stride_3, WORD32 stride_4,
+		WORD32 dims_1, WORD32 dims_2,
+		WORD32 dims_3, WORD32 dims_4)
 {
   /* NULL pointer checks */
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);

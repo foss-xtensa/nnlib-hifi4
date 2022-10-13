@@ -250,7 +250,7 @@ WORD32 xa_nn_vec_sigmoid_asym8_asym8(UWORD8 *p_out,
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND(((zero_point < 0) || (zero_point > 255)), -1);
     XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND(((input_left_shift < -31) || (input_left_shift > 31)), -1);
+    XA_NNLIB_ARG_CLIP(input_left_shift, -31, 31);
     XA_NNLIB_ARG_CHK_COND((input_multiplier < 0), -1);
     XA_NNLIB_ARG_CHK_COND((input_range_radius < 0), -1);
 
@@ -638,7 +638,7 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND(((zero_point < -128) || (zero_point > 127)), -1);
   XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
-  XA_NNLIB_ARG_CHK_COND(((input_left_shift < -31) || (input_left_shift > 31)), -1);
+  XA_NNLIB_ARG_CLIP(input_left_shift, -31, 31);
   XA_NNLIB_ARG_CHK_COND((input_multiplier < 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_range_radius < 0), -1);
 
@@ -1550,9 +1550,6 @@ WORD32 xa_nn_vec_leaky_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
 
     d_v0_0 = AE_SUB16(d_inp0, inp_zb);
 
-    //Checking for input values less than zero
-    xtbool4 sel0 = AE_LT16(d_v0_0, zero);
-
     // Multiply with out multiplier for input values >= 0
     AE_MUL16X4(d_w0_0, d_w0_1, d_v0_0, one);
 
@@ -1565,6 +1562,8 @@ WORD32 xa_nn_vec_leaky_relu_asym8s_asym8s( WORD8 * __restrict__ p_out,
     ae_int16x4 a_out0;
     MPY_BY_QUANT_MULT_X2X2_OUT16(a_out0, d_alpha_w0_0, d_alpha_w0_1, alpha_multiplier, a_left_shift, a_right_shift);
 
+    //Checking for input values less than zero
+    xtbool4 sel0 = AE_LT16(d_v0_0, zero);
     AE_MOVT16X4(out0, a_out0, sel0);
 
     out0 = AE_ADD16S(AE_MOVDA16(out_zero_bias), out0);
@@ -1910,7 +1909,7 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND(((zero_point < -128) || (zero_point > 127)), -1);
   XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
-  XA_NNLIB_ARG_CHK_COND(((input_left_shift < -31) || (input_left_shift > 31)), -1);
+  XA_NNLIB_ARG_CLIP(input_left_shift, -31, 31);
   XA_NNLIB_ARG_CHK_COND((input_multiplier < 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_range_radius < 0), -1);
 

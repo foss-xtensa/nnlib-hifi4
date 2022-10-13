@@ -575,6 +575,22 @@
 			WORD32 out_zero_bias
 			);
 
+	WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s(
+			WORD16 * __restrict__ p_out,
+			const WORD8 * __restrict__ p_mat1,
+			const WORD8 * __restrict__ p_mat2,
+			const WORD16 * __restrict__ p_vec1,
+			const WORD16 * __restrict__ p_vec2,
+			const WORD64 * __restrict__ p_bias,
+			WORD32 rows,
+			WORD32 cols1,
+			WORD32 cols2,
+			WORD32 row_stride1,
+			WORD32 row_stride2,
+			WORD32 out_multiplier,
+			WORD32 out_shift
+			);
+
 	WORD32  xa_nn_matXvec_out_stride_sym8sxasym8s_16(
 			WORD16  * __restrict__ p_out,
 			const WORD8  * __restrict__ p_mat1,
@@ -768,8 +784,6 @@
       WORD32 kernel_width,
       WORD32 x_stride,
       WORD32 y_stride,
-      WORD32 x_pad,
-      WORD32 y_pad,
       WORD32 output_height,
       WORD32 output_width,
       WORD32 output_channels,
@@ -1388,6 +1402,17 @@
 		 ,WORD32  out_zero_bias
 		);
 
+	WORD32 xa_nn_fully_connected_sym8sxsym16s_sym16s
+		(pWORD16 __restrict__ p_out
+		 ,const WORD8 *__restrict__ p_weight
+		 ,const WORD16 *__restrict__ p_inp
+		 ,const WORD64 *__restrict__ p_bias
+		 ,WORD32  weight_depth
+		 ,WORD32  out_depth
+		 ,WORD32  out_multiplier
+		 ,WORD32  out_shift
+		);
+
   WORD32 xa_nn_fully_connected_asym8sxasym8s_asym8s
     (WORD8 *__restrict__ p_out
      ,const WORD8 *__restrict__ p_weight
@@ -1811,6 +1836,31 @@
 			WORD32  out_data_format,
 			pVOID p_scratch);
 
+        WORD32 xa_nn_conv2d_depthwise_per_chan_sym8sxsym16s(
+                        pWORD16 __restrict__ p_out
+                        ,const WORD8 *__restrict__ p_kernel
+                        ,const WORD16 *__restrict__ p_inp
+                        ,const WORD64 *__restrict__ p_bias
+                        ,WORD32  input_height
+                        ,WORD32  input_width
+                        ,WORD32  input_channels
+                        ,WORD32  kernel_height
+                        ,WORD32  kernel_width
+                        ,WORD32  channels_multiplier
+                        ,WORD32  x_stride
+                        ,WORD32  y_stride
+                        ,WORD32  x_padding
+                        ,WORD32  y_padding
+                        ,WORD32  out_height
+                        ,WORD32  out_width
+                        ,WORD32  input_zero_bias
+                        ,const WORD32 *p_out_multiplier
+                        ,const WORD32 *p_out_shift
+                        ,WORD32  out_zero_bias
+                        ,WORD32  inp_data_format
+                        ,WORD32  out_data_format
+                        ,pVOID p_scratch);
+
 	WORD32 xa_nn_conv2d_pointwise_per_chan_sym8sxasym8s(
 			WORD8* __restrict__ p_out,
 			WORD8* __restrict__ p_kernel,
@@ -2098,6 +2148,14 @@
             WORD32  left_shift);
 
 	WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
+			const WORD16 * __restrict__ p_inp,
+			WORD32  inp_zero_bias,
+			WORD32  out_zero_bias,
+			WORD32  out_shift,
+			WORD32  out_multiplier,
+			WORD32  num_elm);
+
+	WORD32 xa_nn_elm_requantize_asym16s_asym16s(WORD16 * __restrict__ p_out,
 			const WORD16 * __restrict__ p_inp,
 			WORD32  inp_zero_bias,
 			WORD32  out_zero_bias,
@@ -2467,15 +2525,27 @@
 
 	WORD32 xa_nn_strided_slice_int16(WORD16 * __restrict__ p_out,
 			const   WORD16 * __restrict__ p_inp,
-			WORD16 start_0, WORD16 stop_0,
-			WORD16 start_1, WORD16 stop_1,
-			WORD16 start_2, WORD16 stop_2,
-			WORD16 start_3, WORD16 stop_3,
-			WORD16 start_4, WORD16 stop_4,
-			WORD16 stride_0, WORD16 stride_1,
-			WORD16 stride_2, WORD16 stride_3, WORD16 stride_4,
-			WORD16 dims_1, WORD16 dims_2,
-			WORD16 dims_3, WORD16 dims_4);
+			WORD32 start_0, WORD32 stop_0,
+			WORD32 start_1, WORD32 stop_1,
+			WORD32 start_2, WORD32 stop_2,
+			WORD32 start_3, WORD32 stop_3,
+			WORD32 start_4, WORD32 stop_4,
+			WORD32 stride_0, WORD32 stride_1,
+			WORD32 stride_2, WORD32 stride_3, WORD32 stride_4,
+			WORD32 dims_1, WORD32 dims_2,
+			WORD32 dims_3, WORD32 dims_4);
+
+	WORD32 xa_nn_strided_slice_int8(WORD8 * __restrict__ p_out,
+			const   WORD8 * __restrict__ p_inp,
+			WORD32 start_0, WORD32 stop_0,
+			WORD32 start_1, WORD32 stop_1,
+			WORD32 start_2, WORD32 stop_2,
+			WORD32 start_3, WORD32 stop_3,
+			WORD32 start_4, WORD32 stop_4,
+			WORD32 stride_0, WORD32 stride_1,
+			WORD32 stride_2, WORD32 stride_3, WORD32 stride_4,
+			WORD32 dims_1, WORD32 dims_2,
+			WORD32 dims_3, WORD32 dims_4);
 
 
 

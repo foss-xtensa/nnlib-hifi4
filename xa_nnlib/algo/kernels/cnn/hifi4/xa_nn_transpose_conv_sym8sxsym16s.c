@@ -31,8 +31,6 @@ WORD32 xa_nn_transpose_conv_getsize(
     WORD32 kernel_width,
     WORD32 x_stride,
     WORD32 y_stride,
-    WORD32 x_pad,
-    WORD32 y_pad,
     WORD32 output_height,
     WORD32 output_width,
     WORD32 output_channels,
@@ -51,8 +49,6 @@ WORD32 xa_nn_transpose_conv_getsize(
     (void)kernel_width; 
     (void)x_stride; 
     (void)y_stride; 
-    (void)x_pad; 
-    (void)y_pad; 
     (void)kernel_precision; 
 
     WORD32 scratch_bytewidth = 0;
@@ -192,9 +188,9 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 						AE_L16X4_IP(d_inp2, (ae_int16x4*)pinp, sizeof(WORD64));
 						AE_L16X4_IP(d_inp3, (ae_int16x4*)pinp, sizeof(WORD64));
 
-            for (int filter_y = filt_y_min; filter_y < filt_y_max; ++filter_y)
+						for (int filter_y = filt_y_min; filter_y < filt_y_max; ++filter_y)
 						{
-              for (int filter_x = filt_x_min; filter_x < filt_x_max; ++filter_x)
+							for (int filter_x = filt_x_min; filter_x < filt_x_max; ++filter_x)
 							{
 								// Compute output element location.
 								int out_x = out_x_orig + filter_x;//out_x_origin + filter_x;
@@ -203,10 +199,17 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 								ae_int64 d_scr;
 								WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
 								ae_int16x4 d_fil, d_fil1, d_fil2, d_fil3;
+#if XCHAL_HAVE_HIFI1
+								AE_L8X4S_IP(d_fil, pfilt, sizeof(WORD32));
+								AE_L8X4S_IP(d_fil1, pfilt, sizeof(WORD32));
+								AE_L8X4S_IP(d_fil2, pfilt, sizeof(WORD32));
+								AE_L8X4S_XP(d_fil3, pfilt, (stride1-12));
+#else
 								AE_L8X4F_IP(d_fil, pfilt, sizeof(WORD32));
 								AE_L8X4F_IP(d_fil1, pfilt, sizeof(WORD32));
 								AE_L8X4F_IP(d_fil2, pfilt, sizeof(WORD32));
 								AE_L8X4F_XP(d_fil3, pfilt, (stride1-12));
+#endif	
 
 								for (int out_channel = 0; out_channel < output_depth; ++out_channel)
 								{
@@ -215,11 +218,18 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 									AE_MULAAAAQ16(d_scr, d_inp1, d_fil1);
 									AE_MULAAAAQ16(d_scr, d_inp2, d_fil2);
 									AE_MULAAAAQ16(d_scr, d_inp3, d_fil3);
+#if XCHAL_HAVE_HIFI1
+									d_fil  = AE_L8X4S_I( pfilt, 0*sizeof(WORD32));
+									d_fil1 = AE_L8X4S_I( pfilt, 1*sizeof(WORD32));
+									d_fil2 = AE_L8X4S_I( pfilt, 2*sizeof(WORD32));
+									d_fil3 = AE_L8X4S_I( pfilt, 3*sizeof(WORD32));
+#else
 									d_fil  = AE_L8X4F_I( pfilt, 0*sizeof(WORD32));
 									d_fil1 = AE_L8X4F_I( pfilt, 1*sizeof(WORD32));
 									d_fil2 = AE_L8X4F_I( pfilt, 2*sizeof(WORD32));
 									d_fil3 = AE_L8X4F_I( pfilt, 3*sizeof(WORD32));
-                  pfilt += stride1;
+#endif
+									pfilt += stride1;
 									AE_S64_IP(d_scr, pscratch_src, sizeof(WORD64));
 								}
 							}
@@ -270,12 +280,20 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 								ae_int64 d_scr;
 								WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
 								ae_int16x4 d_fil;
+#if XCHAL_HAVE_HIFI1
+								AE_L8X4S_XP(d_fil, pfilt, stride1);
+#else
 								AE_L8X4F_XP(d_fil, pfilt, stride1);
+#endif
 								for (int out_channel = 0; out_channel < output_depth; ++out_channel)
 								{
 									d_scr = AE_L64_I(pscratch_src, 0);
 									AE_MULAAAAQ16(d_scr, d_inp, d_fil);
+#if XCHAL_HAVE_HIFI1
+									AE_L8X4S_XP(d_fil, pfilt, stride1);
+#else
 									AE_L8X4F_XP(d_fil, pfilt, stride1);
+#endif
 									AE_S64_IP(d_scr, pscratch_src, sizeof(WORD64));
 								}
 							}
@@ -307,7 +325,11 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 									for (int out_channel = 0; out_channel < output_depth; ++out_channel)
 									{
 										const int32_t input_value = input_data[((in_y)*input_width+in_x)*input_depth+in_channel];
+#if XCHAL_HAVE_HIFI1
+										const int32_t filter_value = filter_data[(((out_channel*filter_height)+filter_y)*filter_width+filter_x)*input_depth+in_channel];
+#else
 										const int32_t filter_value = filter_data[(((out_channel*filter_height)+filter_y)*filter_width+filter_x)*input_depth+in_channel]<<8;
+#endif
 										scratch_buffer[((out_y)*output_width+out_x)*output_depth+out_channel] += input_value * filter_value;
 									}
 								}
@@ -341,8 +363,10 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 			AE_L64_XP(acc1, pscratch1, output_depth*sizeof(WORD64));
 			for (int i = 0; i < ((output_height*output_width)>>1); i++)
 			{
+#if !XCHAL_HAVE_HIFI1
 				acc = AE_SRAI64(acc, 8);
 				acc1 = AE_SRAI64(acc1, 8);
+#endif
 				acc = AE_ADD64(acc, dbias);
 				acc1 = AE_ADD64(acc1, dbias);
 				ae_int32x2 scaled_acc = MultiplyByQuantizedMultiplier_x2_opt(acc, acc1, d_red_mul32, shift);
@@ -354,7 +378,9 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 			}
 			if((output_height*output_width) & 1)
 			{
+#if !XCHAL_HAVE_HIFI1
 				acc1 = AE_SRAI64(acc1, 8);
+#endif
 				acc1 = AE_ADD64(acc1, dbias);
 				ae_int32x2 scaled_acc = MultiplyByQuantizedMultiplier_x2_opt(acc1, acc1, d_red_mul32, shift);
 				ae_int16x4 d1 = AE_SAT16X4(scaled_acc, scaled_acc);
@@ -372,7 +398,9 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
 			{
 				ae_int64 acc;
 				AE_L64_IP(acc, pscratch, sizeof(WORD64));
+#if !XCHAL_HAVE_HIFI1
 				acc = AE_SRAI64(acc, 8);
+#endif
 				ae_int32x2 scaled_acc = MultiplyByQuantizedMultiplier_ref(acc, output_multiplier[out_channel], output_shift[out_channel]);
 				ae_int16x4 d1 = AE_SAT16X4(scaled_acc, scaled_acc);
 				AE_S16_0_IP(d1, pout, sizeof(WORD16));

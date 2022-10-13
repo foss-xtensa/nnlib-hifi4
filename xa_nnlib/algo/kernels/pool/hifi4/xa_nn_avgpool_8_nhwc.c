@@ -149,7 +149,11 @@ const WORD8* __restrict__ p_inp,
                 for(i = 0; i < (plane_size >> 2); i++)
                 {
                     ae_int16x4 i1, i2, i3, out;
-
+#if XCHAL_HAVE_HIFI1
+                    AE_LA8X4S_IP(i1, i1_la, p_src1_temp);
+                    AE_LA8X4S_IP(i2, i2_la, p_src2_temp);
+                    AE_LA8X4S_IP(i3, i3_la, p_src3_temp);
+#else
                     AE_LA8X4F_IP(i1, i1_la, p_src1_temp);
                     i1 = AE_SRAI16(i1, 8);
 
@@ -158,7 +162,7 @@ const WORD8* __restrict__ p_inp,
 
                     AE_LA8X4F_IP(i3, i3_la, p_src3_temp);
                     i3 = AE_SRAI16(i3, 8);
-
+#endif
                     out = AE_ADD16S(i1, i2);
                     out = AE_ADD16S(out, i3);
 
@@ -208,13 +212,16 @@ const WORD8* __restrict__ p_inp,
                         ae_int16x4 i1, i2, i3, out;
 
                         AE_LA16X4_IP(i1, align_src1, p_src1_scratch);
-
+#if XCHAL_HAVE_HIFI1
+                        AE_LA8X4S_IP(i2, i2_la, p_src2_temp);
+                        AE_LA8X4S_IP(i3, i3_la, p_src3_temp);
+#else
                         AE_LA8X4F_IP(i2, i2_la, p_src2_temp);
                         i2 = AE_SRAI16(i2, 8);
 
                         AE_LA8X4F_IP(i3, i3_la, p_src3_temp);
                         i3 = AE_SRAI16(i3, 8);
-
+#endif
                         out = AE_ADD16S(i1, i2);
                         out = AE_ADD16S(out, i3);
 
@@ -539,7 +546,11 @@ const WORD8* __restrict__ p_inp,
                     ae_int16x4 i1, i2, i3;
                     ae_int32x2 wout1, wout2;
                     ae_int16x4 one = AE_MOVDA16(1);
-
+#if XCHAL_HAVE_HIFI1
+                    AE_LA8X4S_IP(i1, i1_la, p_src1_temp);
+                    AE_LA8X4S_IP(i2, i2_la, p_src2_temp);
+                    AE_LA8X4S_IP(i3, i3_la, p_src3_temp);
+#else
                     AE_LA8X4F_IP(i1, i1_la, p_src1_temp);
                     i1 = AE_SRAI16(i1, 8);
 
@@ -548,7 +559,7 @@ const WORD8* __restrict__ p_inp,
 
                     AE_LA8X4F_IP(i3, i3_la, p_src3_temp);
                     i3 = AE_SRAI16(i3, 8);
-
+#endif
                     AE_MUL16X4 (wout1, wout2, i1, one);
                     AE_MULA16X4(wout1, wout2, i2, one);
                     AE_MULA16X4(wout1, wout2, i3, one);
@@ -607,13 +618,16 @@ const WORD8* __restrict__ p_inp,
 
                         AE_LA32X2_IP(wout1, align_src1, p_src1_scratch);
                         AE_LA32X2_IP(wout2, align_src1, p_src1_scratch);
-
+#if XCHAL_HAVE_HIFI1
+                        AE_LA8X4S_IP(i2, i2_la, p_src2_temp);
+                        AE_LA8X4S_IP(i3, i3_la, p_src3_temp);
+#else
                         AE_LA8X4F_IP(i2, i2_la, p_src2_temp);
                         i2 = AE_SRAI16(i2, 8);
 
                         AE_LA8X4F_IP(i3, i3_la, p_src3_temp);
                         i3 = AE_SRAI16(i3, 8);
-
+#endif
                         AE_MULA16X4(wout1, wout2, i2, one);
                         AE_MULA16X4(wout1, wout2, i3, one);
 

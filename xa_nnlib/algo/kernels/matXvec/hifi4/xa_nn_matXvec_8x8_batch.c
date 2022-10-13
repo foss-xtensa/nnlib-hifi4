@@ -92,8 +92,20 @@ WORD32 xa_nn_matXvec_batch_8x8_32(
     #define UNROLL_KERNEL_MAT1_VEC_BATCH        KERNEL_MAT1_VEC_BATCH_8b_8b
     #define UNROLL_ROW_ADD_BIAS_ACC             ADD_BIAS_BATCH_ROW_8b_ACC_FOR_8bx8b
     #define UNROLL_ADD_BIAS_ACC_BATCH           ADD_BIAS_BATCH_8b_ACC_FOR_8bx8b
+#if XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
+	#define UNROLL_ROW_STORE_ACC                STORE_ACC_BATCH_ROW_8bx8b_AT_OUT_32bx2
+#else
     #define UNROLL_ROW_STORE_ACC                STORE_ACC_BATCH_ROW_8bx8b_AT_OUT_32b
+#endif
     #define UNROLL_STORE_ACC_BATCH              STORE_ACC_BATCH_8bx8b_AT_OUT_32b
+#if XCHAL_HAVE_HIFI4
+    #define UNROLL_SETUP_MAT1_X2                SETUP_MAT1_8b_x2
+    #define UNROLL_SETUP_VEC_BATCH_X2           SETUP_VEC_BATCH_8b_x2
+    #define UNROLL_LOAD_VEC_BATCH_X2            LOAD_VEC_BATCH_8b_x2
+    #define UNROLL_LOAD_ROW_MAT1_X2             LOAD_ROW_MAT1_8b_x2
+    #define UNROLL_ROW_KERNEL_MAT1_VEC_BATCH_X2 KERNEL_MAT1_VEC_BATCH_ROW_8b_8b_X2
+    #define UNROLL_KERNEL_MAT1_VEC_BATCH_X2     KERNEL_MAT1_VEC_BATCH_8b_8b_x2
+#endif
 
     ADJUST_ACC_LSH_AND_BIAS_LSH_AxB_C(WORD8, WORD8, WORD32);
 
@@ -107,16 +119,31 @@ WORD32 xa_nn_matXvec_batch_8x8_32(
                 for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
                 {
                     SETUP_ACC_BATCH;
+#if XCHAL_HAVE_HIFI4
+                    SETUP_VEC_BATCH_X2;
+                    SETUP_MAT1_X2;
+                    for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
+                    {
+                        LOAD_VEC_BATCH_X2;
+                        LOAD_MAT1_X2;
+                        KERNEL_MAT1_VEC_BATCH_X2;
+                    }
+                    if((cols1 & 7) != 0)
+                    {
+                        LOAD_VEC_BATCH;
+                        LOAD_MAT1;
+                        KERNEL_MAT1_VEC_BATCH;
+                    }
+#else
                     SETUP_VEC_BATCH;
                     SETUP_MAT1;
-
                     for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
                     {
                         LOAD_VEC_BATCH;
                         LOAD_MAT1;
                         KERNEL_MAT1_VEC_BATCH;
                     }
-
+#endif
                     ADD_BIAS_ACC_BATCH;
                     STORE_ACC_BATCH;
                 }
@@ -251,7 +278,14 @@ WORD32 xa_nn_matXvec_batch_8x8_32(
     #undef UNROLL_STORE_ACC_BATCH
     #undef VEC_UNROLL
     #undef ROW_UNROLL
-
+#if XCHAL_HAVE_HIFI4
+    #undef UNROLL_SETUP_MAT1_X2                
+    #undef UNROLL_SETUP_VEC_BATCH_X2           
+    #undef UNROLL_LOAD_VEC_BATCH_X2            
+    #undef UNROLL_LOAD_ROW_MAT1_X2             
+    #undef UNROLL_ROW_KERNEL_MAT1_VEC_BATCH_X2 
+    #undef UNROLL_KERNEL_MAT1_VEC_BATCH_X2     
+#endif
     return 0;
 }
 

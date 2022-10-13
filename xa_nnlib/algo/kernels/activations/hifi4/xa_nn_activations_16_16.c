@@ -79,6 +79,118 @@
 /*
  * inp: p_vec: 2 byte aligned input pointer
  * out: p_out: 2 byte aligned input pointer */
+#if (( XCHAL_HW_VERSION >= RI9_HWVERSION )& (XCHAL_HAVE_HIFI1))
+WORD32 xa_nn_vec_activation_min_max_16_16(WORD16 * __restrict__ p_out,
+                                      const  WORD16 * __restrict__ p_vec,
+                                      int    activation_min,
+                                      int    activation_max,
+                                      WORD32 vec_length)
+{
+    int i;
+    ae_int16x4 x, y, min, max;
+    ae_valign align_src, align_dst;
+#if !XCHAL_HAVE_HIFI1
+    xtbool4 b0;
+#endif
+    /* NULL pointer checks */
+    XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+    XA_NNLIB_ARG_CHK_PTR(p_vec, -1);
+
+    /* Basic Parameter checks */
+    XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
+    XA_NNLIB_ARG_CHK_COND((activation_max < activation_min), -1);
+
+    WORD16 *p_o = p_out;
+    WORD16 *p_v = (WORD16 *)p_vec;
+
+    min  = AE_MOVDA16(activation_min);
+    max  = AE_MOVDA16(activation_max);
+
+    align_src = AE_LA64_PP((ae_int16x4 *)p_v);
+    align_dst = AE_ZALIGN64(); // zero alignment reg
+
+    if((activation_max >= MAX_WORD16) && (activation_min <= MIN_WORD16))
+    {
+        for(i=0; i<(vec_length >> 2); i++)
+        {
+            AE_LA16X4_IP(x, align_src, (ae_int16x4 *)p_v);
+            AE_SA16X4_IP(x, align_dst, (ae_int16x4 *)p_o);
+        }
+        int rem_itr = (vec_length & 3);
+        {
+            AE_LAV16X4_XP(x, align_src, (ae_int16x4 *)p_v, (rem_itr << 1));
+            AE_SAV16X4_XP(x, align_dst, (ae_int16x4 *)p_o, (rem_itr << 1));
+        }
+        AE_SA64POS_FP(align_dst, p_o); // finalize the stream
+    }
+    else if((activation_max < MAX_WORD16) && (activation_min <= MIN_WORD16))
+    {
+        for(i=0; i<(vec_length >> 2); i++)
+        {
+            AE_LA16X4_IP(x, align_src, (ae_int16x4 *)p_v);
+			
+            MIN_16X4(x, max)
+
+            AE_SA16X4_IP(x, align_dst, (ae_int16x4 *)p_o);
+        }
+
+        int rem_itr = (vec_length & 3);
+        {
+            AE_LAV16X4_XP(y, align_src, (ae_int16x4 *)p_v, (rem_itr << 1));
+
+            MIN_16X4(y, max)
+
+            AE_SAV16X4_XP(y, align_dst, (ae_int16x4 *)p_o, (rem_itr << 1));
+        }
+        AE_SA64POS_FP(align_dst, p_o); // finalize the stream
+    }
+    else if((activation_max >= MAX_WORD16) && (activation_min > MIN_WORD16))
+    {
+        for(i=0; i<(vec_length >> 2); i++)
+        {
+            AE_LA16X4_IP(y, align_src, (ae_int16x4 *)p_v);
+
+            MAX_16X4(y, min)
+
+            AE_SA16X4_IP(y, align_dst, (ae_int16x4 *)p_o);
+        }
+
+        int rem_itr = (vec_length & 3);
+        {
+            AE_LAV16X4_XP(y, align_src, (ae_int16x4 *)p_v, (rem_itr << 1));
+
+            MAX_16X4(y ,min)
+
+            AE_SAV16X4_XP(y, align_dst, (ae_int16x4 *)p_o, (rem_itr << 1));
+        }
+        AE_SA64POS_FP(align_dst, p_o); // finalize the stream
+    }
+    else
+    {
+        for(i=0; i<(vec_length >> 2); i++)
+        {
+            AE_LA16X4_IP(x, align_src, (ae_int16x4 *)p_v);
+			
+            LIMIT(y, x, min, max)
+			
+            AE_SA16X4_IP(y, align_dst, (ae_int16x4 *)p_o);
+        }
+
+        int rem_itr = (vec_length & 3);
+        {
+            AE_LAV16X4_XP(x, align_src, (ae_int16x4 *)p_v, (rem_itr << 1));
+			
+            LIMIT(y, x, min, max)
+			
+            AE_SAV16X4_XP(y, align_dst, (ae_int16x4 *)p_o, (rem_itr << 1));
+        }
+        AE_SA64POS_FP(align_dst, p_o); // finalize the stream
+
+    }
+
+    return 0;
+}	
+#else
 WORD32 xa_nn_vec_activation_min_max_16_16(WORD16 * __restrict__ p_out,
                                       const  WORD16 * __restrict__ p_vec,
                                       int    activation_min,
@@ -198,6 +310,7 @@ WORD32 xa_nn_vec_activation_min_max_16_16(WORD16 * __restrict__ p_out,
 
     return 0;
 }
+#endif
 
 /*
  * ReLU 16-bit:

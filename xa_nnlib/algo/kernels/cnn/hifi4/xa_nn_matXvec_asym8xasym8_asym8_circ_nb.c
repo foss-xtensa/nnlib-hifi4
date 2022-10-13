@@ -189,6 +189,46 @@ WORD32 xa_nn_matXvec_asym8xasym8_asym8_circ_nb(
   right_shift = out_shift>0?0:-out_shift;
 #endif /* #if TFLITE_SINGLE_ROUNDING */
 
+#if XCHAL_HAVE_HIFI4
+  if(p_mat1 && p_vec1)
+  {
+    for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
+    {
+      SETUP_ACC;
+      SETUP_VEC;
+      SETUP_MAT1;
+      for(c_itr = 0; c_itr < (cols >> 3); c_itr++)
+      {
+        LOAD_VEC;
+        KERNEL_MAT1_VEC;
+        LOAD_VEC;
+        KERNEL_MAT1_VEC;
+      }
+      if((cols & 7) != 0)
+      {
+        LOAD_VEC;
+        KERNEL_MAT1_VEC;
+      }
+      ADD_BIAS_ACC;
+      ADJUST_ACC;
+      STORE_ACC;
+    }
+    for(; m_itr < rows; m_itr++)
+    {
+      UNROLL_SETUP_ACC(0);
+      SETUP_VEC;
+      UNROLL_SETUP_MAT1(0);
+      for(c_itr = 0; c_itr < (cols >> 2); c_itr++)
+      {
+          LOAD_VEC;
+          UNROLL_KERNEL_MAT1_VEC(0);
+      }
+      UNROLL_ADD_BIAS_ACC(0);
+      UNROLL_ADJUST_ACC(0);
+      UNROLL_STORE_ACC(0);
+    }
+  }
+#else
   if(p_mat1 && p_vec1)
   {
     for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
@@ -220,6 +260,7 @@ WORD32 xa_nn_matXvec_asym8xasym8_asym8_circ_nb(
       UNROLL_STORE_ACC(0);
     }
   }
+#endif
   else
   {
     return -1;

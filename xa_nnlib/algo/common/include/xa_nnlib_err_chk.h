@@ -43,11 +43,22 @@ do {                                                                    \
   if((_cond)) return (_err);                                            \
 } while(0)
 
+#define XA_NNLIB_ARG_CLIP(_val, _min, _max)                             \
+do {                                                                    \
+  if(_val < _min){                                                      \
+    _val = _min;                                                        \
+  }                                                                     \
+  if(_val > _max){                                                      \
+    _val = _max;                                                        \
+  }                                                                     \
+} while(0)                                                                
+
 #else /* DISABLE_ARG_CHK */
 
 #define XA_NNLIB_ARG_CHK_PTR(_ptr, _err)
 #define XA_NNLIB_ARG_CHK_ALIGN(_ptr, _align, _err)
 #define XA_NNLIB_ARG_CHK_COND(_cond, _err)
+#define XA_NNLIB_ARG_CLIP(_val,_min, _max)                             
 
 #endif /* DISABLE_ARG_CHK */
 

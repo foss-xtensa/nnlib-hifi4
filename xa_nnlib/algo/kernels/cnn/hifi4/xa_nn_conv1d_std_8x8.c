@@ -39,23 +39,28 @@ static WORD32 conv_y_top_pad(
   WORD32 i,j;
   WORD32 out_height_over_y_pad = (y_padding - kernel_height)/y_stride + 1;
   out_height_over_y_pad = out_height_over_y_pad > out_height ? out_height : out_height_over_y_pad;
-
   /* When kernel convolves over y-top pad region only, output is just bias */
   for(i=0;i<out_height_over_y_pad;i++)
   {
     for(j=0;j<out_channels;j++)
     {
 #if XCHAL_HAVE_HIFI1
-      ae_int16x4 acc16, sat_acc16;
+      ae_int16x4 acc16;
       ae_int64 acc;
       acc16 = AE_L8S_I(&p_bias[j], 0);
       acc = AE_SRAI64(AE_MOVINT64_FROMINT16X4(acc16), 48);
       acc = AE_SLAA64S(acc, bias_shift);
       acc = AE_SLAA64S(acc, acc_shift);
       ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+      ae_int8x8 d_tmp8 = AE_SAT8X4X32_L(sat_acc, sat_acc);
+      AE_S8_0_I(d_tmp8, (ae_int8 *)(p_out + i*out_height_offset+j*out_channels_offset), 0);
+#else
+      ae_int16x4 sat_acc16;
       acc16 = AE_SAT16X4(sat_acc, sat_acc);
       sat_acc16 = AE_SAT8S(acc16);
       AE_S8_0_I_HIFI1(sat_acc16,((WORD8 *) p_out + i*out_height_offset+j*out_channels_offset), 0);
+#endif
 #else
       ae_int64 acc = AE_MOVINT64_FROMINT16X4(AE_MOVDA16(p_bias[j]));
       acc = AE_SLAA64S(acc, 8);
@@ -86,23 +91,28 @@ static WORD32 conv_y_bottom_pad(
   WORD32 i,j;
   WORD32 idx_out_height_over_y_b_pad = (y_padding + input_height + y_stride - 1)/y_stride + 1;
   WORD32 out_height_over_y_b_pad = out_height - idx_out_height_over_y_b_pad;
-
   /* When kernel convolves over y-bottom pad region only, output is just bias */
   for(i=idx_out_height_over_y_b_pad;i<out_height;i++)
   {
     for(j=0;j<out_channels;j++)
     {
 #if XCHAL_HAVE_HIFI1
-      ae_int16x4 acc16, sat_acc16;
+      ae_int16x4 acc16;
       ae_int64 acc;
       acc16 = AE_L8S_I(&p_bias[j], 0);
       acc = AE_SRAI64(AE_MOVINT64_FROMINT16X4(acc16), 48);
       acc = AE_SLAA64S(acc, bias_shift);
       acc = AE_SLAA64S(acc, acc_shift);
       ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+      ae_int8x8 d_tmp8 = AE_SAT8X4X32_L(sat_acc, sat_acc);
+      AE_S8_0_I(d_tmp8, (ae_int8 *)(p_out + i*out_height_offset+j*out_channels_offset), 0);
+#else
+      ae_int16x4 sat_acc16;
       acc16 = AE_SAT16X4(sat_acc, sat_acc);
       sat_acc16 = AE_SAT8S(acc16);
       AE_S8_0_I_HIFI1(sat_acc16, ((WORD8 *)p_out + i*out_height_offset+j*out_channels_offset), 0);
+#endif
 #else
       ae_int64 acc = AE_MOVINT64_FROMINT16X4(AE_MOVDA16(p_bias[j]));
       acc = AE_SLAA64S(acc, 8);

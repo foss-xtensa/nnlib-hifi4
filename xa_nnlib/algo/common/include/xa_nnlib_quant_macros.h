@@ -68,6 +68,10 @@
   out64_1 = AE_SLAA64S(out64_1, 1 + l_shift_1); \
   out = AE_ROUND32X2F64SASYM(out64_0, out64_1); \
 }
+#define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_HIFI1(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1) \
+  MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1)
+
+#define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_SHIFT MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32
 
 #define MPY_BY_QUANT_MULT_GT_ONE_X2_OUT32(y, x, multiplier, lsh) \
   MPY_BY_QUANT_MULT_X2_OUT32(y, x, multiplier, lsh, lsh)
@@ -180,7 +184,6 @@
   inp2 = AE_MULFP32X2RS(inp2, AE_SRAA32(AE_MOVDA32(0x80000000), r_shift)); \
   out = AE_SAT16X4(inp1, inp2); \
 }
-
 #define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1) \
 { \
   ae_int64 accu1 = AE_MUL32_HH(inp, (1 << l_shift_0)); \
@@ -190,6 +193,40 @@
   out = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(out), r_shift_0), AE_SRAA64(AE_CVT64F32_L(out), r_shift_1)); \
 }
 
+#define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_SHIFT(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1) \
+{ \
+  ae_int32x2 inp_up = AE_SLAA32S(inp,l_shift_0); \
+  ae_int32x2 inp_low = AE_SLAA32S(inp,l_shift_1); \
+  out = AE_SEL32_HL(inp_up, inp_low); \
+  out = AE_MULFP32X2RAS(out, multiplier); \
+  out = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(out), r_shift_0), AE_SRAA64(AE_CVT64F32_L(out), r_shift_1)); \
+}
+
+#if XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= 281090)
+#define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_HIFI1(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1) \
+{ \
+  ae_int64 accu1 = AE_CVT64F32_H(inp); \
+  ae_int64 accu2 = AE_CVT64F32_L(inp); \
+  out = AE_TRUNCAV32X2F64S(accu1, accu2, l_shift_0); \
+  out = AE_MULFP32X2RAS(out, multiplier); \
+  out = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(out), r_shift_0), AE_SRAA64(AE_CVT64F32_L(out), r_shift_1)); \
+}
+#else
+#define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_HIFI1(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1) \
+  MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1)
+#endif
+
+#if XCHAL_HAVE_HIFI1
+#define MPY_BY_QUANT_MULT_X2X2_OUT32(out1, out2, inp1, inp2, multiplier, l_shift, r_shift) \
+{ \
+  out1 = AE_SLAA32(inp1, l_shift); \
+  out2 = AE_SLAA32(inp2, l_shift); \
+  out1 = AE_MULFP32X2RAS(out1, AE_MOVDA32(multiplier)); \
+  out2 = AE_MULFP32X2RAS(out2, AE_MOVDA32(multiplier)); \
+  out1 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(out1), r_shift), AE_SRAA64(AE_CVT64F32_L(out1), r_shift)); \
+  out2 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(out2), r_shift), AE_SRAA64(AE_CVT64F32_L(out2), r_shift)); \
+}
+#else
 #define MPY_BY_QUANT_MULT_X2X2_OUT32(out1, out2, inp1, inp2, multiplier, l_shift, r_shift) \
 { \
   ae_int32x2 d_ls = AE_MOVDA32(1<<l_shift); \
@@ -204,6 +241,7 @@
   out1 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(out1), r_shift), AE_SRAA64(AE_CVT64F32_L(out1), r_shift)); \
   out2 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(out2), r_shift), AE_SRAA64(AE_CVT64F32_L(out2), r_shift)); \
 }
+#endif
 
 #define MPY_BY_QUANT_MULT_GT_ONE_X2_OUT32(y, x, multiplier, lsh) { \
   y = AE_SLAA32(x, lsh); \

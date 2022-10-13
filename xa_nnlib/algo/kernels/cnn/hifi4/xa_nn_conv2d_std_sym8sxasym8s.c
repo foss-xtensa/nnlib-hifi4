@@ -577,8 +577,6 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxasym8s(
   XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((kernel_height <= 0 || kernel_width <= 0), -1);
-  XA_NNLIB_ARG_CHK_COND((kernel_height > input_height), -1);
-  XA_NNLIB_ARG_CHK_COND((kernel_width > input_width), -1);
   XA_NNLIB_ARG_CHK_COND((out_channels <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);

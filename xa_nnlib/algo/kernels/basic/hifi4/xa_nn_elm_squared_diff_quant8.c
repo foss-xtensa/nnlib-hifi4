@@ -189,10 +189,17 @@ static void internal_elm_squared_diff_broadcast_2D_asym8sxasym8s_asym8s(WORD8 * 
         MPY_BY_QUANT_MACC_ST_ONE_EXP_X2X2_OUT32(raw_diff4_5, raw_diff6_7, shifted_a4_5, shifted_a6_7, inp1_multiplier, inp1_left_shift);
         MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2X2_OUT32(raw_diff4_5, raw_diff6_7, shifted_b4_5, shifted_b6_7, inp2_multiplier, inp2_left_shift);
         // Squared Diff
+#if XCHAL_HAVE_HIFI1
+        raw_diff0_1 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32);
+        raw_diff2_3 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32);
+        raw_diff4_5 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff4_5, raw_diff4_5), AE_MUL32_LL(raw_diff4_5, raw_diff4_5), 32);
+        raw_diff6_7 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff6_7, raw_diff6_7), AE_MUL32_LL(raw_diff6_7, raw_diff6_7), 32);
+#else
         raw_diff0_1 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32)));
         raw_diff2_3 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32)));
         raw_diff4_5 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff4_5, raw_diff4_5), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff4_5, raw_diff4_5), 32)));
         raw_diff6_7 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff6_7, raw_diff6_7), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff6_7, raw_diff6_7), 32)));
+#endif
         // Raw Output
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2X2_OUT16_ZB(out0, raw_diff0_1, raw_diff2_3, out_multiplier, out_left_shift, out_zero_bias);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2X2_OUT16_ZB(out1, raw_diff4_5, raw_diff6_7, out_multiplier, out_left_shift, out_zero_bias);
@@ -275,10 +282,17 @@ static void internal_elm_squared_diff_broadcast_2D_asym8sxasym8s_asym8s(WORD8 * 
         MPY_BY_QUANT_MACC_ST_ONE_EXP_X2X2_OUT32(raw_diff4_5, raw_diff6_7, shifted_a4_5, shifted_a6_7, inp1_multiplier, inp1_left_shift);
         MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2X2_OUT32(raw_diff4_5, raw_diff6_7, shifted_b4_5, shifted_b6_7, inp2_multiplier, inp2_left_shift);
     // Squared Diff
+#if XCHAL_HAVE_HIFI1
+        raw_diff0_1 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32);
+        raw_diff2_3 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32);
+        raw_diff4_5 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff4_5, raw_diff4_5), AE_MUL32_LL(raw_diff4_5, raw_diff4_5), 32);
+        raw_diff6_7 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff6_7, raw_diff6_7), AE_MUL32_LL(raw_diff6_7, raw_diff6_7), 32);
+#else
         raw_diff0_1 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32)));
         raw_diff2_3 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32)));
         raw_diff4_5 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff4_5, raw_diff4_5), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff4_5, raw_diff4_5), 32)));
         raw_diff6_7 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff6_7, raw_diff6_7), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff6_7, raw_diff6_7), 32)));
+#endif
         // Raw Output
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2X2_OUT16_ZB(out0, raw_diff0_1, raw_diff2_3, out_multiplier, out_left_shift, out_zero_bias);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2X2_OUT16_ZB(out1, raw_diff4_5, raw_diff6_7, out_multiplier, out_left_shift, out_zero_bias);
@@ -318,7 +332,11 @@ static void internal_elm_squared_diff_broadcast_2D_asym8sxasym8s_asym8s(WORD8 * 
         raw_diff0_1 = AE_ZERO32();
         MPY_BY_QUANT_MACC_ST_ONE_EXP_X2_OUT32(raw_diff0_1, shifted_a0_1, inp1_multiplier, inp1_left_shift);
         MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2_OUT32(raw_diff0_1, shifted_b0_1, inp2_multiplier, inp2_left_shift);
+#if XCHAL_HAVE_HIFI1
+        raw_diff0_1 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32);
+#else
         raw_diff0_1 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32)));
+#endif
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT16_ZB(out0, raw_diff0_1, out_multiplier, out_left_shift, out_zero_bias);
         LIMIT16X4(out1, out0, AE_MOVDA16(out_activation_min), AE_MOVDA16(out_activation_max));
         *(WORD8 *)p_c = (WORD8)AE_MOVAD16_0(out1);
@@ -407,8 +425,13 @@ static void internal_elm_squared_diff_broadcast_asym8sxasym8s_asym8s(WORD8 * __r
 
       raw_diff0_1 = raw_diff2_3 = scaled_b0;
       MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2X2_OUT32(raw_diff0_1, raw_diff2_3, shifted_a0_1, shifted_a2_3, a_mult, a_ls);
+#if XCHAL_HAVE_HIFI1
+      raw_diff0_1 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32);
+      raw_diff2_3 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32);
+#else
       raw_diff0_1 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32)));
       raw_diff2_3 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32)));
+#endif
       MPY_BY_QUANT_MULT_ST_ONE_EXP_X2X2_OUT16_ZB(out0, raw_diff0_1, raw_diff2_3, out_multiplier, out_left_shift, out_zero_bias);
       LIMIT16X4(out1, out0, AE_MOVDA16(out_activation_min), AE_MOVDA16(out_activation_max));
 
@@ -457,8 +480,13 @@ static void internal_elm_squared_diff_broadcast_asym8sxasym8s_asym8s(WORD8 * __r
 
       raw_diff0_1 = raw_diff2_3 = scaled_b0;
       MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2X2_OUT32(raw_diff0_1, raw_diff2_3, shifted_a0_1, shifted_a2_3, a_mult, a_ls);
+#if XCHAL_HAVE_HIFI1
+      raw_diff0_1 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32);
+      raw_diff2_3 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32);
+#else
       raw_diff0_1 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32)));
-      raw_diff2_3 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32)));
+      raw_diff2_3 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32))); 
+#endif
       MPY_BY_QUANT_MULT_ST_ONE_EXP_X2X2_OUT16_ZB(out0, raw_diff0_1, raw_diff2_3, out_multiplier, out_left_shift, out_zero_bias);
       LIMIT16X4(out1, out0, AE_MOVDA16(out_activation_min), AE_MOVDA16(out_activation_max));
 
@@ -481,7 +509,11 @@ static void internal_elm_squared_diff_broadcast_asym8sxasym8s_asym8s(WORD8 * __r
 
     raw_diff0_1 = raw_diff2_3 = scaled_b0;
     MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2_OUT32(raw_diff0_1, shifted_a0_1, a_mult, a_ls);
+#if XCHAL_HAVE_HIFI1
+    raw_diff0_1 = AE_TRUNCA32X2F64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32);
+#else
     raw_diff0_1 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32)));
+#endif
     MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT16_ZB(out0, raw_diff0_1, out_multiplier, out_left_shift, out_zero_bias);
     LIMIT16X4(out1, out0, AE_MOVDA16(out_activation_min), AE_MOVDA16(out_activation_max));
     *p_c =  (WORD8)AE_MOVAD16_3(out1);
@@ -562,6 +594,7 @@ WORD32 xa_nn_elm_squared_diff_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restri
   }
 
   int need_broadcast = 0;
+  int inp1_const = 1, inp2_const = 1;
   for(i = 0; i < 4; i++)
   {
     if(p_inp1_shape[i] != p_inp2_shape[i])
@@ -573,6 +606,10 @@ WORD32 xa_nn_elm_squared_diff_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restri
 
       need_broadcast = 1;
     }
+    if(p_inp1_shape[i] != 1)
+      inp1_const &= 0;
+    if(p_inp2_shape[i] != 1)
+      inp2_const &= 0;
   }
   int itr0, itr1, itr2;
 
@@ -675,6 +712,46 @@ WORD32 xa_nn_elm_squared_diff_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restri
       p_inp1_tmp += inp1_strides[0];
       p_inp2_tmp += inp2_strides[0];
     }
+  }
+  else if(inp1_const == 1 || inp2_const == 1)
+  {
+    WORD32 inp1_zb, inp1_ls, inp1_mult;
+    WORD32 inp2_zb, inp2_ls, inp2_mult;
+    inp1_zb = inp1_zero_bias;
+    inp1_ls = inp1_left_shift;
+    inp1_mult = inp1_multiplier;
+    inp2_zb = inp2_zero_bias;
+    inp2_ls = inp2_left_shift;
+    inp2_mult = inp2_multiplier;
+    /* Reversing the inputs is okay because difference is squared */
+    if(inp1_strides[3] == 0)
+    {
+      inp2_zb = inp1_zero_bias;
+      inp2_ls = inp1_left_shift;
+      inp2_mult = inp1_multiplier;
+      inp1_zb = inp2_zero_bias;
+      inp1_ls = inp2_left_shift;
+      inp1_mult = inp2_multiplier;
+      const WORD8 *tmp;
+      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
+    }
+    internal_elm_squared_diff_broadcast_asym8sxasym8s_asym8s(
+        p_out_tmp,
+        out_zero_bias,
+        out_left_shift,
+        out_multiplier,
+        out_activation_min,
+        out_activation_max,
+        p_inp1_tmp,
+        inp1_zb,
+        inp1_ls,
+        inp1_mult,
+        p_inp2_tmp,
+        inp2_zb,
+        inp2_ls,
+        inp2_mult,
+        left_shift,
+        p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3]);
   }
   else
   {

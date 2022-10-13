@@ -24,6 +24,7 @@
 #define __XA_NN_CONV2D_DEPTHWISE_STATE_H__
 
 #include "xa_nn_circ_buf.h"
+#include "xa_nnlib_common.h"
 
 typedef struct _xa_nn_conv2d_dw_state_t
 {
@@ -50,7 +51,36 @@ VOID xa_nn_conv2d_depthwise_init
  ,pVOID p_pad_val
  );
 
-#if XCHAL_HAVE_HIFI1
+#if XCHAL_HAVE_HIFI1 
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+#define COPY_KERNEL_TO_SCRATCH_8b(p_out, p_in, kh, kw, kw_pad) \
+{ \
+  int itr_kh, itr_kw; \
+  ae_valign alignIn, alignOut; \
+  for(itr_kh = 0; itr_kh < kh; itr_kh++) \
+  { \
+    WORD8 *pae_in = (WORD8 *)(&p_in[itr_kh * kw]); \
+    WORD8 *pae_out = (WORD8 *)(&p_out[itr_kh * kw_pad]); \
+    alignIn = AE_LA64_PP(pae_in); \
+    alignOut = AE_ZALIGN64(); \
+    ae_int16x4 d_tmp; \
+    _Pragma("no_unroll") \
+    for(itr_kw = 0; itr_kw < (kw >> 2); itr_kw++) \
+    { \
+      AE_LA8X4S_IP(d_tmp, alignIn, pae_in); \
+      AE_SA8X4U_IP(d_tmp, alignOut, (ae_int32 *)pae_out); \
+    } \
+  int rem_itr = (kw & 0x3);\
+  if(rem_itr)\
+  {\
+      AE_LAV8X4S_XP(d_tmp, alignIn, (ae_int8x4 *)pae_in, rem_itr); \
+      AE_SAV8X4U_XP(d_tmp, alignOut, (ae_int8x4u *)pae_out, rem_itr); \
+  }\
+    AE_SA64POS_FP(alignOut, pae_out); \
+  }\
+}\
+
+#else
 #define COPY_KERNEL_TO_SCRATCH_8b(p_out, p_in, kh, kw, kw_pad) \
 { \
   int itr_kh, itr_kw; \
@@ -75,6 +105,7 @@ VOID xa_nn_conv2d_depthwise_init
     } \
   } \
 }
+#endif
 #else
 #define COPY_KERNEL_TO_SCRATCH_8b(p_out, p_in, kh, kw, kw_pad) \
 { \

@@ -155,11 +155,11 @@ enum xa_error_class {
 
 #define XA_NNLIB_GENERIC    0
 
-#define XA_ERROR_CODE(severity, class, codec, index)    ((severity << 31) | (class << 12) | (codec << 7) | index)
-#define XA_ERROR_SEVERITY(code)    (((code) & XA_FATAL_ERROR) != 0)
-#define XA_ERROR_CLASS(code)    (((code) >> 12) & 0x0f)
-#define XA_ERROR_CODEC(code)    (((code) >>  7) & 0x1f)
-#define XA_ERROR_SUBCODE(code)    (((code) >>  0) & 0x3f)
+#define XA_ERROR_CODE(severity, class, codec, index)	((severity << 15) | (class << 11) | (codec << 6) | index)
+#define XA_ERROR_SEVERITY(code)	(((code) & XA_FATAL_ERROR) != 0)
+#define XA_ERROR_CLASS(code)	(((code) >> 11) & 0x0f)
+#define XA_ERROR_CODEC(code)    (((code) >>  6) & 0x1f)
+#define XA_ERROR_SUBCODE(code)	(((code) >>  0) & 0x3f)
 
 /* Our convention is that only nnlib-class errors can be generic ones. */
 

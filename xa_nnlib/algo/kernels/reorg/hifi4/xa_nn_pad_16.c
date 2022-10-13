@@ -22,6 +22,46 @@
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_common_macros.h"
 
+#if XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
+static inline WORD32 xa_nn_memset_16_16( void *p_dst,
+		WORD32 val,
+		WORD32 n)
+{
+	WORD32 MEMCPY_16b_num_elements = n >> 1;
+	ae_int16x4 d_inp0;
+	d_inp0 = (WORD16)val;
+	ae_int16 * __restrict__ pdest = (ae_int16 *)p_dst;
+	ae_valign MEMCPY_16b_d_align = AE_ZALIGN64();
+	for (int ii=0; ii < (MEMCPY_16b_num_elements >> 2); ii++) {
+		AE_SA16X4_IP(d_inp0, MEMCPY_16b_d_align, (ae_int16x4 *)pdest);
+	}
+	AE_SAV16X4_XP(d_inp0, MEMCPY_16b_d_align, (ae_int16x4 *)pdest, ((MEMCPY_16b_num_elements&3)<<1));
+	AE_SA64POS_FP(MEMCPY_16b_d_align, pdest);
+	
+	return 0;
+}
+
+static inline WORD32 xa_nn_memmove_16_16( void *p_dst,
+		const void *p_src,
+		WORD32 n)
+{
+	WORD32 MEMCPY_16b_num_elements = n >> 1;
+	ae_int16x4 d_inp0;
+	ae_int16 * __restrict__ psrc  = (ae_int16 *)p_src;
+	ae_int16 * __restrict__ pdest = (ae_int16 *)p_dst;
+	ae_valign MEMCPY_16b_s_align = AE_LA64_PP((ae_int16x4 *)psrc);
+	ae_valign MEMCPY_16b_d_align = AE_ZALIGN64();
+	for (int ii=0; ii < (MEMCPY_16b_num_elements >> 2); ii++) {
+		AE_LA16X4_IP(d_inp0, MEMCPY_16b_s_align, (ae_int16x4 *)psrc);
+		AE_SA16X4_IP(d_inp0, MEMCPY_16b_d_align, (ae_int16x4 *)pdest);
+	}
+	AE_LAV16X4_XP(d_inp0, MEMCPY_16b_s_align, (ae_int16x4 *)psrc, ((MEMCPY_16b_num_elements&3)<<1));
+	AE_SAV16X4_XP(d_inp0, MEMCPY_16b_d_align, (ae_int16x4 *)pdest, ((MEMCPY_16b_num_elements&3)<<1));
+	AE_SA64POS_FP(MEMCPY_16b_d_align, pdest);
+	
+	return 0;
+}
+#else
 static inline WORD32 xa_nn_memset_16_16( void *p_dst,
 		WORD32 val,
 		WORD32 n)
@@ -66,6 +106,7 @@ static inline WORD32 xa_nn_memmove_16_16( void *p_dst,
 	}
 	return 0;
 }
+#endif
 
 /*
  * Currently only supports upto 4D input tensors.

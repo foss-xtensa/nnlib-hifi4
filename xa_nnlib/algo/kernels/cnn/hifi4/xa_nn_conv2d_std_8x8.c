@@ -51,16 +51,22 @@ static WORD32 conv_x_left_pad(
       for(k=0;k<out_channels;k++)
       {
 #if XCHAL_HAVE_HIFI1
-        ae_int16x4 acc16, sat_acc16;
+        ae_int16x4 acc16;
         ae_int64 acc;
         acc16 = AE_L8S_I(&p_bias[k], 0);
         acc = AE_SRAI64(AE_MOVINT64_FROMINT16X4(acc16), 48);
         acc = AE_SLAA64S(acc, bias_shift);
         acc = AE_SLAA64S(acc, acc_shift);
         ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+        ae_int8x8 d_tmp8 = AE_SAT8X4X32_L(sat_acc, sat_acc);
+        AE_S8_0_I(d_tmp8, (ae_int8 *)(p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset), 0);
+#else
+        ae_int16x4 sat_acc16;
         acc16 = AE_SAT16X4(sat_acc, sat_acc);
         sat_acc16 = AE_SAT8S(acc16);
         AE_S8_0_I_HIFI1(sat_acc16,((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset), 0);
+#endif
 #else
         ae_int64 acc = AE_MOVINT64_FROMINT16X4(AE_MOVDA16(p_bias[k]));
         acc = AE_SLAA64S(acc, 8);
@@ -103,16 +109,22 @@ static WORD32 conv_x_right_pad(
       for(k=0;k<out_channels;k++)
       {
 #if XCHAL_HAVE_HIFI1
-        ae_int16x4 acc16, sat_acc16;
+        ae_int16x4 acc16;
         ae_int64 acc;
         acc16 = AE_L8S_I(&p_bias[k], 0);
         acc = AE_SRAI64(AE_MOVINT64_FROMINT16X4(acc16), 48);
         acc = AE_SLAA64S(acc, bias_shift);
         acc = AE_SLAA64S(acc, acc_shift);
         ae_int32x2 sat_acc = AE_ROUND32F64SSYM(acc);
+#if (XCHAL_HW_VERSION >= RI9_HWVERSION )
+        ae_int8x8 d_tmp8 = AE_SAT8X4X32_L(sat_acc, sat_acc);
+        AE_S8_0_I(d_tmp8, (ae_int8 *)(p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset), 0);
+#else
+        ae_int16x4 sat_acc16;
         acc16 = AE_SAT16X4(sat_acc, sat_acc);
         sat_acc16 = AE_SAT8S(acc16);
         AE_S8_0_I_HIFI1(sat_acc16,((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset), 0);
+#endif
 #else
         ae_int64 acc = AE_MOVINT64_FROMINT16X4(AE_MOVDA16(p_bias[k]));
         acc = AE_SLAA64S(acc, 8);

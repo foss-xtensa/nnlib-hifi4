@@ -339,6 +339,49 @@ WORD32 xa_nn_fully_connected_sym8sxasym8s_asym8s
   return ret;
 }
 
+WORD32 xa_nn_fully_connected_sym8sxsym16s_sym16s
+  (WORD16 *__restrict__ p_out
+   ,const WORD8 *__restrict__ p_weight
+   ,const WORD16 *__restrict__ p_inp
+   ,const WORD64 *__restrict__ p_bias
+   ,WORD32  weight_depth
+   ,WORD32  out_depth
+   ,WORD32  out_multiplier
+   ,WORD32  out_shift
+  )
+{
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_weight, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD16), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_weight, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD16), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD64), -1);
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND((out_depth <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND((out_shift < -31 || out_shift > 31), -1);
+
+  WORD32 ret = 0;
+  ret = xa_nn_matXvec_sym8sxsym16s_sym16s
+    (p_out
+     ,p_weight
+     ,0
+     ,p_inp
+     ,0
+     ,p_bias
+     ,out_depth
+     ,weight_depth
+     ,0
+     ,weight_depth
+     ,0
+     ,out_multiplier
+     ,out_shift
+    );
+  return ret;
+}
+
 WORD32 xa_nn_fully_connected_asym8sxasym8s_asym8s
   (WORD8 *__restrict__ p_out
    ,const WORD8 *__restrict__ p_weight

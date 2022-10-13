@@ -144,16 +144,16 @@ void show_usage(void)
     printf("\t-acc_shift : Accumulator left shift; Default=0\n");
     printf("\t-bias_shift : Bias left shift; Default=0\n");
     printf("\t-mat_precision : 8, 16, -1(single prec float), -3(asym8u) or -5(sym8s); Default=16\n");
-    printf("\t-inp_precision : 8, 16, -1(single prec float), -3(asym8u) or -4(asym8s); Default=16\n");
-    printf("\t-out_precision : 8, 16, 32, 64 or -1(single prec float), -3(asym8u), -4(asym8s) or -7(asym16s); Default=16\n");
+    printf("\t-inp_precision : 8, 16, -1(single prec float), -3(asym8u), -8(sym16s) or -4(asym8s); Default=16\n");
+    printf("\t-out_precision : 8, 16, 32, 64 or -1(single prec float), -3(asym8u), -4(asym8s) or -8(sym16s); Default=16\n");
     printf("\t-bias_precision : 8, 16, 64 or -1(single prec float); Default=16\n");
     printf("\t-mat1_zero_bias : Matrix1 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
     printf("\t-mat2_zero_bias : Matrix2 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
-    printf("\t-inp1_zero_bias : Input1 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s; Default=-128\n");
-    printf("\t-inp2_zero_bias : Input2 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s; Default=-128\n");
+    printf("\t-inp1_zero_bias : Input1 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s, 0 for sym16s; Default=-128\n");
+    printf("\t-inp2_zero_bias : Input2 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s, 0 for sym16s; Default=-128\n");
     printf("\t-out_multiplier : Output multiplier in Q31 format for quantized 8-bit, 0x0 to 0x7fffffff; Default=0x40000000\n");
     printf("\t-out_shift : Output shift for quantized 8-bit(asym8u and asym8s), 31 to -31; Default=-8\n");
-    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s; Default=128\n");
+    printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s, 0 for sym16s; Default=128\n");
     printf("\t-out_stride : Stride for storing the output; Default=1\n");
     printf("\t-membank_padding: 0, 1; Default=1\n");
     printf("\t-frames: Positive number; Default=2\n");
@@ -266,6 +266,16 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define MAT_VEC_MUL_FN_SYM8SXSYM16S(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_matXvec_sym8sxsym16s_sym16s ( \
+          (WORD16 *) p_out->p, (WORD8 *) p_mat1->p, (WORD8 *) p_mat2->p, (WORD16 *)p_vec1->p, (WORD16 *)p_vec2->p, (WORD64 *)p_bias->p, \
+          cfg.rows, cfg.cols1, cfg.cols2, p_mat1->row_offset, p_mat2->row_offset, \
+          cfg.out_multiplier, cfg.out_shift);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define MAT_VEC_MUL_FC_FN(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
       XTPWR_PROFILER_START(0);\
@@ -306,6 +316,16 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
           cfg.cols1, cfg.rows, \
           cfg.inp1_zero_bias, \
           cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
+#define MAT_VEC_MUL_FC_FN_SYM8SXSYM16S(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_fully_connected_sym8sxsym16s_sym16s ( \
+          (WORD16 *)p_out->p, (WORD8 *) p_mat1->p, (WORD16 *)p_vec1->p, (WORD64 *)p_bias->p, \
+          cfg.cols1, cfg.rows, \
+          cfg.out_multiplier, cfg.out_shift);\
       XTPWR_PROFILER_STOP(0);\
     }
 
@@ -467,6 +487,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MAT_VEC_MUL_FN_ASYM8(-3, -3, -3) \
     else MAT_VEC_MUL_FN_ASYM8S(-4, -4, -4) \
     else MAT_VEC_MUL_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else MAT_VEC_MUL_FN_SYM8SXSYM16S(-5, -8, -8) \
     else MAT_VEC_MUL_OUT_STRIDE_FN_SYM8SXASYM8S_16(-5, -4, 16)  \
     else MAT_VEC_MUL_ACTIVATION_FN_F32(-1, -1, -1, sigmoid) \
     else MAT_VEC_MUL_ACTIVATION_FN_F32(-1, -1, -1, tanh) \
@@ -492,6 +513,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MAT_VEC_MUL_FN_ASYM8(-3, -3, -3) \
     else MAT_VEC_MUL_FN_ASYM8S(-4, -4, -4) \
     else MAT_VEC_MUL_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else MAT_VEC_MUL_FN_SYM8SXSYM16S(-5, -8, -8) \
     else MAT_VEC_MUL_OUT_STRIDE_FN_SYM8SXASYM8S_16(-5, -4, 16)  \
     else {  printf("unsupported multiplication\n"); return -1;} 
 #endif
@@ -504,6 +526,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MAT_VEC_MUL_FC_FN_ASYM8(-3, -3, -3) \
     else MAT_VEC_MUL_FC_FN_ASYM8S(-4, -4, -4) \
     else MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_SYM8SXSYM16S(-5, -8, -8) \
     else MAT_VEC_MUL_FC_FN_F32(-1, -1, -1) \
     else {  printf("unsupported multiplication\n"); return -1;} 
 #else
@@ -514,6 +537,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MAT_VEC_MUL_FC_FN_ASYM8(-3, -3, -3) \
     else MAT_VEC_MUL_FC_FN_ASYM8S(-4, -4, -4) \
     else MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_SYM8SXSYM16S(-5, -8, -8) \
     else {  printf("unsupported multiplication\n"); return -1;} 
 #endif
 
@@ -654,6 +678,24 @@ int xa_nn_main_process(int argc, char *argv[])
     }
     else{
       sprintf(profiler_name,"matXvec%s_sym8sxasym8s_asym8s",(cfg.batch)? "_batch": "");
+    }
+  }
+  else if((cfg.mat_precision == -5) && (cfg.inp_precision == -7) && (cfg.out_precision == -7))
+  {
+    if(cfg.fc == 1){
+      sprintf(profiler_name,"fully_connected_sym8sxasym16s_asym16s");
+    }
+    else{
+      sprintf(profiler_name,"matXvec%s_sym8sxasym16s_asym16s",(cfg.batch)? "_batch": "");
+    }
+  }
+  else if((cfg.mat_precision == -5) && (cfg.inp_precision == -8) && (cfg.out_precision == -8))
+  {
+    if(cfg.fc == 1){
+      sprintf(profiler_name,"fully_connected_sym8sxsym16s_sym16s");
+    }
+    else{
+      sprintf(profiler_name,"matXvec%s_sym8sxsym16s_sym16s",(cfg.batch)? "_batch": "");
     }
   }
   else if((cfg.mat_precision == -5) && (cfg.inp_precision == -4) && (cfg.out_precision == 16))

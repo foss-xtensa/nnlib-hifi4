@@ -27,7 +27,7 @@
 #if defined(CUST_UNROLL) && (CUST_UNROLL != 0)
 #define UNROLL_S CUST_UNROLL
 #else
-#define UNROLL_S  8 /// Optimal unroll
+#define UNROLL_S  4 /// Optimal unroll
 #endif
 
 #define SETUP_ROW_S(N) \
@@ -106,10 +106,6 @@ WORD32 xa_nn_matXvec_f32_circ_nb(
     {
       xtfloatx2 *p_src1 = (xtfloatx2*)p_vec;
       SETUP_S;
-#pragma ymemory (p_mat1_0)
-#pragma ymemory (p_mat1_1)
-#pragma ymemory (p_mat1_2)
-#pragma ymemory (p_mat1_3)
       for (col = 0; col < (cols>>1); col++) {
         KERNEL_S;
       }

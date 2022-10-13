@@ -221,6 +221,38 @@ static void vecmax8_inpx3_unaligned(const WORD8 *p_src1, const WORD8* p_src2, co
       AE_SA8X4U_IP(i1, align_out, (ae_int32 *)p_dst);
       AE_SA8X4U_IP(i2, align_out, (ae_int32 *)p_dst);
      }
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+    int rem_itr = (N&7);
+    if( rem_itr > 4)
+    {
+      AE_LA8X4S_IP(i1,  align_src_in1,  p_src1);
+      AE_LA8X4S_IP(j1,  align_src_in2,  p_src2);
+      AE_LA8X4S_IP(k1,  align_src_in3,  p_src3);
+      AE_LAV8X4S_XP(i2,  align_src_in1,  (ae_int8x4 *)p_src1, (rem_itr&3));
+      AE_LAV8X4S_XP(j2,  align_src_in2,  (ae_int8x4 *)p_src2, (rem_itr&3));
+      AE_LAV8X4S_XP(k2,  align_src_in3,  (ae_int8x4 *)p_src3, (rem_itr&3));
+
+      i1 = AE_MAX16(i1, j1);
+      i2 = AE_MAX16(i2, j2);
+      i1 = AE_MAX16(i1, k1);
+      i2 = AE_MAX16(i2, k2);
+
+      AE_SA8X4U_IP(i1, align_out, (ae_int32 *)p_dst);
+      AE_SAV8X4U_XP(i2, align_out, (ae_int8x4u *)p_dst, (rem_itr&3));
+    }
+    else if (rem_itr > 0)
+    {
+      AE_LAV8X4S_XP(i1,  align_src_in1,  (ae_int8x4 *)p_src1, rem_itr);
+      AE_LAV8X4S_XP(j1,  align_src_in2,  (ae_int8x4 *)p_src2, rem_itr);
+      AE_LAV8X4S_XP(k1,  align_src_in3,  (ae_int8x4 *)p_src3, rem_itr);
+
+      i1 = AE_MAX16(i1, j1);
+      i1 = AE_MAX16(i1, k1);
+
+      AE_SAV8X4U_XP(i1, align_out, (ae_int8x4u *)p_dst, rem_itr);
+    }
+     AE_SA64POS_FP(align_out, p_dst);
+#else
      AE_SA64POS_FP(align_out, p_dst);
     #pragma no_unroll
     for(i = 0; i < (N & 7); i++)
@@ -233,6 +265,7 @@ static void vecmax8_inpx3_unaligned(const WORD8 *p_src1, const WORD8* p_src2, co
         out1 = out1>k1 ? out1 : k1;
         *p_dst++ = (WORD8) out1;
     }
+#endif
 }
 #else
 static void vecmax8_inpx3_unaligned(const WORD8 *p_src1, const WORD8* p_src2, const WORD8* p_src3, WORD8 * /*__restrict__*/ p_dst, int N){
@@ -335,7 +368,33 @@ static void vecmax8_inpx2_unaligned(const WORD8 *p_src1, const WORD8* p_src2, WO
       AE_SA8X4U_IP(i1, align_out, (ae_int32 *)p_dst);
       AE_SA8X4U_IP(i2, align_out, (ae_int32 *)p_dst);
      }
-      AE_SA64POS_FP(align_out, p_dst);
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+    int rem_itr = (N&7);
+    if( rem_itr > 4)
+    {
+      AE_LA8X4S_IP(i1,  align_src_in1,  p_src1);
+      AE_LA8X4S_IP(j1,  align_src_in2,  p_src2);
+      AE_LAV8X4S_XP(i2,  align_src_in1,  (ae_int8x4 *)p_src1, (rem_itr&3));
+      AE_LAV8X4S_XP(j2,  align_src_in2,  (ae_int8x4 *)p_src2, (rem_itr&3));
+
+      i1 = AE_MAX16(i1, j1);
+      i2 = AE_MAX16(i2, j2);
+
+      AE_SA8X4U_IP(i1, align_out, (ae_int32 *)p_dst);
+      AE_SAV8X4U_XP(i2, align_out, (ae_int8x4u *)p_dst, (rem_itr&3));
+    }
+    else if (rem_itr > 0)
+    {
+      AE_LAV8X4S_XP(i1,  align_src_in1,  (ae_int8x4 *)p_src1, rem_itr);
+      AE_LAV8X4S_XP(j1,  align_src_in2,  (ae_int8x4 *)p_src2, rem_itr);
+
+      i1 = AE_MAX16(i1, j1);
+
+      AE_SAV8X4U_XP(i1, align_out, (ae_int8x4u *)p_dst, rem_itr);
+    }
+     AE_SA64POS_FP(align_out, p_dst);
+#else
+     AE_SA64POS_FP(align_out, p_dst);
     #pragma no_unroll
 
     for(i = 0; i < (N & 7); i++)
@@ -346,6 +405,7 @@ static void vecmax8_inpx2_unaligned(const WORD8 *p_src1, const WORD8* p_src2, WO
         out1 = i1>j1 ? i1 : j1;
         *p_dst++ = (WORD8) out1;
     }
+#endif
 }
 #else
 static void vecmax8_inpx2_unaligned(const WORD8 *p_src1, const WORD8* p_src2, WORD8 *p_dst, int N){
@@ -1335,7 +1395,7 @@ static inline void xa_nn_reduce_sum_4D_asym8s_asym8s(const WORD8 * __restrict__ 
                   AE_L8X4S_IP(j2, p_src2, 4*sizeof(WORD8));
 #else
                   AE_L8X4F_IP(j1, p_src2, 4*sizeof(WORD8));
-                  AE_L8X4F_IP(j2, p_src2, 4*sizeof(WORD8));	
+                  AE_L8X4F_IP(j2, p_src2, 4*sizeof(WORD8)); 
                   j1 = AE_SRAI16(j1, 8);
                   j2 = AE_SRAI16(j2, 8);
 #endif
@@ -1743,6 +1803,9 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
   {
     p_axis_data[itr] = p_axis_data[itr] + (4 - num_inp_dims);
   }
+#if XCHAL_HAVE_HIFI1
+  ALIGN_REGISTER_TYPE align_out = AE_ZALIGN64();
+#endif
 
   if(num_axis_dims)
   {
@@ -1775,9 +1838,19 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
           temp2 = AE_MULFP32X2RS(inv_mult, wout2);
           temp3 = AE_MULFP32X2RS(inv_mult, wout3);
           temp4 = AE_MULFP32X2RS(inv_mult, wout4);
+#if XCHAL_HAVE_HIFI1
+          ae_int16x4 out = AE_SEL16_6420(AE_MOVF16X4_FROMF32X2(temp1), AE_MOVF16X4_FROMF32X2(temp2));
+          AE_SA8X4U_IP(out, align_out, (ae_int32 *)p_out);
+          out = AE_SEL16_6420(AE_MOVF16X4_FROMF32X2(temp3), AE_MOVF16X4_FROMF32X2(temp4));
+          AE_SA8X4U_IP(out, align_out, (ae_int32 *)p_out);    
+#else
           STORE_8X4_FROM_32X4(p_out, temp1, temp2);
           STORE_8X4_FROM_32X4(p_out, temp3, temp4);
+#endif
         }
+#if XCHAL_HAVE_HIFI1
+    AE_SA64POS_FP(align_out, p_out);
+#endif
         for(itr = 0; itr < (out_length & 7); itr++)
         {
           ae_int32x2 wout1;
@@ -1822,9 +1895,19 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
           d1_out32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(d1_out32, AE_MOVDA32(-128)));
           d2_out32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(d2_out32, AE_MOVDA32(-128)));
           d3_out32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(d3_out32, AE_MOVDA32(-128)));
+#if XCHAL_HAVE_HIFI1
+          ae_int16x4 out = AE_SEL16_6420(AE_MOVF16X4_FROMF32X2(d0_out32), AE_MOVF16X4_FROMF32X2(d1_out32));
+          AE_SA8X4U_IP(out, align_out, (ae_int32 *)p_out);
+          out = AE_SEL16_6420(AE_MOVF16X4_FROMF32X2(d2_out32), AE_MOVF16X4_FROMF32X2(d3_out32));
+          AE_SA8X4U_IP(out, align_out, (ae_int32 *)p_out);    
+#else
           STORE_8X4_FROM_32X4(p_out, d0_out32, d1_out32)
           STORE_8X4_FROM_32X4(p_out, d2_out32, d3_out32)
+#endif
         }
+#if XCHAL_HAVE_HIFI1
+    AE_SA64POS_FP(align_out, p_out);
+#endif
         for(itr = 0; itr < (out_length & 7); itr++)
         {
           ae_int32x2 wout1;
@@ -1882,8 +1965,16 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
 
           d0_out32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(d0_out32, AE_MOVDA32(-128)));
           d1_out32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(d1_out32, AE_MOVDA32(-128)));
+#if XCHAL_HAVE_HIFI1
+          ae_int16x4 out = AE_SEL16_6420(AE_MOVF16X4_FROMF32X2(d0_out32), AE_MOVF16X4_FROMF32X2(d1_out32));
+          AE_SA8X4U_IP(out, align_out, (ae_int32 *)p_out); 
+#else
           STORE_8X4_FROM_32X4(p_out, d0_out32, d1_out32)
+#endif
         }
+#if XCHAL_HAVE_HIFI1
+    AE_SA64POS_FP(align_out, p_out);
+#endif
         //Remainder Loop
         for(itr = 0; itr < (out_length & 3); itr++)
         {

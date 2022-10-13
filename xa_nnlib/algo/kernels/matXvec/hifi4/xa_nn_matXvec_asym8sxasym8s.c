@@ -405,163 +405,6 @@ static inline void _xa_nn_dot_product_4_rows_1_vecs_offset_aligned
 }
 
 #if XCHAL_HAVE_HIFI1
-static inline void _xa_nn_dot_product_8_rows_1_vec_mat_aligned_vec_aligned
-    (ae_int32x2*  out_0_0
-    ,ae_int32x2*  out_1_0
-    ,ae_int32x2*  out_2_0
-    ,ae_int32x2*  out_3_0
-    ,const WORD8* p_mat_0
-    ,const WORD8* p_vec_0
-    ,WORD32       cols1
-    ,WORD32       row_stride1
-    ,WORD32       mat_zero_bias
-    ,WORD32       vec_zero_bias)
-{
-  int c_itr = 0;
-  ae_int16x4 d_mat0, d_mat1, d_mat2, d_mat3, d_vec;
-  ae_int16x4 d_mat4, d_mat5, d_mat6, d_mat7;
-  ae_int64 out_0, out_1, out_2, out_3;
-  ae_int64 out_4, out_5, out_6, out_7;
-
-  WORD8 *p_mat_1 = ((WORD8 *)p_mat_0 + row_stride1);
-  WORD8 *p_mat_2 = ((WORD8 *)p_mat_1 + row_stride1);
-  WORD8 *p_mat_3 = ((WORD8 *)p_mat_2 + row_stride1);
-  WORD8 *p_mat_4 = ((WORD8 *)p_mat_3 + row_stride1);
-  WORD8 *p_mat_5 = ((WORD8 *)p_mat_4 + row_stride1);
-  WORD8 *p_mat_6 = ((WORD8 *)p_mat_5 + row_stride1);
-  WORD8 *p_mat_7 = ((WORD8 *)p_mat_6 + row_stride1);
-
-  WORD8 *p_vec = (WORD8*)p_vec_0;
-
-  ae_int32x2 acc_row0_vec0 = *out_0_0;
-  ae_int32x2 acc_row1_vec0 = *out_1_0;
-  ae_int32x2 acc_row2_vec0 = *out_2_0;
-  ae_int32x2 acc_row3_vec0 = *out_3_0;
-
-  out_0 = AE_CVT64F32_H(acc_row0_vec0);
-  out_1 = AE_CVT64F32_L(acc_row0_vec0);
-  out_2 = AE_CVT64F32_H(acc_row1_vec0);
-  out_3 = AE_CVT64F32_L(acc_row1_vec0);
-  out_4 = AE_CVT64F32_H(acc_row2_vec0);
-  out_5 = AE_CVT64F32_L(acc_row2_vec0);
-  out_6 = AE_CVT64F32_H(acc_row3_vec0);
-  out_7 = AE_CVT64F32_L(acc_row3_vec0);
-
-  out_0 = AE_SRAI64(out_0, 32);
-  out_1 = AE_SRAI64(out_1, 32);
-  out_2 = AE_SRAI64(out_2, 32);
-  out_3 = AE_SRAI64(out_3, 32);
-  out_4 = AE_SRAI64(out_4, 32);
-  out_5 = AE_SRAI64(out_5, 32);
-  out_6 = AE_SRAI64(out_6, 32);
-  out_7 = AE_SRAI64(out_7, 32);
-
-  for(c_itr = 0; c_itr < cols1 >> 3; c_itr++)
-  {
-    ae_int16x4 d_mat01, d_mat11, d_mat21, d_mat31, d_vec1;
-    ae_int16x4 d_mat41, d_mat51, d_mat61, d_mat71;
-
-    d_vec = AE_L8X4S_I(p_vec, 4);
-    AE_L8X4S_IP(d_vec1, p_vec, 8);
-
-    d_vec = AE_ADD16(d_vec, AE_MOVDA16(vec_zero_bias));
-    d_vec1 = AE_ADD16(d_vec1, AE_MOVDA16(vec_zero_bias));
-
-    d_mat0 =  AE_L8X4S_I(p_mat_0, 4);
-    AE_L8X4S_IP(d_mat01,  p_mat_0, 8);
-    d_mat1 =  AE_L8X4S_I(p_mat_1, 4);
-    AE_L8X4S_IP(d_mat11,  p_mat_1, 8);
-    d_mat2 =  AE_L8X4S_I(p_mat_2, 4);
-    AE_L8X4S_IP(d_mat21,  p_mat_2, 8);
-    d_mat3 =  AE_L8X4S_I(p_mat_3, 4);
-    AE_L8X4S_IP(d_mat31,  p_mat_3, 8);
-    d_mat4 =  AE_L8X4S_I(p_mat_4, 4);
-    AE_L8X4S_IP(d_mat41,  p_mat_4, 8);
-    d_mat5 =  AE_L8X4S_I(p_mat_5, 4);
-    AE_L8X4S_IP(d_mat51,  p_mat_5, 8);
-    d_mat6 =  AE_L8X4S_I(p_mat_6, 4);
-    AE_L8X4S_IP(d_mat61,  p_mat_6, 8);
-    d_mat7 =  AE_L8X4S_I(p_mat_7, 4);
-    AE_L8X4S_IP(d_mat71,  p_mat_7, 8);
-
-    d_mat0 =  AE_ADD16(d_mat0, AE_MOVDA16(mat_zero_bias));
-    d_mat1 =  AE_ADD16(d_mat1, AE_MOVDA16(mat_zero_bias));
-    d_mat2 =  AE_ADD16(d_mat2, AE_MOVDA16(mat_zero_bias));
-    d_mat3 =  AE_ADD16(d_mat3, AE_MOVDA16(mat_zero_bias));
-    d_mat4 =  AE_ADD16(d_mat4, AE_MOVDA16(mat_zero_bias));
-    d_mat5 =  AE_ADD16(d_mat5, AE_MOVDA16(mat_zero_bias));
-    d_mat6 =  AE_ADD16(d_mat6, AE_MOVDA16(mat_zero_bias));
-    d_mat7 =  AE_ADD16(d_mat7, AE_MOVDA16(mat_zero_bias));
-    d_mat01 = AE_ADD16(d_mat01, AE_MOVDA16(mat_zero_bias));
-    d_mat11 = AE_ADD16(d_mat11, AE_MOVDA16(mat_zero_bias));
-    d_mat21 = AE_ADD16(d_mat21, AE_MOVDA16(mat_zero_bias));
-    d_mat31 = AE_ADD16(d_mat31, AE_MOVDA16(mat_zero_bias));
-    d_mat41 = AE_ADD16(d_mat41, AE_MOVDA16(mat_zero_bias));
-    d_mat51 = AE_ADD16(d_mat51, AE_MOVDA16(mat_zero_bias));
-    d_mat61 = AE_ADD16(d_mat61, AE_MOVDA16(mat_zero_bias));
-    d_mat71 = AE_ADD16(d_mat71, AE_MOVDA16(mat_zero_bias));
-
-    AE_MULAAAAQ16(out_0, d_mat0, d_vec);
-    AE_MULAAAAQ16(out_1, d_mat1, d_vec);
-    AE_MULAAAAQ16(out_2, d_mat2, d_vec);
-    AE_MULAAAAQ16(out_3, d_mat3, d_vec);
-    AE_MULAAAAQ16(out_4, d_mat4, d_vec);
-    AE_MULAAAAQ16(out_5, d_mat5, d_vec);
-    AE_MULAAAAQ16(out_6, d_mat6, d_vec);
-    AE_MULAAAAQ16(out_7, d_mat7, d_vec);
-
-    AE_MULAAAAQ16(out_0, d_mat01, d_vec1);
-    AE_MULAAAAQ16(out_1, d_mat11, d_vec1);
-    AE_MULAAAAQ16(out_2, d_mat21, d_vec1);
-    AE_MULAAAAQ16(out_3, d_mat31, d_vec1);
-    AE_MULAAAAQ16(out_4, d_mat41, d_vec1);
-    AE_MULAAAAQ16(out_5, d_mat51, d_vec1);
-    AE_MULAAAAQ16(out_6, d_mat61, d_vec1);
-    AE_MULAAAAQ16(out_7, d_mat71, d_vec1);
-  }
-
-  /* Remaining 4 elements of multiple of 4 length */
-  if((c_itr << 3) < cols1)
-  {
-    AE_L8X4S_IP(d_mat0,  p_mat_0, 4);
-    AE_L8X4S_IP(d_mat1,  p_mat_1, 4);
-    AE_L8X4S_IP(d_mat2,  p_mat_2, 4);
-    AE_L8X4S_IP(d_mat3,  p_mat_3, 4);
-    AE_L8X4S_IP(d_mat4,  p_mat_4, 4);
-    AE_L8X4S_IP(d_mat5,  p_mat_5, 4);
-    AE_L8X4S_IP(d_mat6,  p_mat_6, 4);
-    AE_L8X4S_IP(d_mat7,  p_mat_7, 4);
-    AE_L8X4S_IP(d_vec, p_vec, 4);
-
-    d_mat0 = AE_ADD16(d_mat0, AE_MOVDA16(mat_zero_bias));
-    d_mat1 = AE_ADD16(d_mat1, AE_MOVDA16(mat_zero_bias));
-    d_mat2 = AE_ADD16(d_mat2, AE_MOVDA16(mat_zero_bias));
-    d_mat3 = AE_ADD16(d_mat3, AE_MOVDA16(mat_zero_bias));
-    d_mat4 = AE_ADD16(d_mat4, AE_MOVDA16(mat_zero_bias));
-    d_mat5 = AE_ADD16(d_mat5, AE_MOVDA16(mat_zero_bias));
-    d_mat6 = AE_ADD16(d_mat6, AE_MOVDA16(mat_zero_bias));
-    d_mat7 = AE_ADD16(d_mat7, AE_MOVDA16(mat_zero_bias));
-    d_vec = AE_ADD16(d_vec, AE_MOVDA16(vec_zero_bias));
-
-    AE_MULAAAAQ16(out_0, d_mat0, d_vec);
-    AE_MULAAAAQ16(out_1, d_mat1, d_vec);
-    AE_MULAAAAQ16(out_2, d_mat2, d_vec);
-    AE_MULAAAAQ16(out_3, d_mat3, d_vec);
-    AE_MULAAAAQ16(out_4, d_mat4, d_vec);
-    AE_MULAAAAQ16(out_5, d_mat5, d_vec);
-    AE_MULAAAAQ16(out_6, d_mat6, d_vec);
-    AE_MULAAAAQ16(out_7, d_mat7, d_vec);
-  }
-
-  acc_row0_vec0 = AE_SEL32_LL(AE_MOVINT32X2_FROMINT64(out_0), AE_MOVINT32X2_FROMINT64(out_1));
-  acc_row1_vec0 = AE_SEL32_LL(AE_MOVINT32X2_FROMINT64(out_2), AE_MOVINT32X2_FROMINT64(out_3));
-  acc_row2_vec0 = AE_SEL32_LL(AE_MOVINT32X2_FROMINT64(out_4), AE_MOVINT32X2_FROMINT64(out_5));
-  acc_row3_vec0 = AE_SEL32_LL(AE_MOVINT32X2_FROMINT64(out_6), AE_MOVINT32X2_FROMINT64(out_7));
-  *out_0_0 = acc_row0_vec0;
-  *out_1_0 = acc_row1_vec0;
-  *out_2_0 = acc_row2_vec0;
-  *out_3_0 = acc_row3_vec0;
-}
 
 static inline void _xa_nn_dot_product_4_rows_1_vec_mat_aligned_vec_aligned
     (ae_int32x2*  out_0_0
@@ -1278,11 +1121,10 @@ WORD32 xa_nn_matXvec_asym8sxasym8s_asym8s(
     ae_int32x2 out_01 = 0, out_23 = 0;
 #if XCHAL_HAVE_HIFI1
     ae_valign align_out = AE_ZALIGN64();
-    ae_int16x4 out_0123;
 #endif
 
     // 4 rows per iteration
-    for(m_itr = 0; m_itr < (rows/4)*4 ; m_itr+=4) {
+    for(m_itr = 0; m_itr < ((rows>>2)<<2) ; m_itr+=4) {
         
       /* Load bias in the accumulator */
       if(bias_flag) {
@@ -1315,9 +1157,14 @@ WORD32 xa_nn_matXvec_asym8sxasym8s_asym8s(
       out_23 = AE_ADD32S(out_23, AE_MOVDA32(out_zero_bias));
 
 #if XCHAL_HAVE_HIFI1
-      out_0123 = AE_SAT16X4(out_01, out_23);
+#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
+      ae_int8x8 out_0123 = AE_SAT8X4X32_H(out_01, out_23);
+      AE_SAV8X8_XP(out_0123, align_out, (ae_int8x8 *)p_out, 4);
+#else
+      ae_int16x4 out_0123 = AE_SAT16X4(out_01, out_23);
       out_0123 = AE_SAT8S(out_0123);
       AE_SA8X4U_IP(out_0123, align_out, (ae_int32 *)p_out);
+#endif
 #else
       out_01 = AE_MAX32(out_01, min_int8);  out_01 = AE_MIN32(out_01, max_int8);
       out_23 = AE_MAX32(out_23, min_int8);  out_23 = AE_MIN32(out_23, max_int8);
@@ -1382,11 +1229,7 @@ WORD32 xa_nn_matXvec_asym8sxasym8s_asym8s(
     {
       const WORD8 *p_mat1_0;
       const WORD8 *p_vec1_0;
-#if XCHAL_HAVE_HIFI1
-    ae_valign align_out = AE_ZALIGN64();
-    ae_int16x4 rowvec01, rowvec23;
-#endif
-      
+#if !XCHAL_HAVE_HIFI1 
       for(m_itr = 0; m_itr < (rows & ~7); m_itr += 8)
       {
         ae_int32x2 acc_row0_vec0 = ZERO32;
@@ -1426,14 +1269,7 @@ WORD32 xa_nn_matXvec_asym8sxasym8s_asym8s(
         acc_row1_vec0 = AE_ADD32S(acc_row1_vec0, AE_MOVDA32(out_zero_bias));
         acc_row2_vec0 = AE_ADD32S(acc_row2_vec0, AE_MOVDA32(out_zero_bias));
         acc_row3_vec0 = AE_ADD32S(acc_row3_vec0, AE_MOVDA32(out_zero_bias));
-#if XCHAL_HAVE_HIFI1
-        rowvec01 = AE_SAT16X4(acc_row0_vec0, acc_row1_vec0);
-        rowvec23 = AE_SAT16X4(acc_row2_vec0, acc_row3_vec0);
-        rowvec01 = AE_SAT8S(rowvec01);
-        rowvec23 = AE_SAT8S(rowvec23);
-        AE_SA8X4U_IP(rowvec01, align_out, (ae_int32 *)p_out);
-        AE_SA8X4U_IP(rowvec23, align_out, (ae_int32 *)p_out);
-#else
+
         acc_row0_vec0 = AE_MAX32(acc_row0_vec0, min_int8);
         acc_row0_vec0 = AE_MIN32(acc_row0_vec0, max_int8);
         acc_row1_vec0 = AE_MAX32(acc_row1_vec0, min_int8);
@@ -1451,12 +1287,13 @@ WORD32 xa_nn_matXvec_asym8sxasym8s_asym8s(
         *p_out++ = (WORD8)AE_MOVAD32_L(acc_row2_vec0);
         *p_out++ = (WORD8)AE_MOVAD32_H(acc_row3_vec0);
         *p_out++ = (WORD8)AE_MOVAD32_L(acc_row3_vec0);
-#endif
       }
+#endif 
 #if XCHAL_HAVE_HIFI1
-    AE_SA64POS_FP(align_out, p_out);
+    ae_valign align_out = AE_ZALIGN64();
+    ae_int16x4 rowvec01;
+    m_itr=0;
 #endif
-      
       for(; m_itr < (rows & ~3); m_itr += 4)
       {
         ae_int32x2 acc_row0_vec0 = ZERO32;

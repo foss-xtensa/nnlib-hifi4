@@ -297,10 +297,10 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     exit(1);
   }
 }
-#define STRIDED_SLICE_INT16(KERNEL, IPREC, OPREC) \
+#define STRIDED_SLICE_FN(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) {\
   XTPWR_PROFILER_START(0);\
-  err = xa_nn_##KERNEL##_int16( \
+  err = xa_nn_##KERNEL##_int##OPREC( \
         (WORD##OPREC *)p_out->p, (WORD##IPREC *) p_inp->p, \
         cfg.start_0, cfg.stop_0, cfg.start_1, cfg.stop_1, cfg.start_2, cfg.stop_2, cfg.start_3, cfg.stop_3, cfg.start_4, cfg.stop_4, \
         cfg.stride_0,cfg.stride_1,cfg.stride_2,cfg.stride_3,cfg.stride_4, \
@@ -362,7 +362,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else SPACE_TO_BATCH_ND_KERNEL_FN(space_to_batch_nd, 8, 8) \
     else PAD_KERNEL_FN(pad, 8, 8) \
     else PAD_KERNEL_FN(pad, 16, 16) \
-    else STRIDED_SLICE_INT16(strided_slice, 16, 16) \
+    else STRIDED_SLICE_FN(strided_slice, 16, 16) \
+    else STRIDED_SLICE_FN(strided_slice, 8, 8) \
     else {  printf("unsupported reorg operation\n"); return -1;}
 
 int xa_nn_main_process(int argc, char *argv[])
