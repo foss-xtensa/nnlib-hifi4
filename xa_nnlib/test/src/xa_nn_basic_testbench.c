@@ -1322,6 +1322,8 @@ int xa_nn_main_process(int argc, char *argv[])
     sprintf(profiler_params, "N=%d\n", out_length);
   }
   else if( !strcmp(cfg.kernel_name, "elm_add_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_sub_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_mul_broadcast_4D") ||
            !strcmp(cfg.kernel_name, "elm_squared_diff_broadcast_4D"))
   {
     sprintf(profiler_params, "output_shape= %s input1_shape= %s input2_shape= %s\n", cfg.read_out_shape_str, cfg.read_inp1_shape_str, cfg.read_inp2_shape_str);

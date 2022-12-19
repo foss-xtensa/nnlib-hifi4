@@ -1051,7 +1051,7 @@ WORD32 xa_nn_dot_prod_f32xf32_f32(
             pt_inp2u = (float *)pt_inp2;
             if((vec_length&1) != 0)
             {
-                XT_MADD_S(d_out, pt_inp1u[j], pt_inp2u[j]);
+                XT_MADD_S(d_out, pt_inp1u[0], pt_inp2u[0]);
             }
             *(float *)(&p_out[i]) = d_out;
         }

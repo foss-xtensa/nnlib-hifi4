@@ -140,7 +140,7 @@ const WORD8* __restrict__ p_inp,
 
             for(i = 0; i < loop_count; i++)
             {
-                src2 = AE_MOVDA16(((WORD8 *)p_src2_temp)[i] << 8);
+                src2 = AE_MOVDA16(((UWORD8 *)p_src2_temp)[i] << 8);
                 AE_S16_0_IP(src2, (ae_int16 *)p_dst_temp, 2);
             }
             p_src2_temp = (ae_int16x4 *)((WORD8 *)p_src2_temp + loop_count);
@@ -182,7 +182,7 @@ const WORD8* __restrict__ p_inp,
                 for(i = 0; i < loop_count; i++)
                 {
                     AE_L16_IP(src1, (ae_int16 *)p_src1_temp, 2);
-                    src2 = AE_MOVDA16(((WORD8 *)p_src2_temp)[i] << 8);
+                    src2 = AE_MOVDA16(((UWORD8 *)p_src2_temp)[i] << 8);
 
                     MAX_16X4(src1, src2);
                     AE_S16_0_IP(src1, (ae_int16 *)p_dst_temp, 2);

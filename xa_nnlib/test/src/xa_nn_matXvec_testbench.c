@@ -467,6 +467,26 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define MATMUL_FN_PLAIN(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_matmul_##MPREC##x##VPREC##_##OPREC ( \
+          (WORD##OPREC *)p_out->p, (WORD##MPREC *) p_mat1->p, (WORD##VPREC *) p_vec1->p, (VOID *)p_bias->p, \
+          cfg.rows, cfg.cols1, p_mat1->row_offset, \
+          cfg.acc_shift, cfg.bias_shift, cfg.vec_count, p_mat1->row_offset, 1, cfg.vec_count);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
+#define MATMUL_FN_PLAIN_F32(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_matmul_f32xf32_f32( \
+          (FLOAT32 *)p_out->p, (FLOAT32 *) p_mat1->p, (FLOAT32 *) p_vec1->p, (VOID *)p_bias->p, \
+          cfg.rows, cfg.cols1, p_mat1->row_offset, \
+          cfg.vec_count, p_mat1->row_offset, 1, cfg.vec_count);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #if HIFI_VFPU 
 #define PROCESS_MATXVEC \
     MAT_VEC_MUL_ACTIVATION_FN(16, 16, 16, sigmoid) \
@@ -560,10 +580,20 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else {  printf("unsupported multiplication\n"); return -1;} 
 #endif
 
+#if HIFI_VFPU
 #define PROCESS_MATMUL \
     MATMUL_FN_ASYM8S(-4, -4, -4) \
+    else MATMUL_FN_PLAIN(8, 16, 16) \
+    else MATMUL_FN_PLAIN(16, 16, 16) \
+    else MATMUL_FN_PLAIN_F32(-1, -1, -1) \
     else { printf("unsupported multiplication\n"); return -1;}
-
+#else
+#define PROCESS_MATMUL \
+    MATMUL_FN_ASYM8S(-4, -4, -4) \
+    else MATMUL_FN_PLAIN(8, 16, 16) \
+    else MATMUL_FN_PLAIN(16, 16, 16) \
+    else { printf("unsupported multiplication\n"); return -1;}
+#endif
 
 int xa_nn_main_process(int argc, char *argv[])
 {
@@ -640,6 +670,9 @@ int xa_nn_main_process(int argc, char *argv[])
     if(cfg.fc == 1){
       sprintf(profiler_name,"fully_connected_f32");
     }
+    else if(cfg.matmul == 1) {
+      sprintf(profiler_name,"matmul_f32xf32_f32");
+    }
     else{
       sprintf(profiler_name,"matXvec%s_f32xf32_f32",(cfg.batch)? "_batch": "");
     }
@@ -711,6 +744,9 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     if(cfg.fc == 1){
       sprintf(profiler_name, "fully_connected_%dx%d_%d",cfg.mat_precision, cfg.inp_precision, cfg.out_precision); 
+    }
+    else if(cfg.matmul == 1) {
+    sprintf(profiler_name,"matmul_%dx%d_%d", cfg.mat_precision, cfg.inp_precision, cfg.out_precision);
     }
     else{
       sprintf(profiler_name, "matXvec%s_%dx%d_%d",(cfg.batch)? "_batch" : "",cfg.mat_precision, cfg.inp_precision, cfg.out_precision); 

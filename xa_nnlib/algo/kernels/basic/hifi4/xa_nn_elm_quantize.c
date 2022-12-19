@@ -794,20 +794,6 @@ WORD32 xa_nn_elm_dequantize_asym8s_f32(FLOAT32 * __restrict__ p_out,
 }
 #endif
 
-#define CVT_FLOAT_TO_INT_X2(out, inp) \
-{ \
-  FLOAT32 d_i0, d_i1; \
-  FLOAT32 *ptr = (FLOAT32 *)&inp; \
-  d_i0 = ptr[0]; \
-  d_i1 = ptr[1]; \
-  out = AE_MOVDA32X2((WORD32)d_i0, (WORD32)d_i1); \
-}
-
-#define CVT_FLOAT_TO_INT(out, inp) \
-{ \
-  out = AE_MOVDA32((WORD32)inp); \
-}
-
 #if !HAVE_VFPU
 DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_elm_quantize_f32_asym8s,
                                (WORD8 * __restrict__ p_out,
@@ -855,8 +841,10 @@ WORD32 xa_nn_elm_quantize_f32_asym8s(WORD8 * __restrict__ p_out,
     XT_LASX2IP(d_inp1, align_inp, p_i);
     d_inp0_t = XT_DIV_SX2(d_inp0, d_out_scale);
     d_inp1_t = XT_DIV_SX2(d_inp1, d_out_scale);
-    CVT_FLOAT_TO_INT_X2(d_out32_0, d_inp0_t);
-    CVT_FLOAT_TO_INT_X2(d_out32_1, d_inp1_t);
+    d_inp0_t = XT_FIROUND_SX2(d_inp0_t);
+    d_inp1_t = XT_FIROUND_SX2(d_inp1_t);    
+    d_out32_0 = XT_TRUNC_SX2(d_inp0_t, 0);
+    d_out32_1 = XT_TRUNC_SX2(d_inp1_t, 0);
     d_out32_0 = AE_ADD32S(d_out32_0, d_out_zero_bias);
     d_out32_1 = AE_ADD32S(d_out32_1, d_out_zero_bias);
 #if (XCHAL_HAVE_HIFI1 &( XCHAL_HW_VERSION >= RI9_HWVERSION ))
@@ -881,7 +869,8 @@ WORD32 xa_nn_elm_quantize_f32_asym8s(WORD8 * __restrict__ p_out,
     ae_int32x2 d_out32_0;
     XT_LSIP(d_inp0, (xtfloat *)p_i, sizeof(FLOAT32));
     d_inp0_t = XT_DIV_S(d_inp0, d_out_scale);
-    CVT_FLOAT_TO_INT(d_out32_0, d_inp0_t);
+    d_inp0_t = XT_FIROUND_S(d_inp0_t);
+    d_out32_0 = XT_TRUNC_S(d_inp0_t, 0);    
     d_out32_0 = AE_ADD32S(d_out32_0, d_out_zero_bias);
     CLAMP_VAL(d_out32_0, d_out32_0, quant_min, quant_max);
     *p_o = (WORD8)AE_MOVAD32_L(d_out32_0);
