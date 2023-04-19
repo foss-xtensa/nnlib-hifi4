@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -26,7 +26,6 @@
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_quant_macros.h"
 
-#define ZERO16  AE_ZERO16()
 #define ZERO64  AE_ZERO64()
 
 #define ROW_UNROLL  4
@@ -43,14 +42,9 @@
 #define SETUP_ACC_BATCH_FOR_ASYM8bxASYM8b(idx_row,idx_vec) \
   ae_int64 _ae_int64_acc_ ##idx_row ##_ ##idx_vec = ZERO64; \
 
-#define SETUP_COL_SUM_VEC_BATCH_ASYM8b(idx_vec) \
-  ae_int64 _ae_int64_vec_col_sum_ ##idx_vec = ZERO64; \
-
 #define SETUP_VEC_BATCH_ASYM8b(idx_vec) \
   ae_int16x4 _ae_int16x4_vec_batch_ ##idx_vec  = AE_ZERO16(); \
   WORD8 *_WORD8_p_vec_batch_ ##idx_vec  = (WORD8 *)(&p_vec1[(vec_itr + idx_vec)*vec_stride]); \
-
-#define SETUP_ROW_SUM_MAT1_ASYM8b(idx)
 
 #define SETUP_MAT1_ASYM8b(idx) \
   ae_int16x4 _ae_int16x4_mat1_ ## idx = AE_ZERO16(); \
@@ -136,8 +130,6 @@
 #define SETUP_MAT1           UNROLL_SETUP_MAT1(0)           UNROLL_SETUP_MAT1(1)
 
 #elif (ROW_UNROLL == 4)
-#define SETUP_ACC            UNROLL_SETUP_ACC(0)            UNROLL_SETUP_ACC(1)            UNROLL_SETUP_ACC(2)            UNROLL_SETUP_ACC(3)
-#define SETUP_ROW_SUM_MAT1   UNROLL_SETUP_ROW_SUM_MAT1(0)   UNROLL_SETUP_ROW_SUM_MAT1(1)   UNROLL_SETUP_ROW_SUM_MAT1(2)   UNROLL_SETUP_ROW_SUM_MAT1(3)
 #define SETUP_MAT1           UNROLL_SETUP_MAT1(0)           UNROLL_SETUP_MAT1(1)           UNROLL_SETUP_MAT1(2)           UNROLL_SETUP_MAT1(3)
 
 #elif (ROW_UNROLL == 8)
@@ -223,7 +215,6 @@ WORD32 xa_nn_matXvec_asym8xasym8_asym8_circ(
 #define UNROLL_SETUP_BIAS_BATCH                 SETUP_BIAS_BATCH_ASYM8b
 #define UNROLL_LOAD_VEC_BATCH                   LOAD_VEC_BATCH_ASYM8b
 #define UNROLL_LOAD_ROW_MAT1                    LOAD_ROW_MAT1_ASYM8b
-#define LOAD_BIAS                               LOAD_BIAS_ASYM8b
 #define UNROLL_ROW_KERNEL_MAT1_VEC_BATCH        KERNEL_MAT1_VEC_BATCH_ROW_ASYM8b_ASYM8b
 #define UNROLL_KERNEL_MAT1_VEC_BATCH            KERNEL_MAT1_VEC_BATCH_ASYM8b_ASYM8b
 #define UNROLL_ROW_ADD_BIAS_ACC                 ADD_BIAS_BATCH_ROW_ASYM8b_ACC_FOR_ASYM8bxASYM8b

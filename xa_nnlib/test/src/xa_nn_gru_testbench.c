@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -24,6 +24,7 @@
 #define INT16_MAX_ERR 0
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <stdlib.h>
 #include "xa_type_def.h"
 #include "xa_nnlib_gru_api.h"
@@ -96,7 +97,7 @@ char pb_prev_h_file_path[XA_MAX_FILE_PATH_LENGTH] = "";
   fclose(fptr);                                                                                     \
 }
 
-const char *coef_files[9] = 
+const char *coef_files[12] = 
 {
   "/w_z.bin",
   "/u_z.bin",
@@ -106,7 +107,10 @@ const char *coef_files[9] =
   "/u_h.bin",
   "/b_z.bin",
   "/b_r.bin",
-  "/b_h.bin"
+  "/b_h.bin",
+  "/bs_z.bin",
+  "/bs_r.bin",
+  "/bs_h.bin"
 };
 
 static inline void error_code_parse(int error_code)
@@ -137,6 +141,9 @@ static inline void error_code_parse(int error_code)
     case XA_NNLIB_GRU_CONFIG_FATAL_INVALID_MEMBANK_PADDING:
       printf("\nInvalid memory padding, Exiting\n");
       break;
+    case XA_NNLIB_GRU_CONFIG_FATAL_INVALID_SPLIT_BIAS:
+      printf("\nInvalid split bias option, Exiting\n");
+      break;
     case XA_NNLIB_FATAL_INVALID_SHAPE:
       printf("\nInvalid shape, Exiting\n");
       break;
@@ -157,6 +164,7 @@ void show_usage(void)
   printf("xt-run <binary> [Options]\n");
   printf("--in_feats:        \t Input length (Default=256)                   \t  Range: 4-2048 NOTE:-Input length must be multiple of 4\n");
   printf("--out_feats:       \t Output length (Default=256)                  \t  Range: 4-2048 NOTE:-Output length must be multiple of 4\n");
+  printf("--split_bias:      \t Split Bias (Default=0)                       \t  Must be 0 or 1\n");
   printf("--membank_padding: \t Memory bank padding (Default=1)              \t  Must be 0 or 1\n");
   printf("--mat_prec:        \t Coefficient precision (Default=16)           \t  Must be 8 or 16\n");
   printf("--vec_prec:        \t Input precision (Default=16)                 \t  Must be 16\n");
@@ -173,18 +181,24 @@ void *setup_weights_and_biases(xa_nnlib_gru_weights_t *weights,
                  xa_nnlib_gru_biases_t *biases,
                  int in_feats, int out_feats, int pad_flag,
                  char *filter_path,
-                 xa_nnlib_gru_precision_t precision)
+                 xa_nnlib_gru_precision_t precision,
+                 int split_bias)
 {
   if(precision == XA_NNLIB_GRU_16bx16b)
   {
       coeff_t *weights_and_biases, *ptr;
       size_t size;
       char coef_file_name[XA_MAX_FULL_FILE_NAME_LENGTH];
-      int pad = XA_PAD_BYTES*pad_flag;  //Width of mem bank for HiFi4/5
+      int pad = (XA_PAD_BYTES*pad_flag) >> 1;  //Width of mem bank for HiFi4/5
 
       size  = 3 * (in_feats + pad) * out_feats;
       size += 3 * (out_feats + pad) * out_feats;
-      size += 3 * out_feats ;
+
+      int num_bias = 3;
+      if(split_bias == 1){
+        num_bias = 6;
+      }     
+      size += num_bias * out_feats ;
 
       CHECK_PTR_RETURN_NULL(weights, "Allocation for weights");
       CHECK_PTR_RETURN_NULL(biases, "Allocation for biases");
@@ -218,6 +232,17 @@ void *setup_weights_and_biases(xa_nnlib_gru_weights_t *weights,
   
       biases->b_h  = ptr; ptr += out_feats;
       FILL_SHAPE_VECTOR(biases->shape_b_h, out_feats)
+
+      if(split_bias == 1){
+        biases->bs_z  = ptr; ptr += out_feats;
+        FILL_SHAPE_VECTOR(biases->shape_bs_z, out_feats)
+    
+        biases->bs_r  = ptr; ptr += out_feats;
+        FILL_SHAPE_VECTOR(biases->shape_bs_r, out_feats)
+    
+        biases->bs_h  = ptr; ptr += out_feats;
+        FILL_SHAPE_VECTOR(biases->shape_bs_h, out_feats)
+      }
 #ifdef FILE_IO
       // Read from file
       READ_FILE(coef_file_name, filter_path, coef_files[0], weights->weights16.w_z, 2, in_feats  , out_feats, pad, "Allocation for w_z")
@@ -229,6 +254,11 @@ void *setup_weights_and_biases(xa_nnlib_gru_weights_t *weights,
       READ_FILE(coef_file_name, filter_path, coef_files[6], biases->b_z , 2,  out_feats, 1, 0     , "Allocation for b_z")
       READ_FILE(coef_file_name, filter_path, coef_files[7], biases->b_r , 2,  out_feats, 1, 0     , "Allocation for b_r")
       READ_FILE(coef_file_name, filter_path, coef_files[8], biases->b_h , 2,  out_feats, 1, 0     , "Allocation for b_h")
+      if(split_bias == 1){
+        READ_FILE(coef_file_name, filter_path, coef_files[9], biases->bs_z , 2,  out_feats, 1, 0     , "Allocation for bs_z")
+        READ_FILE(coef_file_name, filter_path, coef_files[10], biases->bs_r , 2,  out_feats, 1, 0     , "Allocation for bs_r")
+        READ_FILE(coef_file_name, filter_path, coef_files[11], biases->bs_h , 2,  out_feats, 1, 0     , "Allocation for bs_h")
+      }
 #else
       // Generate random data for weights
       coeff_t *random = weights_and_biases;
@@ -252,7 +282,12 @@ void *setup_weights_and_biases(xa_nnlib_gru_weights_t *weights,
 
       size   = 3 * (in_feats + pad) * out_feats;
       size  += 3 * (out_feats + pad) * out_feats;
-      size_b = 3 * out_feats ;
+      
+      int num_bias = 3;
+      if(split_bias == 1){
+        num_bias = 6;
+      }
+      size_b = num_bias * out_feats ;
 
       CHECK_PTR_RETURN_NULL(weights, "Allocation for weights");
       CHECK_PTR_RETURN_NULL(biases, "Allocation for biases");
@@ -269,7 +304,17 @@ void *setup_weights_and_biases(xa_nnlib_gru_weights_t *weights,
   
       biases->b_h  = ptr; ptr += out_feats;
       FILL_SHAPE_VECTOR(biases->shape_b_h, out_feats)
-  
+
+      if(split_bias == 1){
+        biases->bs_z  = ptr; ptr += out_feats;
+        FILL_SHAPE_VECTOR(biases->shape_bs_z, out_feats)
+    
+        biases->bs_r  = ptr; ptr += out_feats;
+        FILL_SHAPE_VECTOR(biases->shape_bs_r, out_feats)
+    
+        biases->bs_h  = ptr; ptr += out_feats;
+        FILL_SHAPE_VECTOR(biases->shape_bs_h, out_feats)
+      }
       ptr8 = (coeff8_t*)ptr;
 
       weights->weights8.w_z = ptr8; ptr8 += (in_feats + pad)  * out_feats;
@@ -302,6 +347,11 @@ void *setup_weights_and_biases(xa_nnlib_gru_weights_t *weights,
       READ_FILE(coef_file_name, filter_path, coef_files[6], biases->b_z , 2,  out_feats, 1, 0     , "Allocation for b_z")
       READ_FILE(coef_file_name, filter_path, coef_files[7], biases->b_r , 2,  out_feats, 1, 0     , "Allocation for b_r")
       READ_FILE(coef_file_name, filter_path, coef_files[8], biases->b_h , 2,  out_feats, 1, 0     , "Allocation for b_h")
+      if(split_bias == 1){
+        READ_FILE(coef_file_name, filter_path, coef_files[9], biases->bs_z , 2,  out_feats, 1, 0     , "Allocation for bs_z")
+        READ_FILE(coef_file_name, filter_path, coef_files[10], biases->bs_r , 2,  out_feats, 1, 0     , "Allocation for bs_r")
+        READ_FILE(coef_file_name, filter_path, coef_files[11], biases->bs_h , 2,  out_feats, 1, 0     , "Allocation for bs_h")    
+      }  
 #else
       // Generate random data for weights
       coeff_t *random = weights_and_biases;
@@ -315,12 +365,156 @@ void *setup_weights_and_biases(xa_nnlib_gru_weights_t *weights,
       return weights_and_biases;
       // If not, allocate memory (single allocation)
   }
+  else if(precision == XA_NNLIB_GRU_flt32xflt32)
+  {
+      coefff32_t *weights_and_biases, *ptr32;
+      coefff32_t *ptr;
+      size_t size, size_b;
+      char coef_file_name[XA_MAX_FULL_FILE_NAME_LENGTH];
+      int pad = (XA_PAD_BYTES*pad_flag) >> 2;  //Width of mem bank for HiFi4/5
 
+      size   = 3 * (in_feats + pad) * out_feats;
+      size  += 3 * (out_feats + pad) * out_feats;
+      
+      int num_bias = 3;
+      if(split_bias == 1){
+        num_bias = 6;
+      }
+      size_b = num_bias * out_feats ;
+
+      CHECK_PTR_RETURN_NULL(weights, "Allocation for weights");
+      CHECK_PTR_RETURN_NULL(biases, "Allocation for biases");
+  
+      ptr = malloc(size * sizeof(coefff32_t)+ size_b * sizeof(coefff32_t));
+      weights_and_biases = (coefff32_t *)ptr;
+      CHECK_PTR_RETURN_NULL(ptr, "Allocation for weights_and_biases");
+  
+      biases->b_z  = ptr; ptr += out_feats;
+      FILL_SHAPE_VECTOR(biases->shape_b_z, out_feats)
+  
+      biases->b_r  = ptr; ptr += out_feats;
+      FILL_SHAPE_VECTOR(biases->shape_b_r, out_feats)
+  
+      biases->b_h  = ptr; ptr += out_feats;
+      FILL_SHAPE_VECTOR(biases->shape_b_h, out_feats)
+
+      if(split_bias == 1){
+        biases->bs_z  = ptr; ptr += out_feats;
+        FILL_SHAPE_VECTOR(biases->shape_bs_z, out_feats)
+    
+        biases->bs_r  = ptr; ptr += out_feats;
+        FILL_SHAPE_VECTOR(biases->shape_bs_r, out_feats)
+    
+        biases->bs_h  = ptr; ptr += out_feats;
+        FILL_SHAPE_VECTOR(biases->shape_bs_h, out_feats)
+      }
+      ptr32 = (coefff32_t*)ptr;
+
+      weights->weightsf32.w_z = ptr32; ptr32 += (in_feats + pad)  * out_feats;
+      FILL_SHAPE_MATRIX(weights->weightsf32.shape_w_z, out_feats, in_feats)
+  
+      weights->weightsf32.u_z = ptr32; ptr32 += (out_feats + pad) * out_feats;
+      FILL_SHAPE_MATRIX(weights->weightsf32.shape_u_z, out_feats, out_feats)
+  
+      weights->weightsf32.w_r = ptr32; ptr32 += (in_feats + pad)  * out_feats;
+      FILL_SHAPE_MATRIX(weights->weightsf32.shape_w_r, out_feats, in_feats)
+  
+      weights->weightsf32.u_r = ptr32; ptr32 += (out_feats + pad) * out_feats;
+      FILL_SHAPE_MATRIX(weights->weightsf32.shape_u_r, out_feats, out_feats)
+  
+      weights->weightsf32.w_h = ptr32; ptr32 += (in_feats + pad)  * out_feats;
+      FILL_SHAPE_MATRIX(weights->weightsf32.shape_w_h, out_feats, in_feats)
+  
+      weights->weightsf32.u_h = ptr32; ptr32 += (out_feats + pad) * out_feats;
+      FILL_SHAPE_MATRIX(weights->weightsf32.shape_u_h, out_feats, out_feats)
+
+#ifdef FILE_IO
+      // Read from file
+  
+      READ_FILE(coef_file_name, filter_path, coef_files[0], weights->weightsf32.w_z, 4, in_feats,  out_feats, pad, "Allocation for w_z")
+      READ_FILE(coef_file_name, filter_path, coef_files[1], weights->weightsf32.u_z, 4, out_feats, out_feats, pad, "Allocation for u_z")
+      READ_FILE(coef_file_name, filter_path, coef_files[2], weights->weightsf32.w_r, 4, in_feats,  out_feats, pad, "Allocation for w_r")
+      READ_FILE(coef_file_name, filter_path, coef_files[3], weights->weightsf32.u_r, 4, out_feats, out_feats, pad, "Allocation for u_r")
+      READ_FILE(coef_file_name, filter_path, coef_files[4], weights->weightsf32.w_h, 4, in_feats,  out_feats, pad, "Allocation for w_h")
+      READ_FILE(coef_file_name, filter_path, coef_files[5], weights->weightsf32.u_h, 4, out_feats, out_feats, pad, "Allocation for u_h")
+      READ_FILE(coef_file_name, filter_path, coef_files[6], biases->b_z , 4,  out_feats, 1, 0     , "Allocation for b_z")
+      READ_FILE(coef_file_name, filter_path, coef_files[7], biases->b_r , 4,  out_feats, 1, 0     , "Allocation for b_r")
+      READ_FILE(coef_file_name, filter_path, coef_files[8], biases->b_h , 4,  out_feats, 1, 0     , "Allocation for b_h")
+      if(split_bias == 1){
+        READ_FILE(coef_file_name, filter_path, coef_files[9], biases->bs_z , 4,  out_feats, 1, 0     , "Allocation for bs_z")
+        READ_FILE(coef_file_name, filter_path, coef_files[10], biases->bs_r , 4,  out_feats, 1, 0     , "Allocation for bs_r")
+        READ_FILE(coef_file_name, filter_path, coef_files[11], biases->bs_h , 4,  out_feats, 1, 0     , "Allocation for bs_h")    
+      }  
+#else
+      // Generate random data for weights
+      coefff32_t *random = weights_and_biases;
+
+      for(i=0;i<size;i++)
+      {
+        random[i] = rand();
+      }
+#endif
+  return weights_and_biases;
+  }
   return NULL;
 }
 
 #ifdef VERIFY
 #define ABS(A) (((A) < 0) ? -(A):(A))
+
+static float machine_eps(float value, int sum_length)
+{
+    float epsilon = 1.19e-07;
+    float eps, eps_sum;
+    int eps_exp;
+    frexp(value, &eps_exp);
+
+
+    if(eps_exp > 0){
+        eps = epsilon * eps_exp;
+        eps_sum = ((sum_length+1)/2)*eps + eps;
+    }
+    else if(eps_exp < 0){
+        eps = epsilon /(eps_exp * (-1));
+        eps_sum = ((sum_length+1)/2)*eps + eps;
+    }
+    else
+    {
+        eps = epsilon;
+        eps_sum = ((sum_length+1)/2)*eps + eps;
+    }
+    return eps_sum;
+}
+
+static int verify_epsf32(void *p_ref, void *p_out, int len, int sum_length)
+{
+  int i;
+  float *p_in1 = (float *)p_ref;
+  float *p_in2 = (float *)p_out;
+  float ref_lo, ref_hi;
+  float eps;
+
+  for(i = 0; i < len; i++)
+  {
+    eps = machine_eps(p_in1[i], sum_length);
+    ref_lo = p_in1[i] - eps;
+    ref_hi = p_in1[i] + eps;
+    if(p_in2[i] < ref_lo || p_in2[i] > ref_hi) {return -1;}
+  }
+  return 0;
+}
+
+int comparef32(float *p_dut, float *p_ref, int len, int sum_length)
+{
+  if(verify_epsf32(p_ref, p_dut, len, sum_length))
+  {
+      return -1;
+  }
+  else
+  {
+      return 0;
+  }  
+}
 
 int compare(vect_t *p_dut, vect_t *p_ref, int len)
 {
@@ -368,6 +562,7 @@ int default_config(xa_nnlib_gru_init_config_t *config,
     config->in_feats = 256;
     config->out_feats = 256;
     config->pad = 1;
+    config->split_bias = 0;
     config->mat_prec = 16;
     config->vec_prec = 16;
     config->precision = XA_NNLIB_GRU_16bx16b;
@@ -412,6 +607,7 @@ void parse_arguments(int argc, char** argv,
     ARGTYPE_ONETIME_CONFIG("--in_feats",config->in_feats);
     ARGTYPE_ONETIME_CONFIG("--out_feats",config->out_feats);
     ARGTYPE_ONETIME_CONFIG("--membank_padding",config->pad);
+    ARGTYPE_ONETIME_CONFIG("--split_bias",config->split_bias);
     ARGTYPE_ONETIME_CONFIG("--mat_prec",config->mat_prec);
     ARGTYPE_ONETIME_CONFIG("--vec_prec",config->vec_prec);
     ARGTYPE_ONETIME_CONFIG("--verify",*verify_flag);
@@ -508,6 +704,8 @@ int xa_nn_main_process(int argc, char *argv[])
         config.precision = XA_NNLIB_GRU_16bx16b;
     else if((config.mat_prec == 8)&&(config.vec_prec == 16))
         config.precision = XA_NNLIB_GRU_8bx16b;
+    else if((config.mat_prec == -1)&&(config.vec_prec == -1))
+        config.precision = XA_NNLIB_GRU_flt32xflt32;        
     else
         return err;
         //#error "Unsupported precision\n"
@@ -516,8 +714,16 @@ int xa_nn_main_process(int argc, char *argv[])
   if(config.mat_prec == 8)
     config.coeff_Qformat = 7;
 
+  if(config.precision == XA_NNLIB_GRU_flt32xflt32)
+  {
+  fprintf(stdout, "Use Case:\nGRU_f32xf32: In Feats: %d, Out Feats: %d",
+          config.in_feats, config.out_feats);
+  }
+  else
+  {
   fprintf(stdout, "Use Case:\nGRU_%dx%d: In Feats: %d, Out Feats: %d, Qformats- Weights and Biases: Q%d, Input and Output: Q%d\n",
           config.mat_prec, config.vec_prec, config.in_feats, config.out_feats, config.coeff_Qformat, config.io_Qformat);
+  }
   PRINT_STR("Init Loop ");
   {
     int persistent_size;
@@ -566,7 +772,8 @@ int xa_nn_main_process(int argc, char *argv[])
         config.out_feats,
         config.pad,
         filter_path,
-        config.precision);
+        config.precision,
+        config.split_bias);
 
     CHECK_PTR(p_weights_biases, "Allocation for p_weights_biases");
 #else
@@ -587,16 +794,31 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     char file_name[XA_MAX_FULL_FILE_NAME_LENGTH];
     FILE *prev_h_file;
-    vect_t *prev_h;
+    void *prev_h;
     strcpy(file_name, pb_prev_h_file_path);
     strcat(file_name, prev_h_file_name);
     prev_h_file=fopen(file_name, "rb");
     CHECK_PTR(prev_h_file, "Opening the context file");
 
-    prev_h = malloc(output_shape.dim.vector.length * sizeof(vect_t));
+    if(config.precision == XA_NNLIB_GRU_flt32xflt32)
+    {
+      prev_h = malloc(output_shape.dim.vector.length * sizeof(FLOAT32));
+    }
+    else
+    {
+      prev_h = malloc(output_shape.dim.vector.length * sizeof(vect_t));
+    }
     CHECK_PTR(prev_h, "temporary Allocate memory for prev context");
 
-    fread(prev_h,sizeof(vect_t),output_shape.dim.vector.length,prev_h_file);
+    if(config.precision == XA_NNLIB_GRU_flt32xflt32)
+    {
+      fread((FLOAT32 *)prev_h,sizeof(FLOAT32),output_shape.dim.vector.length,prev_h_file);
+    }
+    else
+    {
+      fread((vect_t *)prev_h,sizeof(vect_t),output_shape.dim.vector.length,prev_h_file);
+    }
+    
 
     xa_nnlib_gru_set_config(gru_handle, XA_NNLIB_GRU_RESTORE_CONTEXT, prev_h);
 
@@ -619,11 +841,25 @@ int xa_nn_main_process(int argc, char *argv[])
     CHECK_PTR(output_file, "Allocation for output_file");
 
     /* Allocate input and output buffer */
-    input_buffer_size = input_shape.dim.vector.length * sizeof(vect_t);
+    if(config.precision == XA_NNLIB_GRU_flt32xflt32)
+    {
+      input_buffer_size = input_shape.dim.vector.length * sizeof(FLOAT32);
+    }
+    else
+    {
+      input_buffer_size = input_shape.dim.vector.length * sizeof(vect_t);
+    }
     p_input   = malloc(input_buffer_size); PRINT_VAR(input_buffer_size);
     CHECK_PTR(p_input, "Allocation for p_input");
 
-    output_buffer_size = output_shape.dim.vector.length * sizeof(vect_t);
+    if(config.precision == XA_NNLIB_GRU_flt32xflt32)
+    {
+      output_buffer_size = output_shape.dim.vector.length * sizeof(FLOAT32);
+    }
+    else
+    {
+      output_buffer_size = output_shape.dim.vector.length * sizeof(vect_t);
+    }
     p_output = malloc(output_buffer_size); PRINT_VAR(output_buffer_size);
     CHECK_PTR(p_output, "Allocation for p_output");
 
@@ -644,7 +880,7 @@ int xa_nn_main_process(int argc, char *argv[])
 #endif // VERIFY  
 
     // Set profiler name 
-    if((config.mat_prec == -1)&&(config.vec_prec == -1))
+    if(config.precision == XA_NNLIB_GRU_flt32xflt32)
     {
       sprintf(profiler_name, "gru_f32xf32");
     }
@@ -668,7 +904,15 @@ int xa_nn_main_process(int argc, char *argv[])
       output_length.dim.vector.length = output_shape.dim.vector.length; 
       output_length.shape_type = output_shape.shape_type; 
       // Read input frame
-      input_length.dim.vector.length  = fread(p_input, sizeof(vect_t), input_shape.dim.vector.length, input_file);
+      if(config.precision == XA_NNLIB_GRU_flt32xflt32)
+      {
+        input_length.dim.vector.length  = fread(p_input, sizeof(FLOAT32), input_shape.dim.vector.length, input_file);
+      }
+      else
+      {
+        input_length.dim.vector.length  = fread(p_input, sizeof(vect_t), input_shape.dim.vector.length, input_file);
+      }
+      
       input_length.shape_type = input_shape.shape_type;
       
       if (input_length.dim.vector.length < input_shape.dim.vector.length) 
@@ -698,16 +942,40 @@ int xa_nn_main_process(int argc, char *argv[])
       PRINT_VAR(output_length.dim.vector.length);  
       
       // Write output frame
-      fwrite(p_output, sizeof(vect_t), output_length.dim.vector.length, output_file);
+      if(config.precision == XA_NNLIB_GRU_flt32xflt32)
+      {
+        fwrite(p_output, sizeof(FLOAT32), output_length.dim.vector.length, output_file);
+      }
+      else
+      {
+        fwrite(p_output, sizeof(vect_t), output_length.dim.vector.length, output_file);
+      }
 
 #ifdef VERIFY
       {
         if(verify_flag)
         {
-          fread(output_ref,sizeof(vect_t),output_shape.dim.vector.length,output_ref_file);
-          if(XA_NNLIB_NO_ERROR != compare(p_output, output_ref, output_length.dim.vector.length))
+          if(config.precision == XA_NNLIB_GRU_flt32xflt32)
           {
-            verify_pass = 0;
+            fread(output_ref,sizeof(FLOAT32),output_shape.dim.vector.length,output_ref_file);
+          }
+          else
+          {
+            fread(output_ref,sizeof(vect_t),output_shape.dim.vector.length,output_ref_file);
+          }
+          if(config.precision == XA_NNLIB_GRU_flt32xflt32)
+          {
+            if(XA_NNLIB_NO_ERROR != comparef32((FLOAT32 *)p_output, (FLOAT32 *)output_ref, output_length.dim.vector.length, 2))
+            {
+              verify_pass = 0;
+            }
+          }
+          else
+          {
+            if(XA_NNLIB_NO_ERROR != compare(p_output, output_ref, output_length.dim.vector.length))
+            {
+              verify_pass = 0;
+            }            
           }
         }
       }

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -1511,7 +1511,7 @@ __Pragma("no_unroll") \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx = \
   AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 24); \
   _ae_int32_tmp_var_ ## idx = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx, 24); \
-  (*((WORD8 *) p_out + m_itr + idx)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
+  (*((WORD8 *) p_out + m_itr + idx)) =(WORD8)(*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
 
 #endif
 
@@ -1529,7 +1529,7 @@ __Pragma("no_unroll") \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx = \
   AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 16); \
   _ae_int32_tmp_var_ ## idx = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx, 16); \
-  (*((WORD16 *) p_out + m_itr + idx)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
+  (*((WORD16 *) p_out + m_itr + idx)) =(WORD16)(*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
 
 #endif
 
@@ -1567,7 +1567,7 @@ __Pragma("no_unroll") \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx = \
   AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 16); \
   _ae_int32_tmp_var_ ## idx = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx, 16); \
-  (*((WORD16 *) p_out + m_itr + idx)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
+  (*((WORD16 *) p_out + m_itr + idx)) =(WORD16)(*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
 
 #endif
 
@@ -1600,7 +1600,7 @@ __Pragma("no_unroll") \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx = \
   AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx, acc_shift)), 16); \
   _ae_int32_tmp_var_ ## idx = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx, 16); \
-  (*((WORD16 *) p_out + m_itr + idx)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
+  (*((WORD16 *) p_out + m_itr + idx)) =(WORD16)(*((UWORD32 *)&_ae_int32_tmp_var_ ## idx)); \
 
 #endif
 
@@ -1658,7 +1658,7 @@ __Pragma("no_unroll") \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec = \
   AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 24); \
   _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, 24); \
-  (*((WORD8 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec)); \
+  (*((WORD8 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) =(WORD8)(*((UWORD32 *)&_ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec)); \
 
 #endif
 
@@ -1709,7 +1709,7 @@ __Pragma("no_unroll") \
   ae_f32x2 _ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec = \
   AE_SLAI32S(AE_ROUND32F64SSYM(AE_SLAA64S(_ae_int64_acc_ ## idx_row ##_ ##idx_vec, acc_shift)), 16); \
   _ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec = AE_SRAI32(_ae_f32x2_tmp_var_ ## idx_row ##_ ##idx_vec, 16); \
-  (*((WORD16 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) = (*((UWORD32 *)&_ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec)); \
+  (*((WORD16 *) p_out + (vec_itr + idx_vec)*out_offset + (m_itr + idx_row)*out_stride)) =(WORD16)(*((UWORD32 *)&_ae_int32_tmp_var_ ## idx_row ##_ ##idx_vec)); \
 
 #endif
 

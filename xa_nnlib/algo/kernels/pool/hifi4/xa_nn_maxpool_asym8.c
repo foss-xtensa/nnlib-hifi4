@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -27,13 +27,6 @@
 
 #define INCR_N_ROW(ptr, n) \
     ptr = (ae_int16x4 *)((WORD8 *)(ptr) + (n) * (input_width));
-
-#define INCR_ROW_IF_HEIGHT(ptr, height) \
-        if(height) \
-        { \
-            INCR_N_ROW(ptr, 1); \
-            height--; \
-        }
 
 #define INC_1_IF_WIDTH(ptr, width) \
         if(width) \
@@ -352,6 +345,7 @@ const UWORD8* __restrict__ p_inp,
     /* Pointer alignment checks */
     XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(UWORD8), -1);
     XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(UWORD8), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
@@ -369,13 +363,6 @@ const UWORD8* __restrict__ p_inp,
     {
         err = xa_nn_maxpool_init(-3
                 ,p_scratch
-                ,input_width
-                ,kernel_height
-                ,kernel_width
-                ,x_stride
-                ,y_stride
-                ,x_padding
-                ,out_width
                 );
         if(err<0)
             return err;

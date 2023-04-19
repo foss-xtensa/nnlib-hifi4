@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -138,7 +138,7 @@ WORD32 xa_nn_conv2d_std_f32(
   /* Pointer alignment checks */
   XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(FLOAT32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(FLOAT32), -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_kernel, ALIGNMENT, -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_kernel, sizeof(FLOAT32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(FLOAT32), -1);
   //XA_NNLIB_ARG_CHK_ALIGN(p_scratch, sizeof(WORD8), -1);
   /* Basic Parameter checks */
@@ -165,7 +165,6 @@ WORD32 xa_nn_conv2d_std_f32(
       ,input_channels
       ,kernel_height
       ,kernel_width
-      ,x_stride
       ,y_stride
       ,y_padding
       ,out_height
@@ -222,6 +221,7 @@ WORD32 xa_nn_conv2d_std_f32(
     idx_beg_inp_width_pad += x_stride;
 
     // Convolution using matXvec with matrix as circular buffer
+
     xa_nn_matXvec_f32_circ
       (p_out /* output */
        ,p_state->cir_buf.p_curr/* matrix: rows x cols */
@@ -235,6 +235,7 @@ WORD32 xa_nn_conv2d_std_f32(
        ,out_channels_offset /* out_col_offset */
        ,out_height_offset /* out_row_offset */
       );
+      
 
     p_out += out_width_offset;
   }

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -188,8 +188,8 @@ void show_usage(void)
     printf("\t-num_inp_dims: number of input dimensions; Default=4\n");
     printf("\t-num_axis_dims: number of axis dimensions; Default=4\n");
     printf("\t-num_out_dims: number of output dimensions; Default=4\n");
-    printf("\t-inp_precision: 8, 16, -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s), 1(bool); Default=-1\n");
-    printf("\t-out_precision: 8, 16, -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s), 1(bool); Default=-1\n");
+    printf("\t-inp_precision: 8, 16, -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s), 1(bool), -8 (sym16s); Default=-1\n");
+    printf("\t-out_precision: 8, 16, -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s), 1(bool), -8 (sym16s); Default=-1\n");
     printf("\t-vec_count: number of input vectors; Default=1\n");
     printf("\t-frames: Positive number; Default=2\n");
 #if HIFI_VFPU
@@ -505,6 +505,26 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define MUL_BROADCAST_4D_SYM16S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_sym16sxsym16s_sym16s\
+                (\
+                    (WORD16 *) p_out->p,\
+                    cfg.output_shape, \
+                    cfg.output_left_shift,\
+                    cfg.output_multiplier,\
+                    cfg.output_activation_min,\
+                    cfg.output_activation_max,\
+                    (WORD16 *) p_inp1->p,\
+                    cfg.input1_shape, \
+                    (WORD16 *) p_inp2->p,\
+                    cfg.input2_shape \
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define MATH_BROADCAST_4D_ASYM16S(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
@@ -529,6 +549,22 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                     cfg.input2_left_shift,\
                     cfg.input2_multiplier,\
                     cfg.left_shift\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define SUB_BROADCAST_4D_F32(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_f32xf32_f32\
+                (\
+                    (FLOAT32 *) p_out->p,\
+                    cfg.output_shape, \
+                    (FLOAT32 *) p_inp1->p,\
+                    cfg.input1_shape, \
+                    (FLOAT32 *) p_inp2->p,\
+                    cfg.input2_shape\
                 );\
     XTPWR_PROFILER_STOP(0);\
   }
@@ -1040,12 +1076,34 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define DEQUANTIZE_ASYM16S_F32(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_elm_dequantize_asym16s_f32 ( \
+                (FLOAT32 *)p_out->p, (WORD16 *)p_inp1->p, \
+                cfg.input1_zero_bias, cfg.input1_scale,\
+                cfg.io_length);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define QUANTIZE_F32_ASYM8S(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
       XTPWR_PROFILER_START(0);\
       err = xa_nn_elm_quantize_f32_asym8s ( \
                 (WORD8 *)p_out->p, (FLOAT32 *)p_inp1->p, \
+                cfg.output_scale, cfg.output_zero_bias,\
+                cfg.io_length);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
+#define QUANTIZE_F32_ASYM16S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_elm_quantize_f32_asym16s ( \
+                (WORD16 *)p_out->p, (FLOAT32 *)p_inp1->p, \
                 cfg.output_scale, cfg.output_zero_bias,\
                 cfg.io_length);\
       XTPWR_PROFILER_STOP(0);\
@@ -1089,6 +1147,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MUL_ASYM8(elm_mul, -3, -3) \
     else MUL_ASYM8S(elm_mul, -4, -4) \
     else MUL_BROADCAST_4D_ASYM8S(elm_mul_broadcast_4D, -4, -4) \
+    else MUL_BROADCAST_4D_SYM16S(elm_mul_broadcast_4D, -8, -8) \
     else ADD_ASYM8(elm_add, -3, -3) \
     else ADD_ASYM8S(elm_add, -4, -4) \
     else MATH_BROADCAST_4D_ASYM8S(elm_add_broadcast_4D, -4, -4) \
@@ -1097,6 +1156,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else SUB_ASYM8S(elm_sub, -4, -4) \
     else MATH_BROADCAST_4D_ASYM8S(elm_sub_broadcast_4D, -4, -4) \
     else MATH_BROADCAST_4D_ASYM16S(elm_sub_broadcast_4D, -7, -7) \
+    else SUB_BROADCAST_4D_F32(elm_sub_broadcast_4D, -1, -1) \
     else MATH_BROADCAST_4D_ASYM8S(elm_squared_diff_broadcast_4D, -4, -4) \
     else MINMAX_8(elm_min, -4, -4)\
     else MINMAX_8(elm_max, -4, -4)\
@@ -1133,7 +1193,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else REQUANTIZE_ASYM16S_ASYM8S(elm_requantize, -7, -4) \
     else REQUANTIZE_ASYM8S_ASYM8S(elm_requantize, -4, -4) \
     else DEQUANTIZE_ASYM8S_F32(elm_dequantize, -4, -1) \
+    else DEQUANTIZE_ASYM16S_F32(elm_dequantize, -7, -1) \
     else QUANTIZE_F32_ASYM8S(elm_quantize, -1, -4) \
+    else QUANTIZE_F32_ASYM16S(elm_quantize, -1, -7) \
     else MEMMOVE_8_8(memmove, -4, -4) \
     else MEMSET_F32(memset, -1, -1) \
     else {  printf("unsupported basic operation\n"); return -1;}
@@ -1142,6 +1204,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     MUL_ASYM8(elm_mul, -3, -3) \
     else MUL_ASYM8S(elm_mul, -4, -4) \
     else MUL_BROADCAST_4D_ASYM8S(elm_mul_broadcast_4D, -4, -4) \
+    else MUL_BROADCAST_4D_SYM16S(elm_mul_broadcast_4D, -8, -8) \
     else ADD_ASYM8(elm_add, -3, -3) \
     else ADD_ASYM8S(elm_add, -4, -4) \
     else MATH_BROADCAST_4D_ASYM8S(elm_add_broadcast_4D, -4, -4) \
@@ -1247,6 +1310,10 @@ int xa_nn_main_process(int argc, char *argv[])
     {
       sprintf(profiler_name, "%s_f32_asym8s", cfg.kernel_name);
     }
+    else if(cfg.out_precision == -7)
+    {
+      sprintf(profiler_name, "%s_f32_asym16s", cfg.kernel_name);
+    }
     else
     {
       sprintf(profiler_name, "%s_f32", cfg.kernel_name);
@@ -1273,6 +1340,10 @@ int xa_nn_main_process(int argc, char *argv[])
       sprintf(profiler_name, "%s_asym16s_asym16s", cfg.kernel_name);
     else
       sprintf(profiler_name, "%s_asym16s", cfg.kernel_name);
+  }
+  else if(cfg.inp_precision == -8 && cfg.out_precision == -8)
+  {
+      sprintf(profiler_name, "%s_sym16s_sym16s", cfg.kernel_name);
   }
   else if(cfg.inp_precision == 8 && cfg.out_precision == 8)
   {
@@ -1301,6 +1372,10 @@ int xa_nn_main_process(int argc, char *argv[])
   else if(cfg.inp_precision == -4 && cfg.out_precision == -1)
   {
     sprintf(profiler_name, "%s_asym8s_f32", cfg.kernel_name);
+  }
+  else if(cfg.inp_precision == -7 && cfg.out_precision == -1)
+  {
+    sprintf(profiler_name, "%s_asym16s_f32", cfg.kernel_name);
   }
   else
   {

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -74,7 +74,7 @@ static WORD32 conv_x_left_pad(
         acc = AE_SLAA64S(acc, bias_shift);
         acc = AE_SLAA64S(acc, acc_shift);\
         ae_int32 temp1 = AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),24),-24);
-        (*((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset)) = (*((UWORD32 *)&temp1));
+        (*((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset)) =(WORD8)(*((UWORD32 *)&temp1));
 #endif
       }
     }
@@ -132,7 +132,7 @@ static WORD32 conv_x_right_pad(
         acc = AE_SLAA64S(acc, bias_shift);
         acc = AE_SLAA64S(acc, acc_shift);\
         ae_int32 temp1 = AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(acc),24),-24);
-        (*((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset)) = (*((UWORD32 *)&temp1));
+        (*((WORD8 *) p_out + i*out_height_offset+j*out_width_offset+k*out_channels_offset)) =(WORD8)(*((UWORD32 *)&temp1));
 #endif
       }
     }
@@ -200,7 +200,7 @@ WORD32 xa_nn_conv2d_std_8x8(
       ,input_channels
       ,kernel_height
       ,kernel_width
-      ,x_stride,y_stride
+      ,y_stride
       ,y_padding
       ,out_height
       ,out_channels

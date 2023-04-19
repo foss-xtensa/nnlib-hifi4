@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -53,7 +53,6 @@ VOID conv1d_std_update_cir_buf(
     WORD32 kernel_height,
     WORD32 y_stride,
     WORD32 y_padding,
-    WORD32 y_b_pad,
     VOID **pp_inp,
     WORD32 idx_beg_inp_height_pad,
     xa_nn_conv_state_t *p_state);
@@ -79,7 +78,6 @@ VOID conv1d_std_update_cir_buf_asym8(
     WORD32 kernel_height,
     WORD32 y_stride,
     WORD32 y_padding,
-    WORD32 y_b_pad,
     VOID **pp_inp,
     WORD32 idx_beg_inp_height_pad,
     xa_nn_conv_state_t *p_state,

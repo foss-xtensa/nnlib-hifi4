@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -538,7 +538,8 @@ WORD32 xa_nn_reduce_max_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
   if(num_axis_dims)
   {
     inp_shape_max = p_inp_shape[p_axis[0]];
-    int axis_itr = 1, max_axis_itr = 0;
+    axis_itr = 1;
+    int max_axis_itr = 0;
     int temp_p_axis_0 = p_axis[0];
     for(axis_itr = 0; axis_itr < num_axis_dims; axis_itr++)
     {
@@ -555,7 +556,7 @@ WORD32 xa_nn_reduce_max_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
     p_axis_data[0] = p_axis_data[max_axis_itr];
     p_axis_data[max_axis_itr] = temp_p_axis_0;
 
-    int inp_itr = 0;
+    inp_itr = 0;
     for(inp_itr=0; inp_itr < num_inp_dims; inp_itr++)
     {
       inp_length *= p_inp_shape[inp_itr];
@@ -1198,7 +1199,6 @@ static void vecmean32_inpx2_unaligned(const ae_int32x2* p_src1, const ae_int32x2
 static inline void xa_nn_reduce_sum_4D_asym8s_asym8s(const WORD8 * __restrict__ p_inp
                                                     ,const WORD32 *const p_4D_inp_shape
                                                     ,const WORD32 * __restrict__ p_axis_data
-                                                    ,WORD32 num_inp_dims
                                                     ,WORD32 num_axis_dims
                                                     ,pVOID p_scratch_in)
 {
@@ -1472,7 +1472,7 @@ static inline void xa_nn_reduce_sum_4D_asym8s_asym8s(const WORD8 * __restrict__ 
 
   while(axis_dims_count)
   {
-    ae_valign align_src2;
+    ae_valign align_src;
     WORD32 *p_scr_in =(WORD32 *)p_scratch;
     ae_int32x2 *p_wsrc2, *p_wsrc3;
     switch(p_axis_data[itr_axis])
@@ -1637,14 +1637,14 @@ static inline void xa_nn_reduce_sum_4D_asym8s_asym8s(const WORD8 * __restrict__ 
             {
               p_wsrc2 = (ae_int32x2 *)(p_scr_in + (itr_n * plane_size) + (itr_h * wc_plane_size) + (itr_w * temp_inp_c));
               p_dst = (ae_int32x2 *)(p_scratch + (itr_n * hw_plane_size) + (itr_h * temp_inp_w) + itr_w);
-              align_src2 = AE_LA64_PP(p_wsrc2);
+              align_src = AE_LA64_PP(p_wsrc2);
               ae_int32x2 i1 = AE_ZERO32();
               for(itr_c = 0; itr_c < (temp_inp_c >> 2); itr_c++)
               {
                 ae_int32x2 j1, j2;
                 ae_int32 out1, out2;
-                AE_LA32X2_IP(j1, align_src2, p_wsrc2);
-                AE_LA32X2_IP(j2, align_src2, p_wsrc2);
+                AE_LA32X2_IP(j1, align_src, p_wsrc2);
+                AE_LA32X2_IP(j2, align_src, p_wsrc2);
                 out1 = AE_INT32X2_RADD(j1);
                 out2 = AE_INT32X2_RADD(j2);
                 i1 = AE_ADD32S(i1, AE_MOVDA32(out1));
@@ -1723,6 +1723,10 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
       num_elm_in_axis *= p_inp_shape[p_axis[axis_itr]];
     }
   }
+  if(num_elm_in_axis <= 1024)
+  {
+    inv_mult = AE_MOVDA32(inv_256_tbl[num_elm_in_axis]);
+  }
 
   for(inp_itr=0; inp_itr < num_inp_dims; inp_itr++)
   {
@@ -1762,7 +1766,8 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
   if(num_axis_dims)
   {
     inp_shape_max = p_inp_shape[p_axis[0]];
-    int axis_itr = 1, max_axis_itr = 0;
+    axis_itr = 1;
+    int max_axis_itr = 0;
     int temp_p_axis_0 = p_axis[0];
     for(axis_itr = 0; axis_itr < num_axis_dims; axis_itr++)
     {
@@ -1779,7 +1784,7 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
     p_axis_data[0] = p_axis_data[max_axis_itr];
     p_axis_data[max_axis_itr] = temp_p_axis_0;
 
-    int inp_itr = 0;
+    inp_itr = 0;
     for(inp_itr=0; inp_itr < num_inp_dims; inp_itr++)
     {
       inp_length *= p_inp_shape[inp_itr];
@@ -1814,13 +1819,12 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
       xa_nn_reduce_sum_4D_asym8s_asym8s(p_in,
                                         p_4D_inp_shape,
                                         p_axis_data,
-                                        4,
                                         num_axis_dims,
                                         p_scratch);
 
       xtbool same_quant = (inp_zero_bias == out_zero_bias) && (out_multiplier == 0x40000000) && (out_shift == 1);
 
-      int itr = 0;
+      itr = 0;
       ae_int32x2 *p_src1 = (ae_int32x2 *)(p_scratch);
 
       if(same_quant)
@@ -1929,7 +1933,7 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
     {
       xtbool same_quant = (inp_zero_bias == out_zero_bias) && (out_multiplier == 0x40000000) && (out_shift == 1);
 
-      int itr = 0;
+      itr = 0;
       ALIGN_REGISTER_TYPE align_inp;
       PRIME_8X4F(p_in, align_inp);
 

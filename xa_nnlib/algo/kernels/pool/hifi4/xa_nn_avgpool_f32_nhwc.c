@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -217,7 +217,7 @@ const FLOAT32* __restrict__ p_inp,
         {
             xtfloatx2 recip_den;
             xtfloat recip_den_s;
-            FLOAT32 *p_scratch_zeros = p_zeros_mem;
+            p_scratch_zeros = p_zeros_mem;
 
             start_row  = itr_ow * x_stride - x_padding;
             end_row = start_row + kernel_width;

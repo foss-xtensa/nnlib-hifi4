@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -38,14 +38,7 @@ typedef struct _xa_nn_maxpool_state_t
 
 WORD32 xa_nn_maxpool_init(
     WORD32 inp_precision,
-    VOID   *handle,
-    WORD32 input_width,
-    WORD32 kernel_height,
-    WORD32 kernel_width,
-    WORD32 x_stride,
-    WORD32 y_stride,
-    WORD32 x_padding,
-    WORD32 out_width);
+    VOID   *handle);
 
 void xa_nn_maxpool_f32_hwc(
       FLOAT32* __restrict__ p_out,

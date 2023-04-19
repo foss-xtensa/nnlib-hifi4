@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -65,7 +65,6 @@ VOID xa_nn_conv2d_std_init_state(
     WORD32 input_channels,
     WORD32 kernel_height,
     WORD32 kernel_width,
-    WORD32 x_stride,
     WORD32 y_stride,
     WORD32 y_padding,
     WORD32 out_height,
@@ -80,7 +79,6 @@ VOID xa_nn_dilated_conv2d_std_init_circ_buf(
     WORD32 input_channels,
     WORD32 kernel_height_dilation,
     WORD32 kernel_width,
-    WORD32 x_stride,
     WORD32 y_stride,
     WORD32 y_padding,
     WORD32 out_height,
@@ -178,10 +176,8 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s_circ(
     WORD32 vec_stride,
     WORD32 out_col_offset,
     WORD32 out_row_offset,
-    WORD32 mat1_offset,
     WORD32 * p_out_multiplier,
-    WORD32 * p_out_shift,
-    WORD32 out_offset);
+    WORD32 * p_out_shift);
 
 WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
     WORD8 * __restrict__ p_out,
@@ -254,7 +250,6 @@ VOID xa_nn_dilated_conv2d_std_load_cir_buf_asym8(
     WORD32 y_b_pad,
     WORD32 x_padding,
     WORD32 kernel_width,
-    WORD32 x_stride,
     VOID **pp_inp,
     xa_nn_conv_state_t *p_state,
     WORD32 pad_val,
@@ -270,8 +265,7 @@ VOID xa_nn_dilated_conv2d_std_load_cir_buf_asym8(
     WORD32 *circMatrixHeight,
     WORD32 widthIndexIteration,
     WORD32 x_stride_dilated,
-    WORD32 heightIndexIteration,
-    WORD32 y_stride_dilated);
+    WORD32 heightIndexIteration);
 
 VOID conv2d_std_update_cir_buf_asym8(
     WORD32 input_channels,

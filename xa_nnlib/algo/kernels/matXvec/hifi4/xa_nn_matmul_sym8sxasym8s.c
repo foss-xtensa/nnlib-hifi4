@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -44,19 +44,11 @@
 
 #else
 
-#define AE_L8X4S_I_HIFI4(d, ptr, inc) \
-    d = AE_L8X4F_I(ptr, inc); \
-  d = AE_SRAI16(d, 8);
-
 #define AE_S8_FROM32_WITHSTRIDE(val32, dst, stride) \
     *dst = (WORD8)val32; \
   dst += stride;
 
 #endif
-
-#define AE_S8_FROM32(val32, dst, index) \
-    dst[index] = (WORD8)val32;
-
 
 static inline void _xa_nn_dot_product_1_rows_1_vecs_unaligned
 (ae_int32x2* out_0_0
@@ -502,11 +494,15 @@ WORD32 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s(
 #endif /* XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION) */
 #endif /* #if TFLITE_SINGLE_ROUNDING */
      
+      
+      ae_valign bias_valign;
+      bias_valign = AE_LA64_PP(p_bias); 
+
       ae_int32x2 bias_01 = AE_ZERO32(), bias_23 = AE_ZERO32();
       if(p_bias)
       {
-        bias_01 = AE_MOVDA32X2(p_bias[m_itr+0], p_bias[m_itr+1]);
-        bias_23 = AE_MOVDA32X2(p_bias[m_itr+2], p_bias[m_itr+3]);
+        AE_LA32X2_IP(bias_01, bias_valign,(ae_int32x2 *)p_bias);
+        AE_LA32X2_IP(bias_23, bias_valign,(ae_int32x2 *)p_bias);
       }
       for(v_itr = 0; v_itr < (vec_count & ~1); v_itr += 2)
       {

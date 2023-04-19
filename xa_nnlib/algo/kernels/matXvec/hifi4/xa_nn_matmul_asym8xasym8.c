@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -25,8 +25,6 @@
 #undef ROW_UNROLL
 #endif
 #define ROW_UNROLL  4
-
-#define GET_SUM_BY_MULTIPLY
 
 #include "xa_nnlib_common_macros.h"
 
@@ -211,13 +209,10 @@ WORD32 xa_nn_matmul_asym8xasym8_asym8(
     {
         #define ROW_UNROLL 2
         #define VEC_UNROLL 2
-        #define UNROLL_ROW_SETUP_ACC_BATCH          SETUP_ACC_BATCH_ROW_FOR_ASYM8bxASYM8b
         #define UNROLL_SETUP_ACC_BATCH              SETUP_ACC_BATCH_FOR_ASYM8bxASYM8b
         #define SETUP_BIAS                          SETUP_BIAS_ASYM8b
         #define LOAD_BIAS                           LOAD_BIAS_ASYM8b_MATMUL
-        #define UNROLL_ROW_ADD_BIAS_ACC             ADD_BIAS_BATCH_ROW_ASYM8b_ACC_FOR_ASYM8bxASYM8b_MATMUL
         #define UNROLL_ADD_BIAS_ACC_BATCH           ADD_BIAS_BATCH_ASYM8b_ACC_FOR_ASYM8bxASYM8b_MATMUL
-        #define UNROLL_ROW_ADJUST_ACC               ADJUST_ACC_BATCH_ROW_ASYM8b
         #define UNROLL_ADJUST_ACC_BATCH             ADJUST_ACC_BATCH_ASYM8b
         for (vec_itr = 0; vec_itr < (vec_count & ~(VEC_UNROLL-1)); vec_itr += VEC_UNROLL)
         {

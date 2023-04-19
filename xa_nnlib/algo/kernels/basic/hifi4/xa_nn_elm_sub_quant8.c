@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -456,7 +456,7 @@ WORD32 xa_nn_elm_sub_asym8xasym8_asym8(UWORD8 * __restrict__ p_out,
         CLAMP_VAL(clamped_out12, raw_out12, activation_min, activation_max)
 
         // Store Output
-        i1 = AE_MOVAD32_H(clamped_out12);
+        i1 = (WORD16)(AE_MOVAD32_H(clamped_out12));
         *out++ = (UWORD8) i1;
     }
 

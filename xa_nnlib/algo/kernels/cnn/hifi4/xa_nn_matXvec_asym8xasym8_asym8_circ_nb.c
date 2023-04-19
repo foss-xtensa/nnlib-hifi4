@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -26,7 +26,6 @@
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_quant_macros.h"
 
-#define ZERO16  AE_ZERO16()
 #define ZERO64  AE_ZERO64()
 
 #define ROW_UNROLL  4
@@ -123,7 +122,6 @@
 #elif (ROW_UNROLL == 4)
 #define SETUP_ACC            UNROLL_SETUP_ACC(0)            UNROLL_SETUP_ACC(1)            UNROLL_SETUP_ACC(2)            UNROLL_SETUP_ACC(3)
 #define SETUP_MAT1           UNROLL_SETUP_MAT1(0)           UNROLL_SETUP_MAT1(1)           UNROLL_SETUP_MAT1(2)           UNROLL_SETUP_MAT1(3)
-#define LOAD_MAT1            UNROLL_LOAD_MAT1(0)            UNROLL_LOAD_MAT1(1)            UNROLL_LOAD_MAT1(2)            UNROLL_LOAD_MAT1(3)
 #define KERNEL_MAT1_VEC      UNROLL_KERNEL_MAT1_VEC(0)      UNROLL_KERNEL_MAT1_VEC(1)      UNROLL_KERNEL_MAT1_VEC(2)      UNROLL_KERNEL_MAT1_VEC(3)
 #define ADD_BIAS_ACC         UNROLL_ADD_BIAS_ACC(0)         UNROLL_ADD_BIAS_ACC(1)         UNROLL_ADD_BIAS_ACC(2)         UNROLL_ADD_BIAS_ACC(3)
 #define ADJUST_ACC           UNROLL_ADJUST_ACC(0)           UNROLL_ADJUST_ACC(1)           UNROLL_ADJUST_ACC(2)           UNROLL_ADJUST_ACC(3)

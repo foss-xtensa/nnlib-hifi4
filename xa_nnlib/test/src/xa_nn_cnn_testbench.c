@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -162,6 +162,9 @@ static inline void error_code_parse(int error_code)
       break;
     case XA_NNLIB_CNN_CONFIG_FATAL_INVALID_INPUT_SHAPE:
       printf("\nInvalid input shape, Exiting\n");
+      break;
+    case XA_NNLIB_CNN_EXECUTE_FATAL_INVALID_INPUT_SHAPE:
+      printf("\nInput shape mismatch during execution, Exiting\n");
       break;
     default:
       printf("\nUnknown error condition, Exiting\n");

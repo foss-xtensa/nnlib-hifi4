@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -111,14 +111,14 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         pScrWr=(      xtfloatx2*)scratch;
         for (n = 0; n < (M>>1); n++) 
         {
-            xtfloatx2 x, p0, dy,t;
-            XT_LASX2IP(x,aX,pX);
-            x = XT_ABS_SX2(x);
-            x=XT_MUL_SX2(two, x); 
-            t=(xtfloatx2)80.f; x = XT_MIN_SX2(x, t);
+            xtfloatx2 d, p0, dy,t;
+            XT_LASX2IP(d,aX,pX);
+            d = XT_ABS_SX2(d);
+            d=XT_MUL_SX2(two, d); 
+            t=(xtfloatx2)80.f; d = XT_MIN_SX2(d, t);
 
             /* scale input to 1/ln(2) */
-            p0 = XT_MUL_SX2(x, log2_e[0].f);
+            p0 = XT_MUL_SX2(d, log2_e[0].f);
             #if defined(XT_FIROUND_SX2)
             p0 = XT_FIROUND_SX2(p0);
             #else
@@ -126,8 +126,8 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             #endif
             dy = XT_NEG_SX2(p0);
 
-            XT_MADD_SX2(dy, x, log2_e[0].f);
-            XT_MADD_SX2(dy, x, log2_e[1].f);
+            XT_MADD_SX2(dy, d, log2_e[0].f);
+            XT_MADD_SX2(dy, d, log2_e[1].f);
             XT_SSX2IP(dy ,pScrWr,sizeof(xtfloatx2));
             /* saturating p0 to the right values */
             t=(xtfloatx2) 129.f; p0=XT_MIN_SX2(p0,t);
@@ -141,7 +141,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         pPolytanhf=(const ae_int32*)pow2f_coef;
         for (n = 0; n < (M>>1); n++) 
         {
-            xtfloatx2 dy, y, y0,y1, y2, y3, y4, y5, y6, dy2;
+            xtfloatx2 dy, y0,y1, y2, y3, y4, y5, y6, y7, dy2;
             ae_int32x2 tmp;
             XT_LSX2IP(dy ,pScrRd,2*sizeof(xtfloatx2));
             dy2 = XT_MUL_SX2(dy, dy);
@@ -158,8 +158,8 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             XT_MADD_SX2(y3, y1, dy2);
             XT_MADD_SX2(y5, y3, dy2);
             XT_MADD_SX2(y6, y5, dy);
-            y = y6;
-            XT_SSX2IP(y ,pScrWr,2*sizeof(xtfloatx2));
+            y7 = y6;
+            XT_SSX2IP(y7 ,pScrWr,2*sizeof(xtfloatx2));
         }
         /* resulted scaling by 2^N and final Newton-Raphson phase */
         __Pragma("no_reorder")
@@ -167,9 +167,9 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         pScrWr=(      xtfloatx2*)scratch;
         for (n = 0; n < (M>>1); n++) 
         {
-            xtfloatx2  y, z, r, eps, p0;
+            xtfloatx2  d, z, r, eps, p0;
             ae_int32x2 tmp, v1, v2, e1, e2;
-            XT_LSX2IP(y ,pScrRd,sizeof(xtfloatx2));
+            XT_LSX2IP(d ,pScrRd,sizeof(xtfloatx2));
             XT_LSX2IP(p0,pScrRd,sizeof(xtfloatx2));
 
             /* Apply exponential part to the result */
@@ -182,9 +182,9 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             /*
             * Convert (y*2^(ex-30))/2 to floating-point p == exp(x)/2
             */
-            y = XT_MUL_SX2(y, XT_AE_MOVXTFLOATX2_FROMINT32X2(e2));
-            y = XT_MUL_SX2(y, XT_AE_MOVXTFLOATX2_FROMINT32X2(e1));
-            z = XT_ADD_SX2(y, half);
+            d = XT_MUL_SX2(d, XT_AE_MOVXTFLOATX2_FROMINT32X2(e2));
+            d = XT_MUL_SX2(d, XT_AE_MOVXTFLOATX2_FROMINT32X2(e1));
+            z = XT_ADD_SX2(d, half);
             /* Initial approximation for 1/y */
             r = XT_RECIP0_SX2(z);
             /* 2 Newton-Raphson iterations for 1/z  */
@@ -206,11 +206,11 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         pPolytanhf=(const ae_int32*)polytanhf_tbl;
         for (n = 0; n < (M>>1); n++) 
         {
-            xtfloatx2 z, x, x2, x3, tn0, tn1, tn2, tn3;
-            XT_LASX2IP(x,aX,pX);
-            x = XT_ABS_SX2(x);
-            x2 = XT_MUL_SX2(x, x);
-            x3 = XT_MUL_SX2(x, x2);
+            xtfloatx2 z, x1, x2, x3, tn0, tn1, tn2, tn3;
+            XT_LASX2IP(x1,aX,pX);
+            x1 = XT_ABS_SX2(x1);
+            x2 = XT_MUL_SX2(x1, x1);
+            x3 = XT_MUL_SX2(x1, x2);
             ae_int32x2 tmp;
             AE_L32_IP(tmp,pPolytanhf,sizeof(float32_t));           tn0 = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp);
             AE_L32_IP(tmp,pPolytanhf,sizeof(float32_t));           tn1 = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp);
@@ -219,7 +219,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             XT_MADD_SX2(tn1, tn0, x2);
             XT_MADD_SX2(tn2, tn1, x2);
             XT_MADD_SX2(tn3, tn2, x2);
-            z = x;
+            z = x1;
             XT_MADD_SX2(z, tn3, x3);
             XT_SSX2IP(z,pScrWr,2*sizeof(xtfloatx2));
         }
@@ -232,13 +232,13 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         for (n = 0; n < (M>>1); n++) 
         {
             xtbool2 bbig,bsign;
-            xtfloatx2 x, z, zbig;
+            xtfloatx2 d, z, zbig;
             ae_int32x2 ux;
-            XT_LASX2IP(x,aX,pX);
-            ux = XT_AE_MOVINT32X2_FROMXTFLOATX2(x); 
+            XT_LASX2IP(d,aX,pX);
+            ux = XT_AE_MOVINT32X2_FROMXTFLOATX2(d); 
             bsign=AE_LT32(ux,0);
-            x = XT_ABS_SX2(x);
-            bbig = XT_OLT_SX2(halfln3.f,x);
+            d = XT_ABS_SX2(d);
+            bbig = XT_OLT_SX2(halfln3.f,d);
             XT_LSX2IP(zbig,pScrRd,sizeof(xtfloatx2));
             XT_LSX2IP(z   ,pScrRd,sizeof(xtfloatx2));
             XT_MOVT_SX2(z,zbig,bbig);

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -241,7 +241,6 @@ static void xa_nn_conv2d_depthwise_per_chan_nchw_sym8sxsym16s
  ,WORD32  out_width
  ,const WORD32  *p_out_multiplier
  ,const WORD32  *p_out_shift
-,WORD32  out_data_format
 ,pVOID p_scratch
 )
 {
@@ -418,7 +417,6 @@ static inline void conv2d_per_chan_nhwc_sym8sxsym16s
  ,int out_height
  ,int out_width
  ,int out_channels
- ,int x_stride
  ,int y_stride
  ,const WORD32 *p_out_multiplier
  ,const WORD32 *p_out_shift
@@ -537,7 +535,7 @@ static inline void conv2d_per_chan_nhwc_sym8sxsym16s
 
             for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
             {
-                out_ptr0[itr_ch+i] = AE_MOVAD16_3(d_acc16x4);
+                out_ptr0[itr_ch+i] =(WORD16)(AE_MOVAD16_3(d_acc16x4));
                 d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
             }
 
@@ -553,7 +551,7 @@ static inline void conv2d_per_chan_nhwc_sym8sxsym16s
               d_acc16x4 = AE_SAT16X4(d32_acc2, d32_acc3);
               for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
               {
-                out_ptr1[itr_ch+i] = AE_MOVAD16_3(d_acc16x4);
+                out_ptr1[itr_ch+i] = (WORD16)(AE_MOVAD16_3(d_acc16x4));
                 d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
               }
             }
@@ -581,7 +579,6 @@ static void xa_nn_conv2d_depthwise_per_chan_nhwc_sym8sxsym16s
  ,WORD32  out_width
  ,const WORD32  *p_out_multiplier
  ,const WORD32  *p_out_shift
-,WORD32  out_data_format
 ,pVOID p_scratch
 )
 {
@@ -626,6 +623,7 @@ static void xa_nn_conv2d_depthwise_per_chan_nhwc_sym8sxsym16s
             ,input_height
             ,input_width
             ,input_channels
+            ,kernel_height
             ,kernel_width
             ,channels_multiplier
             ,x_stride
@@ -646,6 +644,7 @@ static void xa_nn_conv2d_depthwise_per_chan_nhwc_sym8sxsym16s
                   ,input_height
                   ,input_width
                   ,input_channels
+                  ,kernel_height
                   ,kernel_width
                   ,channels_multiplier
                   ,x_stride
@@ -668,7 +667,6 @@ static void xa_nn_conv2d_depthwise_per_chan_nhwc_sym8sxsym16s
                ,out_height
                ,out_width
                ,(input_channels * channels_multiplier)
-               ,x_stride
                ,y_stride
                ,p_out_multiplier
                ,p_out_shift
@@ -752,7 +750,6 @@ WORD32 xa_nn_conv2d_depthwise_per_chan_sym8sxsym16s
              ,out_width
              ,p_out_multiplier
              ,p_out_shift
-             ,out_data_format
              ,p_scratch);
     }
     else if(inp_data_format == 1)
@@ -776,7 +773,6 @@ WORD32 xa_nn_conv2d_depthwise_per_chan_sym8sxsym16s
              ,out_width
              ,p_out_multiplier
              ,p_out_shift
-             ,out_data_format
              ,p_scratch);
     }
 

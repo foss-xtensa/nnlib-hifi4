@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -35,6 +35,8 @@ int load_conv1d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, b
     int kernel_pad_val);
 int load_conv2d_ds_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel,
     buf1D_t *p_bias, buf1D_t *p_kernel_point, buf1D_t *p_bias_point, int kernel_pad_val);
+int load_dilated_conv2d_depth_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel,
+    buf1D_t *p_bias, int kernel_pad_val);
 int load_conv2d_pt_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp,
     buf1D_t *p_kernel_point, buf1D_t *p_bias_point);
 int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_inp_alpha, char *kernel_name); 

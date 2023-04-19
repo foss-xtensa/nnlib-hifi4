@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,6 +40,27 @@ VOID xa_nn_conv2d_depthwise_init
  ,WORD32 kernel_height
  ,WORD32 kernel_width
  ,WORD32 channels_multiplier
+ ,WORD32 x_stride
+ ,WORD32 y_stride
+ ,WORD32 x_padding
+ ,WORD32 y_padding
+ ,WORD32 output_height
+ ,WORD32 output_width
+ ,WORD32 circ_buf_precision
+ ,WORD32 inp_data_format
+ ,pVOID p_pad_val
+ );
+
+VOID xa_nn_dilated_conv2d_depthwise_init
+(pVOID p_scratch
+ ,WORD32 input_height
+ ,WORD32 input_width
+ ,WORD32 input_channels
+ ,WORD32 kernel_height
+ ,WORD32 kernel_width
+ ,WORD32 channels_multiplier
+ ,WORD32 dilation_height
+ ,WORD32 dilation_width
  ,WORD32 x_stride
  ,WORD32 y_stride
  ,WORD32 x_padding
@@ -208,17 +229,17 @@ _Pragma("no_unroll") \
 #else
 #define COPY_KERNEL_TO_SCRATCH_NHWC_4_8b(p_out, p_in, kh, kw, kc) \
 { \
-  int itr_kh, itr_kw; \
-  for(itr_kh = 0; itr_kh < kh; itr_kh++) \
+  int itr_kernel_height, itr_kernel_width; \
+  for(itr_kernel_height = 0; itr_kernel_height < kh; itr_kernel_height++) \
   { \
     const UWORD8 *pae_in; \
     ae_int16 *pae_out; \
     ae_int16x4 d_tmp, d_tmp1; \
 _Pragma("no_unroll") \
-    for(itr_kw = 0; itr_kw < kw; itr_kw++) \
+    for(itr_kernel_width = 0; itr_kernel_width < kw; itr_kernel_width++) \
     { \
-      pae_in = (const UWORD8 *)(&p_in[(itr_kh * kw + itr_kw) * kc]); \
-      pae_out = (ae_int16 *)(&p_out[(itr_kh * kw + itr_kw) * 4]); \
+      pae_in = (const UWORD8 *)(&p_in[(itr_kernel_height * kw + itr_kernel_width) * kc]); \
+      pae_out = (ae_int16 *)(&p_out[(itr_kernel_height * kw + itr_kernel_width) * 4]); \
       WORD16 a1, a2; \
       a1 = *pae_in++; \
       a2 = *pae_in++; \

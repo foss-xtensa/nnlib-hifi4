@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -26,6 +26,60 @@ Cadence HiFi 4 Neural Network (NN) Library
 ======================================================================
 Revision History
 ======================================================================
+
+Version 3.1.0 API 1.5: April 19, 2023
+
++ Intermediate Release of HiFi4 NN Library
++ Tested using RI.9 tools, xt-clang/xt-clang++ compiler
++ Adds support for depthwise separable 2D convolution with dilation for
+  single precision float and quantized int8 data-types
++ Adds support for TRANSPOSE_CONV TFLM operator for single precision float data-type
++ Adds support for new datatype symmetric quantized int16 for TFLM operators:
+  TANH
+  SIGMOID
+  MUL (with 4D broadcast)
++ Adds supports for TFLM reorg operators:
+  PAD (32-bit)
+  STRIDED_SLICE (32-bit)
+  TRANSPOSE (8-bit)
++ Adds support for new datatypes for TFLM operators:
+  SUB (single precision float inputs/outputs, with 4D broadcast)
+  QUANTIZE (single precision float to asymmetric quantized int16)
+  DEQUANTIZE (asymmetric quantized int16 to single precision float)
++ Adds kernels xa_nn_matmul_sym8sxsym16s_sym16s, xa_nn_lstm_cell_state_update_16
+  xa_nn_elm_mul_sym16sxsym16s_asym8s and xa_nn_elm_add_16x16_16 for supporting TFLM
+  LSTM operator.
++ Adds single precision float support for existing GRU layer
++ Adds Pytorch GRU equations support for precisions 8x16, 16x16 and float32xfloat32 
+  to existing GRU layer
++ Adds XA_NNLIB_CNN_EXECUTE_FATAL_INVALID_INPUT_SHAPE error code for CNN layer
++ Adds support for scalar-aligned i/o pointers for xa_nn_matXvec_f32xf32_f32_sigmoid/tanh
++ Add NULL bias-pointer support to kernels
+  xa_nn_matXvec_f32xf32_f32, xa_nn_matXvec_f32xf32_f32_tanh/sigmoid  
++ Removes kernel padding requirement for conv2d_std_f32
++ Improves performance of
+  transpose_conv_sym8sxsym16_sym16s (kernel dimensions are less than input dimensions)
+  conv2d_std_sym8sxasym8s (special case of input_channels=1 for HiFi4 core)
++ Improves performance of all variants of matXvec 8x8, 8x16 and conv1d_std_8x8/8x16
+  for HiFi3 core
++ Fine tunes newly added kernels for HiFi1-enhanced core (RI.9 HiFi1e) for 
+  cycles and code size
+
+Note
+> Processor Configuration must be built with SP-VFP option in order to compile 
+  floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for C++11 standard. 
+  This is supported only with Xtensa C library. 
+
+Known issues
+> Compiler optimizations are disabled for ANN C++ source files
+> 3 failures seen in ANN testcases because  of differences in reference 
+  code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
 
 Version 3.0.0 API 1.4: December 16, 2022
 

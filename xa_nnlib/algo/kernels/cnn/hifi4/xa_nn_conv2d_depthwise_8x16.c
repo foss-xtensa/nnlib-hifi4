@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -408,7 +408,6 @@ static void xa_nn_conv2d_depthwise_nchw_8x16
  ,WORD32  out_width
  ,WORD32  acc_shift
  ,WORD32  bias_shift
- ,WORD32  out_data_format
  ,pVOID p_scratch
 )
 {
@@ -587,7 +586,6 @@ static inline void conv2d_nhwc_8x16
  ,int out_height
  ,int out_width
  ,int out_channels
- ,int x_stride
  ,int y_stride
  ,WORD32  acc_shift
  ,WORD32  bias_shift
@@ -746,7 +744,6 @@ static void xa_nn_conv2d_depthwise_nhwc_8x16
  ,WORD32  out_width
  ,WORD32  acc_shift
  ,WORD32  bias_shift
- ,WORD32  out_data_format
  ,pVOID p_scratch
 )
 {
@@ -791,6 +788,7 @@ static void xa_nn_conv2d_depthwise_nhwc_8x16
             ,input_height
             ,input_width
             ,input_channels
+            ,kernel_height
             ,kernel_width
             ,channels_multiplier
             ,x_stride
@@ -811,6 +809,7 @@ static void xa_nn_conv2d_depthwise_nhwc_8x16
                 ,input_height
                 ,input_width
                 ,input_channels
+                ,kernel_height
                 ,kernel_width
                 ,channels_multiplier
                 ,x_stride
@@ -833,7 +832,6 @@ static void xa_nn_conv2d_depthwise_nhwc_8x16
              ,out_height
              ,out_width
              ,(input_channels * channels_multiplier)
-             ,x_stride
              ,y_stride
              ,acc_shift
              ,bias_shift
@@ -910,7 +908,6 @@ WORD32 xa_nn_conv2d_depthwise_8x16
              ,out_width
              ,acc_shift
              ,bias_shift
-             ,out_data_format
              ,p_scratch);
     }
     else if(inp_data_format == 1)
@@ -934,7 +931,6 @@ WORD32 xa_nn_conv2d_depthwise_8x16
              ,out_width
              ,acc_shift
              ,bias_shift
-             ,out_data_format
              ,p_scratch);
     }
     return 0;

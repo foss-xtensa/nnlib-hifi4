@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -33,8 +33,6 @@
  * This file is sourced from ../hifi5/xa_nn_broadcast_8_8.c
  */
 
-#define NUMDIMS_4D 4
-#define NUMDIMS_8D 8
 #define NUMDIMS_MAX 8
 
 typedef struct bcast_expansion_struct_{

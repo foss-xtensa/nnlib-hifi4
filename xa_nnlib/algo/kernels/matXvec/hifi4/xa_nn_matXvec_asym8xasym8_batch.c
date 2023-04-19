@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -25,8 +25,6 @@
 #undef ROW_UNROLL
 #endif
 #define ROW_UNROLL  4
-
-#define GET_SUM_BY_MULTIPLY
 
 #include "xa_nnlib_common_macros.h"
 

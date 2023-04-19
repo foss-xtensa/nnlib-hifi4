@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -358,7 +358,7 @@ WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
 
     AE_MOVT32X2(out_32, ONE_32x2, b32);
 
-    i1 = AE_MOVAD32_H(out_32);
+    i1 = (WORD16)(AE_MOVAD32_H(out_32));
     *p_o++ = (WORD8) i1;
 
     out_32 = AE_ZERO32();
@@ -708,7 +708,7 @@ WORD32 xa_nn_elm_notequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
 
     AE_MOVF32X2(out_32, ONE_32x2, b32);
 
-    i1 = AE_MOVAD32_H(out_32);
+    i1 = (WORD16)(AE_MOVAD32_H(out_32));
     *p_o++ = (WORD8) i1;
 
     out_32 = AE_ZERO32();
@@ -1058,7 +1058,7 @@ WORD32 xa_nn_elm_greater_asym8sxasym8s(WORD8 * __restrict__ p_out,
 
     AE_MOVF32X2(out_32, ONE_32x2, b32);
 
-    i1 = AE_MOVAD32_H(out_32);
+    i1 = (WORD16)(AE_MOVAD32_H(out_32));
     *p_o++ = (WORD8) i1;
 
     out_32 = AE_ZERO32();
@@ -1409,7 +1409,7 @@ WORD32 xa_nn_elm_greaterequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
 
     AE_MOVF32X2(out_32, ONE_32x2, b32);
 
-    i1 = AE_MOVAD32_H(out_32);
+    i1 = (WORD16)(AE_MOVAD32_H(out_32));
     *p_o++ = (WORD8) i1;
 
     out_32 = AE_ZERO32();
@@ -1758,7 +1758,7 @@ WORD32 xa_nn_elm_less_asym8sxasym8s(WORD8 * __restrict__ p_out,
 
     AE_MOVT32X2(out_32, ONE_32x2, b32);
 
-    i1 = AE_MOVAD32_H(out_32);
+    i1 =(WORD16)( AE_MOVAD32_H(out_32));
     *p_o++ = (WORD8) i1;
 
     out_32 = AE_ZERO32();
@@ -2104,7 +2104,7 @@ WORD32 xa_nn_elm_lessequal_asym8sxasym8s(WORD8 * __restrict__ p_out,
 
     AE_MOVT32X2(out_32, ONE_32x2, b32);
 
-    i1 = AE_MOVAD32_H(out_32);
+    i1 = (WORD16)(AE_MOVAD32_H(out_32));
     *p_o++ = (WORD8) i1;
 
     out_32 = AE_ZERO32();

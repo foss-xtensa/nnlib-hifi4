@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -62,8 +62,7 @@ static WORD32 conv_x_left_pad(
     const WORD64* __restrict__ p_bias,
     WORD16 *p_out,
     WORD32 * p_out_multiplier,
-    WORD32 * p_out_shift,
-    WORD32 out_zero_bias)
+    WORD32 * p_out_shift)
 {
   WORD32 i,j,k;
   WORD32 out_width_over_x_pad = (x_padding - kernel_width)/x_stride + 1;
@@ -103,8 +102,7 @@ static WORD32 conv_x_right_pad(
     const WORD64* __restrict__ p_bias,
     WORD16 *p_out,
     WORD32 * p_out_multiplier,
-    WORD32 * p_out_shift,
-    WORD32 out_zero_bias)
+    WORD32 * p_out_shift)
 {
   WORD32 i,j,k;
   WORD32 idx_out_width_over_x_r_pad = (x_padding + input_width + x_stride - 1)/x_stride + 1;
@@ -194,7 +192,7 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s(
       ,input_channels
       ,kernel_height
       ,kernel_width
-      ,x_stride,y_stride
+      ,y_stride
       ,y_padding
       ,out_height
       ,out_channels
@@ -217,7 +215,7 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s(
   WORD32 out_width_over_x_pad = 0;
   if(x_padding_var >= kernel_width)
   {
-    out_width_over_x_pad = conv_x_left_pad(x_padding, kernel_width, x_stride, out_width, out_height, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift, out_zero_bias);
+    out_width_over_x_pad = conv_x_left_pad(x_padding, kernel_width, x_stride, out_width, out_height, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift);
     x_padding_var -= out_width_over_x_pad * x_stride;
   }
 
@@ -228,7 +226,7 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s(
   x_r_pad = x_r_pad < 0 ? 0 : x_r_pad;
   if(x_r_pad >= kernel_width)
   {
-    out_width_over_x_r_pad = conv_x_right_pad(x_padding, input_width, x_stride, out_width, out_height, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift, out_zero_bias);
+    out_width_over_x_r_pad = conv_x_right_pad(x_padding, input_width, x_stride, out_width, out_height, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift);
   }
 
   /* When kernel convolves over input region */
@@ -267,10 +265,8 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s(
        ,input_channels_pad * kernel_width * kernel_height /* vec_stride */
        ,out_channels_offset /* out_col_offset */
        ,out_height_offset /* out_row_offset */
-       ,input_zero_bias
        ,p_out_multiplier
        ,p_out_shift
-       ,out_zero_bias
       );
     p_out += out_width_offset;
   }

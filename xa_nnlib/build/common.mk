@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -142,8 +142,7 @@ ifeq ($(NOSTRIP), 1)
 $(LIBOBJ): $(OBJ_LIBO2OBJS) $(OBJ_LIBOSOBJS) $(OBJ_LIBO2CPPOBJS) $(OBJ_LIBO2CCOBJS) $(OBJ_LIBOSCPPOBJS) 
 	@echo "Linking Objects"
 	$(QUIET) $(CC) -o $@ $^ \
-	-Wl,-r,-Map,$(MAPFILE) --no-standard-libraries \
-	-Wl,--script,$(LDSCRIPT) $(LIBLDFLAGS)
+	-Wl,-r,-Map,$(MAPFILE) --no-standard-libraries
 else
 $(LIBOBJ): $(OBJ_LIBO2OBJS) $(OBJ_LIBOSOBJS) $(OBJ_LIBO2CPPOBJS) $(OBJ_LIBO2CCOBJS) $(OBJ_LIBOSCPPOBJS)
 	@echo "Linking Objects"

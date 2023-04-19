@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -82,8 +82,10 @@ typedef enum _xa_nnlib_fatal_config_cnn_error_code_t
 /* None */
 
 /* Fatal Errors */
-/* None */
-
+typedef enum _xa_nnlib_fatal_exec_cnn_error_code_t
+{
+  XA_NNLIB_CNN_EXECUTE_FATAL_INVALID_INPUT_SHAPE    = XA_ERROR_CODE(xa_severity_fatal, xa_class_execute, XA_NNLIB_CNN, 0)
+} xa_nnlib_fatal_exec_cnn_error_code_t;
 
 /* Structure for initial configuration */
 typedef struct _xa_nnlib_cnn_init_config_t

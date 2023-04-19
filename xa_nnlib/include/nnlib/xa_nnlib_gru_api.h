@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -42,7 +42,8 @@ typedef enum _xa_nnlib_gru_precision_t
   XA_NNLIB_GRU_16bx16b             = 100,           // Coef: 16 bits, I/O: 16 bits Fixed Point
   XA_NNLIB_GRU_8bx16b              = 101,           // Coef: 8 bits, I/O: 16 bits Fixed Point
   XA_NNLIB_GRU_8bx8b               = 102,           // Not supported
-  XA_NNLIB_GRU_flt16xflt16         = 103            // Not supported
+  XA_NNLIB_GRU_flt16xflt16         = 103,           // Not supported
+  XA_NNLIB_GRU_flt32xflt32         = 104
 } xa_nnlib_gru_precision_t;
 
 
@@ -61,7 +62,8 @@ typedef enum _xa_nnlib_fatal_config_gru_error_code_t
   XA_NNLIB_GRU_CONFIG_FATAL_INVALID_COEFF_QFORMAT    = XA_ERROR_CODE(xa_severity_fatal, xa_class_config, XA_NNLIB_GRU, 3),
   XA_NNLIB_GRU_CONFIG_FATAL_INVALID_IO_QFORMAT       = XA_ERROR_CODE(xa_severity_fatal, xa_class_config, XA_NNLIB_GRU, 4),
   XA_NNLIB_GRU_CONFIG_FATAL_INVALID_PARAM_ID         = XA_ERROR_CODE(xa_severity_fatal, xa_class_config, XA_NNLIB_GRU, 5),
-  XA_NNLIB_GRU_CONFIG_FATAL_INVALID_MEMBANK_PADDING  = XA_ERROR_CODE(xa_severity_fatal, xa_class_config, XA_NNLIB_GRU, 6)
+  XA_NNLIB_GRU_CONFIG_FATAL_INVALID_MEMBANK_PADDING  = XA_ERROR_CODE(xa_severity_fatal, xa_class_config, XA_NNLIB_GRU, 6),
+  XA_NNLIB_GRU_CONFIG_FATAL_INVALID_SPLIT_BIAS       = XA_ERROR_CODE(xa_severity_fatal, xa_class_config, XA_NNLIB_GRU, 7)
 } xa_nnlib_fatal_config_gru_error_code_t;
 
 /************************************************************/
@@ -97,6 +99,8 @@ typedef struct _xa_nnlib_gru_init_config_t
   Int16 coeff_Qformat;
   /* Number of fractional bits for input and output; 0-15 */
   Int16 io_Qformat;
+  /* Flag to indicate if the biases are split. split_bias=1 indicates six bias vectors, otherwise three bias vectors */
+  Int32 split_bias;
 } xa_nnlib_gru_init_config_t;
 
 /* Structure for getting/setting XA_NNLIB_GRU_WEIGHT parameter
@@ -121,15 +125,28 @@ typedef union _xa_nnlib_gru_weights_t
         coeff8_t *w_h; xa_nnlib_shape_t shape_w_h;
         coeff8_t *u_h; xa_nnlib_shape_t shape_u_h;
     }weights8;
+	    struct
+    {
+        float *w_z; xa_nnlib_shape_t shape_w_z;
+        float *u_z; xa_nnlib_shape_t shape_u_z;
+        float *w_r; xa_nnlib_shape_t shape_w_r;
+        float *u_r; xa_nnlib_shape_t shape_u_r;
+        float *w_h; xa_nnlib_shape_t shape_w_h;
+        float *u_h; xa_nnlib_shape_t shape_u_h;
+    }weightsf32;
 } xa_nnlib_gru_weights_t;
 
 /* Structure for getting/setting XA_NNLIB_GRU_BIAS parameter.
  All pointer needs to be 8 bytes aligned.                   */
 typedef struct _xa_nnlib_gru_biases_t
 {
-  coeff_t *b_z; xa_nnlib_shape_t shape_b_z;
-  coeff_t *b_r; xa_nnlib_shape_t shape_b_r;
-  coeff_t *b_h; xa_nnlib_shape_t shape_b_h;
+  void *b_z; xa_nnlib_shape_t shape_b_z;
+  void *b_r; xa_nnlib_shape_t shape_b_r;
+  void *b_h; xa_nnlib_shape_t shape_b_h;
+  /* Following biases are used only for split-bias implementation */
+  void *bs_z; xa_nnlib_shape_t shape_bs_z;
+  void *bs_r; xa_nnlib_shape_t shape_bs_r;
+  void *bs_h; xa_nnlib_shape_t shape_bs_h;
 } xa_nnlib_gru_biases_t;
 
 #if defined(__cplusplus)

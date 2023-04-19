@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -184,12 +184,12 @@ static ae_int32x2 GetReciprocal(ae_int64 x, int x_integerbits, int *lsh)
 
 #define EXP_Q26(y, inp)\
 {\
-    xtbool2 b;\
-    ae_int32x2 x_in, x2, remainder;\
+    xtbool2 b1;\
+    ae_int32x2 x_in, x0, remainder;\
     ae_int32x2 a_mod_quater_minus_q_1_by_4;\
 \
-    x2 = AE_AND32(inp, mask_6fs);\
-    a_mod_quater_minus_q_1_by_4 = AE_SUB32(x2, q_1_by_4);\
+    x0 = AE_AND32(inp, mask_6fs);\
+    a_mod_quater_minus_q_1_by_4 = AE_SUB32(x0, q_1_by_4);\
     x_in = AE_SLAI32(a_mod_quater_minus_q_1_by_4, 5);\
 \
     EXP_ON_INTERVAL_BETWEEN_NEGATIVE_ONE_QUARTER_AND_0_EXCL(y, x_in)\
@@ -204,8 +204,8 @@ static ae_int32x2 GetReciprocal(ae_int64 x, int x_integerbits, int *lsh)
     GEMMLOWP_EXP_BARREL_SHIFTER(y,3, 720401,      remainder);\
     GEMMLOWP_EXP_BARREL_SHIFTER(y,4, 242,         remainder);\
 \
-    b = AE_EQ32(inp, z);\
-    AE_MOVT32X2(y, AE_MOVDA32(Q31), b);\
+    b1 = AE_EQ32(inp, z);\
+    AE_MOVT32X2(y, AE_MOVDA32(Q31), b1);\
 }
 
 

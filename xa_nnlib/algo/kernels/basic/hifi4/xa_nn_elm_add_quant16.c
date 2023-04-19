@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -331,7 +331,7 @@ static void internal_elm_add_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
         MPY_BY_QUANT_MACC_ST_ONE_EXP_X2_OUT32(out0_32, raw_sum0_1, out_multiplier, out_left_shift);
         out0 = AE_SAT16X4(out0_32, out0_32);
         LIMIT16X4(out1, out0, AE_MOVDA16(out_activation_min), AE_MOVDA16(out_activation_max));
-        *p_c++ = AE_MOVAD16_0(out1);
+        *p_c++ = (WORD16)(AE_MOVAD16_0(out1));
       }
     }
   }
@@ -530,7 +530,7 @@ static void internal_elm_add_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
     MPY_BY_QUANT_MACC_ST_ONE_EXP_X2_OUT32(out0_32, raw_sum0_1, out_multiplier, out_left_shift);
     out0 = AE_SAT16X4(out0_32, out0_32);
     LIMIT16X4(out1, out0, AE_MOVDA16(out_activation_min), AE_MOVDA16(out_activation_max));
-    *p_c =  AE_MOVAD16_3(out1);
+    *p_c = (WORD16)(AE_MOVAD16_3(out1));
     p_c++;
   }
 

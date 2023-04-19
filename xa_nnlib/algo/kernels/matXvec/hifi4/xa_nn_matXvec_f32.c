@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -65,7 +65,7 @@ WORD32 static dual_mtx_vecmpyf_bias_add( FLOAT32 * z,
   NASSERT(v);
   NASSERT(w);
   NASSERT(z);
-  NASSERT(b);
+//  NASSERT(b);
   NASSERT((z != x) && (z != y) && (z != v) && (z != w) && (z != b));
   NASSERT_ALIGN(x,8);
   NASSERT_ALIGN(y,8);
@@ -104,8 +104,11 @@ WORD32 static dual_mtx_vecmpyf_bias_add( FLOAT32 * z,
       acc00 = acc01 = acc10 = acc11 =
       acc20 = acc21 = acc30 = acc31 =  (xtfloatx2)0.0f;
 
-      XT_LSX2IP(b0, pb, SZ_F32*2);
-      XT_LSX2IP(b1, pb, SZ_F32*2);
+      b0 = b1 = (xtfloatx2)0.0f;
+      if(b != NULL){
+        XT_LSX2IP(b0, pb, SZ_F32*2);
+        XT_LSX2IP(b1, pb, SZ_F32*2);
+      }
 
 #if defined(ENABLE_PRAGMA)
       __Pragma("loop_count min=1")
@@ -204,7 +207,10 @@ WORD32 static dual_mtx_vecmpyf_bias_add( FLOAT32 * z,
       pv0 = (const xtfloatx2 *)(v+m*row_stride2);
       pw  = (const xtfloatx2 *)(w);
 
-      b0_ = b[m];
+      b0_ = 0.0f;
+      if(b != NULL){
+        b0_ = b[m];
+      }
       acc00 = acc01 = (xtfloatx2)0.0f;
 
 #if defined(ENABLE_PRAGMA)
@@ -264,8 +270,11 @@ WORD32 static dual_mtx_vecmpyf_bias_add( FLOAT32 * z,
       acc00 = acc01 = acc10 = acc11 =
       acc20 = acc21 = acc30 = acc31 =  (xtfloatx2)0.0f;
 
-      XT_LSX2IP(b0, pb, SZ_F32*2);
-      XT_LSX2IP(b1, pb, SZ_F32*2);
+      b0 = b1 = (xtfloatx2)0.0f;
+      if(b != NULL){
+        XT_LSX2IP(b0, pb, SZ_F32*2);
+        XT_LSX2IP(b1, pb, SZ_F32*2);
+      }
 
 #if defined(ENABLE_PRAGMA)
       __Pragma("loop_count min=1")
@@ -318,7 +327,10 @@ WORD32 static dual_mtx_vecmpyf_bias_add( FLOAT32 * z,
       py  = (const xtfloatx2 *)(y);
       pz_ = (xtfloat *)(z+m);
 
-      b0_ = b[m];
+      b0_ = 0.0f;
+      if(b != NULL){
+        b0_ = b[m];
+      }
       acc00 = acc01 = (xtfloatx2)0.0f;
 
 #if defined(ENABLE_PRAGMA)
@@ -375,14 +387,14 @@ WORD32 static dual_mtx_vecmpyf_bias_add_generic( FLOAT32 * z,
   NASSERT(v);
   NASSERT(w);
   NASSERT(z);
-  NASSERT(b);
+//  NASSERT(b);
   NASSERT((z != x) && (z != y) && (z != v) && (z != w) && (z != b));
   NASSERT_ALIGN(x,4);
   NASSERT_ALIGN(y,4);
   NASSERT_ALIGN(v,4);
   NASSERT_ALIGN(w,4);
   NASSERT_ALIGN(z,4);
-  NASSERT_ALIGN(b,4);
+//  NASSERT_ALIGN(b,4);
 
   pz = (xtfloatx2 *)z;
   pb = (const xtfloat *)(b);
@@ -406,7 +418,10 @@ WORD32 static dual_mtx_vecmpyf_bias_add_generic( FLOAT32 * z,
 
       acc00 = acc01 = acc10 = acc11 = (xtfloatx2)0.0f;
 
-      b0 = XT_SEL32_LL_SX2((xtfloatx2)(pb[(m<<1)+0]), (xtfloatx2)(pb[(m<<1)+1]));
+      b0 = (xtfloatx2)0.0f;
+      if(b != NULL){
+        b0 = XT_SEL32_LL_SX2((xtfloatx2)(pb[(m<<1)+0]), (xtfloatx2)(pb[(m<<1)+1]));
+      }
 
       for (n = 0; n < (cols1>>2); n++)
       {
@@ -492,7 +507,10 @@ WORD32 static dual_mtx_vecmpyf_bias_add_generic( FLOAT32 * z,
       x0_a = XT_LASX2PP(px0);
       y_a = XT_LASX2PP(py);
 
-      b0_ = b[m];
+      b0_ = 0.0f;
+      if(b != NULL){
+        b0_ = b[m];
+      }
       acc00 = acc01 = (xtfloatx2)0.0f;
 
       for (n = 0; n < (cols1>>2); n++)
@@ -555,7 +573,10 @@ WORD32 static dual_mtx_vecmpyf_bias_add_generic( FLOAT32 * z,
 
       acc00 = acc01 = acc10 = acc11 = (xtfloatx2)0.0f;
 
-      b0 = XT_SEL32_LL_SX2((xtfloatx2)(pb[(m<<1)+0]), (xtfloatx2)(pb[(m<<1)+1]));
+      b0 = (xtfloatx2)0.0f;
+      if(b != NULL){
+        b0 = XT_SEL32_LL_SX2((xtfloatx2)(pb[(m<<1)+0]), (xtfloatx2)(pb[(m<<1)+1]));
+      }
 
       for (n = 0; n < (cols1>>2); n++)
       {
@@ -603,7 +624,10 @@ WORD32 static dual_mtx_vecmpyf_bias_add_generic( FLOAT32 * z,
       x0_a = XT_LASX2PP(px0);
       y_a = XT_LASX2PP(py);
 
-      b0_ = b[m];
+      b0_ = 0.0f;
+      if(b != NULL){
+        b0_ = b[m];
+      }
       acc00 = acc01 = (xtfloatx2)0.0f;
 
       for (n = 0; n < (cols1>>2); n++)
@@ -701,39 +725,45 @@ WORD32  xa_nn_matXvec_f32xf32_f32_sigmoid(
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_mat1, -1);
   XA_NNLIB_ARG_CHK_PTR(p_vec1, -1);
-  XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
+//  XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
   /* Pointer alignment checks */
-  XA_NNLIB_ARG_CHK_ALIGN(p_out, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_mat1, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_vec1, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_bias, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_out , sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_mat1, sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_vec1, sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_scratch, sizeof(FLOAT32), -1);
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((rows <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((cols1 <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((row_stride1 < cols1), -1);
-  /* Implementation dependent checks */
-  XA_NNLIB_ARG_CHK_COND(((cols1&3) != 0), -1);
-  XA_NNLIB_ARG_CHK_COND(((row_stride1&1) != 0), -1);
+
 
   if(p_mat2 != NULL)
   {
     XA_NNLIB_ARG_CHK_PTR(p_vec2, -1);
     /* Pointer alignment checks */
-    XA_NNLIB_ARG_CHK_ALIGN(p_mat2, ALIGNMENT, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_vec2, ALIGNMENT, -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_mat2, sizeof(FLOAT32), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_vec2, sizeof(FLOAT32), -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((cols2 <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((row_stride2 < cols2), -1);
-    /* Implementation dependent checks */
-    XA_NNLIB_ARG_CHK_COND(((cols2&3) != 0), -1);
-    XA_NNLIB_ARG_CHK_COND(((row_stride2&1) != 0), -1);
   }
 
   WORD32 ret = 0, k;
-  ret = dual_mtx_vecmpyf_bias_add(p_scratch, p_mat1, p_vec1, p_mat2, p_vec2,
-      p_bias, rows, cols1, cols2, row_stride1, row_stride2);
+
+  if(((cols1&3) == 0) && ((cols2&3) == 0) && ((row_stride1&1) == 0) && ((row_stride2&1) == 0) &&
+     ((((unsigned)p_out)&7) == 0) && ((((unsigned)p_mat1)&7) == 0) && ((((unsigned)p_vec1)&7) == 0) &&
+     ((((unsigned)p_mat2)&7) == 0) && ((((unsigned)p_vec2)&7) == 0) && ((((unsigned)p_bias)&7) == 0))
+  {
+    ret = dual_mtx_vecmpyf_bias_add(p_scratch, p_mat1, p_vec1, p_mat2, p_vec2,
+        p_bias, rows, cols1, cols2, row_stride1, row_stride2);
+  }
+  else
+  {
+    ret = dual_mtx_vecmpyf_bias_add_generic(p_scratch, p_mat1, p_vec1, p_mat2, p_vec2,
+        p_bias, rows, cols1, cols2, row_stride1, row_stride2);
+  }
 
   if (0 == ret)
   {
@@ -819,39 +849,43 @@ WORD32  xa_nn_matXvec_f32xf32_f32_tanh(
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_mat1, -1);
   XA_NNLIB_ARG_CHK_PTR(p_vec1, -1);
-  XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
+ // XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
   /* Pointer alignment checks */
-  XA_NNLIB_ARG_CHK_ALIGN(p_out, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_mat1, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_vec1, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_bias, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_out , sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_mat1, sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_vec1, sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_scratch, sizeof(FLOAT32), -1);
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((rows <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((cols1 <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((row_stride1 < cols1), -1);
-  /* Implementation dependent checks */
-  XA_NNLIB_ARG_CHK_COND(((cols1&3) != 0), -1);
-  XA_NNLIB_ARG_CHK_COND(((row_stride1&1) != 0), -1);
 
   if(p_mat2 != NULL)
   {
     XA_NNLIB_ARG_CHK_PTR(p_vec2, -1);
     /* Pointer alignment checks */
-    XA_NNLIB_ARG_CHK_ALIGN(p_mat2, ALIGNMENT, -1);
-    XA_NNLIB_ARG_CHK_ALIGN(p_vec2, ALIGNMENT, -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_mat2, sizeof(FLOAT32), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_vec2, sizeof(FLOAT32), -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((cols2 <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((row_stride2 < cols2), -1);
-    /* Implementation dependent checks */
-    XA_NNLIB_ARG_CHK_COND(((cols2&3) != 0), -1);
-    XA_NNLIB_ARG_CHK_COND(((row_stride2&1) != 0), -1);
   }
 
   WORD32 ret = 0, k;
-  ret = dual_mtx_vecmpyf_bias_add(p_scratch, p_mat1, p_vec1, p_mat2, p_vec2,
-      p_bias, rows, cols1, cols2, row_stride1, row_stride2);
+  if(((cols1&3) == 0) && ((cols2&3) == 0) && ((row_stride1&1) == 0) && ((row_stride2&1) == 0) &&
+     ((((unsigned)p_out)&7) == 0) && ((((unsigned)p_mat1)&7) == 0) && ((((unsigned)p_vec1)&7) == 0) &&
+     ((((unsigned)p_mat2)&7) == 0) && ((((unsigned)p_vec2)&7) == 0) && ((((unsigned)p_bias)&7) == 0))
+  {
+    ret = dual_mtx_vecmpyf_bias_add(p_scratch, p_mat1, p_vec1, p_mat2, p_vec2,
+        p_bias, rows, cols1, cols2, row_stride1, row_stride2);
+  }
+  else
+  {
+    ret = dual_mtx_vecmpyf_bias_add_generic(p_scratch, p_mat1, p_vec1, p_mat2, p_vec2,
+        p_bias, rows, cols1, cols2, row_stride1, row_stride2);
+  }
 
   if (0 == ret)
   {
@@ -929,7 +963,7 @@ WORD32  xa_nn_matXvec_f32xf32_f32(
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_mat1, -1);
   XA_NNLIB_ARG_CHK_PTR(p_vec1, -1);
-  XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
+//  XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   /* Pointer alignment checks */
   XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(FLOAT32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_mat1, sizeof(FLOAT32), -1);
@@ -954,7 +988,7 @@ WORD32  xa_nn_matXvec_f32xf32_f32(
   WORD32 ret = 0, k;
   if(((cols1&3) == 0) && ((cols2&3) == 0) && ((row_stride1&1) == 0) && ((row_stride2&1) == 0) &&
      ((((unsigned)p_out)&7) == 0) && ((((unsigned)p_mat1)&7) == 0) && ((((unsigned)p_vec1)&7) == 0) &&
-     ((((unsigned)p_mat1)&7) == 0) && ((((unsigned)p_vec1)&7) == 0) && ((((unsigned)p_bias)&7) == 0))
+     ((((unsigned)p_mat2)&7) == 0) && ((((unsigned)p_vec2)&7) == 0) && ((((unsigned)p_bias)&7) == 0))
   {
     ret = dual_mtx_vecmpyf_bias_add(p_out, p_mat1, p_vec1, p_mat2, p_vec2,
         p_bias, rows, cols1, cols2, row_stride1, row_stride2);

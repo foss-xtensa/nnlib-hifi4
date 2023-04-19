@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -50,7 +50,6 @@ WORD32 xa_nn_fully_connected_f32
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_weight, -1);
   XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
-  XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   /* Pointer alignment checks */
   XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(FLOAT32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_weight, sizeof(FLOAT32), -1);
@@ -238,18 +237,11 @@ WORD32 xa_nn_fully_connected_asym8xasym8_asym8
   XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
   XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   /* Pointer alignment checks */
-#if 0
-  XA_NNLIB_ARG_CHK_ALIGN(p_out, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_weight, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_inp, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_bias, ALIGNMENT, -1);
-#else
-  /* For TF Micro lite testing */
   XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(UWORD8), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_weight, sizeof(UWORD8), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(UWORD8), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD32), -1);
-#endif
+
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((out_depth <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_zero_bias < -255 || input_zero_bias > 0), -1);
@@ -401,18 +393,11 @@ WORD32 xa_nn_fully_connected_asym8sxasym8s_asym8s
   XA_NNLIB_ARG_CHK_PTR(p_weight, -1);
   XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
   /* Pointer alignment checks */
-#if 0
-  XA_NNLIB_ARG_CHK_ALIGN(p_out, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_weight, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_inp, ALIGNMENT, -1);
-  XA_NNLIB_ARG_CHK_ALIGN(p_bias, ALIGNMENT, -1);
-#else
-  /* For TF Micro lite testing */
   XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD8), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_weight, sizeof(WORD8), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD8), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD32), -1);
-#endif
+
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((out_depth <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_zero_bias < -127 || input_zero_bias > 128), -1);

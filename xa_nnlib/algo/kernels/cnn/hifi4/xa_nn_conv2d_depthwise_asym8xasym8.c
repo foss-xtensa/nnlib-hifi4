@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -450,7 +450,6 @@ static void xa_nn_conv2d_depthwise_nchw_asym8xasym8
  ,WORD32  out_multiplier
  ,WORD32  out_shift
  ,WORD32  out_zero_bias
-,WORD32  out_data_format
 ,pVOID p_scratch
 )
 {
@@ -640,7 +639,6 @@ static inline void conv2d_nhwc_asym8xasym8
  ,int out_height
  ,int out_width
  ,int out_channels
- ,int x_stride
  ,int y_stride
  ,WORD32  input_zero_bias
  ,WORD32  kernel_zero_bias
@@ -784,7 +782,6 @@ static void xa_nn_conv2d_depthwise_nhwc_asym8xasym8
  ,WORD32  out_multiplier
  ,WORD32  out_shift
  ,WORD32  out_zero_bias
-,WORD32  out_data_format
 ,pVOID p_scratch
 )
 {
@@ -830,6 +827,7 @@ static void xa_nn_conv2d_depthwise_nhwc_asym8xasym8
             ,input_height
             ,input_width
             ,input_channels
+            ,kernel_height
             ,kernel_width
             ,channels_multiplier
             ,x_stride
@@ -851,6 +849,7 @@ static void xa_nn_conv2d_depthwise_nhwc_asym8xasym8
                 ,input_height
                 ,input_width
                 ,input_channels
+                ,kernel_height
                 ,kernel_width
                 ,channels_multiplier
                 ,x_stride
@@ -874,7 +873,6 @@ static void xa_nn_conv2d_depthwise_nhwc_asym8xasym8
              ,out_height
              ,out_width
              ,(input_channels * channels_multiplier)
-             ,x_stride
              ,y_stride
              ,input_zero_bias
              ,kernel_zero_bias
@@ -959,7 +957,6 @@ WORD32 xa_nn_conv2d_depthwise_asym8xasym8
              ,out_multiplier
              ,out_shift
              ,out_zero_bias
-             ,out_data_format
              ,p_scratch);
     }
     else if(inp_data_format == 1)
@@ -986,7 +983,6 @@ WORD32 xa_nn_conv2d_depthwise_asym8xasym8
              ,out_multiplier
              ,out_shift
              ,out_zero_bias
-             ,out_data_format
              ,p_scratch);
     }
     return 0;

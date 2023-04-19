@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -98,24 +98,24 @@ void vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
         {
             xtbool2 s;
             ae_int32x2 n;
-            xtfloatx2 x,d,y;
-            XT_LASX2IP(x,aX,pX);
+            xtfloatx2 d0,d1,d2;
+            XT_LASX2IP(d0,aX,pX);
 
-            s=XT_OLT_SX2(x,XT_CONST_S(0));
-            x=XT_NEG_SX2(XT_ABS_SX2(x));
-            x=XT_MAX_SX2(-103.9721f,x);
-            /* compute d+n=log2(e)*x */
+            s=XT_OLT_SX2(d0,XT_CONST_S(0));
+            d0=XT_NEG_SX2(XT_ABS_SX2(d0));
+            d0=XT_MAX_SX2(-103.9721f,d0);
+            /* compute d1+n=log2(e)*x */
             #if defined(XT_FIROUND_SX2)
-                y=XT_FIROUND_SX2(XT_MUL_SX2(x,c[0].f));
+                d2=XT_FIROUND_SX2(XT_MUL_SX2(d0,c[0].f));
             #else
-                y=XT_FLOAT_SX2(XT_ROUND_SX2(XT_MUL_SX2(x,c[0].f),0),0);
+                d2=XT_FLOAT_SX2(XT_ROUND_SX2(XT_MUL_SX2(d0,c[0].f),0),0);
             #endif
-            d=XT_NEG_SX2(y);
-            XT_MADDN_SX2(d,x,c[0].f);
-            XT_MADDN_SX2(d,x,c[1].f);
-            n=XT_TRUNC_SX2(y,0);
+            d1=XT_NEG_SX2(d2);
+            XT_MADDN_SX2(d1,d0,c[0].f);
+            XT_MADDN_SX2(d1,d0,c[1].f);
+            n=XT_TRUNC_SX2(d2,0);
             AE_S32X2_IP(n,pScrWr,sizeof(ae_int32x2));
-            XT_SSX2IP(d,castxcc(xtfloatx2,pScrWr),sizeof(ae_int32x2));
+            XT_SSX2IP(d1,castxcc(xtfloatx2,pScrWr),sizeof(ae_int32x2));
         }
         // second phase: compute polynomial approximation
         __Pragma("no_reorder")
@@ -128,23 +128,23 @@ void vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
         {
             xtbool2 s;
             ae_int32x2 n;
-            xtfloatx2 x,d,z,t,z0;
-            XT_LASX2IP(x,aX,pX);
+            xtfloatx2 a,d,z,t,z0;
+            XT_LASX2IP(a,aX,pX);
             AE_L32X2_IP(n,pScrRd,sizeof(ae_int32x2));
             XT_LSX2IP(d,castxcc(xtfloatx2,pScrRd),sizeof(ae_int32x2));
 
-            s=XT_OLT_SX2(x,XT_CONST_S(0));
+            s=XT_OLT_SX2(a,XT_CONST_S(0));
             /* approx 2^d */
             {
-                xtfloatx2 d2,z0,z1;
+                xtfloatx2 d2,z1,z2;
                 d2=XT_MUL_SX2(d,d);
-                { ae_int32x2 tmp; AE_L32_IP(tmp,pP,sizeof(float32_t)); z0= XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp); }
+                { ae_int32x2 tmp; AE_L32_IP(tmp,pP,sizeof(float32_t)); z2= XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp); }
                 { ae_int32x2 tmp; AE_L32_IP(tmp,pP,sizeof(float32_t)); z1= XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp); }
-                { ae_int32x2 tmp; AE_L32_IP(tmp,pP,sizeof(float32_t)); t = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp); } XT_MADDN_SX2(t,d2,z0); z0=t;
+                { ae_int32x2 tmp; AE_L32_IP(tmp,pP,sizeof(float32_t)); t = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp); } XT_MADDN_SX2(t,d2,z2); z2=t;
                 { ae_int32x2 tmp; AE_L32_IP(tmp,pP,sizeof(float32_t)); t = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp); } XT_MADDN_SX2(t,d2,z1); z1=t;
-                { ae_int32x2 tmp; AE_L32_IP(tmp,pP,sizeof(float32_t)); t = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp); } XT_MADDN_SX2(t,d2,z0); z0=t;
+                { ae_int32x2 tmp; AE_L32_IP(tmp,pP,sizeof(float32_t)); t = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp); } XT_MADDN_SX2(t,d2,z2); z2=t;
                 { ae_int32x2 tmp; AE_L32_XP(tmp,pP,-5*(int)sizeof(float32_t)); t = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp); } XT_MADDN_SX2(t,d2,z1); z1=t;
-                XT_MADDN_SX2(z1,z0,d);
+                XT_MADDN_SX2(z1,z2,d);
                 z=z1;
             }
             t=XT_CONST_S(1); XT_MADDN_SX2(t,d,z); z=t;
@@ -165,8 +165,8 @@ void vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
         {
             xtbool2 s;
             ae_int32x2 n,n0,n1;
-            xtfloatx2 x,s0,s1;
-            xtfloatx2 x0,y,z,t;
+            xtfloatx2 s0,s1,s2;
+            xtfloatx2 x0,x1,z,t;
             XT_LASX2IP(z,aX,pX);
             AE_L32X2_IP(n,pScrRd,1*sizeof(ae_int32x2));
             s=XT_OLT_SX2(z,XT_CONST_S(0));  /* extract right sign */
@@ -181,12 +181,12 @@ void vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
             n0=AE_SLLI32(n0,23);
             s0=XT_AE_MOVXTFLOATX2_FROMINT32X2(n0);
             s1=XT_AE_MOVXTFLOATX2_FROMINT32X2(n1);
-            x=XT_MUL_SX2(XT_MUL_SX2(z,s0),s1);
-            /* approx y=1/(1+x); */
-            y=XT_RECIP_SX2(XT_ADD_SX2(XT_CONST_S(1),x0));
-            t=XT_MUL_SX2(y,x);
-            XT_MOVT_SX2(y,t,s);
-            XT_SASX2IP(y,aY,pY);
+            s2=XT_MUL_SX2(XT_MUL_SX2(z,s0),s1);
+            /* approx y=1/(1+s2); */
+            x1=XT_RECIP_SX2(XT_ADD_SX2(XT_CONST_S(1),x0));
+            t=XT_MUL_SX2(x1,s2);
+            XT_MOVT_SX2(x1,t,s);
+            XT_SASX2IP(x1,aY,pY);
         }    
         AE_SA64POS_FP(aY,pY);
     }

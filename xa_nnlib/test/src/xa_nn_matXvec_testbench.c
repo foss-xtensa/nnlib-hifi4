@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -467,13 +467,24 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define MATMUL_FN_SYM8S_SYM16S(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_matmul_sym8sxsym16s_sym16s ( \
+          (WORD16 *)p_out->p, (WORD8 *) p_mat1->p, (WORD16 *)p_vec1->p, (WORD64 *)p_bias->p, \
+          cfg.rows, cfg.cols1, p_mat1->row_offset, \
+          cfg.vec_count, cfg.cols1, cfg.rows, 1, \
+          0, cfg.out_multiplier, cfg.out_shift, 0);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define MATMUL_FN_PLAIN(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
       XTPWR_PROFILER_START(0);\
       err = xa_nn_matmul_##MPREC##x##VPREC##_##OPREC ( \
           (WORD##OPREC *)p_out->p, (WORD##MPREC *) p_mat1->p, (WORD##VPREC *) p_vec1->p, (VOID *)p_bias->p, \
           cfg.rows, cfg.cols1, p_mat1->row_offset, \
-          cfg.acc_shift, cfg.bias_shift, cfg.vec_count, p_mat1->row_offset, 1, cfg.vec_count);\
+          cfg.acc_shift, cfg.bias_shift, cfg.vec_count, cfg.cols1, 1, cfg.vec_count);\
       XTPWR_PROFILER_STOP(0);\
     }
 
@@ -483,7 +494,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       err = xa_nn_matmul_f32xf32_f32( \
           (FLOAT32 *)p_out->p, (FLOAT32 *) p_mat1->p, (FLOAT32 *) p_vec1->p, (VOID *)p_bias->p, \
           cfg.rows, cfg.cols1, p_mat1->row_offset, \
-          cfg.vec_count, p_mat1->row_offset, 1, cfg.vec_count);\
+          cfg.vec_count, cfg.cols1, 1, cfg.vec_count);\
       XTPWR_PROFILER_STOP(0);\
     }
 
@@ -583,6 +594,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #if HIFI_VFPU
 #define PROCESS_MATMUL \
     MATMUL_FN_ASYM8S(-4, -4, -4) \
+    else MATMUL_FN_SYM8S_SYM16S(-5, -8, -8) \
     else MATMUL_FN_PLAIN(8, 16, 16) \
     else MATMUL_FN_PLAIN(16, 16, 16) \
     else MATMUL_FN_PLAIN_F32(-1, -1, -1) \
@@ -590,6 +602,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #else
 #define PROCESS_MATMUL \
     MATMUL_FN_ASYM8S(-4, -4, -4) \
+    else MATMUL_FN_SYM8S_SYM16S(-5, -8, -8) \
     else MATMUL_FN_PLAIN(8, 16, 16) \
     else MATMUL_FN_PLAIN(16, 16, 16) \
     else { printf("unsupported multiplication\n"); return -1;}
@@ -724,7 +737,10 @@ int xa_nn_main_process(int argc, char *argv[])
   }
   else if((cfg.mat_precision == -5) && (cfg.inp_precision == -8) && (cfg.out_precision == -8))
   {
-    if(cfg.fc == 1){
+    if(cfg.matmul == 1) {
+      sprintf(profiler_name,"matmul_sym8sxsym16s_sym16s");
+    }
+    else if(cfg.fc == 1){
       sprintf(profiler_name,"fully_connected_sym8sxsym16s_sym16s");
     }
     else{

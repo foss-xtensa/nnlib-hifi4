@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -24,14 +24,11 @@
 #include "common_fpu.h"
 #include "xa_nnlib_cnn_api.h"
 
-#define ALIGN_MEM(_sptr) (((unsigned)((_sptr)+7))&(~7))
 #define ALIGN_SIZE(n) (((n)+7)&(~7))
-#define scratch_alloc(_sptr, p, type, sz) { p = (type *)_sptr; _sptr += ALIGN_MEM(sz * sizeof(type));}
 #define CHECK_PTR(ptr, err) if(NULL == ptr) return err;
 #define CHECK_PTR_ALIGN(ptr, alignment, err) if((((unsigned)(ptr))&(alignment-1)) != 0) return err;
 
 #define  IO_PRECISION_BITS(prec) ((prec == XA_NNLIB_CNN_16bx16b || prec == XA_NNLIB_CNN_8bx16b) ? 16 : ((prec == XA_NNLIB_CNN_8bx8b)   ?  8 : -1))
-#define KER_PRECISION_BITS(prec) ((prec == XA_NNLIB_CNN_8bx8b   || prec == XA_NNLIB_CNN_8bx16b) ?  8 : ((prec == XA_NNLIB_CNN_16bx16b) ? 16 : -1))
 #define IO_PRECISION_BYTES(prec) ((prec == XA_NNLIB_CNN_16bx16b || prec == XA_NNLIB_CNN_8bx16b) ?  2 : ((prec == XA_NNLIB_CNN_8bx8b)   ?  1 : 4))
 
 /* HiFi_LE: clang warning - always true condition checks
@@ -75,19 +72,6 @@ do {                                                                            
   if((shape.shape_type == SHAPE_CUBE_WHD_T) && (shape.dim.cube.width_offset != 1))      \
     return err;                                                                         \
 } while(0)
-
-#define CHECK_MATRIX_DIMS(shape, err)                                                   \
-do {                                                                                    \
-  if((shape.shape_type != SHAPE_MATRIX_T) ||                                            \
-     (shape.dim.matrix.row_offset != shape.dim.matrix.cols))                            \
-    return err;                                                                         \
-} while(0)
-
-#define CHECK_INP_SHAPE(p_shape, type, err)                                             \
-do {                                                                                    \
-  if(p_shape->shape_type != type)                                                       \
-    return err;                                                                         \
-} while (0)
 
 #define FILL_SHAPE_MATRIX(shape, rows_shape, cols_shape)  \
 {                                                         \
@@ -604,7 +588,7 @@ int xa_nnlib_cnn_process(xa_nnlib_handle_t handle,
     CHECK_PTR_ALIGN(cnn->bias_ds_point,   8, XA_NNLIB_FATAL_MEM_ALIGN);
   }
 
-  MATCH_CUBE_DIMS(p_in_shape, config->input_shape, XA_NNLIB_CNN_CONFIG_FATAL_INVALID_INPUT_SHAPE);
+  MATCH_CUBE_DIMS(p_in_shape, config->input_shape, XA_NNLIB_CNN_EXECUTE_FATAL_INVALID_INPUT_SHAPE);
 
   inp_precision = IO_PRECISION_BITS(config->precision);
 

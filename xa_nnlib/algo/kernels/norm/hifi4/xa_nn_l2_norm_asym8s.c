@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -80,8 +80,8 @@ static inline unsigned char  AE_MOVAB2( xtbool2 b2){
     fixedpoint_half_three = AE_MOVDA32(FIXED_POINT_HALF_THREE);\
     x = AE_MOVDA32(FIXED_POINT_ONE);\
 \
-    int i = 0;\
-    for(i=0; i<5; i++)\
+    int itr = 0;\
+    for(itr=0; itr<5; itr++)\
     {\
       x2 = AE_MULFP32X2RS(x, x);\
       x3 = AE_MULFP32X2RS(x2, x);\

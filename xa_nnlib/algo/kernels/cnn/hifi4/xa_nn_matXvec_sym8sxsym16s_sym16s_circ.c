@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -644,10 +644,8 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s_circ(
     WORD32 vec_stride,
     WORD32 out_col_offset,
     WORD32 out_row_offset,
-    WORD32 mat1_offset,
     WORD32 * p_out_multiplier,
-    WORD32 * p_out_shift,
-    WORD32 out_zero_bias)
+    WORD32 * p_out_shift)
 {
   int out_stride = out_row_offset<<1;
   int out_offset = out_col_offset;

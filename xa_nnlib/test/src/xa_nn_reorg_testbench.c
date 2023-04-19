@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -67,10 +67,12 @@ typedef struct _test_config_t
   int output_shape[MAX_DIMS];  
   int pad_shape[MAX_DIMS];
   int pad_values[MAX_DIMS];
+  int permute_vec[MAX_DIMS];  
   char read_inp_shape_str[SHAPE_ARGS_LENGTH];
   char read_pad_shape_str[SHAPE_ARGS_LENGTH];
   char read_out_shape_str[SHAPE_ARGS_LENGTH];
   char read_pad_values_str[SHAPE_ARGS_LENGTH];
+  char read_permute_vec_str[SHAPE_ARGS_LENGTH];
   int block_sizes[MAX_DIMS-2];
   int crop_or_pad_sizes[2*(MAX_DIMS)-2];
   char read_block_sizes_str[SHAPE_ARGS_LENGTH];
@@ -146,12 +148,14 @@ int default_config(test_config_t *p_cfg)
     p_cfg->read_pad_shape_str[0] = '\0';
     p_cfg->read_out_shape_str[0] = '\0';
     p_cfg->read_pad_values_str[0] = '\0';
+    p_cfg->read_permute_vec_str[0] = '\0';
     int itr;
     for(itr = 0; itr < MAX_DIMS; itr++)
     {
       p_cfg->input_shape[itr] = 1;
       p_cfg->output_shape[itr] = 1;
       p_cfg->pad_values[itr] = 0;
+      p_cfg->permute_vec[itr] = 1;
     }
     for(itr = 0; itr < MAX_DIMS_FOR_STRIDED_SLICE; itr++)
     {
@@ -221,6 +225,7 @@ void show_usage(void)
     printf("\t-pad_shape: Takes the pad shape dimensions (num_pad_dims values space ' ' separated) \n");
     printf("\t-out_shape: Takes the output shape dimensions (num_out_dims values space ' ' separated) \n");
     printf("\t-pad_values: Takes the pad values (prod(pad_shape) values space ' ' separated) \n");
+    printf("\t-permute_vec: Takes the permutation values of dimentions for transpose; space ' ' separated) \n");
     printf("\t-block_sizes: Takes the block sizes((num_inp_dims-2) values space ' ' separated) for batch_to_space_nd and space_to_batch_nd kernels \n");
     printf("\t-crop_or_pad_sizes: Takes the crop sizes for batch_to_space_nd or pad sizes for space_to_batch_nd (2*(num_inp_dims-2) values space ' ' separated) \n");
 }
@@ -281,6 +286,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG_ARRAY("-inp_shape", p_cfg->input_shape, p_cfg->num_inp_dims, p_cfg->read_inp_shape_str);
     ARGTYPE_ONETIME_CONFIG_ARRAY("-pad_shape", p_cfg->pad_shape, p_cfg->num_pad_dims, p_cfg->read_pad_shape_str);
     ARGTYPE_ONETIME_CONFIG_ARRAY("-out_shape", p_cfg->output_shape, p_cfg->num_out_dims, p_cfg->read_out_shape_str);
+    ARGTYPE_ONETIME_CONFIG_ARRAY("-permute_vec", p_cfg->permute_vec, p_cfg->num_inp_dims, p_cfg->read_permute_vec_str);
     int i, num_pad_values = 1;
     for(i = 0; i < p_cfg->num_pad_dims; i++)
     {
@@ -355,6 +361,20 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define TRANSPOSE_KERNEL_FN(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_##IPREC##_##OPREC ( \
+        (WORD##OPREC *)p_out->p, \
+        (WORD32 *) p_out_shape,\
+        (WORD##IPREC *) p_inp->p, \
+        (WORD32 *) p_inp_shape,\
+        (WORD32 *) p_permute_vec, \
+        cfg.num_out_dims,\
+        cfg.num_inp_dims);\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define PROCESS_REORG \
     DEPTH_SPACE_KERNEL_FN(depth_to_space, 8, 8) \
     else DEPTH_SPACE_KERNEL_FN(space_to_depth, 8, 8) \
@@ -362,8 +382,11 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else SPACE_TO_BATCH_ND_KERNEL_FN(space_to_batch_nd, 8, 8) \
     else PAD_KERNEL_FN(pad, 8, 8) \
     else PAD_KERNEL_FN(pad, 16, 16) \
+    else PAD_KERNEL_FN(pad, 32, 32) \
     else STRIDED_SLICE_FN(strided_slice, 16, 16) \
+    else STRIDED_SLICE_FN(strided_slice, 32, 32) \
     else STRIDED_SLICE_FN(strided_slice, 8, 8) \
+    else TRANSPOSE_KERNEL_FN(transpose, 8, 8) \
     else {  printf("unsupported reorg operation\n"); return -1;}
 
 int xa_nn_main_process(int argc, char *argv[])
@@ -387,8 +410,8 @@ int xa_nn_main_process(int argc, char *argv[])
   FILE *fptr_out;
   FILE *fptr_ref;
 
-  // pad_values and shape pointers for pad kernel
-  WORD32 *p_inp_shape, *p_out_shape, *p_pad_shape, *p_pad_values;
+  // permute_vec, pad_values and shape pointers for transpose and pad kernel
+  WORD32 *p_inp_shape, *p_out_shape, *p_pad_shape, *p_pad_values, *p_permute_vec;
 
   if(default_config(&cfg))
   {
@@ -479,6 +502,22 @@ int xa_nn_main_process(int argc, char *argv[])
       out_size *= cfg.output_shape[itr]; 
     }
   }
+  else if(strcmp(cfg.kernel_name, "transpose") == 0)
+  {
+    inp_size = 1; 
+    out_size = 1;
+    /* Calculating input, output size from respective shapes for transpose */
+    pad_values_size = 1;
+    int itr;
+    for(itr = 0; itr < cfg.num_inp_dims; itr++)
+    {
+      inp_size *= cfg.input_shape[itr]; 
+    }
+    for(itr = 0; itr < cfg.num_out_dims; itr++)
+    {
+      out_size *= cfg.output_shape[itr]; 
+    }
+  }
   else
   {
     inp_size = cfg.input_height * cfg.input_width * cfg.input_channels;
@@ -536,6 +575,10 @@ int xa_nn_main_process(int argc, char *argv[])
   {
    sprintf(profiler_params,"start = [%d %d %d %d %d] stop = [%d %d %d %d %d] stride = [%d %d %d %d %d] input_shape=%s\n", cfg.start_0, cfg.start_1, cfg.start_2, cfg.start_3, cfg.start_4 , cfg.stop_0, cfg.stop_1, cfg.stop_2, cfg.stop_3, cfg.stop_4 , cfg.stride_0,cfg.stride_1,cfg.stride_2,cfg.stride_3,cfg.stride_4, cfg.read_inp_shape_str);
   }
+  else if(strcmp(cfg.kernel_name, "transpose") == 0)
+  {
+    sprintf(profiler_params, "input_shape= %s output_shape= %s permute_vec= %s\n", cfg.read_inp_shape_str, cfg.read_out_shape_str, cfg.read_permute_vec_str);
+  }
   else
   {
     sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, out_height=%d, out_width=%d, out_channels =%d",
@@ -579,6 +622,14 @@ int xa_nn_main_process(int argc, char *argv[])
     p_out_shape  = cfg.output_shape;
     p_pad_values = cfg.pad_values;
     num_pts      = out_size;
+  }
+
+  if(strcmp(cfg.kernel_name, "transpose") == 0)
+  {
+    p_inp_shape   = cfg.input_shape;
+    p_out_shape   = cfg.output_shape;
+    p_permute_vec = cfg.permute_vec;
+    num_pts       = out_size;
   }
 
   if(!strcmp(cfg.kernel_name,"depth_to_space")

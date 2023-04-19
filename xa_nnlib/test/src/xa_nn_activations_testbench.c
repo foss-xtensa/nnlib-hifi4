@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -136,8 +136,8 @@ void show_usage(void)
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-num_elements : number of elements; Default=32\n");
     printf("\t-relu_threshold : threshold for relu in Q16.15; Default=32768 (=1 in Q16.15)\n");
-    printf("\t-inp_precision : 16, 32, -1(single prec float), -3 (asym8u), -4 (asym8s) or -7 (asym16s); Default=32\n");
-    printf("\t-out_precision : 16, 32, -1(single prec float), -3 (asym8u), -4 (asym8s) or -7 (asym16s); Default=32\n");
+    printf("\t-inp_precision : 16, 32, -1(single prec float), -3 (asym8u), -4 (asym8s), -7 (asym16s) or -8 (sym16s); Default=32\n");
+    printf("\t-out_precision : 16, 32, -1(single prec float), -3 (asym8u), -4 (asym8s), -7 (asym16s) or -8 (sym16s); Default=32\n");
     printf("\t-integer_bits : number of integer bits in input for tanh_16_16 (0-6); Default=3\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-activation: sigmoid, tanh, relu, relu_std, relu1, relu6, leaky_relu, prelu, hard_swish, activation_min_max or softmax; Default=sigmoid\n");
@@ -258,6 +258,20 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define SIGMOID_SYM16s(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_vec_##KERNEL##_sym16s_sym16s\
+                (\
+                    (WORD16 *) p_out->p,\
+                    (WORD16 *) p_inp->p,\
+                    cfg.input_multiplier,\
+                    cfg.input_left_shift,\
+                    cfg.num_elements\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define TANH_ASYM8s(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -267,6 +281,20 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                     (WORD8 *) p_inp->p,\
                     cfg.zero_point,\
                     cfg.input_range_radius,\
+                    cfg.input_multiplier,\
+                    cfg.input_left_shift,\
+                    cfg.num_elements\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define TANH_SYM16s(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_vec_##KERNEL##_sym16s_sym16s\
+                (\
+                    (WORD16 *) p_out->p,\
+                    (WORD16 *) p_inp->p,\
                     cfg.input_multiplier,\
                     cfg.input_left_shift,\
                     cfg.num_elements\
@@ -530,7 +558,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else SOFTMAX_ASYM8s_16(softmax, -4, 16) \
     else SIGMOID_ASYM8(sigmoid, -3, -3) \
     else SIGMOID_ASYM8s(sigmoid, -4, -4) \
+    else SIGMOID_SYM16s(sigmoid, -8, -8) \
     else TANH_ASYM8s(tanh, -4, -4) \
+    else TANH_SYM16s(tanh, -8, -8) \
     else {  printf("unsupported activation\n"); return -1;} 
 
 
@@ -610,6 +640,10 @@ int xa_nn_main_process(int argc, char *argv[])
   else if((cfg.inp_precision == -7) && (cfg.out_precision == -7))
   {
     sprintf(profiler_name, "%s_asym16sxasym16s", cfg.activation);
+  }
+  else if((cfg.inp_precision == -8) && (cfg.out_precision == -8))
+  {
+    sprintf(profiler_name, "%s_sym16sxsym16s", cfg.activation);
   }
   else if((cfg.inp_precision == -4) && (cfg.out_precision == 16))
   {

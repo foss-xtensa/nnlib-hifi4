@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -88,6 +88,7 @@ WORD32 xa_nn_matXvec_8x16_16(
 #define LOAD_VEC2                 LOAD_VEC2_16b
 #define SETUP_BIAS                SETUP_BIAS_16b
 #define UNROLL_ADD_BIAS_ACC       ADD_BIAS_16b_ACC_FOR_8bx16b
+#if !XA_HAVE_HIFI3_CORE
 #define SETUP_VEC1_X2             SETUP_VEC1_16b_x2
 #define SETUP_VEC2_X2             SETUP_VEC2_16b_x2
 #define LOAD_VEC1_X2              LOAD_VEC1_16b_x2
@@ -96,6 +97,7 @@ WORD32 xa_nn_matXvec_8x16_16(
 #define UNROLL_SETUP_MAT2_X2      SETUP_MAT2_8b_x2
 #define UNROLL_KERNEL_MAT1_VEC1_X2    KERNEL_MAT1_VEC1_8b_16b_x2
 #define UNROLL_KERNEL_MAT2_VEC2_X2    KERNEL_MAT2_VEC2_8b_16b_x2
+#endif
 
   ADJUST_ACC_LSH_AND_BIAS_LSH_AxB_C(WORD8, WORD16, WORD16);
 
@@ -107,7 +109,9 @@ WORD32 xa_nn_matXvec_8x16_16(
     {
       for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
       {
-        SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+        SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE        
+        SETUP_VEC1_X2; SETUP_MAT1_X2;
         for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
         {
           LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -115,7 +119,6 @@ WORD32 xa_nn_matXvec_8x16_16(
         if((cols1 & (7)) !=0){
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
-
         SETUP_VEC2_X2; SETUP_MAT2_X2;
         for(c_itr = 0; c_itr < (cols2 >> 3); c_itr++)
         {
@@ -124,6 +127,18 @@ WORD32 xa_nn_matXvec_8x16_16(
         if((cols2 & (7)) !=0){
           LOAD_VEC2; KERNEL_MAT2_VEC2;
         }
+#else
+        SETUP_VEC1; SETUP_MAT1;
+        for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+        {
+          LOAD_VEC1; KERNEL_MAT1_VEC1;
+        }
+        SETUP_VEC2; SETUP_MAT2;
+        for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
+        {
+          LOAD_VEC2; KERNEL_MAT2_VEC2;
+        } 
+#endif        
         ADD_BIAS_ACC; STORE_ACC;
       }
     }
@@ -152,7 +167,9 @@ WORD32 xa_nn_matXvec_8x16_16(
     {
       for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)) ; m_itr += ROW_UNROLL)
       {
-        SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+        SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE         
+        SETUP_VEC1_X2; SETUP_MAT1_X2;
         for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
         {
           LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -160,6 +177,13 @@ WORD32 xa_nn_matXvec_8x16_16(
         if((cols1 & (7)) !=0){
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
+#else
+        SETUP_VEC1; SETUP_MAT1;
+        for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+        {
+          LOAD_VEC1; KERNEL_MAT1_VEC1;
+        }   
+#endif        
         ADD_BIAS_ACC; STORE_ACC;
       }
     }
@@ -190,6 +214,7 @@ WORD32 xa_nn_matXvec_8x16_16(
 #undef LOAD_VEC2
 #undef SETUP_BIAS
 #undef UNROLL_ADD_BIAS_ACC
+#if !XA_HAVE_HIFI3_CORE
 #undef UNROLL_SETUP_MAT1_X2
 #undef UNROLL_SETUP_MAT2_X2
 #undef UNROLL_KERNEL_MAT1_VEC1_X2
@@ -198,7 +223,7 @@ WORD32 xa_nn_matXvec_8x16_16(
 #undef SETUP_VEC2_X2
 #undef LOAD_VEC1_X2
 #undef LOAD_VEC2_X2
-
+#endif
   return 0;
 }
 
@@ -269,6 +294,7 @@ WORD32 xa_nn_matXvec_8x16_32(
 #define LOAD_VEC2                   LOAD_VEC2_16b
 #define SETUP_BIAS                  SETUP_BIAS_16b
 #define UNROLL_ADD_BIAS_ACC         ADD_BIAS_16b_ACC_FOR_8bx16b
+#if !XA_HAVE_HIFI3_CORE
 #define SETUP_VEC1_X2               SETUP_VEC1_16b_x2
 #define SETUP_VEC2_X2               SETUP_VEC2_16b_x2
 #define LOAD_VEC1_X2                LOAD_VEC1_16b_x2
@@ -277,7 +303,7 @@ WORD32 xa_nn_matXvec_8x16_32(
 #define UNROLL_SETUP_MAT2_X2        SETUP_MAT2_8b_x2
 #define UNROLL_KERNEL_MAT1_VEC1_X2  KERNEL_MAT1_VEC1_8b_16b_x2
 #define UNROLL_KERNEL_MAT2_VEC2_X2  KERNEL_MAT2_VEC2_8b_16b_x2
-
+#endif
   ADJUST_ACC_LSH_AND_BIAS_LSH_AxB_C(WORD8, WORD16, WORD32);
 
   if (p_mat2 && p_vec2)
@@ -288,7 +314,9 @@ WORD32 xa_nn_matXvec_8x16_32(
     {
       for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
       {
-        SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+        SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE        
+        SETUP_VEC1_X2; SETUP_MAT1_X2;
         for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
         {
           LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -304,6 +332,18 @@ WORD32 xa_nn_matXvec_8x16_32(
         if((cols2 & (7)) !=0){
           LOAD_VEC2; KERNEL_MAT2_VEC2;
         }
+#else
+        SETUP_VEC1; SETUP_MAT1;
+        for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+        {
+          LOAD_VEC1; KERNEL_MAT1_VEC1;
+        }
+        SETUP_VEC2; SETUP_MAT2;
+        for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
+        {
+          LOAD_VEC2; KERNEL_MAT2_VEC2;
+        } 
+#endif        
         ADD_BIAS_ACC; STORE_ACC;
       }
     }
@@ -333,7 +373,9 @@ WORD32 xa_nn_matXvec_8x16_32(
     {
       for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)) ; m_itr += ROW_UNROLL)
       {
-        SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+        SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE        
+        SETUP_VEC1_X2; SETUP_MAT1_X2;
         for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
         {
           LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -341,6 +383,13 @@ WORD32 xa_nn_matXvec_8x16_32(
         if((cols1 & (7)) !=0){
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
+#else
+        SETUP_VEC1; SETUP_MAT1;
+        for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+        {
+          LOAD_VEC1; KERNEL_MAT1_VEC1;
+        } 
+#endif        
         ADD_BIAS_ACC; STORE_ACC;
       }
     }
@@ -370,6 +419,7 @@ WORD32 xa_nn_matXvec_8x16_32(
 #undef LOAD_VEC2
 #undef SETUP_BIAS
 #undef UNROLL_ADD_BIAS_ACC
+#if !XA_HAVE_HIFI3_CORE
 #undef UNROLL_SETUP_MAT1_X2
 #undef UNROLL_SETUP_MAT2_X2
 #undef UNROLL_KERNEL_MAT1_VEC1_X2
@@ -378,7 +428,7 @@ WORD32 xa_nn_matXvec_8x16_32(
 #undef SETUP_VEC2_X2
 #undef LOAD_VEC1_X2
 #undef LOAD_VEC2_X2
-
+#endif
   return 0;
 }
 
@@ -449,6 +499,7 @@ WORD32 xa_nn_matXvec_8x16_64(
 #define LOAD_VEC2                   LOAD_VEC2_16b
 #define SETUP_BIAS                  SETUP_BIAS_16b
 #define UNROLL_ADD_BIAS_ACC         ADD_BIAS_16b_ACC_FOR_8bx16b
+#if !XA_HAVE_HIFI3_CORE
 #define SETUP_VEC1_X2               SETUP_VEC1_16b_x2
 #define SETUP_VEC2_X2               SETUP_VEC2_16b_x2
 #define LOAD_VEC1_X2                LOAD_VEC1_16b_x2
@@ -457,7 +508,7 @@ WORD32 xa_nn_matXvec_8x16_64(
 #define UNROLL_SETUP_MAT2_X2        SETUP_MAT2_8b_x2
 #define UNROLL_KERNEL_MAT1_VEC1_X2  KERNEL_MAT1_VEC1_8b_16b_x2
 #define UNROLL_KERNEL_MAT2_VEC2_X2  KERNEL_MAT2_VEC2_8b_16b_x2
-
+#endif
   if (p_mat2 && p_vec2)
   {
     /* All four pointers are non-null */
@@ -466,7 +517,9 @@ WORD32 xa_nn_matXvec_8x16_64(
     {
       for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
       {
-        SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+        SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE        
+        SETUP_VEC1_X2; SETUP_MAT1_X2;
         for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
         {
           LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -482,6 +535,18 @@ WORD32 xa_nn_matXvec_8x16_64(
         if((cols2 & (7)) !=0){
           LOAD_VEC2; KERNEL_MAT2_VEC2;
         }
+#else
+        SETUP_VEC1; SETUP_MAT1;
+        for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+        {
+          LOAD_VEC1; KERNEL_MAT1_VEC1;
+        }
+        SETUP_VEC2; SETUP_MAT2;
+        for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
+        {
+          LOAD_VEC2; KERNEL_MAT2_VEC2;
+        } 
+#endif        
         ADD_BIAS_ACC; STORE_ACC;
       }
     }
@@ -511,7 +576,9 @@ WORD32 xa_nn_matXvec_8x16_64(
     {
       for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)) ; m_itr += ROW_UNROLL)
       {
-        SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+        SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE        
+        SETUP_VEC1_X2; SETUP_MAT1_X2;
         for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
         {
           LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -519,6 +586,13 @@ WORD32 xa_nn_matXvec_8x16_64(
         if((cols1 & (7)) !=0){
           LOAD_VEC1; KERNEL_MAT1_VEC1;
         }
+#else
+        SETUP_VEC1; SETUP_MAT1;
+        for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+        {
+          LOAD_VEC1; KERNEL_MAT1_VEC1;
+        } 
+#endif        
         ADD_BIAS_ACC; STORE_ACC;
       }
     }
@@ -547,6 +621,7 @@ WORD32 xa_nn_matXvec_8x16_64(
 #undef LOAD_VEC2
 #undef SETUP_BIAS
 #undef UNROLL_ADD_BIAS_ACC
+#if !XA_HAVE_HIFI3_CORE
 #undef UNROLL_SETUP_MAT1_X2
 #undef UNROLL_SETUP_MAT2_X2
 #undef UNROLL_KERNEL_MAT1_VEC1_X2
@@ -555,7 +630,7 @@ WORD32 xa_nn_matXvec_8x16_64(
 #undef SETUP_VEC2_X2
 #undef LOAD_VEC1_X2
 #undef LOAD_VEC2_X2
-
+#endif
   return 0;
 }
 
@@ -628,6 +703,7 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
 #define SETUP_VEC2                  SETUP_VEC2_16b
 #define LOAD_VEC1                   LOAD_VEC1_16b
 #define LOAD_VEC2                   LOAD_VEC2_16b
+#if !XA_HAVE_HIFI3_CORE
 #define SETUP_VEC1_X2               SETUP_VEC1_16b_x2
 #define SETUP_VEC2_X2               SETUP_VEC2_16b_x2
 #define LOAD_VEC1_X2                LOAD_VEC1_16b_x2
@@ -636,6 +712,7 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
 #define UNROLL_SETUP_MAT2_X2        SETUP_MAT2_8b_x2
 #define UNROLL_KERNEL_MAT1_VEC1_X2  KERNEL_MAT1_VEC1_8b_16b_x2
 #define UNROLL_KERNEL_MAT2_VEC2_X2  KERNEL_MAT2_VEC2_8b_16b_x2
+#endif
 
   ADJUST_ACC_LSH_AND_BIAS_LSH_AxB_C(WORD8, WORD16, WORD32);
 
@@ -654,7 +731,9 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
           {
             for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
             {
-              SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+              SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE              
+              SETUP_VEC1_X2; SETUP_MAT1_X2;
               for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
               {
                 LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -670,6 +749,18 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
               if((cols2 & (7)) !=0){
                 LOAD_VEC2; KERNEL_MAT2_VEC2;
               }
+#else
+              SETUP_VEC1; SETUP_MAT1;
+              for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+              {
+                LOAD_VEC1; KERNEL_MAT1_VEC1;
+              }
+              SETUP_VEC2; SETUP_MAT2;
+              for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
+              {
+                LOAD_VEC2; KERNEL_MAT2_VEC2;
+              } 
+#endif              
               ADD_BIAS_ACC; STORE_ACC;
             }
           }
@@ -699,7 +790,9 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
           {
             for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)) ; m_itr += ROW_UNROLL)
             {
-              SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+              SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE              
+              SETUP_VEC1_X2; SETUP_MAT1_X2;
               for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
               {
                 LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -707,6 +800,13 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
               if((cols1 & (7)) !=0){
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
+#else
+              SETUP_VEC1; SETUP_MAT1;
+              for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+              {
+                LOAD_VEC1; KERNEL_MAT1_VEC1;
+              } 
+#endif              
               ADD_BIAS_ACC; STORE_ACC;
             }
           }
@@ -740,7 +840,9 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
           {
             for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
             {
-              SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+              SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE              
+              SETUP_VEC1_X2; SETUP_MAT1_X2;
               for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
               {
                 LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -756,6 +858,18 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
               if((cols2 & (7)) !=0){
                 LOAD_VEC2; KERNEL_MAT2_VEC2;
               }
+#else
+              SETUP_VEC1; SETUP_MAT1;
+              for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+              {
+                LOAD_VEC1; KERNEL_MAT1_VEC1;
+              }
+              SETUP_VEC2; SETUP_MAT2;
+              for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
+              {
+                LOAD_VEC2; KERNEL_MAT2_VEC2;
+              } 
+#endif              
               ADD_BIAS_ACC; STORE_ACC;
             }
           }
@@ -785,7 +899,9 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
           {
             for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)) ; m_itr += ROW_UNROLL)
             {
-              SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+              SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE              
+              SETUP_VEC1_X2; SETUP_MAT1_X2;
               for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
               {
                 LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -793,6 +909,13 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
               if((cols1 & (7)) !=0){
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
+#else
+              SETUP_VEC1; SETUP_MAT1;
+              for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+              {
+                LOAD_VEC1; KERNEL_MAT1_VEC1;
+              } 
+#endif              
               ADD_BIAS_ACC; STORE_ACC;
             }
           }
@@ -824,6 +947,7 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
 #undef SETUP_VEC2
 #undef LOAD_VEC1
 #undef LOAD_VEC2
+#if !XA_HAVE_HIFI3_CORE
 #undef UNROLL_SETUP_MAT1_X2
 #undef UNROLL_SETUP_MAT2_X2
 #undef UNROLL_KERNEL_MAT1_VEC1_X2
@@ -832,6 +956,7 @@ WORD32 xa_nn_matXvec_8x16_16_tanh(
 #undef SETUP_VEC2_X2
 #undef LOAD_VEC1_X2
 #undef LOAD_VEC2_X2
+#endif
   }
 
   xa_nn_vec_tanh_32_16((pWORD16) p_out, (pWORD32) p_scratch, rows);
@@ -908,6 +1033,7 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
 #define SETUP_VEC2                  SETUP_VEC2_16b
 #define LOAD_VEC1                   LOAD_VEC1_16b
 #define LOAD_VEC2                   LOAD_VEC2_16b
+#if !XA_HAVE_HIFI3_CORE
 #define SETUP_VEC1_X2               SETUP_VEC1_16b_x2
 #define SETUP_VEC2_X2               SETUP_VEC2_16b_x2
 #define LOAD_VEC1_X2                LOAD_VEC1_16b_x2
@@ -916,6 +1042,7 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
 #define UNROLL_SETUP_MAT2_X2        SETUP_MAT2_8b_x2
 #define UNROLL_KERNEL_MAT1_VEC1_X2  KERNEL_MAT1_VEC1_8b_16b_x2
 #define UNROLL_KERNEL_MAT2_VEC2_X2  KERNEL_MAT2_VEC2_8b_16b_x2
+#endif
 
   ADJUST_ACC_LSH_AND_BIAS_LSH_AxB_C(WORD8, WORD16, WORD32);
 
@@ -934,7 +1061,9 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
           {
             for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
             {
-              SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+              SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE              
+              SETUP_VEC1_X2; SETUP_MAT1_X2;
               for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
               {
                 LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -950,6 +1079,18 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
               if((cols2 & (7)) !=0){
                 LOAD_VEC2; KERNEL_MAT2_VEC2;
               }
+#else
+              SETUP_VEC1; SETUP_MAT1;
+              for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+              {
+                LOAD_VEC1; KERNEL_MAT1_VEC1;
+              }
+              SETUP_VEC2; SETUP_MAT2;
+              for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
+              {
+                LOAD_VEC2; KERNEL_MAT2_VEC2;
+              } 
+#endif              
               ADD_BIAS_ACC; STORE_ACC;
             }
           }
@@ -979,7 +1120,9 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
           {
             for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)) ; m_itr += ROW_UNROLL)
             {
-              SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+              SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE              
+              SETUP_VEC1_X2; SETUP_MAT1_X2;
               for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
               {
                 LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -987,6 +1130,13 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
               if((cols1 & (7)) !=0){
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
+#else
+              SETUP_VEC1; SETUP_MAT1;
+              for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+              {
+                LOAD_VEC1; KERNEL_MAT1_VEC1;
+              } 
+#endif              
               ADD_BIAS_ACC; STORE_ACC;
             }
           }
@@ -1020,7 +1170,9 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
           {
             for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)); m_itr += ROW_UNROLL)
             {
-              SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+              SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE              
+              SETUP_VEC1_X2; SETUP_MAT1_X2;
               for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
               {
                 LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -1036,6 +1188,18 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
               if((cols2 & (7)) !=0){
                 LOAD_VEC2; KERNEL_MAT2_VEC2;
               }
+#else
+              SETUP_VEC1; SETUP_MAT1;
+              for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+              {
+                LOAD_VEC1; KERNEL_MAT1_VEC1;
+              }
+              SETUP_VEC2; SETUP_MAT2;
+              for(c_itr = 0; c_itr < (cols2 >> 2); c_itr++)
+              {
+                LOAD_VEC2; KERNEL_MAT2_VEC2;
+              } 
+#endif              
               ADD_BIAS_ACC; STORE_ACC;
             }
           }
@@ -1065,7 +1229,9 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
           {
             for(m_itr = 0; m_itr < (rows & ~(ROW_UNROLL-1)) ; m_itr += ROW_UNROLL)
             {
-              SETUP_ACC; SETUP_VEC1_X2; SETUP_MAT1_X2;
+              SETUP_ACC; 
+#if !XA_HAVE_HIFI3_CORE              
+              SETUP_VEC1_X2; SETUP_MAT1_X2;
               for(c_itr = 0; c_itr < (cols1 >> 3); c_itr++)
               {
                 LOAD_VEC1_X2; KERNEL_MAT1_VEC1_X2;
@@ -1073,6 +1239,13 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
               if((cols1 & (7)) !=0){
                 LOAD_VEC1; KERNEL_MAT1_VEC1;
               }
+#else
+              SETUP_VEC1; SETUP_MAT1;
+              for(c_itr = 0; c_itr < (cols1 >> 2); c_itr++)
+              {
+                LOAD_VEC1; KERNEL_MAT1_VEC1;
+              } 
+#endif              
               ADD_BIAS_ACC; STORE_ACC;
             }
           }
@@ -1103,6 +1276,7 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
 #undef SETUP_VEC2
 #undef LOAD_VEC1
 #undef LOAD_VEC2
+#if !XA_HAVE_HIFI3_CORE
 #undef UNROLL_SETUP_MAT1_X2
 #undef UNROLL_SETUP_MAT2_X2
 #undef UNROLL_KERNEL_MAT1_VEC1_X2
@@ -1111,6 +1285,7 @@ WORD32 xa_nn_matXvec_8x16_16_sigmoid(
 #undef SETUP_VEC2_X2
 #undef LOAD_VEC1_X2
 #undef LOAD_VEC2_X2
+#endif
   }
 
   xa_nn_vec_sigmoid_32_16((pWORD16) p_out, (pWORD32) p_scratch, rows);

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -23,10 +23,6 @@
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_err_chk.h"
 
-
-#define ALIGNMENT   8   /* 8 bytes alignment */
-
-#define ALIGN_PTR(x, bytes)     ((((unsigned)(x))+(bytes-1))&(~(bytes-1)))
 
 #if XCHAL_HAVE_HIFI1
 #define MAX_16X4(id1, id0) \
@@ -60,18 +56,6 @@
 
 #endif
 
-
-#define STORE_8X4_FROM_16X4(out_ptr, val){\
-    int o1, o2, o3, o4;\
-    o1 = AE_MOVAD16_3(val);\
-    o2 = AE_MOVAD16_2(val);\
-    o3 = AE_MOVAD16_1(val);\
-    o4 = AE_MOVAD16_0(val);\
-    *out_ptr++ = (WORD8)o1;\
-    *out_ptr++ = (WORD8)o2;\
-    *out_ptr++ = (WORD8)o3;\
-    *out_ptr++ = (WORD8)o4;\
-}
 
 #define MAX_WORD16 (int)0x00007fff
 #define MIN_WORD16 (int)0xffff8000
@@ -356,7 +340,6 @@ WORD32 xa_nn_vec_relu_std_16_16(
 #define CONSTANT_TERM             (0x70f6)
 #define CONSTANT_1_OVER_3         (0x2aab)
 #define CONSTANT_1_OVER_8         (0x1000)
-#define ONE_QUATER_Q12            (0x400) // Q3.12
 #define Q15_ONE                   (0x7fff)
 #define CONSTANT_48_OVER_17       (23130)
 #define CONSTANT_NEG_32_OVER_17   (-15420)
@@ -399,7 +382,7 @@ WORD32 xa_nn_vec_relu_std_16_16(
 
 #define GEMMLOWP_EXP_BARREL_SHIFTER_16X4(out_1, fract_bits, exponent, FixedPointMultiplier, remainder1)\
 { \
-  ae_int16x4 out1, mask1, scale;\
+  ae_int16x4 out2, mask1, scale;\
   ae_int16x4 d16_fpm;\
   xtbool4 bit_set;\
   \
@@ -409,19 +392,19 @@ WORD32 xa_nn_vec_relu_std_16_16(
   bit_set = AE_LT16(zero16, mask1);\
   \
   d16_fpm = AE_MOVDA16(FixedPointMultiplier); \
-  out1 = AE_MULFP16X4RAS(out_1, d16_fpm);\
-  AE_MOVT16X4(out_1, out1, bit_set);\
+  out2 = AE_MULFP16X4RAS(out_1, d16_fpm);\
+  AE_MOVT16X4(out_1, out2, bit_set);\
 }
 
 #define EXP_INP16_Q12_X4(y1, inp1)\
 { \
   /*xtbool4 b; */\
-  ae_int16x4 x_in1, x2, remainder1;\
+  ae_int16x4 x_in1, x0, remainder1;\
   ae_int16x4 a_mod_quater_minus_q_1_by_4_first;\
   ae_int16x4 q_1_by_4 = AE_SLAI16S1(ONE, 12-2); /* 1/4 in Q12 */\
   \
-  x2 = AE_AND16(inp1, AE_SUB16(q_1_by_4, ONE));\
-  a_mod_quater_minus_q_1_by_4_first = AE_SUB16(x2, q_1_by_4);\
+  x0 = AE_AND16(inp1, AE_SUB16(q_1_by_4, ONE));\
+  a_mod_quater_minus_q_1_by_4_first = AE_SUB16(x0, q_1_by_4);\
   x_in1 = AE_SLAI16S1(a_mod_quater_minus_q_1_by_4_first, 3);\
   \
   EXP_ON_INTERVAL_BETWEEN_NEGATIVE_ONE_QUARTER_AND_0_EXCL_16X4(y1, x_in1)\
@@ -646,12 +629,12 @@ WORD32 xa_nn_vec_sigmoid_16_16(WORD16 *p_out,         /* result, Q0.15     */
 {\
   /* exp(2x) so calculation happens in Q(fract_bits-1) format */ \
   /* xtbool4 b; */\
-  ae_int16x4 x_in1, x2, remainder1;\
+  ae_int16x4 x_in1, x0, remainder1;\
   ae_int16x4 a_mod_quater_minus_q_1_by_4_first;\
   ae_int16x4 q_1_by_4 = AE_SLAA16S1(ONE, (fract_bits-1)-2); /* 1/4 in Q(fract_bits+1) */\
   \
-  x2 = AE_AND16(inp1, AE_SUB16(q_1_by_4, ONE));\
-  a_mod_quater_minus_q_1_by_4_first = AE_SUB16(x2, q_1_by_4);\
+  x0 = AE_AND16(inp1, AE_SUB16(q_1_by_4, ONE));\
+  a_mod_quater_minus_q_1_by_4_first = AE_SUB16(x0, q_1_by_4);\
   x_in1 = AE_SLAA16S1(a_mod_quater_minus_q_1_by_4_first, 15-(fract_bits-1));\
   \
   EXP_ON_INTERVAL_BETWEEN_NEGATIVE_ONE_QUARTER_AND_0_EXCL_16X4(y1, x_in1)\

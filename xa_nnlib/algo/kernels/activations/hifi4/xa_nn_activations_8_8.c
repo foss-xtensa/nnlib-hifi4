@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -22,8 +22,6 @@
 #include "xa_type_def.h"
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_err_chk.h"
-
-#define ALIGNMENT   8   /* 8 bytes alignment */
 
 #define ALIGN_PTR(x, bytes)     ((((unsigned)(x))+(bytes-1))&(~(bytes-1)))
 

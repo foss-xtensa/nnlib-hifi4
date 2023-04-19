@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -91,7 +91,6 @@ void vec_softmaxf    (float32_t * y, const float32_t * x,int N)
     }
     if (N&1)
     {
-        xtfloatx2 t;
         t=XT_LSI((const xtfloat*)pX,0);
         xmax=XT_MAX_SX2(xmax,t);
     }

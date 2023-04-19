@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -52,17 +52,6 @@
         else\
         {\
             ptr = (WORD32 *)p_zeros_mem;\
-        }
-
-#define INCR_ROW_IF_WIDTH_16(ptr, width, row_size) \
-        if(width)\
-        { \
-            INCR_N_ROW(ptr, 1, row_size);\
-            width--;\
-        }\
-        else\
-        {\
-            ptr = (WORD16 *)p_zeros_mem;\
         }
 
 /* Average pooling without using extra copy of input data

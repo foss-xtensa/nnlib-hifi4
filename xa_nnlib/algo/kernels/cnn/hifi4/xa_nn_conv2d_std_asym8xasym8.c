@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -205,7 +205,6 @@ WORD32 xa_nn_conv2d_std_asym8xasym8(
       ,input_channels
       ,kernel_height
       ,kernel_width
-      ,x_stride
       ,y_stride
       ,y_padding
       ,out_height

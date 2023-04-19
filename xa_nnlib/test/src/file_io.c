@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -274,6 +274,31 @@ int load_conv2d_ds_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, bu
     read_buf1D_from_file(fptr_inp, p_kernel_point);                  
     read_buf1D_from_file(fptr_inp, p_bias_point);                  
   }                                                                                  
+  return 0;
+}
+
+int load_dilated_conv2d_depth_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp,
+    buf2D_t *p_kernel, buf1D_t *p_bias, int kernel_pad_val)
+{
+  if(write_file)
+  {
+    /* Set random input data */
+    set_rand_inp_buf1D(p_inp);
+    set_rand_inp_buf2D(p_kernel);
+    set_rand_inp_buf1D(p_bias);
+
+    /* Write input data into file */                                                 
+    write_buf1D_to_file(fptr_inp, p_inp);
+    write_buf2D_to_file(fptr_inp, p_kernel);
+    write_buf1D_to_file(fptr_inp, p_bias);
+  }
+  else
+  {
+    /* Read input data from file */
+    read_buf1D_from_file(fptr_inp, p_inp);
+    read_buf2D_from_file(fptr_inp, p_kernel, kernel_pad_val);
+    read_buf1D_from_file(fptr_inp, p_bias);
+  }
   return 0;
 }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -32,3 +32,8 @@
 #endif /* __XA_NNLIB_LEGACY_COMPAT_H__ */
 
 #define RI9_HWVERSION 281090
+#if (XCHAL_HAVE_HIFI3 && !(XCHAL_HAVE_HIFI1 || XCHAL_HAVE_HIFI3Z || XCHAL_HAVE_HIFI4 || XCHAL_HAVE_HIFI5))
+#define XA_HAVE_HIFI3_CORE 1
+#else
+#define XA_HAVE_HIFI3_CORE 0
+#endif

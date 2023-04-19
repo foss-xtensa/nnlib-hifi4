@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -57,16 +57,6 @@ const FLOAT32* __restrict__ p_inp,
         if(height) \
         { \
             INCR_N_ROW(ptr, 1); \
-            height--; \
-        }
-
-#define CIRC_INCR_N_ROW(ptr, n) \
-    AE_ADDCIRC16X4_XC((ae_int16x4 *)ptr, (n * input_width) * sizeof(FLOAT32));
-
-#define CIRC_INCR_ROW_IF_HEIGHT(ptr, height) \
-        if(height) \
-        { \
-            CIRC_INCR_N_ROW(ptr, 1); \
             height--; \
         }
 
@@ -347,13 +337,6 @@ const FLOAT32* __restrict__ p_inp,
     {
         err = xa_nn_maxpool_init(-1
                 ,p_scratch
-                ,input_width
-                ,kernel_height
-                ,kernel_width
-                ,x_stride
-                ,y_stride
-                ,x_padding
-                ,out_width
                 );
         if(err<0)
             return err;

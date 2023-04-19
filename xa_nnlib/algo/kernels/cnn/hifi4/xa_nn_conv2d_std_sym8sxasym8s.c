@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -462,7 +462,7 @@ WORD32 xa_nn_dilated_conv2d_std_per_chan_sym8sxasym8s(
                   (void*)p_state, (void*)p_kernel,
                    input_height, input_channels,
                    kernel_height_dilation, kernel_width,
-                   x_stride, y_stride, y_padding,
+                   y_stride, y_padding,
                    out_height, out_channels,
                    dilation_height, dilation_h_offset,
                    PREC_ASYM8S, PREC_ASYM8S); //dilation
@@ -473,7 +473,7 @@ WORD32 xa_nn_dilated_conv2d_std_per_chan_sym8sxasym8s(
 			  WORD32 planesToAdd = (kernel_width - x_stride_dilated);
 			  planesToAdd = (planesToAdd>0) ? planesToAdd : 0;
 			  //xa_nn_dilated_conv2d_std_load_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, p_state, -input_zero_bias, dilation_height, dilation_h_offset, dilation_width, dilation_w_offset, x_padding, &input_padding_consumed, &input_width_consumed, planesToAdd,1,&circMatrixHeight, widthIndexIteration, x_stride_dilated, heightIndexIteration,y_stride_dilated);
-			  xa_nn_dilated_conv2d_std_load_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, p_state, -input_zero_bias, dilation_height, dilation_h_offset, dilation_width, dilation_w_offset, x_padding, &input_padding_consumed, &input_width_consumed, planesToAdd,1,&circMatrixHeight, adjustZpAndOffsetIndex, x_stride_dilated, heightIndexIteration,y_stride_dilated);
+			  xa_nn_dilated_conv2d_std_load_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, (VOID**)&pp_inp, p_state, -input_zero_bias, dilation_height, dilation_h_offset, dilation_width, dilation_w_offset, x_padding, &input_padding_consumed, &input_width_consumed, planesToAdd,1,&circMatrixHeight, adjustZpAndOffsetIndex, x_stride_dilated, heightIndexIteration);
 
 			  ///output index addition corresponding to left padding
 			  /*
@@ -501,7 +501,7 @@ WORD32 xa_nn_dilated_conv2d_std_per_chan_sym8sxasym8s(
 				  if(planesToAdd>kernel_width)
 					  planesToAdd = kernel_width;
 				  //xa_nn_dilated_conv2d_std_load_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, p_state, -input_zero_bias, dilation_height, dilation_h_offset, dilation_width, dilation_w_offset, x_padding, &input_padding_consumed, &input_width_consumed, planesToAdd,0,&circMatrixHeight, widthIndexIteration, x_stride_dilated, heightIndexIteration,y_stride_dilated);
-				  xa_nn_dilated_conv2d_std_load_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, p_state, -input_zero_bias, dilation_height, dilation_h_offset, dilation_width, dilation_w_offset, x_padding, &input_padding_consumed, &input_width_consumed, planesToAdd,0,&circMatrixHeight, adjustZpAndOffsetIndex, x_stride_dilated, heightIndexIteration,y_stride_dilated);
+				  xa_nn_dilated_conv2d_std_load_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, (VOID**)&pp_inp, p_state, -input_zero_bias, dilation_height, dilation_h_offset, dilation_width, dilation_w_offset, x_padding, &input_padding_consumed, &input_width_consumed, planesToAdd,0,&circMatrixHeight, adjustZpAndOffsetIndex, x_stride_dilated, heightIndexIteration);
 
 #ifdef polyphase_debug
 			  p_buff_circ_deb = p_state->cir_buf.p_curr;
@@ -602,7 +602,7 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxasym8s(
       ,input_channels
       ,kernel_height
       ,kernel_width
-      ,x_stride,y_stride
+      ,y_stride
       ,y_padding
       ,out_height
       ,out_channels
@@ -614,11 +614,20 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxasym8s(
   WORD32 out_width_offset = out_data_format ? 1 : out_channels;
 
   WORD32 x_padding_var = x_padding;
+  WORD32 input_channels_pad;
 
 #if !ENABLE_PADDING_CONV2D_STD
-  WORD32 input_channels_pad = input_channels;
+  input_channels_pad = input_channels;
 #else
-  WORD32 input_channels_pad = PADDED_SIZE(input_channels, (ALIGNMENT>>1));
+#if HW_AE_ADDCIRC16X4_XC
+  if(input_channels == 1){
+    input_channels_pad = 1;
+  }
+  else
+#endif
+  {
+    input_channels_pad = PADDED_SIZE(input_channels, (ALIGNMENT>>1));
+  }
 #endif
 
   /* When kernel convolves over x-left pad region only */

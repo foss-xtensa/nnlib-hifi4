@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -339,12 +339,6 @@ const WORD16* __restrict__ p_inp,
     {
         xa_nn_avgpool_init(16,
                 p_scratch,
-                input_width,
-                kernel_height,
-                kernel_width,
-                x_stride,
-                y_stride,
-                x_padding,
                 out_height,
                 out_width);
 

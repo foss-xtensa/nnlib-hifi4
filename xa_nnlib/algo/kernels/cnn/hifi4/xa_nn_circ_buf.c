@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -73,10 +73,8 @@ VOID xa_nn_circ_buf_nchw_init(
     pVOID p_mem,
     WORD32 bytewidth,
     WORD32 input_width,
-    WORD32 kernel_height,
     WORD32 kernel_width,
     WORD32 x_stride,
-    WORD32 y_stride,
     WORD32 x_padding,
     WORD32 circ_buf_height,
     WORD32 output_width,
@@ -372,6 +370,46 @@ int xa_nn_circ_buf_nhwc_getsize(
   }
 }
 
+int xa_nn_dilated_circ_buf_nhwc_getsize(
+    WORD32 bytewidth,
+    WORD32 input_height,
+    WORD32 input_channels,
+    WORD32 kernel_height,
+    WORD32 kernel_width,
+    WORD32 channels_multiplier,
+    WORD32 dilation_height,
+    WORD32 y_stride,
+    WORD32 y_padding,
+    WORD32 output_height)
+{
+  int circ_buf_height, circ_buf_channels;
+  int size_in_bytes;
+
+  circ_buf_height = kernel_height + ((output_height - 1) * y_stride);
+//  circ_buf_height = XT_MAX(circ_buf_height, y_padding + input_height);
+  circ_buf_height = XT_MAX(circ_buf_height, (y_padding + input_height + dilation_height - 1)/dilation_height);
+
+  if(bytewidth == 4)
+  {
+    circ_buf_channels = ALIGNED_SIZE(input_channels*channels_multiplier, 2);
+  }
+  else
+  {
+    circ_buf_channels = ALIGNED_SIZE(input_channels*channels_multiplier, 4);
+  }
+
+  size_in_bytes = bytewidth*circ_buf_height*circ_buf_channels*kernel_width;
+
+  if (0 > size_in_bytes)
+  {
+    return -1;
+  }
+  else
+  {
+    return size_in_bytes;
+  }
+}
+
 VOID xa_nn_circ_buf_nhwc_init(
     xa_nn_circ_buf_t *p_circ_buf,
     pVOID p_mem,
@@ -389,6 +427,42 @@ VOID xa_nn_circ_buf_nhwc_init(
 
   circ_buf_height = kernel_height + ((output_height - 1) * y_stride);
   circ_buf_height = XT_MAX(circ_buf_height, y_padding + input_height);
+  /* No. of row in circular buf */
+  p_circ_buf->rows       = circ_buf_height*kernel_width;
+  if(bytewidth == 4)
+  {
+    p_circ_buf->row_offset = ALIGNED_SIZE(input_channels*channels_multiplier, 2);
+  }
+  else
+  {
+    p_circ_buf->row_offset = ALIGNED_SIZE(input_channels*channels_multiplier, 4);
+  }
+  p_circ_buf->bytewidth  = bytewidth;
+  /* Initialize circular buffer pointers */
+  p_circ_buf->p_begin    = p_mem;
+  p_circ_buf->p_curr     = p_mem;
+  p_circ_buf->p_end      = (((char *)p_mem) + p_circ_buf->rows*p_circ_buf->row_offset*bytewidth);
+}
+
+VOID xa_nn_dilated_circ_buf_nhwc_init(
+    xa_nn_circ_buf_t *p_circ_buf,
+    pVOID p_mem,
+    WORD32 bytewidth,
+    WORD32 input_height,
+    WORD32 input_channels,
+    WORD32 kernel_height,
+    WORD32 kernel_width,
+    WORD32 channels_multiplier,
+    WORD32 dilation_height,
+    WORD32 y_stride,
+    WORD32 y_padding,
+    WORD32 output_height)
+{
+  int circ_buf_height;
+
+  circ_buf_height = kernel_height + ((output_height - 1) * y_stride);
+//  circ_buf_height = XT_MAX(circ_buf_height, y_padding + input_height);
+  circ_buf_height = XT_MAX(circ_buf_height, (y_padding + input_height + dilation_height - 1)/dilation_height);
   /* No. of row in circular buf */
   p_circ_buf->rows       = circ_buf_height*kernel_width;
   if(bytewidth == 4)
@@ -597,7 +671,8 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
 #pragma loop_count min=1
         for(j = 0; j < circ_buf_height; j++)
         {
-            int k = 0, loop_count = p_circ_buf->row_offset >> 2;
+            k = 0;
+            int loop_count = p_circ_buf->row_offset >> 2;
             ae_int32 *p_ae_dst = (ae_int32 *)p_dst;
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                              | (pad_val_u8 << 8)
@@ -616,7 +691,8 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
         AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, (i+left_pad)*p_circ_buf->row_offset);
         for(j = 0; j < top_padding; j++)
         {
-            int k = 0, loop_count = p_circ_buf->row_offset >> 2;
+            k = 0;
+            int loop_count = p_circ_buf->row_offset >> 2;
             ae_int32 *p_ae_dst = (ae_int32 *)p_dst;
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                          | (pad_val_u8 << 8)
@@ -657,7 +733,8 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
         }
         for(j = 0; j < (circ_buf_height-input_height-top_padding); j++)
         {
-            int k = 0, loop_count = p_circ_buf->row_offset >> 2;
+            k = 0;
+            int loop_count = p_circ_buf->row_offset >> 2;
             ae_int32 *p_ae_dst = (ae_int32 *)p_dst;
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                          | (pad_val_u8 << 8)
@@ -676,7 +753,8 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
 #pragma loop_count min=1
         for(j = 0; j < circ_buf_height; j++)
         {
-            int k = 0, loop_count = p_circ_buf->row_offset >> 2;
+            k = 0;
+            int loop_count = p_circ_buf->row_offset >> 2;
             ae_int32 *p_ae_dst = (ae_int32 *)p_dst;
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                              | (pad_val_u8 << 8)
@@ -689,4 +767,298 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
     }
     /* Update current pointer for circular buffer */
     AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, (n_cols-circ_buf_width)*p_circ_buf->row_offset);
+}
+
+
+void xa_nn_dilated_circ_buf_nhwc_add_cols(
+    xa_nn_circ_buf_t *p_circ_buf,
+    const VOID *p_inp,
+    WORD32 top_padding,
+    WORD32 input_height,
+    WORD32 input_width,
+    WORD32 input_channels,
+    WORD32 kernel_height,
+    WORD32 circ_buf_width,
+    WORD32 channels_multiplier,
+    WORD32 dilation_height,
+    WORD32 dilation_width,
+    WORD32 y_stride,
+    WORD32 y_padding,
+    WORD32 output_height,
+    WORD32 n_cols,
+    WORD32 left_pad,
+    WORD32 right_pad)
+{
+    int i, j, k;
+    int circ_buf_height;
+    int bytewidth = p_circ_buf->bytewidth;
+
+    circ_buf_height = kernel_height + ((output_height - 1) * y_stride);
+    circ_buf_height = XT_MAX(circ_buf_height, (y_padding + input_height + dilation_height - 1)/dilation_height);
+
+    AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, circ_buf_width*p_circ_buf->row_offset*bytewidth);
+    const WORD8 *p_src = (const WORD8 *)p_inp;
+    pWORD8 p_dst = (pWORD8)p_circ_buf->p_curr;
+
+    /* Add left padding */
+    for(i = 0; i < left_pad; i += dilation_width)
+    {
+        p_dst = (pWORD8)p_circ_buf->p_curr;
+#pragma loop_count min=1
+        for(j = 0; j < circ_buf_height; j++)
+        {
+            memset(p_dst, 0, p_circ_buf->row_offset*bytewidth);
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+        }
+        AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, p_circ_buf->row_offset*bytewidth);
+    }
+    /* Add input strips */
+    /* Padding in depth dimension doesn't need to be initialized as output doesn't depend on it */
+    if(channels_multiplier == 1)
+    {
+        for(; i < n_cols - right_pad; i += dilation_width)
+        {
+            p_dst = (pWORD8)p_circ_buf->p_curr;
+            for(j = 0; j < top_padding; j += dilation_height)
+            {
+                memset(p_dst, 0, p_circ_buf->row_offset*bytewidth);
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+            }
+            pWORD8 p_src1 = (pWORD8)(&p_src[((j - top_padding)*input_width + i-left_pad)*input_channels*bytewidth]);
+            for(; j < top_padding + input_height; j += dilation_height)
+            {
+                memcpy(p_dst, p_src1, input_channels*bytewidth);
+                p_src1 += dilation_height*input_width*input_channels*bytewidth;
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+            }
+            for(; j < (circ_buf_height*dilation_height); j += dilation_height)
+            {
+                memset(p_dst, 0, p_circ_buf->row_offset*bytewidth);
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+            }
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, p_circ_buf->row_offset*bytewidth);
+        }
+    }
+    else
+    {
+        for(; i < n_cols - right_pad; i += dilation_width)
+        {
+            p_dst = (pWORD8)p_circ_buf->p_curr;
+            for(j = 0; j < top_padding; j += dilation_height)
+            {
+                memset(p_dst, 0, p_circ_buf->row_offset*bytewidth);
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+            }
+            WORD32 cm;
+            if(bytewidth == 1)
+            {
+                for(; j < top_padding + input_height; j += dilation_height)
+                {
+                    const WORD8 *p_src1 = p_src;
+                    pWORD8 p_dst1 = p_dst;
+                    for(k = 0; k < input_channels; k++)
+                    {
+                        WORD8 val = p_src1[((j - top_padding)*input_width + i - left_pad)*input_channels + k];
+                        for(cm = 0; cm < channels_multiplier; cm++)
+                        {
+                            p_dst1[k*channels_multiplier + cm] = val;
+                        }
+                    }
+                    AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+                }
+            }
+            else if(bytewidth == 2)
+            {
+                for(; j < top_padding + input_height; j += dilation_height)
+                {
+                    const WORD16 *p_src1 = (const WORD16 *)p_src;
+                    pWORD16 p_dst1 = (pWORD16)p_dst;
+                    for(k = 0; k < input_channels; k++)
+                    {
+                        WORD16 val = p_src1[((j - top_padding)*input_width + i - left_pad)*input_channels + k];
+                        for(cm = 0; cm < channels_multiplier; cm++)
+                        {
+                            p_dst1[k*channels_multiplier + cm] = val;
+                        }
+                    }
+                    AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+                }
+            }
+            else if(bytewidth == 4)
+            {
+                for(; j < top_padding + input_height; j += dilation_height)
+                {
+                    const WORD32 *p_src1 = (const WORD32 *)p_src;
+                    pWORD32 p_dst1 = (pWORD32)p_dst;
+                    for(k = 0; k < input_channels; k++)
+                    {
+                        WORD32 val = p_src1[((j - top_padding)*input_width + i - left_pad)*input_channels + k];
+                        for(cm = 0; cm < channels_multiplier; cm++)
+                        {
+                            p_dst1[k*channels_multiplier + cm] = val;
+                        }
+                    }
+                    AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+                }
+            }
+            for(; j < circ_buf_height*dilation_height; j += dilation_height)
+            {
+                memset(p_dst, 0, p_circ_buf->row_offset*bytewidth);
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+            }
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, p_circ_buf->row_offset*bytewidth);
+        }
+    }
+    /* Add right padding */
+    for(; i < n_cols; i += dilation_width)
+    {
+        p_dst = (pWORD8)p_circ_buf->p_curr;
+#pragma loop_count min=1
+        for(j = 0; j < circ_buf_height; j++)
+        {
+            memset(p_dst, 0, p_circ_buf->row_offset*bytewidth);
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width*bytewidth);
+        }
+        AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, p_circ_buf->row_offset*bytewidth);
+    }
+    /* Update current pointer for circular buffer */
+    AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, (-circ_buf_width)*p_circ_buf->row_offset*bytewidth);
+}
+
+/* Trying to adapt non-dilated hifi4 code to dilated one */
+void xa_nn_dilated_circ_buf_nhwc_add_cols_with_pad_val(
+    xa_nn_circ_buf_t *__restrict__ p_circ_buf,
+    const VOID *__restrict__ p_inp,
+    WORD32 top_padding,
+    WORD32 input_height,
+    WORD32 input_width,
+    WORD32 input_channels,
+    WORD32 kernel_height,
+    WORD32 circ_buf_width,
+    WORD32 channels_multiplier,
+    WORD32 dilation_height,
+    WORD32 dilation_width,
+    WORD32 y_stride,
+    WORD32 y_padding,
+    WORD32 output_height,
+    WORD32 n_cols,
+    WORD32 left_pad,
+    WORD32 right_pad,
+    pVOID  p_pad_val)
+{
+    int i, j, k;
+    int circ_buf_height;
+    UWORD8 pad_val_u8 = *(UWORD8 *)p_pad_val;
+
+    circ_buf_height = kernel_height + ((output_height - 1) * y_stride);
+    circ_buf_height = XT_MAX(circ_buf_height, (y_padding + input_height + dilation_height - 1)/dilation_height );
+
+    AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, circ_buf_width*p_circ_buf->row_offset);
+    const WORD8 *p_src = (const WORD8 *)p_inp;
+    pWORD8 p_dst = (pWORD8)p_circ_buf->p_curr;
+
+    /* Add left padding */
+    for(i = 0; i < left_pad; i+= dilation_width)
+    {
+        p_dst = (pWORD8)p_circ_buf->p_curr;
+#pragma loop_count min=1
+        for(j = 0; j < circ_buf_height; j++)
+        {
+            k = 0;
+            int loop_count = p_circ_buf->row_offset >> 2;
+            ae_int32 *p_ae_dst = (ae_int32 *)p_dst;
+            ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
+                                             | (pad_val_u8 << 8)
+                                             | (pad_val_u8 << 16)
+                                             | (pad_val_u8 << 24));
+            for(k = 0; k < loop_count; k++)
+                p_ae_dst[k] = pad_val_32;
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
+        }
+        AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, p_circ_buf->row_offset);
+    }
+    /* Add input strips */
+    /* Padding in depth dimension doesn't need to be initialized as output doesn't depend on it */
+    for(; i < n_cols - right_pad; i+= dilation_width)
+    {
+        p_dst = (pWORD8)p_circ_buf->p_curr;
+        for(j = 0; j < top_padding; j+= dilation_height)
+        {
+            k = 0;
+            int loop_count = p_circ_buf->row_offset >> 2;
+            ae_int32 *p_ae_dst = (ae_int32 *)p_dst;
+            ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
+                                         | (pad_val_u8 << 8)
+                                         | (pad_val_u8 << 16)
+                                         | (pad_val_u8 << 24));
+            for(k = 0; k < loop_count; k++)
+                p_ae_dst[k] = pad_val_32;
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
+        }
+        if(channels_multiplier == 1)
+        {
+          pWORD8 p_src1 = (pWORD8)(&p_src[((j - top_padding)*input_width + i-left_pad)*input_channels]);
+
+          for(; j < top_padding+input_height; j+=dilation_height)
+          {
+            xa_nn_memcpy(p_dst, p_src1, input_channels);
+            p_src1 +=  dilation_height*input_width * input_channels;
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset * circ_buf_width);
+          }
+        }
+        else
+        {
+          for(; j < top_padding + input_height; j+=dilation_height)
+          {
+            const WORD8 *p_src1 = p_src;
+            pWORD8 p_dst1 = p_dst;
+            for(k = 0; k < input_channels; k++)
+            {
+              WORD8 val = p_src1[((j - top_padding)*input_width + i - left_pad)*input_channels + k];
+              WORD32 cm;
+              for(cm = 0; cm < channels_multiplier; cm++)
+              {
+                p_dst1[k*channels_multiplier + cm] = val;
+              }
+            }
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
+          }
+        }
+        for(; j < (circ_buf_height*dilation_height); j+= dilation_height)
+        {
+            k = 0;
+            int loop_count = p_circ_buf->row_offset >> 2;
+            ae_int32 *p_ae_dst = (ae_int32 *)p_dst;
+            ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
+                                         | (pad_val_u8 << 8)
+                                         | (pad_val_u8 << 16)
+                                         | (pad_val_u8 << 24));
+            for(k = 0; k < loop_count; k++)
+                p_ae_dst[k] = pad_val_32;
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
+        }
+        AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, p_circ_buf->row_offset);
+    }
+    /* Add right padding */
+    for(; i < n_cols; i+=dilation_width)
+    {
+        p_dst = (pWORD8)p_circ_buf->p_curr;
+#pragma loop_count min=1
+        for(j = 0; j < circ_buf_height; j++)
+        {
+            k = 0;
+            int loop_count = p_circ_buf->row_offset >> 2;
+            ae_int32 *p_ae_dst = (ae_int32 *)p_dst;
+            ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
+                                             | (pad_val_u8 << 8)
+                                             | (pad_val_u8 << 16)
+                                             | (pad_val_u8 << 24));
+            for(k = 0; k < loop_count; k++)
+              p_ae_dst[k] = pad_val_32;
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
+        }
+        AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, p_circ_buf->row_offset);
+    }
+    /* Update current pointer for circular buffer */
+    AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, (-circ_buf_width)*p_circ_buf->row_offset);
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -21,8 +21,6 @@
 ******************************************************************************/
 #include <stddef.h>
 #include "xa_nnlib_common.h"
-
-#define ZERO64   AE_MOVINT64_FROMINT32X2(AE_MOVDA32(0))
 
 #if defined(CUST_UNROLL) && (CUST_UNROLL != 0)
 #define UNROLL_D CUST_UNROLL

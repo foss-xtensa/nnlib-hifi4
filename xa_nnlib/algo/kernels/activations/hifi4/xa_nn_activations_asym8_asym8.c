@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -24,8 +24,6 @@
 #include "xa_nnlib_err_chk.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nnlib_common_macros.h"
-
-#define ALIGNMENT   8   /* 8 bytes alignment */
 
 #define ALIGN_PTR(x, bytes)     ((((unsigned)(x))+(bytes-1))&(~(bytes-1)))
 
@@ -135,12 +133,12 @@
 // calculates exp for inp < 0
 #define EXP_Q26(y, inp)\
 {\
-    xtbool2 b;\
-    ae_int32x2 x_in, x2, remainder;\
+    xtbool2 b0;\
+    ae_int32x2 x_in, x0, remainder;\
     ae_int32x2 a_mod_quater_minus_q_1_by_4;\
 \
-    x2 = AE_AND32(inp, mask_6fs);\
-    a_mod_quater_minus_q_1_by_4 = AE_SUB32(x2, q_1_by_4);\
+    x0 = AE_AND32(inp, mask_6fs);\
+    a_mod_quater_minus_q_1_by_4 = AE_SUB32(x0, q_1_by_4);\
     x_in = AE_SLAI32(a_mod_quater_minus_q_1_by_4, 4);\
 \
     EXP_ON_INTERVAL_BETWEEN_NEGATIVE_ONE_QUARTER_AND_0_EXCL(y, x_in)\
@@ -154,8 +152,8 @@
     GEMMLOWP_EXP_BARREL_SHIFTER(y,2, 39332535,    remainder);\
     GEMMLOWP_EXP_BARREL_SHIFTER(y,3, 720401,      remainder);\
 \
-    b = AE_EQ32(inp, zero);\
-    AE_MOVT32X2(y, AE_MOVDA32(Q31), b);\
+    b0 = AE_EQ32(inp, zero);\
+    AE_MOVT32X2(y, AE_MOVDA32(Q31), b0);\
 }
 
 //extern ae_int32x2 one_over_one_plus_x_for_x_in_0_1(ae_int64 a);
@@ -170,7 +168,7 @@
     ae_int32x2 one_minus_half_denominator_times_x1;\
     ae_int32x2 one_minus_half_denominator_times_x2;\
     ae_int32x2 CT_48_by_7, CT_neg_32_by_7, CT_F2_ONE;\
-    int i;\
+    int j;\
 \
     CT_48_by_7 = AE_MOVDA32(constant_48_over_17);\
     CT_neg_32_by_7 = AE_MOVDA32(constant_neg_32_over_17);\
@@ -200,7 +198,7 @@
     m2 = AE_MULFP32X2RS(half_den34, CT_neg_32_by_7);\
     x2 = AE_ADD32S(m2, CT_48_by_7);\
 \
-    for(i=0; i<3; i++)\
+    for(j=0; j<3; j++)\
     {\
         half_denominator_times_x1 = AE_MULFP32X2RS(x1, half_den12);\
         one_minus_half_denominator_times_x1 = AE_SUB32S(CT_F2_ONE, half_denominator_times_x1);\
@@ -508,7 +506,7 @@ static const int Q31_minus_1 = 0x7fffffff;
   ae_int32x2 one_minus_half_denominator_times_x1;\
   ae_int32x2 one_minus_half_denominator_times_x2;\
   ae_int32x2 CT_48_by_7, CT_neg_32_by_7, CT_F2_ONE;\
-  int i;\
+  int j;\
 \
   CT_48_by_7 = AE_MOVDA32(constant_48_over_17);\
   CT_neg_32_by_7 = AE_MOVDA32(constant_neg_32_over_17);\
@@ -537,7 +535,7 @@ static const int Q31_minus_1 = 0x7fffffff;
   x1 = AE_ADD32S(m1, CT_48_by_7);\
   x2 = AE_ADD32S(m2, CT_48_by_7);\
 \
-  for(i=0; i<3; i++)\
+  for(j=0; j<3; j++)\
   {\
     half_denominator_times_x1 = AE_MULFP32X2RAS(x1, half_den12);\
     half_denominator_times_x2 = AE_MULFP32X2RAS(x2, half_den34);\
@@ -597,11 +595,11 @@ static const int Q31_minus_1 = 0x7fffffff;
 #define EXP_Q26_S(y1, inp1)\
 {\
   xtbool2 b;\
-  ae_int32x2 x_in1, x2, remainder1;\
+  ae_int32x2 x_in1, x0, remainder1;\
   ae_int32x2 a_mod_quater_minus_q_1_by_4_first;\
 \
-  x2 = AE_AND32(inp1, mask_6fs);\
-  a_mod_quater_minus_q_1_by_4_first = AE_SUB32(x2, q_1_by_4);\
+  x0 = AE_AND32(inp1, mask_6fs);\
+  a_mod_quater_minus_q_1_by_4_first = AE_SUB32(x0, q_1_by_4);\
   x_in1 = AE_SLAI32(a_mod_quater_minus_q_1_by_4_first, 4);\
 \
   EXP_ON_INTERVAL_BETWEEN_NEGATIVE_ONE_QUARTER_AND_0_EXCL_S(y1, x_in1)\
@@ -1840,7 +1838,7 @@ WORD32 xa_nn_vec_hard_swish_asym8s_asym8s( WORD8 * __restrict__ p_out,
   ae_int32x2 one_minus_half_denominator_times_x1;\
   ae_int32x2 one_minus_half_denominator_times_x2;\
   ae_int32x2 CT_48_by_7, CT_neg_32_by_7, CT_F2_ONE;\
-  int i;\
+  int j;\
 \
   CT_48_by_7 = AE_MOVDA32(constant_48_over_17);\
   CT_neg_32_by_7 = AE_MOVDA32(constant_neg_32_over_17);\
@@ -1869,7 +1867,7 @@ WORD32 xa_nn_vec_hard_swish_asym8s_asym8s( WORD8 * __restrict__ p_out,
   x1 = AE_ADD32S(m1, CT_48_by_7);\
   x2 = AE_ADD32S(m2, CT_48_by_7);\
 \
-  for(i=0; i<3; i++)\
+  for(j=0; j<3; j++)\
   {\
     half_denominator_times_x1 = AE_MULFP32X2RAS(x1, half_den12);\
     half_denominator_times_x2 = AE_MULFP32X2RAS(x2, half_den34);\

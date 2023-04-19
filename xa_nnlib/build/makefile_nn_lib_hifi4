@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -93,7 +93,8 @@ ACTIVATIONSO2OBJS = \
   xa_nn_softmax_asym8_asym8.o \
   xa_nn_activations_8_8.o \
   xa_nn_activations_16_16.o \
-  xa_nn_activations_asym16_asym16.o
+  xa_nn_activations_asym16_asym16.o \
+  xa_nn_activations_sym16_sym16.o
 
 
 NDSPO2OBJS = \
@@ -165,7 +166,9 @@ CONVO2OBJS = \
     xa_nn_conv2d_std_sym8sxsym16s.o \
     xa_nn_conv2d_pointwise_sym8sxsym16s.o \
     xa_nn_matXvec_sym8sxsym16s_sym16s_circ.o \
-    xa_nn_transpose_conv_sym8sxsym16s.o
+    xa_nn_transpose_conv_circ_buf.o \
+    xa_nn_transpose_conv_sym8sxsym16s.o\
+    xa_nn_transpose_conv_f32.o
 
 FCO2OBJS = \
   xa_nn_fully_connected.o
@@ -210,6 +213,7 @@ BASICOBJS = \
     xa_nn_elm_mul_f32.o\
     xa_nn_elm_add_quant8.o\
     xa_nn_elm_mul_quant8.o\
+    xa_nn_elm_mul_quant16.o\
     xa_nn_elm_sub_quant8.o\
     xa_nn_elm_minmax_8.o\
     xa_nn_elm_quantize.o\
@@ -238,7 +242,8 @@ BASICOBJS = \
     xa_nn_memset_f32.o \
     xa_nn_elm_sub_quant16.o \
     xa_nn_elm_add_quant16.o \
-	xa_nn_elm_squared_diff_quant8.o
+    xa_nn_elm_squared_diff_quant8.o \
+    xa_nn_lstm_utils.o
 
 NORMO2OBJS = \
   xa_nn_l2_norm_f32.o \
@@ -251,8 +256,11 @@ REORGO2OBJS = \
   xa_nn_space_to_batch_nd_8.o \
   xa_nn_pad_8.o \
   xa_nn_pad_16.o \
+  xa_nn_pad_32.o \
+  xa_nn_stride_slice_int32.o \
   xa_nn_stride_slice_int16.o \
-  xa_nn_stride_slice_int8.o
+  xa_nn_stride_slice_int8.o \
+	xa_nn_transpose_8.o
 
 
 LIBO2OBJS = $(MATXVECO2OBJS) $(ACTIVATIONSO2OBJS) $(NDSPO2OBJS) $(CONVO2OBJS) $(FCO2OBJS) $(POOLO2OBJS) $(GRUO2OBJS) $(LSTMO2OBJS) $(CNNO2OBJS) $(BASICOBJS) $(NORMO2OBJS) $(REORGO2OBJS)

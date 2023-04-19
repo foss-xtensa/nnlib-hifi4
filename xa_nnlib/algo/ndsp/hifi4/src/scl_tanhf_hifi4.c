@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -62,7 +62,6 @@
 #include "pow2f_tbl.h"
 
 /* If non-zero, set errno and raise floating-point exceptions on errors. */
-#define TANHF_ERRH   1
 #if 0
 float32_t halfexpf(float32_t* dy, float32_t x );
 #endif

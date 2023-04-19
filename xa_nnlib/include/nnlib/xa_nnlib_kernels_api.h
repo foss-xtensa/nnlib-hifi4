@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -805,6 +805,20 @@
 			int *output_shift, int *output_multiplier,
 			WORD64* scratch_buffer);
 
+    WORD32 xa_nn_transpose_conv_f32(
+            FLOAT32* output_data,
+            const FLOAT32* input_data,
+            const FLOAT32* filter_data,
+            const FLOAT32* bias_data,
+            int stride_width, int stride_height,
+            int pad_width, int pad_height,
+            int input_depth, int output_depth,
+            int input_height, int input_width,
+            int filter_height, int filter_width,
+            int output_height, int output_width,
+            int num_elements,
+            FLOAT32* scratch_buffer);
+
 	WORD32 xa_nn_conv1d_std_getsize(
 			WORD32 kernel_height,
 			WORD32 input_width,
@@ -1048,6 +1062,25 @@
 		 ,WORD32 inp_data_format
 		);
 
+	WORD32 xa_nn_dilated_conv2d_depthwise_getsize
+		(WORD32 input_height
+		 ,WORD32 input_width
+		 ,WORD32 input_channels
+		 ,WORD32 kernel_height
+		 ,WORD32 kernel_width
+		 ,WORD32 channels_multiplier
+         ,WORD32 dilation_height
+         ,WORD32 dilation_width
+		 ,WORD32 x_stride
+		 ,WORD32 y_stride
+		 ,WORD32 x_padding
+		 ,WORD32 y_padding
+		 ,WORD32 output_height
+		 ,WORD32 output_width
+		 ,WORD32 circ_buf_precision
+		 ,WORD32 inp_data_format
+		);
+
 	WORD32 xa_nn_conv2d_depthwise_8x8
 		(pWORD8 __restrict__ p_out
 		 ,const WORD8 *__restrict__ p_kernel
@@ -1083,6 +1116,29 @@
 			WORD32  kernel_height,
 			WORD32  kernel_width,
 			WORD32  channels_multiplier,
+			WORD32  x_stride,
+			WORD32  y_stride,
+			WORD32  x_padding,
+			WORD32  y_padding,
+			WORD32  out_height,
+			WORD32  out_width,
+			WORD32  inp_data_format,
+			WORD32  out_data_format,
+			pVOID p_scratch);
+
+	WORD32 xa_nn_dilated_conv2d_depthwise_f32(
+			FLOAT32* __restrict__ p_out,
+			const FLOAT32* __restrict__ p_kernel,
+			const FLOAT32* __restrict__ p_inp,
+			const FLOAT32* __restrict__ p_bias,
+			WORD32  input_height,
+			WORD32  input_width,
+			WORD32  input_channels,
+			WORD32  kernel_height,
+			WORD32  kernel_width,
+			WORD32  channels_multiplier,
+            WORD32  dilation_height,
+            WORD32  dilation_width,
 			WORD32  x_stride,
 			WORD32  y_stride,
 			WORD32  x_padding,
@@ -1480,6 +1536,12 @@
 			WORD32 input_left_shift,
 			WORD32 vec_length);
 
+	WORD32 xa_nn_vec_sigmoid_sym16s_sym16s(WORD16 *p_out,
+			const WORD16 *p_vec,
+			WORD32 input_multiplier,
+			WORD32 input_left_shift,
+			WORD32 vec_length);
+
 	int get_softmax_scratch_size(int inp_precision, int out_precision, int length);
 
 	WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
@@ -1560,6 +1622,12 @@
 			const WORD8 *p_vec,
 			WORD32 zero_point,
 			WORD32 input_range_radius,
+			WORD32 input_multiplier,
+			WORD32 input_left_shift,
+			WORD32 vec_length);
+
+	WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
+			const WORD16 *p_vec,
 			WORD32 input_multiplier,
 			WORD32 input_left_shift,
 			WORD32 vec_length);
@@ -1769,6 +1837,23 @@
 			const WORD32* __restrict__ p_out_shift,
 			WORD32 out_zero_bias);
 
+	WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
+			WORD16 * __restrict__ p_out,
+			const WORD8 * __restrict__ p_mat1,
+			const WORD16 * __restrict__ p_vec1,
+			const WORD64 * __restrict__ p_bias,
+			WORD32 rows,
+			WORD32 cols1,
+			WORD32 row_stride1,
+			WORD32 vec_count,
+			WORD32 vec_offset,
+			WORD32 out_offset,
+			WORD32 out_stride,
+			WORD32 vec1_zero_bias,
+			WORD32 out_multiplier,
+			WORD32 out_shift,
+			WORD32 out_zero_bias);
+
 	WORD32 xa_nn_conv2d_depthwise_asym8uxasym8u(
 			pUWORD8 __restrict__ p_out,
 			const UWORD8 *__restrict__ p_kernel,
@@ -1835,6 +1920,33 @@
 			WORD32  inp_data_format,
 			WORD32  out_data_format,
 			pVOID p_scratch);
+
+    WORD32 xa_nn_dilated_conv2d_depthwise_per_chan_sym8sxasym8s
+      (pWORD8 __restrict__ p_out
+      ,const WORD8 *__restrict__ p_kernel
+      ,const WORD8 *__restrict__ p_inp
+      ,const WORD32 *__restrict__ p_bias
+      ,WORD32  input_height
+      ,WORD32  input_width
+      ,WORD32  input_channels
+      ,WORD32  kernel_height
+      ,WORD32  kernel_width
+      ,WORD32  channels_multiplier
+      ,WORD32  dilation_height
+      ,WORD32  dilation_width
+      ,WORD32  x_stride
+      ,WORD32  y_stride
+      ,WORD32  x_padding
+      ,WORD32  y_padding
+      ,WORD32  out_height
+      ,WORD32  out_width
+      ,WORD32  input_zero_bias
+      ,const WORD32 *p_out_multiplier
+      ,const WORD32 *p_out_shift
+      ,WORD32  out_zero_bias
+      ,WORD32  inp_data_format
+      ,WORD32  out_data_format
+      ,pVOID p_scratch);
 
         WORD32 xa_nn_conv2d_depthwise_per_chan_sym8sxsym16s(
                         pWORD16 __restrict__ p_out
@@ -2018,6 +2130,11 @@
             WORD32  inp2_multiplier,
             WORD32  left_shift);
 
+    WORD32 xa_nn_elm_add_16x16_16(WORD16 * __restrict__ p_out,
+            const WORD16 * __restrict__ p_inp1,
+            const WORD16 * __restrict__ p_inp2,
+            WORD32 num_elm);
+
     WORD32 xa_nn_elm_sub_broadcast_4D_asym16sxasym16s_asym16s(WORD16 * __restrict__ p_out,
             const WORD32 *const p_out_shape,
             WORD32  out_zero_bias,
@@ -2036,6 +2153,13 @@
             WORD32  inp2_left_shift,
             WORD32  inp2_multiplier,
             WORD32  left_shift);
+
+	WORD32 xa_nn_elm_sub_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+            const WORD32 *const p_out_shape,
+            const FLOAT32 * __restrict__ p_inp1,
+            const WORD32 *const p_inp1_shape,
+            const FLOAT32 * __restrict__ p_inp2,
+            const WORD32 *const p_inp2_shape);
 
 	WORD32 xa_nn_elm_sub_asym8uxasym8u_asym8u(UWORD8 * __restrict__ p_out,
 			WORD32  out_zero_bias,
@@ -2128,6 +2252,28 @@
             const WORD32 *const p_inp2_shape,
             WORD32  inp2_zero_bias);
 
+      WORD32 xa_nn_elm_mul_broadcast_4D_sym16sxsym16s_sym16s(WORD16 * __restrict__ p_out,
+              const WORD32 *const p_out_shape,
+              WORD32  out_zero_bias,
+              WORD32  out_shift,
+              WORD32  out_activation_min,
+              WORD32  out_activation_max,
+              const    WORD16 * __restrict__ p_inp1,
+              const WORD32 *const p_inp1_shape,     
+              const    WORD16 * __restrict__ p_inp2,
+              const WORD32 *const p_inp2_shape
+              );
+
+	WORD32 xa_nn_elm_mul_sym16sxsym16s_asym8s(WORD8 * __restrict__ p_out,
+            WORD32  out_zero_bias,
+            WORD32  out_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const    WORD16 * __restrict__ p_inp1,
+            const    WORD16 * __restrict__ p_inp2,
+            WORD32  num_elm);
+
     WORD32 xa_nn_elm_squared_diff_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
             const WORD32 *const p_out_shape,
             WORD32  out_zero_bias,
@@ -2146,6 +2292,15 @@
             WORD32  inp2_left_shift,
             WORD32  inp2_multiplier,
             WORD32  left_shift);
+
+    WORD32 xa_nn_lstm_cell_state_update_16(WORD16* p_cell_state,
+            const WORD16* p_forget_gate,
+            const WORD16* p_cell_gate,
+            const WORD16* p_input_gate,
+            WORD32 cell_to_forget_shift,
+            WORD32 cell_to_input_shift,
+            WORD32 clip,
+            WORD32 num_elms);
 
 	WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
 			const WORD16 * __restrict__ p_inp,
@@ -2193,7 +2348,19 @@
 			FLOAT32  inp_scale,
 			WORD32   num_elm);
 	
+	WORD32 xa_nn_elm_dequantize_asym16s_f32(FLOAT32 * __restrict__ p_out,
+			const WORD16 * __restrict__ p_inp,
+			WORD32   inp_zero_bias,
+			FLOAT32  inp_scale,
+			WORD32   num_elm);
+
     WORD32 xa_nn_elm_quantize_f32_asym8s(WORD8 * __restrict__ p_out,
+			const FLOAT32 * __restrict__ p_inp,
+			FLOAT32  out_scale,
+			WORD32   out_zero_bias,
+			WORD32   num_elm);
+
+    WORD32 xa_nn_elm_quantize_f32_asym16s(WORD16 * __restrict__ p_out,
 			const FLOAT32 * __restrict__ p_inp,
 			FLOAT32  out_scale,
 			WORD32   out_zero_bias,
@@ -2523,6 +2690,30 @@
 			,WORD32 num_pad_dims
 			,WORD32 pad_value);
 
+	WORD32 xa_nn_pad_32_32(
+			WORD32 * __restrict__ p_out
+			,const WORD32 *const p_out_shape
+			,const WORD32 * __restrict__ p_inp
+			,const WORD32 *const p_inp_shape
+			,const WORD32 * __restrict__ p_pad_values
+			,const WORD32 *const p_pad_shape
+			,WORD32 num_out_dims
+			,WORD32 num_inp_dims
+			,WORD32 num_pad_dims
+			,WORD32 pad_value);
+
+	WORD32 xa_nn_strided_slice_int32(WORD32 * __restrict__ p_out,
+			const   WORD32 * __restrict__ p_inp,
+			WORD32 start_0, WORD32 stop_0,
+			WORD32 start_1, WORD32 stop_1,
+			WORD32 start_2, WORD32 stop_2,
+			WORD32 start_3, WORD32 stop_3,
+			WORD32 start_4, WORD32 stop_4,
+			WORD32 stride_0, WORD32 stride_1,
+			WORD32 stride_2, WORD32 stride_3, WORD32 stride_4,
+			WORD32 dims_1, WORD32 dims_2,
+			WORD32 dims_3, WORD32 dims_4);			
+
 	WORD32 xa_nn_strided_slice_int16(WORD16 * __restrict__ p_out,
 			const   WORD16 * __restrict__ p_inp,
 			WORD32 start_0, WORD32 stop_0,
@@ -2547,6 +2738,13 @@
 			WORD32 dims_1, WORD32 dims_2,
 			WORD32 dims_3, WORD32 dims_4);
 
+  WORD32 xa_nn_transpose_8_8(WORD8 * __restrict__ p_out
+                    ,const WORD32 *const p_out_shape
+                    ,const WORD8 * __restrict__ p_inp
+                    ,const WORD32 *const p_inp_shape
+                    ,const WORD32 * __restrict__ p_permute_vec
+                    ,WORD32 num_out_dims
+                    ,WORD32 num_inp_dims);
 
 
 	/* Mapping the functions names from previous naming convension for backward compatibility */

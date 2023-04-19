@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -23,18 +23,6 @@
 #include "xa_nnlib_common.h"
 #include "xa_nn_maxpool_state.h"
 
-#define STORE_8X4_FROM_16X4(out_ptr, val){\
-    int o1, o2, o3, o4;\
-    o1 = AE_MOVAD16_3(val);\
-    o2 = AE_MOVAD16_2(val);\
-    o3 = AE_MOVAD16_1(val);\
-    o4 = AE_MOVAD16_0(val);\
-    *out_ptr++ = (UWORD8)o1;\
-    *out_ptr++ = (UWORD8)o2;\
-    *out_ptr++ = (UWORD8)o3;\
-    *out_ptr++ = (UWORD8)o4;\
-}
-
 #if XCHAL_HAVE_HIFI1
 
 #define MAX_16X4(out, id2, id1, id0) {\
@@ -53,9 +41,6 @@
 }
 
 #endif
-
-#define INCR_N_PLANE_1(ptr, n, plane_size) \
-    ptr = (ptr) + ((n) * (plane_size));
 
 #define INCR_N_PLANE(ptr, n, plane_size) \
     ptr = (ptr) + ((n) * (plane_size));

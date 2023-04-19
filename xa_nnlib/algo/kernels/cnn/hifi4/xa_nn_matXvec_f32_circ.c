@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -42,15 +42,7 @@ DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_matXvec_f32_circ,(
 #endif
 #define ROW_UNROLL 4
 
-#define INCREMENT_IN_BYTES_FOR_FLOAT32      sizeof(FLOAT32)
 #define INCREMENT_IN_BYTES_FOR_FLOAT32x2    2*sizeof(FLOAT32)
-
-#define SETUP_ACC_BATCH_VEC_UNROLL(idx_row)     UNROLL_SETUP_ACC_BATCH(idx_row,0)   UNROLL_SETUP_ACC_BATCH(idx_row,1)
-#define KERNEL_MAT_VEC_BATCH_VEC_UNROLL(idx_row)   UNROLL_KERNEL_MAT_VEC_BATCH(idx_row,0)     UNROLL_KERNEL_MAT_VEC_BATCH(idx_row,1)
-#define ADD_BIAS_BATCH_ACC_VEC_UNROLL(idx_row)      UNROLL_ADD_BIAS_ACC_BATCH(idx_row,0)     UNROLL_ADD_BIAS_ACC_BATCH(idx_row,1)
-#define STORE_ACC_BATCH_VEC_UNROLL(idx_row)     UNROLL_STORE_ACC_BATCH(idx_row,0)     UNROLL_STORE_ACC_BATCH(idx_row,1)
-
-
 
 #define SETUP_ACC_BATCH_ROW_FOR_f32(idx_row)\
     SETUP_ACC_BATCH_VEC_UNROLL(idx_row);
@@ -66,7 +58,8 @@ DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_matXvec_f32_circ,(
 
 #define SETUP_VEC_OFFSET_BATCH_f32(idx_vec)\
     xtfloatx2 _xtfloatx2_vec_batch_ ##idx_vec  = (xtfloatx2)0.0f ; \
-    xtfloatx2 *_xtfloatx2_p_vec_batch_ ##idx_vec  = (xtfloatx2 *)(&p_vec[(vec_itr + idx_vec)*vec_offset]);
+    xtfloatx2 *_xtfloatx2_p_vec_batch_ ##idx_vec  = (xtfloatx2 *)(&p_vec[(vec_itr + idx_vec)*vec_offset]); \
+    ae_valign _xtfloatx2_vec_batch_aligned_ ##idx_vec = AE_LA64_PP(_xtfloatx2_p_vec_batch_ ##idx_vec);
 
 #define SETUP_BIAS_BATCH_ROW_FOR_f32(idx_row)\
     SETUP_BIAS_BATCH_VEC_UNROLL(idx_row);
@@ -75,7 +68,7 @@ DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_matXvec_f32_circ,(
     xtfloat _xtfloat_bias_ ##idx_row ##_ ##idx_vec = p_bias[(vec_itr + idx_vec)]; \
 
 #define LOAD_VEC_BATCH_f32(idx_vec) \
-    XT_LSX2IP(_xtfloatx2_vec_batch_ ##idx_vec, _xtfloatx2_p_vec_batch_ ##idx_vec, INCREMENT_IN_BYTES_FOR_FLOAT32x2);
+    XT_LASX2IP(_xtfloatx2_vec_batch_ ##idx_vec, _xtfloatx2_vec_batch_aligned_ ##idx_vec, _xtfloatx2_p_vec_batch_ ##idx_vec);
 
 #define LOAD_ROW_MAT_f32(idx) \
     XT_LSX2XC(_xtfloatx2_mat_ ## idx, _xtfloatx2_p_mat_ ## idx, INCREMENT_IN_BYTES_FOR_FLOAT32x2);
@@ -119,19 +112,14 @@ DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_matXvec_f32_circ,(
 
 /* ==================================================================================================== */
 #undef SETUP_MAT
-#undef STORE_ACC
 #if (ROW_UNROLL == 1)
 #define SETUP_MAT           UNROLL_SETUP_MAT(0)
-#define STORE_ACC           UNROLL_STORE_ACC(0)
 #elif (ROW_UNROLL == 2)
 #define SETUP_MAT           UNROLL_SETUP_MAT(0)           UNROLL_SETUP_MAT(1)
-#define STORE_ACC           UNROLL_STORE_ACC(0)           UNROLL_STORE_ACC(1)
 #elif (ROW_UNROLL == 4)
 #define SETUP_MAT           UNROLL_SETUP_MAT(0)           UNROLL_SETUP_MAT(1)           UNROLL_SETUP_MAT(2)           UNROLL_SETUP_MAT(3)
-#define STORE_ACC           UNROLL_STORE_ACC(0)           UNROLL_STORE_ACC(1)           UNROLL_STORE_ACC(2)           UNROLL_STORE_ACC(3)
 #elif (ROW_UNROLL == 8)
 #define SETUP_MAT           UNROLL_SETUP_MAT(0)           UNROLL_SETUP_MAT(1)           UNROLL_SETUP_MAT(2)           UNROLL_SETUP_MAT(3)           UNROLL_SETUP_MAT(4)           UNROLL_SETUP_MAT(5)           UNROLL_SETUP_MAT(6)           UNROLL_SETUP_MAT(7)
-#define STORE_ACC           UNROLL_STORE_ACC(0)           UNROLL_STORE_ACC(1)           UNROLL_STORE_ACC(2)           UNROLL_STORE_ACC(3)           UNROLL_STORE_ACC(4)           UNROLL_STORE_ACC(5)           UNROLL_STORE_ACC(6)           UNROLL_STORE_ACC(7)
 #endif /* (ROW_UNROLL == 1) */
 
 #if (ROW_UNROLL == 4 && VEC_UNROLL == 2)

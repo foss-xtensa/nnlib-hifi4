@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -214,7 +214,7 @@ WORD32 xa_nn_conv1d_std_8x16(
   for(j=0;j<out_height-out_height_over_y_pad-out_height_over_y_b_pad;j++)
   {
     // Add y_stride x input_channelsXwidth_pad new planes to circular buffer
-    conv1d_std_update_cir_buf(input_channels, input_channelsXwidth_pad, input_bytewidth, input_width, input_height, kernel_height, y_stride, y_padding_var, y_b_pad, (VOID**)&pp_inp, idx_beg_inp_height_pad, p_state);
+    conv1d_std_update_cir_buf(input_channels, input_channelsXwidth_pad, input_bytewidth, input_width, input_height, kernel_height, y_stride, y_padding_var, (VOID**)&pp_inp, idx_beg_inp_height_pad, p_state);
 
     // Update index to input width padded
     idx_beg_inp_height_pad += y_stride;

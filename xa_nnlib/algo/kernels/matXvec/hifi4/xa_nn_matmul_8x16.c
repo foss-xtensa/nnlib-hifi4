@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -193,11 +193,9 @@ WORD32 xa_nn_matmul_8x16_16(
     {
         #define ROW_UNROLL 2
         #define VEC_UNROLL 2
-        #define UNROLL_ROW_SETUP_ACC_BATCH          SETUP_ACC_BATCH_ROW_FOR_8bx16b
         #define UNROLL_SETUP_ACC_BATCH              SETUP_ACC_BATCH_FOR_8bx16b
         #define SETUP_BIAS                          SETUP_BIAS_16b
         #define LOAD_BIAS                           LOAD_BIAS_16b_FOR_8bx16b_MATMUL
-        #define UNROLL_ROW_ADD_BIAS_ACC             ADD_BIAS_BATCH_ROW_16b_ACC_FOR_8bx16b_MATMUL
         #define UNROLL_ADD_BIAS_ACC_BATCH           ADD_BIAS_BATCH_16b_ACC_FOR_8bx16b_MATMUL
         if(vec_count > VEC_UNROLL)
         {

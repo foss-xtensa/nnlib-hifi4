@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -35,7 +35,7 @@ typedef enum _xa_nnlib_lstm_param_id_t
   XA_NNLIB_LSTM_BIAS                   = 3,             // GET/SET biases
   XA_NNLIB_LSTM_INPUT_SHAPE            = 4,             // GET input shape information
   XA_NNLIB_LSTM_OUTPUT_SHAPE           = 5,             // GET output shape information
-  XA_NNLIB_LSTM_CELL_SHAPE             = 6              // GET cell shape information
+  XA_NNLIB_LSTM_CELL_SHAPE             = 6              // GET cell shape information. Not Supported.
 } xa_nnlib_lstm_param_id_t;
 
 /* I/O Precision Settings */

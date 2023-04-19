@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -114,8 +114,8 @@
   accu2_ ##N = AE_SLAA64S(accu2_ ##N , acc_shift);\
   ae_int32 temp_var_ ##N = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu1_ ##N),24),-24)); \
   ae_int32 temp1_var_ ##N = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu2_ ##N),24),-24)); \
-  (*((WORD8 *) p_dst1 + (row+N) * out_row_offset )) = (*((UWORD32 *)&temp_var_ ##N)); \
-  (*((WORD8 *) p_dst2 + (row+N) * out_row_offset )) = (*((UWORD32 *)&temp1_var_ ##N));
+  (*((WORD8 *) p_dst1 + (row+N) * out_row_offset )) =(WORD8)(*((UWORD32 *)&temp_var_ ##N)); \
+  (*((WORD8 *) p_dst2 + (row+N) * out_row_offset )) =(WORD8)(*((UWORD32 *)&temp1_var_ ##N));
 #endif
 
 #if (UNROLL_D == 1)
@@ -205,7 +205,7 @@
   accu1_ ##N = AE_ADD64(accu1_ ##N , temp1_ ##N);\
   accu1_ ##N = AE_SLAA64S(accu1_ ##N , acc_shift);\
   ae_int32 temp_var_ ##N = AE_MOVINT16_FROMINT32(AE_SLAA32S(AE_SLAA32S(AE_ROUND32F64SSYM(accu1_ ##N),24),-24)); \
-  (*((WORD8 *) p_dst1 + (row+N) * out_row_offset )) = (*((UWORD32 *)&temp_var_ ##N));
+  (*((WORD8 *) p_dst1 + (row+N) * out_row_offset )) =(WORD8)(*((UWORD32 *)&temp_var_ ##N));
 #endif
 
 #if (UNROLL_S == 1)

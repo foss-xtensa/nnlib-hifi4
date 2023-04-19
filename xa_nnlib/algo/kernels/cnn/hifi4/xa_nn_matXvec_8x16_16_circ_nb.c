@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -59,6 +59,8 @@
   p_out[(row+N)*out_offset] = AE_MOVINT16_FROMINT16X4(AE_SAT16X4(sat_acc1_ ##N, sat_acc1_ ##N)); \
 
 #else
+
+#if !XA_HAVE_HIFI3_CORE
 #define KERNEL_ROW_S_TAIL(N) \
 { \
   ae_int16x4 temp_in1; \
@@ -91,6 +93,24 @@
   AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
   AE_MULAAAAQ16(accu1_ ##N, temp_src2, temp_in1_I);\
 }
+#else/* !XA_HAVE_HIFI3_CORE */
+
+#define KERNEL_ROW_S_I_TAIL KERNEL_ROW_S_I
+#define KERNEL_ROW_S(N) \
+{ \
+  ae_int16x4 temp_in1; \
+  AE_L8X4F_IP(temp_in1, p_mat1_ ##N, 4); \
+  AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
+}
+#define KERNEL_ROW_S_I(N) \
+{ \
+  ae_int16x4 temp_in1; \
+  AE_L8X4F_IP(temp_in1, p_mat1_ ##N, 4); \
+  AE_L16X4_XC(temp_src1, p_src1, 8); \
+  AE_MULAAAAQ16(accu1_ ##N, temp_src1, temp_in1);\
+}
+
+#endif/* !XA_HAVE_HIFI3_CORE */
 #define STORE_ROW_S(N) \
   accu1_ ##N = AE_SLAA64S(accu1_ ##N , -8);\
   ae_int64 temp1_ ##N = p_bias[row+N];            \
@@ -137,7 +157,7 @@ WORD32 xa_nn_matXvec_8x16_16_circ_nb(
   WORD32 bias_shift,
   WORD32 acc_shift)
 {
-#if XCHAL_HAVE_HIFI1
+#if (XCHAL_HAVE_HIFI1 || XA_HAVE_HIFI3_CORE)
   WORD32 row, col;
   ae_int16x4 temp_src1;
 

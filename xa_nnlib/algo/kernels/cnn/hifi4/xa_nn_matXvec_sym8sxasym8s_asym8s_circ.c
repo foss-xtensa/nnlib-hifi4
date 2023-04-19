@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2022 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -46,10 +46,6 @@ AE_S8_0_XP_HIFI1(AE_MOVINT16X4_FROMINT32X2(val32), dst, stride);\
 #define AE_S8_FROM32_WITHSTRIDE(val32, dst, stride) \
   *dst = (WORD8)val32; \
 dst += stride;
-
-#define AE_S8_FROM32(val32, dst, index) \
-  dst[index] = (WORD8)val32;
-
 
 #if XCHAL_HAVE_HIFI1
 static inline void _xa_nn_dot_product_1row_4vec_mat_vecs_4bytes_aligned
@@ -1023,7 +1019,8 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
   }
   else if(p_mat1 && p_vec1 && p_bias)
   {
-#if !ENABLE_PADDING_CONV2D_STD
+//#if !ENABLE_PADDING_CONV2D_STD
+#if HW_AE_ADDCIRC16X4_XC
     vec_itr = 0; 
     for(; vec_itr < (vec_count&~3); vec_itr+=4)
     {
