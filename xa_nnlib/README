@@ -27,7 +27,7 @@ Cadence HiFi 4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
-Version 3.1.0 API 1.5: April 19, 2023
+Version 3.1.0 API 1.5: April 20, 2023
 
 + Intermediate Release of HiFi4 NN Library
 + Tested using RI.9 tools, xt-clang/xt-clang++ compiler

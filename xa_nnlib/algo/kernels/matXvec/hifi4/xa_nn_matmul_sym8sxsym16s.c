@@ -497,10 +497,16 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
         ae_int64 acc1, acc2, acc3, acc4, acc5, acc6, acc7, acc8;
         WORD16* p_vec_0 = (WORD16*)(p_vec1 + ((v_itr+0) * vec_offset));
         WORD16* p_vec_1 = (WORD16*)(p_vec1 + ((v_itr+1) * vec_offset));
-	acc1 = acc2 = AE_L64_I(pbias, 0);
-	acc3 = acc4 = AE_L64_I(pbias, 8);
-	acc5 = acc6 = AE_L64_I(pbias, 16);
-	acc7 = acc8 = AE_L64_I(pbias, 24);
+	acc1 = acc2 = AE_ZERO64();
+	acc3 = acc4 = AE_ZERO64();
+	acc5 = acc6 = AE_ZERO64();
+	acc7 = acc8 = AE_ZERO64();
+        if(p_bias != NULL){
+	  acc1 = acc2 = AE_L64_I(pbias, 0);
+	  acc3 = acc4 = AE_L64_I(pbias, 8);
+	  acc5 = acc6 = AE_L64_I(pbias, 16);
+	  acc7 = acc8 = AE_L64_I(pbias, 24);
+        }
         _xa_nn_dot_product_4_rows_2_vecs_aligned
           (&acc1
            ,&acc2
@@ -533,14 +539,20 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
         AE_S16_0_XP(AE_SEL16_4321(d2, d2), p_dst3, out_offset*sizeof(WORD16));
         AE_S16_0_XP(	               d2, p_dst3, out_offset*sizeof(WORD16));
       }
-      if(vec_count&0x1)//for(; v_itr < vec_count; v_itr++)
+      if(vec_count&0x1)
       {
         ae_int64 acc1, acc2, acc3, acc4;
         WORD16* p_vec_0 = (WORD16*)(p_vec1 + (v_itr * vec_offset));
-        acc1 = AE_L64_I(pbias, 0);
-        acc2 = AE_L64_I(pbias, 8);
-        acc3 = AE_L64_I(pbias, 16);
-        acc4 = AE_L64_I(pbias, 24);
+        acc1 = AE_ZERO64();
+        acc2 = AE_ZERO64();
+        acc3 = AE_ZERO64();
+        acc4 = AE_ZERO64();
+        if(p_bias != NULL) {
+          acc1 = AE_L64_I(pbias, 0);
+          acc2 = AE_L64_I(pbias, 8);
+          acc3 = AE_L64_I(pbias, 16);
+          acc4 = AE_L64_I(pbias, 24);
+        }
         _xa_nn_dot_product_4_rows_1_vecs_aligned
           (&acc1
            ,&acc2
@@ -564,12 +576,13 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
         AE_S16_0_XP(AE_SEL16_6543(d2, d2), p_dst2, out_offset*sizeof(WORD16));
         AE_S16_0_XP(                   d2, p_dst3, out_offset*sizeof(WORD16));
       }
-      AE_L64_IP(acc0, pbias, 32);
+      if(p_bias != NULL) {
+        AE_L64_IP(acc0, pbias, 32);
+      }
     }
   }else
   if(p_mat1 && p_vec1)
   {
-    /* tbd: bias check will be added later */
     ae_int64 *pbias = (ae_int64 *)p_bias;
     ae_int64 acc0;
     int m_itr, v_itr;
@@ -579,7 +592,10 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
       ae_int16 *p_dst0   = (ae_int16*)p_out + (m_itr * out_stride);
       for(v_itr = 0; v_itr < vec_count; v_itr++)
       {
-        ae_int64 acc1 = AE_L64_I(pbias, 0);
+        ae_int64 acc1 = AE_ZERO64();
+        if(p_bias != NULL) {
+          acc1 = AE_L64_I(pbias, 0);
+        }
         WORD16* p_vec_0 = (WORD16*)(p_vec1 + (v_itr * vec_offset));
         _xa_nn_dot_product_1_rows_1_vecs_unaligned
           (&acc1
@@ -591,7 +607,9 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
         ae_int16x4 d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst0, out_offset*sizeof(WORD16));
       }
-      AE_L64_IP(acc0, pbias, 8);
+      if(p_bias != NULL) {
+        AE_L64_IP(acc0, pbias, 8);
+      }
     }
   }
   else
