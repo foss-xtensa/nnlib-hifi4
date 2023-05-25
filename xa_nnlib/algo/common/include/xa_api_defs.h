@@ -31,7 +31,7 @@
 /* A constant to let API copy small strings to buffers outside */
 #define XA_API_STR_LEN            30
 #define XA_APIVERSION_MAJOR 1
-#define XA_APIVERSION_MINOR 5
+#define XA_APIVERSION_MINOR 6
 
 /* last compatible version */
 /* sometimes a new API version is just for a bugfix, or a added feature  in */

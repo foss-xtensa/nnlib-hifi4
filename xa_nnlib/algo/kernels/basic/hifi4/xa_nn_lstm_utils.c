@@ -105,8 +105,8 @@ WORD32 xa_nn_lstm_cell_state_update_16(WORD16* p_cell_state,
   XA_NNLIB_ARG_CHK_ALIGN(p_cell_gate, sizeof(WORD16), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_input_gate, sizeof(WORD16), -1);
   /* Basic Parameter checks */
-  XA_NNLIB_ARG_CHK_COND((cell_to_forget_shift < -31 || cell_to_forget_shift > -15), -1);
-  XA_NNLIB_ARG_CHK_COND((cell_to_input_shift < -31 || cell_to_input_shift > -15), -1);
+  XA_NNLIB_ARG_CHK_COND((cell_to_forget_shift < -31 || cell_to_forget_shift > -1), -1);
+  XA_NNLIB_ARG_CHK_COND((cell_to_input_shift < -31 || cell_to_input_shift > -1), -1);
   XA_NNLIB_ARG_CHK_COND((num_elms < 0), -1);
 
   WORD32 ctof_right_shift, ctoi_right_shift;

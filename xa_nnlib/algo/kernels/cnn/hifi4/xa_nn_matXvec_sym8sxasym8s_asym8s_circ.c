@@ -1030,11 +1030,6 @@ WORD32 xa_nn_matXvec_sym8sxasym8s_asym8s_circ(
       int left_shift1 = p_out_shift[vec_itr+1];
       int left_shift2 = p_out_shift[vec_itr+2];
       int left_shift3 = p_out_shift[vec_itr+3];
-      /* Single rounding macro doesn't need two shifts so this is not used */
-      (void)right_shift0;
-      (void)right_shift1;
-      (void)right_shift2;
-      (void)right_shift3;
 #else /* #if TFLITE_SINGLE_ROUNDING */
       int left_shift0 = p_out_shift[vec_itr]<0?0:p_out_shift[vec_itr];
       int right_shift0 = p_out_shift[vec_itr]>0?0:-p_out_shift[vec_itr];

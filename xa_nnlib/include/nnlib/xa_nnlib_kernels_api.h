@@ -790,6 +790,22 @@
       WORD32 kernel_precision,
       WORD32 output_precision);
 
+	WORD32 xa_nn_transpose_conv_sym8sxasym8s(
+			WORD8* output_data,
+			const WORD8* input_data,
+			const WORD8* filter_data,
+			const WORD32* bias_data,
+			int stride_width, int stride_height,
+			int pad_width, int pad_height,
+			int input_depth, int output_depth,
+			int input_height, int input_width,
+			int filter_height, int filter_width,
+			int output_height, int output_width,
+			int num_elements,
+      int input_offset, int output_offset,
+			int *output_shift, int *output_multiplier,
+			WORD32* scratch_buffer);
+
 	WORD32 xa_nn_transpose_conv_sym8sxsym16s(
 			WORD16* output_data,
 			const WORD16* input_data,
@@ -2293,6 +2309,22 @@
             WORD32  inp2_multiplier,
             WORD32  left_shift);
 
+    WORD32 xa_nn_elm_squared_diff_broadcast_4D_sym16sxsym16s_sym16s(WORD16 * __restrict__ p_out,
+            const WORD32 *const p_out_shape,
+            WORD32  out_left_shift,
+            WORD32  out_multiplier,
+            WORD32  out_activation_min,
+            WORD32  out_activation_max,
+            const WORD16 * __restrict__ p_inp1,
+            const WORD32 *const p_inp1_shape,
+            WORD32  inp1_left_shift,
+            WORD32  inp1_multiplier,
+            const WORD16 * __restrict__ p_inp2,
+            const WORD32 *const p_inp2_shape,
+            WORD32  inp2_left_shift,
+            WORD32  inp2_multiplier,
+            WORD32  left_shift);
+
     WORD32 xa_nn_lstm_cell_state_update_16(WORD16* p_cell_state,
             const WORD16* p_forget_gate,
             const WORD16* p_cell_gate,
@@ -2518,6 +2550,30 @@
 	WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
 			,const WORD32 *const p_out_shape
 			,const WORD8 * __restrict__ p_inp
+			,const WORD32 *const p_inp_shape
+			,const WORD32 * __restrict__ p_axis
+			,WORD32 num_out_dims
+			,WORD32 num_inp_dims
+			,WORD32 num_axis_dims
+			,WORD32 inp_zero_bias
+			,WORD32 out_multiplier
+			,WORD32 out_shift
+			,WORD32 out_zero_bias
+			,pVOID p_scratch_in);
+
+	WORD32 xa_nn_reduce_max_4D_asym16s_asym16s(WORD16 * __restrict__ p_out
+			,const WORD32 *const p_out_shape
+			,const WORD16 * __restrict__ p_inp
+			,const WORD32 *const p_inp_shape
+			,const WORD32 * __restrict__ p_axis
+			,WORD32 num_out_dims
+			,WORD32 num_inp_dims
+			,WORD32 num_axis_dims
+			,pVOID p_scratch_in);
+
+	WORD32 xa_nn_reduce_mean_4D_asym16s_asym16s(WORD16 * __restrict__ p_out
+			,const WORD32 *const p_out_shape
+			,const WORD16 * __restrict__ p_inp
 			,const WORD32 *const p_inp_shape
 			,const WORD32 * __restrict__ p_axis
 			,WORD32 num_out_dims

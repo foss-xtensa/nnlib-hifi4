@@ -69,20 +69,26 @@ WORD32 xa_nn_reduce_getsize_nhwc(WORD32 inp_precision
         inp_length *= p_inp_shape[inp_itr];
       }
 
-      if((inp_precision == -4) && (reduce_ops == REDUCE_MAX)) /*For Reduce Max*/
+      if(reduce_ops == REDUCE_MAX) /*For Reduce Max*/
       {
-        scratch_bytewidth = sizeof(WORD8);
+        if(inp_precision == -4){
+          scratch_bytewidth = sizeof(WORD8);
+        }
+        else if(inp_precision == -7){
+          scratch_bytewidth = sizeof(WORD16);
+        }
+        
         if(inp_shape_max)
         {
-          return (ALIGNED_SIZE(((inp_length / inp_shape_max) * scratch_bytewidth), ALIGNMENT_8) + (BUS_WIDTH_8));
+          return (ALIGNED_SIZE(((inp_length / inp_shape_max) * scratch_bytewidth) + (BUS_WIDTH_8), ALIGNMENT_8));
         }
       }
-      else if((inp_precision == -4) && (reduce_ops == REDUCE_MEAN)) /*For Reduce Mean*/
+      else if(reduce_ops == REDUCE_MEAN) /*For Reduce Mean*/
       {
         scratch_bytewidth = sizeof(WORD32);
         if(inp_shape_max)
         {
-          return (ALIGNED_SIZE(((inp_length / inp_shape_max) * scratch_bytewidth), ALIGNMENT_8) + (BUS_WIDTH_8));
+          return (ALIGNED_SIZE(((inp_length / inp_shape_max) * scratch_bytewidth) + (BUS_WIDTH_8), ALIGNMENT_8));
         }
       }
     }

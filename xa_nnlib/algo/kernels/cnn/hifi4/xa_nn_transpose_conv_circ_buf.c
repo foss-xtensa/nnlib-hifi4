@@ -63,6 +63,11 @@ WORD32 xa_nn_transpose_conv_getsize
             scratch_bytewidth = 8; /* 64b scratch */
             align_size = ALIGNMENT >> 1;
             break;
+        case -4: /* For asym8s */
+            input_size = sizeof(WORD8);
+            scratch_bytewidth = 8; /* 64b scratch */
+            align_size = ALIGNMENT >> 1;
+            break;            
         case -1: /* For float32 */
             input_size = sizeof(FLOAT32);
             scratch_bytewidth = 8; /* 32bx2 scratch */
@@ -103,7 +108,7 @@ WORD32 xa_nn_transpose_conv_getsize
       }
       total_size += kernel_bytes + cir_buf_size_bytes; 
       total_size += BUS_WIDTH;
-      total_size = PADDED_SIZE(total_size, 8);
+      total_size = PADDED_SIZE(total_size, align_size);
     }
     else
     {

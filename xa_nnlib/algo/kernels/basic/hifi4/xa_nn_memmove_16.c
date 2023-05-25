@@ -35,7 +35,7 @@ WORD32 xa_nn_memmove_16( void *pdst,
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((n <= 0), -1);
 
-  WORD32 L = n >> 1;
+  WORD32 L = n;
   WORD32 i;
   const WORD16 *x = (const WORD16*)psrc;
   WORD16 *y = (WORD16*)pdst;
@@ -46,6 +46,9 @@ WORD32 xa_nn_memmove_16( void *pdst,
   const ae_int16x4 *pinp;
   const ae_int16 *pinp_tmp;
   ae_int16 *pout_tmp;
+
+  if(y == x) //no copy needed
+    return 0;  
 
   if (y < x)
   {

@@ -52,13 +52,11 @@ static const uint16_t sigmoid_table_uint16[256] = {
     65533, 65533, 65533, 65534, 65534, 65534, 65534, 65534, 65534, 65534, 65534,
     65534, 65534, 65535};
 
-#if !(XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION))
 static inline UWORD32 abs(WORD32 input)
 {
   return ((UWORD32)((-1)*input));
 }
 #endif
-#endif//XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
 
 static void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
                                                    const WORD16 *p_vec,
@@ -89,10 +87,6 @@ static void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
   ae_int16x4 inp_mult = input_multiplier;
 #else
   ae_int16x4 sign_bit_mask = AE_MOVDA16(0x7FFF);
-  int sar_reg_val = AE_MOVASAR();
-  int sar_reg_low_half = sar_reg_val & 0x7F;
-  sar_reg_val = sar_reg_val >> 7;
-  int sar_reg_up_half = sar_reg_val & 0x7F;
   WUR_AE_SAR(4);
 #endif  
 
@@ -183,82 +177,7 @@ static void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
 #endif
     AE_SA16X4_IP(out, out_align, (ae_int16x4 *)out_ptr); 
   }
-#if XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
-  if((vec_length & 3) != 0){
-    AE_LAV16X4_XP(inp0, inp_align, (ae_int16x4 *)in_ptr_align, ((vec_length & 3) << 1));
-    AE_MUL16X4(inp_x_inp_mul0, inp_x_inp_mul1, inp0, inp_mult);
-    abs_inp_x_inp_mul0 = AE_ABS32S(inp_x_inp_mul0);
-    abs_inp_x_inp_mul1 = AE_ABS32S(inp_x_inp_mul1);
 
-    abs_inp_x_inp_mul0 = AE_ABS32S(inp_x_inp_mul0);
-    abs_inp_x_inp_mul1 = AE_ABS32S(inp_x_inp_mul1);
-
-    ut = AE_SEL16_6420(AE_MOVINT16X4_FROMINT32X2(abs_inp_x_inp_mul0), AE_MOVINT16X4_FROMINT32X2(abs_inp_x_inp_mul1));
-    ut = AE_AND16(ut, mask_nine_bit);
-
-    uh_0 = AE_SRAI32(abs_inp_x_inp_mul0, 9);
-    uh_1 = AE_SRAI32(abs_inp_x_inp_mul1, 9);
-
-    int id0,id1,id2,id3;
-    id0 = AE_MOVAD32_H(AE_SLAI32(uh_0, 1));
-    id1 = AE_MOVAD32_L(AE_SLAI32(uh_0, 1));
-    id2 = AE_MOVAD32_H(AE_SLAI32(uh_1, 1));
-    id3 = AE_MOVAD32_L(AE_SLAI32(uh_1, 1));
-
-    ae_int16 *psigmoid_table_uint16 = (ae_int16 *)sigmoid_table_uint16;
-
-    ae_int16x4 zero_16x4 = AE_ZERO16();
-
-    ae_int16x4 sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id1), zero_16x4); 
-    ua0 = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id0)));
- 
-    sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id3), zero_16x4);
-    ua1  = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id2)));
-
-    psigmoid_table_uint16++;
-
-    sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id1), zero_16x4);
-    ub0  = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id0)));
-
-    sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id3), zero_16x4);
-    ub1 = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id2)));
-
-    ua_lsh0 = AE_SLAI32S(ua0, 9);
-    ua_lsh1 = AE_SLAI32S(ua1, 9);
-
-    ub_minus_ua0 = AE_SUB32S(ub0, ua0);
-    ub_minus_ua1 = AE_SUB32S(ub1, ua1);
-
-    res0 = ua_lsh0;
-    res1 = ua_lsh1;
-
-    AE_MULAP32X16X2_H(res0, ub_minus_ua0, ut);
-    AE_MULAP32X16X2_L(res1, ub_minus_ua1, ut);
-  
-    x0 = AE_LT32(uh_0, uint8_max);
-    x1 = AE_LT32(uh_1, uint8_max);
-    AE_MOVF32X2(res0, res_sat_val, x0); 
-    AE_MOVF32X2(res1, res_sat_val, x1); 
-
-    res0_plus = AE_ADD32S(res0, add_val);
-    res1_plus = AE_ADD32S(res1, add_val);
-
-    res0 = AE_SUB32S(sub_val, res0);
-    res1 = AE_SUB32S(sub_val, res1);
- 
-    x0 = AE_LT32(inp_x_inp_mul0, AE_ZERO32());
-    x1 = AE_LT32(inp_x_inp_mul1, AE_ZERO32());
-
-    AE_MOVF32X2(res0, res0_plus, x0);
-    AE_MOVF32X2(res1, res1_plus, x1);
-
-    res0 = AE_SRAI32(res0, 10);
-    res1 = AE_SRAI32(res1, 10);
-    ae_int16x4 out = AE_SAT16X4(res0, res1);
-    AE_SAV16X4_XP(out, out_align, (ae_int16x4 *)out_ptr, ((vec_length & 3) << 1));  
-  }
-  AE_SA64POS_FP(out_align, out_ptr);
-#else //XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
   AE_SA64POS_FP(out_align, out_ptr);
   p_vec = (WORD16 *)in_ptr_align;
   p_out = (WORD16 *)out_ptr;
@@ -271,7 +190,6 @@ static void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
     out = AE_AND16(out, sign_bit_mask);    
     AE_S16_0_IP(out, (ae_int16 *)p_out, sizeof(WORD16));  
   }
-  AE_MOVSARA7X2(sar_reg_up_half, sar_reg_low_half);
 #else
   /* Following code is directly adapted from TFLM ref code */
   for (i = 0; i < (vec_length & 3); ++i, p_vec++, p_out++) {
@@ -294,7 +212,6 @@ static void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
     *p_out =(WORD16)result;
   }
 #endif
-#endif//XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
 }
 
 /* The scale of input for TFLM reference is 4096*3, which is maintained in the LUT based implementation 
@@ -356,10 +273,6 @@ WORD32 xa_nn_vec_sigmoid_sym16s_sym16s(WORD16 *p_out,
 #else
   ae_int16x4 sign_bit_mask = AE_MOVDA16(0x7FFF);
   ae_int16x4 sigmoid_in;
-  int sar_reg_val = AE_MOVASAR();
-  int sar_reg_low_half = sar_reg_val & 0x7F;
-  sar_reg_val = sar_reg_val >> 7;
-  int sar_reg_up_half = sar_reg_val & 0x7F;
   WUR_AE_SAR(4);
 #endif
   int i;
@@ -459,87 +372,6 @@ WORD32 xa_nn_vec_sigmoid_sym16s_sym16s(WORD16 *p_out,
     AE_SA16X4_IP(out, out_align, (ae_int16x4 *)out_ptr); 
   }
 
-#if XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
-  if((vec_length & 3) != 0){
-    AE_LAV16X4_XP(inp0, inp_align, (ae_int16x4 *)in_ptr_align, ((vec_length & 3) << 1));
-    inp_x_inp_mul0 = round;
-    inp_x_inp_mul1 = round;
-
-    AE_MULA16X4(inp_x_inp_mul0, inp_x_inp_mul1, inp0, inp_mult);
-
-    inp_x_inp_mul0 = AE_SRAA32(inp_x_inp_mul0, input_left_shift);
-    inp_x_inp_mul1 = AE_SRAA32(inp_x_inp_mul1, input_left_shift);
-
-    abs_inp_x_inp_mul0 = AE_ABS32S(inp_x_inp_mul0);
-    abs_inp_x_inp_mul1 = AE_ABS32S(inp_x_inp_mul1);
-
-    ut = AE_SEL16_6420(AE_MOVINT16X4_FROMINT32X2(abs_inp_x_inp_mul0), AE_MOVINT16X4_FROMINT32X2(abs_inp_x_inp_mul1));
-    ut = AE_AND16(ut, mask_nine_bit);
-
-    uh_0 = AE_SRAI32(abs_inp_x_inp_mul0, 9);
-    uh_1 = AE_SRAI32(abs_inp_x_inp_mul1, 9);
-
-    int id0,id1,id2,id3;
-    id0 = AE_MOVAD32_H(AE_SLAI32(uh_0, 1));
-    id1 = AE_MOVAD32_L(AE_SLAI32(uh_0, 1));
-    id2 = AE_MOVAD32_H(AE_SLAI32(uh_1, 1));
-    id3 = AE_MOVAD32_L(AE_SLAI32(uh_1, 1));
-
-    ae_int16 *psigmoid_table_uint16 = (ae_int16 *)sigmoid_table_uint16;
-
-    ae_int16x4 zero_16x4 = AE_ZERO16();
-
-    ae_int16x4 sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id1), zero_16x4); 
-    ua0 = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id0)));
- 
-    sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id3), zero_16x4);
-    ua1  = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id2)));
-
-    psigmoid_table_uint16++;
-
-    sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id1), zero_16x4);
-    ub0  = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id0)));
-
-    sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id3), zero_16x4);
-    ub1 = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id2)));
-
-    ua_lsh0 = AE_SLAI32S(ua0, 9);
-    ua_lsh1 = AE_SLAI32S(ua1, 9);
-
-    ub_minus_ua0 = AE_SUB32S(ub0, ua0);
-    ub_minus_ua1 = AE_SUB32S(ub1, ua1);
-
-    res0 = ua_lsh0;
-    res1 = ua_lsh1;
-
-    AE_MULAP32X16X2_H(res0, ub_minus_ua0, ut);
-    AE_MULAP32X16X2_L(res1, ub_minus_ua1, ut);
-  
-    x0 = AE_LT32(uh_0, uint8_max);
-    x1 = AE_LT32(uh_1, uint8_max);
-    AE_MOVF32X2(res0, res_sat_val, x0); 
-    AE_MOVF32X2(res1, res_sat_val, x1); 
-
-    res0_plus = AE_ADD32S(res0, add_val);
-    res1_plus = AE_ADD32S(res1, add_val);
-
-    res0 = AE_SUB32S(sub_val, res0);
-    res1 = AE_SUB32S(sub_val, res1);
- 
-    x0 = AE_LT32(inp_x_inp_mul0, AE_ZERO32());
-    x1 = AE_LT32(inp_x_inp_mul1, AE_ZERO32());
-
-    AE_MOVF32X2(res0, res0_plus, x0);
-    AE_MOVF32X2(res1, res1_plus, x1);
-
-    res0 = AE_SRAI32(res0, 10);
-    res1 = AE_SRAI32(res1, 10);
-    ae_int16x4 out = AE_SAT16X4(res0, res1);
-    AE_SAV16X4_XP(out, out_align, (ae_int16x4 *)out_ptr, ((vec_length & 3) << 1));  
-  }
-  AE_SA64POS_FP(out_align, out_ptr);
-#else //XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
-
   AE_SA64POS_FP(out_align, out_ptr);
   p_vec = (WORD16 *)in_ptr_align;
   p_out = (WORD16 *)out_ptr;
@@ -558,7 +390,6 @@ WORD32 xa_nn_vec_sigmoid_sym16s_sym16s(WORD16 *p_out,
     out = AE_AND16(out, sign_bit_mask);    
     AE_S16_0_IP(out, (ae_int16 *)p_out, sizeof(WORD16));  
   }
-  AE_MOVSARA7X2(sar_reg_up_half, sar_reg_low_half);
 #else
   /* Following code is directly adapted from TFLM ref code */
   for (i = 0; i < (vec_length & 3); ++i, p_vec++, p_out++) {
@@ -584,7 +415,6 @@ WORD32 xa_nn_vec_sigmoid_sym16s_sym16s(WORD16 *p_out,
     *p_out =(WORD16)result;
   }
 #endif
-#endif  //XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
   return 0;
 }
 
@@ -645,10 +475,6 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
   ae_int16x4 ut;
 #else
   ae_int16x4 tanh_in;
-  int sar_reg_val = AE_MOVASAR();
-  int sar_reg_low_half = sar_reg_val & 0x7F;
-  sar_reg_val = sar_reg_val >> 7;
-  int sar_reg_up_half = sar_reg_val & 0x7F;
   WUR_AE_SAR(4);
 #endif
 
@@ -744,87 +570,6 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
 #endif
     AE_SA16X4_IP(out, out_align, (ae_int16x4 *)out_ptr);
   }
-#if XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
-  if((vec_length & 3) != 0){
-    AE_LAV16X4_XP(inp0, inp_align, in_ptr_align, ((vec_length & 3) << 1));
-    inp_x_inp_mul0 = round;
-    inp_x_inp_mul1 = round;
-
-    AE_MULA16X4(inp_x_inp_mul0, inp_x_inp_mul1, inp0, inp_mult);
-
-    inp_x_inp_mul0 = AE_SRAA32(inp_x_inp_mul0, input_left_shift);
-    inp_x_inp_mul1 = AE_SRAA32(inp_x_inp_mul1, input_left_shift);
-
-    abs_inp_x_inp_mul0 = AE_ABS32S(inp_x_inp_mul0);
-    abs_inp_x_inp_mul1 = AE_ABS32S(inp_x_inp_mul1);
-
-    ut = AE_SEL16_6420(AE_MOVINT16X4_FROMINT32X2(abs_inp_x_inp_mul0), AE_MOVINT16X4_FROMINT32X2(abs_inp_x_inp_mul1));
-    ut = AE_AND16(ut, mask_eight_bit);
-
-    uh_0 = AE_SRAI32(abs_inp_x_inp_mul0, 8);
-    uh_1 = AE_SRAI32(abs_inp_x_inp_mul1, 8);
-
-    int id0,id1,id2,id3;
-    id0 = AE_MOVAD32_H(AE_SLAI32(uh_0, 1));
-    id1 = AE_MOVAD32_L(AE_SLAI32(uh_0, 1));
-    id2 = AE_MOVAD32_H(AE_SLAI32(uh_1, 1));
-    id3 = AE_MOVAD32_L(AE_SLAI32(uh_1, 1));
-
-    ae_int16 *psigmoid_table_uint16 = (ae_int16 *)sigmoid_table_uint16;
-    ae_int16x4 zero_16x4 = AE_ZERO16();
-
-    ae_int16x4 sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id1), zero_16x4); 
-    ua0 = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id0)));
- 
-    sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id3), zero_16x4);
-    ua1  = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id2)));
-
-    psigmoid_table_uint16++;
-
-    sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id1), zero_16x4);
-    ub0  = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id0)));
-
-    sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id3), zero_16x4);
-    ub1 = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id2)));
-
-    ua_lsh0 = AE_SLAI32S(ua0, 8);
-    ua_lsh1 = AE_SLAI32S(ua1, 8);
-
-    ub_minus_ua0 = AE_SUB32S(ub0, ua0);
-    ub_minus_ua1 = AE_SUB32S(ub1, ua1);
-
-    res0 = ua_lsh0;
-    res1 = ua_lsh1;
-
-    AE_MULAP32X16X2_H(res0, ub_minus_ua0, ut);
-    AE_MULAP32X16X2_L(res1, ub_minus_ua1, ut);
-
-    x0 = AE_LT32(uh_0, uint8_max);
-    x1 = AE_LT32(uh_1, uint8_max);
-
-    AE_MOVF32X2(res0, res_sat_val, x0); 
-    AE_MOVF32X2(res1, res_sat_val, x1); 
-
-    res0_minus = AE_SUB32S(res0, sub_val0);
-    res1_minus = AE_SUB32S(res1, sub_val0);
-
-    res0 = AE_SUB32S(sub_val1, res0);
-    res1 = AE_SUB32S(sub_val1, res1);
-
-    x0 = AE_LT32(inp_x_inp_mul0, AE_ZERO32());
-    x1 = AE_LT32(inp_x_inp_mul1, AE_ZERO32());
-
-    AE_MOVF32X2(res0, res0_minus, x0);
-    AE_MOVF32X2(res1, res1_minus, x1);
-
-    res0 = AE_SRAI32(res0, 8);
-    res1 = AE_SRAI32(res1, 8);
-    ae_int16x4 out = AE_SAT16X4(res0, res1);
-
-    AE_SAV16X4_XP(out, out_align, (ae_int16x4 *)out_ptr, ((vec_length & 3) << 1));  
-  }
-  AE_SA64POS_FP(out_align, out_ptr);
-#else //XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
 
   AE_SA64POS_FP(out_align, out_ptr);
   p_vec = (WORD16 *)in_ptr_align;
@@ -842,7 +587,6 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
     ae_int16x4 out = AE_TANH16X4(tanh_in);   
     AE_S16_0_IP(out, (ae_int16 *)p_out, sizeof(WORD16));  
   }
-  AE_MOVSARA7X2(sar_reg_up_half, sar_reg_low_half);
 #else
   /* Following code is directly adapted from TFLM ref code */
   for (i = 0; i < (vec_length & 3); ++i, p_vec++, p_out++) {
@@ -873,6 +617,5 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
     *p_out = (WORD16)result;
   }
 #endif
-#endif//XCHAL_HAVE_HIFI1 && (XCHAL_HW_VERSION >= RI9_HWVERSION)
   return 0;
 }

@@ -301,6 +301,18 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_sym8sxasym8s ( \
+        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.input_channels, \
+        cfg.out_channels, cfg.input_height, cfg.input_width, cfg.kernel_height, cfg.kernel_width, \
+        cfg.out_height, cfg.out_width, num_elements, cfg.input_zero_bias, cfg.out_zero_bias, cfg.p_out_shift, cfg.p_out_multiplier, \
+        p_scratch);\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -556,6 +568,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
     else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
     else if CONV_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_std,-5,-8,-8, 64) \
+    else if TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(transpose_conv,-5,-4,-4, 32) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
     else if TRANSPOSE_CONV_KERNEL_F32XF32_FN(transpose_conv,-1,-1,-1,-1) \
     else if CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(dilated_conv2d_std,-5,-4,-4, 32) \
@@ -584,6 +597,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
     else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
     else if CONV_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_std,-5,-8,-8, 64) \
+    else if TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(transpose_conv,-5,-4,-4, 32) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
     else if CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(dilated_conv2d_std,-5,-4,-4, 32) \
     else if CONV_DS_KERNEL_FN(conv2d_depth,8,16,16,16) \
@@ -777,7 +791,7 @@ int xa_nn_main_process(int argc, char *argv[])
     bias_size = cfg.out_channels;
     out_size = cfg.out_height * cfg.out_width * cfg.out_channels;
     num_elements = out_size;
-    if(cfg.inp_precision == -8)
+    if(cfg.inp_precision == -8 || cfg.inp_precision == -4)
     {
       cfg.p_out_multiplier = (int *)malloc(cfg.out_channels*(sizeof(WORD32)));
       cfg.p_out_shift = (int *)malloc(cfg.out_channels*(sizeof(WORD32)));

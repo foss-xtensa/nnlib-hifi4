@@ -613,7 +613,7 @@ static inline void transpose_conv2d_std_sym8sxsym16s(WORD16* output_data,
     idx_beg_inp_width_pad += 1;
 
     int kernelIdx;
-    for (int kIdx = 0; kIdx < rem_val_out_w; kIdx++)
+    for (int kIdx = 0; kIdx < rem_val_out_w; kIdx++, pad_w--)
     {
       WORD32 rem_val_out_h = (valid_out_h - pad_height) % stride_height;
       WORD32 is_pad_w = (pad_w > 0);

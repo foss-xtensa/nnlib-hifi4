@@ -356,6 +356,48 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define REDUCE_MAX_ASYM16S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym16s_asym16s\
+                (\
+                    (WORD16 *) p_out->p,\
+                    (WORD32 *) p_out_shape,\
+                    (WORD16 *) p_inp1->p,\
+                    (WORD32 *) p_inp_shape,\
+                    (WORD32 *) p_axis,\
+                    cfg.num_out_dims,\
+                    cfg.num_inp_dims,\
+                    cfg.num_axis_dims,\
+                    p_scratch\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define REDUCE_MEAN_ASYM16S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_asym16s_asym16s\
+                (\
+                    (WORD16 *) p_out->p,\
+                    (WORD32 *) p_out_shape,\
+                    (WORD16 *) p_inp1->p,\
+                    (WORD32 *) p_inp_shape,\
+                    (WORD32 *) p_axis,\
+                    cfg.num_out_dims,\
+                    cfg.num_inp_dims,\
+                    cfg.num_axis_dims,\
+                    cfg.input1_zero_bias,\
+                    cfg.output_multiplier,\
+                    cfg.output_left_shift,\
+                    cfg.output_zero_bias,\
+                    p_scratch\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define DOT_PROD_OUT_ASYM8S(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
@@ -481,7 +523,32 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                 );\
     XTPWR_PROFILER_STOP(0);\
   }
-  
+
+#define SQUARED_DIFF_BROADCAST_4D_SYM16S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_sym16sxsym16s_sym16s\
+                (\
+                    (WORD16 *) p_out->p,\
+                    cfg.output_shape, \
+                    cfg.output_left_shift,\
+                    cfg.output_multiplier,\
+                    cfg.output_activation_min,\
+                    cfg.output_activation_max,\
+                    (WORD16 *) p_inp1->p,\
+                    cfg.input1_shape, \
+                    cfg.input1_left_shift,\
+                    cfg.input1_multiplier,\
+                    (WORD16 *) p_inp2->p,\
+                    cfg.input2_shape, \
+                    cfg.input2_left_shift,\
+                    cfg.input2_multiplier,\
+                    cfg.left_shift\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define MUL_BROADCAST_4D_ASYM8S(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
@@ -1158,6 +1225,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MATH_BROADCAST_4D_ASYM16S(elm_sub_broadcast_4D, -7, -7) \
     else SUB_BROADCAST_4D_F32(elm_sub_broadcast_4D, -1, -1) \
     else MATH_BROADCAST_4D_ASYM8S(elm_squared_diff_broadcast_4D, -4, -4) \
+    else SQUARED_DIFF_BROADCAST_4D_SYM16S(elm_squared_diff_broadcast_4D, -8, -8) \
     else MINMAX_8(elm_min, -4, -4)\
     else MINMAX_8(elm_max, -4, -4)\
     else MINMAX_BCAST_8(elm_min_4D_Bcast, -4, -4)\
@@ -1174,6 +1242,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else LESSEQUAL_ASYM8S(elm_lessequal, -4, -4) \
     else REDUCE_MAX_ASYM8S(reduce_max_4D, -4, -4) \
     else REDUCE_MEAN_ASYM8S(reduce_mean_4D, -4, -4) \
+    else REDUCE_MAX_ASYM16S(reduce_max_4D, -7, -7) \
+    else REDUCE_MEAN_ASYM16S(reduce_mean_4D, -7, -7) \
     else LOGICALAND_BOOL(elm_logicaland, 1, 1) \
     else LOGICALOR_BOOL(elm_logicalor, 1, 1) \
     else LOGICALNOT_BOOL(elm_logicalnot, 1, 1) \
@@ -1214,6 +1284,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MATH_BROADCAST_4D_ASYM8S(elm_sub_broadcast_4D, -4, -4) \
     else MATH_BROADCAST_4D_ASYM16S(elm_sub_broadcast_4D, -7, -7) \
     else MATH_BROADCAST_4D_ASYM8S(elm_squared_diff_broadcast_4D, -4, -4) \
+    else SQUARED_DIFF_BROADCAST_4D_SYM16S(elm_squared_diff_broadcast_4D, -8, -8) \
     else MINMAX_8(elm_min, -4, -4)\
     else MINMAX_8(elm_max, -4, -4)\
     else MINMAX_BCAST_8(elm_min_4D_Bcast, -4, -4)\
@@ -1230,6 +1301,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else LESSEQUAL_ASYM8S(elm_lessequal, -4, -4) \
     else REDUCE_MAX_ASYM8S(reduce_max_4D, -4, -4) \
     else REDUCE_MEAN_ASYM8S(reduce_mean_4D, -4, -4) \
+    else REDUCE_MAX_ASYM16S(reduce_max_4D, -7, -7) \
+    else REDUCE_MEAN_ASYM16S(reduce_mean_4D, -7, -7) \
     else LOGICALAND_BOOL(elm_logicaland, 1, 1) \
     else LOGICALOR_BOOL(elm_logicalor, 1, 1) \
     else LOGICALNOT_BOOL(elm_logicalnot, 1, 1) \
