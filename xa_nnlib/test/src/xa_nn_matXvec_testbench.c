@@ -143,10 +143,10 @@ void show_usage(void)
     printf("\t-vec_count : vec count for time batching; Default=1\n");
     printf("\t-acc_shift : Accumulator left shift; Default=0\n");
     printf("\t-bias_shift : Bias left shift; Default=0\n");
-    printf("\t-mat_precision : 8, 16, -1(single prec float), -3(asym8u) or -5(sym8s); Default=16\n");
-    printf("\t-inp_precision : 8, 16, -1(single prec float), -3(asym8u), -8(sym16s) or -4(asym8s); Default=16\n");
-    printf("\t-out_precision : 8, 16, 32, 64 or -1(single prec float), -3(asym8u), -4(asym8s) or -8(sym16s); Default=16\n");
-    printf("\t-bias_precision : 8, 16, 64 or -1(single prec float); Default=16\n");
+    printf("\t-mat_precision : 8, 16, -1(single prec float), -2(half prec float), -3(asym8u), -5(sym8s) or -13(asym4s); Default=16\n");
+    printf("\t-inp_precision : 8, 16, -1(single prec float), -2(half prec float), -3(asym8u), -8(sym16s) or -4(asym8s); Default=16\n");
+    printf("\t-out_precision : 8, 16, 32, 64 or -1(single prec float), -2(half prec float), -3(asym8u), -4(asym8s) or -8(sym16s); Default=16\n");
+    printf("\t-bias_precision : 8, 16, 64, -1(single prec float) or -2(half prec float); Default=16\n");
     printf("\t-mat1_zero_bias : Matrix1 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
     printf("\t-mat2_zero_bias : Matrix2 zero_bias for quantized 8-bit, -255 to 0 for asym8u, ignored for sym8s; Default=-128\n");
     printf("\t-inp1_zero_bias : Input1 zero bias for quantized 8-bit, -255 to 0 for asym8u, -127 to 128 for asym8s, 0 for sym16s; Default=-128\n");
@@ -308,6 +308,17 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define MAT_VEC_MUL_FC_FN_ASYM4S(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_fully_connected_asym4sxasym8s_asym8s ( \
+          (WORD8 *)p_out->p, (WORD8 *) p_mat1->p, (WORD8 *)p_vec1->p, (WORD32 *)p_bias->p, \
+          cfg.cols1, cfg.rows, \
+          cfg.mat1_zero_bias, cfg.inp1_zero_bias, \
+          cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias, p_scratch->p);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
       XTPWR_PROFILER_START(0);\
@@ -346,6 +357,15 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_START(0);\
       err = xa_nn_fully_connected_f32 ( \
           (FLOAT32 *)p_out->p, (FLOAT32 *) p_mat1->p, (FLOAT32 *)p_vec1->p, (FLOAT32 *)p_bias->p, \
+          cfg.cols1, cfg.rows); \
+      XTPWR_PROFILER_STOP(0);\
+    }
+
+#define MAT_VEC_MUL_FC_FN_F16(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_fully_connected_f16 ( \
+          (WORD16 *)p_out->p, (WORD16 *) p_mat1->p, (WORD16 *)p_vec1->p, (WORD16 *)p_bias->p, \
           cfg.cols1, cfg.rows); \
       XTPWR_PROFILER_STOP(0);\
     }
@@ -497,6 +517,15 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
           cfg.vec_count, cfg.cols1, 1, cfg.vec_count);\
       XTPWR_PROFILER_STOP(0);\
     }
+#define MATMUL_FN_PLAIN_F16(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_matmul_f16xf16_f16( \
+          (WORD16 *)p_out->p, (WORD16 *) p_mat1->p, (WORD16 *) p_vec1->p, (VOID *)p_bias->p, \
+          cfg.rows, cfg.cols1, p_mat1->row_offset, \
+          cfg.vec_count, cfg.cols1, 1, cfg.vec_count);\
+      XTPWR_PROFILER_STOP(0);\
+    }
 
 #if HIFI_VFPU 
 #define PROCESS_MATXVEC \
@@ -550,27 +579,58 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #endif
 
 #if HIFI_VFPU 
+#if HIFI_HP_VFPU && hifi5
 #define PROCESS_MATXVEC_FC \
     MAT_VEC_MUL_FC_FN(16, 16, 16) \
     else MAT_VEC_MUL_FC_FN(8, 16, 16) \
     else MAT_VEC_MUL_FC_FN(8, 8, 8) \
     else MAT_VEC_MUL_FC_FN_ASYM8(-3, -3, -3) \
     else MAT_VEC_MUL_FC_FN_ASYM8S(-4, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_ASYM4S(-13, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_SYM8SXSYM16S(-5, -8, -8) \
+    else MAT_VEC_MUL_FC_FN_F32(-1, -1, -1) \
+    else MAT_VEC_MUL_FC_FN_F16(-2, -2, -2) \
+    else {  printf("unsupported multiplication\n"); return -1;} 
+#else /* HIFI_HP_VFPU && hifi5 */
+#define PROCESS_MATXVEC_FC \
+    MAT_VEC_MUL_FC_FN(16, 16, 16) \
+    else MAT_VEC_MUL_FC_FN(8, 16, 16) \
+    else MAT_VEC_MUL_FC_FN(8, 8, 8) \
+    else MAT_VEC_MUL_FC_FN_ASYM8(-3, -3, -3) \
+    else MAT_VEC_MUL_FC_FN_ASYM8S(-4, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_ASYM4S(-13, -4, -4) \
     else MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(-5, -4, -4) \
     else MAT_VEC_MUL_FC_FN_SYM8SXSYM16S(-5, -8, -8) \
     else MAT_VEC_MUL_FC_FN_F32(-1, -1, -1) \
     else {  printf("unsupported multiplication\n"); return -1;} 
-#else
+#endif /* HIFI_HP_VFPU && hifi5 */
+#else /* HIFI_VFPU */
+#if HIFI_HP_VFPU && hifi5 /* HIFI_HP_VFPU && hifi5 */
 #define PROCESS_MATXVEC_FC \
     MAT_VEC_MUL_FC_FN(16, 16, 16) \
     else MAT_VEC_MUL_FC_FN(8, 16, 16) \
     else MAT_VEC_MUL_FC_FN(8, 8, 8) \
     else MAT_VEC_MUL_FC_FN_ASYM8(-3, -3, -3) \
     else MAT_VEC_MUL_FC_FN_ASYM8S(-4, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_ASYM4S(-13, -4, -4) \
     else MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(-5, -4, -4) \
     else MAT_VEC_MUL_FC_FN_SYM8SXSYM16S(-5, -8, -8) \
-    else {  printf("unsupported multiplication\n"); return -1;} 
-#endif
+    else MAT_VEC_MUL_FC_FN_F32(-2, -2, -2) \
+    else {  printf("unsupported multiplication\n"); return -1;}
+#else/* HIFI_HP_VFPU && hifi5 */
+#define PROCESS_MATXVEC_FC \
+    MAT_VEC_MUL_FC_FN(16, 16, 16) \
+    else MAT_VEC_MUL_FC_FN(8, 16, 16) \
+    else MAT_VEC_MUL_FC_FN(8, 8, 8) \
+    else MAT_VEC_MUL_FC_FN_ASYM8(-3, -3, -3) \
+    else MAT_VEC_MUL_FC_FN_ASYM8S(-4, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_ASYM4S(-13, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(-5, -4, -4) \
+    else MAT_VEC_MUL_FC_FN_SYM8SXSYM16S(-5, -8, -8) \
+    else {  printf("unsupported multiplication\n"); return -1;}
+#endif/* HIFI_HP_VFPU && hifi5 */
+#endif /* HIFI_VFPU */
 
 #if HIFI_VFPU 
 #define PROCESS_MATXVEC_BATCH \
@@ -592,12 +652,32 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #endif
 
 #if HIFI_VFPU
+#if HIFI_HP_VFPU && hifi5
 #define PROCESS_MATMUL \
     MATMUL_FN_ASYM8S(-4, -4, -4) \
     else MATMUL_FN_SYM8S_SYM16S(-5, -8, -8) \
     else MATMUL_FN_PLAIN(8, 16, 16) \
     else MATMUL_FN_PLAIN(16, 16, 16) \
     else MATMUL_FN_PLAIN_F32(-1, -1, -1) \
+    else MATMUL_FN_PLAIN_F16(-2, -2, -2) \
+    else { printf("unsupported multiplication\n"); return -1;}
+#else
+#define PROCESS_MATMUL \
+    MATMUL_FN_ASYM8S(-4, -4, -4) \
+    else MATMUL_FN_SYM8S_SYM16S(-5, -8, -8) \
+    else MATMUL_FN_PLAIN(8, 16, 16) \
+    else MATMUL_FN_PLAIN(16, 16, 16) \
+    else MATMUL_FN_PLAIN_F32(-1, -1, -1) \
+    else { printf("unsupported multiplication\n"); return -1;}
+#endif //HIFI_HP_VFPU && hifi5 end
+#else
+#if HIFI_HP_VFPU && hifi5
+#define PROCESS_MATMUL \
+    MATMUL_FN_ASYM8S(-4, -4, -4) \
+    else MATMUL_FN_SYM8S_SYM16S(-5, -8, -8) \
+    else MATMUL_FN_PLAIN(8, 16, 16) \
+    else MATMUL_FN_PLAIN(16, 16, 16) \
+    else MATMUL_FN_PLAIN_F16(-2, -2, -2) \
     else { printf("unsupported multiplication\n"); return -1;}
 #else
 #define PROCESS_MATMUL \
@@ -606,6 +686,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MATMUL_FN_PLAIN(8, 16, 16) \
     else MATMUL_FN_PLAIN(16, 16, 16) \
     else { printf("unsupported multiplication\n"); return -1;}
+#endif //HIFI_HP_VFPU && hifi5 end
 #endif
 
 int xa_nn_main_process(int argc, char *argv[])
@@ -696,6 +777,24 @@ int xa_nn_main_process(int argc, char *argv[])
       return 0;
     }
   }
+  else if((cfg.mat_precision == -2) && (cfg.inp_precision == -2) && (cfg.out_precision == -2))
+  {
+    if(cfg.fc == 1){
+      sprintf(profiler_name,"fully_connected_f16");
+    }
+    else if(cfg.matmul == 1) {
+      sprintf(profiler_name,"matmul_f16xf16_f16");
+    }
+    else{
+      sprintf(profiler_name,"matXvec%s_f16xf16_f16",(cfg.batch)? "_batch": "");
+    }
+// If HP_VFPU is not supported, return
+    if(!HIFI_HP_VFPU)
+    {
+      printf("%s: NOT TESTED\n", profiler_name);
+      return 0;
+    }    
+  }
   else if((cfg.mat_precision == -3) && (cfg.inp_precision == -3) && (cfg.out_precision == -3))
   {
     if(cfg.fc == 1){
@@ -715,6 +814,15 @@ int xa_nn_main_process(int argc, char *argv[])
     }
     else {
       sprintf(profiler_name,"matXvec%s_asym8sxasym8s_asym8s",(cfg.batch)? "_batch": "");
+    }
+  }
+  else if((cfg.mat_precision == -13) && (cfg.inp_precision == -4) && (cfg.out_precision == -4))
+  {
+    if(cfg.fc == 1){
+      sprintf(profiler_name,"fully_connected_asym4sxasym8s_asym8s");
+    }
+    else{
+      printf("%s: NOT TESTED\n", profiler_name);
     }
   }
   else if((cfg.mat_precision == -5) && (cfg.inp_precision == -4) && (cfg.out_precision == -4))
@@ -814,8 +922,16 @@ int xa_nn_main_process(int argc, char *argv[])
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
 
-  // scratch size required for matXvec activation kernels
-  scratch_size = cfg.rows*4;
+  if((cfg.mat_precision == -13) && (cfg.inp_precision == -4) && (cfg.out_precision == -4))
+  {
+    // scratch size required for fully_connected_asym4sxasym8s kernel
+    scratch_size = 16 + cfg.cols1;
+  }
+  else
+  {
+    // scratch size required for matXvec activation kernels
+    scratch_size = cfg.rows*4;
+  }
 
   // Allocate Memory
   p_mat1 = create_buf2D(cfg.rows, cfg.cols1, cfg.row_stride1, cfg.mat_precision, cfg.membank_padding);    VALIDATE_PTR(p_mat1);

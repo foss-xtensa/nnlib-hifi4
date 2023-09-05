@@ -64,6 +64,7 @@ buf1D_t *create_buf1D(int len, int precision)
   switch(precision)
   {
     case -1: pbuf->bytes_per_element = 4; break;
+    case -2: pbuf->bytes_per_element = 2; break;
     case ASYM8_TYPE: pbuf->bytes_per_element = 1; break;
     case ASYM8S_TYPE: pbuf->bytes_per_element = 1; break;
     case SYM8S_TYPE: pbuf->bytes_per_element = 1; break;
@@ -114,12 +115,15 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
   switch(precision)
   {
     case -1:pbuf->bytes_per_element = 4; break;
+    case -2:pbuf->bytes_per_element = 2; break;
     case ASYM8_TYPE: pbuf->bytes_per_element = 1;break;
     case ASYM8S_TYPE: pbuf->bytes_per_element = 1; break;
     case SYM8S_TYPE: pbuf->bytes_per_element = 1; break;
     case ASYM16S_TYPE: pbuf->bytes_per_element = 2; break;
     case SYM16S_TYPE: pbuf->bytes_per_element = 2; break;
     case 1: pbuf->bytes_per_element = 1; break;
+    case -13:
+    case -12:
     case 8: pbuf->bytes_per_element = 1;break;
     case 16:pbuf->bytes_per_element = 2; break;
     case 32:pbuf->bytes_per_element = 4; break;
@@ -316,6 +320,15 @@ int set_rand_inp_buf1D(buf1D_t *ptr_buf1D)
         }
       }
       break;
+    case -2:
+      {
+        short *p = (short *) ptr_buf1D->p;
+        for (i = 0; i < ptr_buf1D->length; i++)
+        {
+          p[i] = RAND();
+        }
+      }
+      break;      
     case ASYM8_TYPE: 
     case ASYM8S_TYPE: 
     case SYM8S_TYPE: 
@@ -398,7 +411,15 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
-    case ASYM8_TYPE: 
+    case -2:
+      {
+        short *p = (short *) ptr_buf2D->p;
+        for (i = 0; i < ptr_buf2D->rows * ptr_buf2D->row_offset; i++)
+        {
+          p[i] = RAND();
+        }
+      }      
+    case ASYM8_TYPE:
     case ASYM8S_TYPE: 
     case SYM8S_TYPE: 
       {
@@ -409,6 +430,16 @@ int set_rand_inp_buf2D(buf2D_t *ptr_buf2D)
         }
       }
       break;
+    case -12:  
+    case -13:
+      {
+        char *p = (char *) ptr_buf2D->p;
+        for (i = 0; i < ((ptr_buf2D->rows * ptr_buf2D->row_offset) / 2); i++)
+        {
+          p[i] = RAND();
+        }
+      }
+      break;      
     case 8: 
       {
         char *p = (char *) ptr_buf2D->p;

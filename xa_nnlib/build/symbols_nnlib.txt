@@ -1,6 +1,7 @@
 xa_nn_matXvec_batch_f32xf32_f32
 
 xa_nn_matXvec_f32xf32_f32
+xa_nn_matXvec_f16xf16_f16
 xa_nn_matXvec_f32xf32_f32_tanh
 xa_nn_matXvec_f32xf32_f32_sigmoid
 xa_nn_matXvec_out_stride_f32xf32_f32
@@ -32,6 +33,7 @@ xa_nn_matXvec_batch_asym8uxasym8u_asym8u
 xa_nn_matXvec_acc_batch_sym8sx8_asym16s
 xa_nn_matXvec_acc_batch_sym8sx8_asym16s_hU
 xa_nn_matXvec_sym8sxasym8s_asym8s
+xa_nn_matXvec_asym4sxasym8s_asym8s
 xa_nn_matXvec_sym8sxsym16s_sym16s
 xa_nn_matXvec_out_stride_sym8sxasym8s_16
 xa_nn_matXvec_asym8sxasym8s_asym8s
@@ -45,6 +47,7 @@ xa_nn_matmul_per_chan_sym8sxsym16s_sym16s
 xa_nn_matmul_sym8sxsym16s_sym16s
 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s
 xa_nn_matmul_f32xf32_f32
+xa_nn_matmul_f16xf16_f16
 
 xa_nn_vec_sigmoid_32_32
 xa_nn_vec_tanh_32_32
@@ -109,9 +112,13 @@ xa_nn_conv2d_std_8x8
 xa_nn_conv2d_std_16x16
 xa_nn_conv2d_std_asym8uxasym8u
 xa_nn_conv2d_std_per_chan_sym8sxasym8s
+xa_nn_conv2d_group_sym8sxasym8s
+xa_nn_conv2d_std_per_chan_sym4sxasym8s
 xa_nn_dilated_conv2d_std_per_chan_sym8sxasym8s
 xa_nn_conv2d_std_f32
+xa_nn_conv2d_std_f16
 xa_nn_conv2d_std_getsize
+xa_nn_conv2d_std_getsize_sym4s
 xa_nn_dilated_conv2d_std_getsize
 xa_nn_conv2d_std_per_chan_sym8sxsym16s
 
@@ -136,6 +143,9 @@ xa_nn_dilated_conv2d_depthwise_getsize
 xa_nn_conv2d_depthwise_f32
 xa_nn_dilated_conv2d_depthwise_f32
 xa_nn_conv2d_pointwise_f32
+
+xa_nn_conv2d_depthwise_f16
+xa_nn_conv2d_pointwise_f16
 
 xa_nn_transpose_conv_sym8sxasym8s
 xa_nn_transpose_conv_sym8sxsym16s
@@ -245,6 +255,7 @@ xa_nn_maxpool_asym8u
 xa_nn_maxpool_16
 xa_nn_maxpool_f32
 
+xa_nn_fully_connected_f16
 xa_nn_fully_connected_f32
 xa_nn_fully_connected_16x16_16
 xa_nn_fully_connected_8x16_16
@@ -253,6 +264,7 @@ xa_nn_fully_connected_asym8uxasym8u_asym8u
 xa_nn_fully_connected_sym8sxasym8s_asym8s
 xa_nn_fully_connected_sym8sxsym16s_sym16s
 xa_nn_fully_connected_asym8sxasym8s_asym8s
+xa_nn_fully_connected_asym4sxasym8s_asym8s
 
 xa_nn_depth_to_space_8_8
 xa_nn_space_to_depth_8_8

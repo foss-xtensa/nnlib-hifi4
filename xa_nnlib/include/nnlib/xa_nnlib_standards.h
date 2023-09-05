@@ -43,6 +43,12 @@ extern "C"
 #define HIFI_VFPU 0
 #endif
 
+#if XCHAL_HAVE_HIFI5_HP_VFPU
+#define HIFI_HP_VFPU 1
+#else
+#define HIFI_HP_VFPU 0
+#endif
+
 typedef double flt64;
 typedef char  Int4;
 typedef char  Int8;
@@ -92,6 +98,7 @@ typedef enum _xa_nnlib_prec_t
   PREC_ASYM32U = -9,
   PREC_ASYM32S = -10,
   PREC_SYM32S  = -11,
+  PREC_SYM4S  = -12,
 } xa_nnlib_prec_t;
 
 #define PREC_ASYM8 PREC_ASYM8U

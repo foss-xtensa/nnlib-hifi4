@@ -26,6 +26,7 @@
   switch(precision)                                       \
   {                                                       \
     case -1: size = sizeof(float);                break;  \
+    case -2: size = sizeof(short);                break;  \
     case ASYM8_TYPE: size = sizeof(char);         break;  \
     case ASYM8S_TYPE: size = sizeof(char);        break;  \
     case SYM8S_TYPE: size = sizeof(char);         break;  \
@@ -33,6 +34,8 @@
     case ASYM16S_TYPE: size = sizeof(short int);  break;  \
     case ASYM32S_TYPE: size = sizeof(int);        break;  \
     case 1: size = sizeof(char);                  break;  \
+    case -12:                                             \
+    case -13:                                             \
     case 8: size = sizeof(char);                  break;  \
     case 16: size = sizeof(short int);            break;  \
     case 32: size = sizeof(int);                  break;  \
@@ -58,11 +61,22 @@ int read_buf2D_from_file(FILE *fptr_read_data, buf2D_t *ptr_buf2D, int pad_val)
   char *ptr_mat = (char *)ptr_buf2D->p;                  
   GET_SIZE_FROM_PRECISION(ptr_buf2D->precision, size)    
   for(row=0; row<ptr_buf2D->rows; row++)                 
-  {                                                      
-    if(ptr_buf2D->cols != fread((ptr_mat + (row * ptr_buf2D->row_offset * size)), size, ptr_buf2D->cols, fptr_read_data))
-    {                                                                                        
-      printf("Error reading input/reference matrix from file\n");                       
-      return -1;                                                                             
+  {                                 
+    if(ptr_buf2D->precision == -13)
+    {
+      if(ptr_buf2D->cols != fread((ptr_mat + ((row * ptr_buf2D->row_offset * size) / 2)), size, ptr_buf2D->cols, fptr_read_data))
+      {                                                                                        
+        printf("Error reading input/reference matrix from file\n");                       
+        return -1;                                                                             
+      }
+    } 
+    else
+    {                    
+      if(ptr_buf2D->cols != fread((ptr_mat + (row * ptr_buf2D->row_offset * size)), size, ptr_buf2D->cols, fptr_read_data))
+      {                                                                                        
+        printf("Error reading input/reference matrix from file\n");                       
+        return -1;                                                                             
+      }
     }
     if(ptr_buf2D->precision == ASYM8_TYPE)
     {
@@ -70,6 +84,12 @@ int read_buf2D_from_file(FILE *fptr_read_data, buf2D_t *ptr_buf2D, int pad_val)
       pad_size = (pad_size < 0) ? 0: pad_size;
       memset((ptr_mat + (row * ptr_buf2D->row_offset * size) + ptr_buf2D->cols * size), (UWORD8)pad_val, pad_size);
     }
+    else if(ptr_buf2D->precision == -13)
+    {
+      int pad_size = ptr_buf2D->row_offset - ptr_buf2D->cols;
+      pad_size = (pad_size < 0) ? 0: pad_size;
+      memset((ptr_mat + ((row * ptr_buf2D->row_offset * size) / 2) + ptr_buf2D->cols * size), (UWORD8)pad_val, pad_size);
+    }    
     else
     {
       int pad_size = ptr_buf2D->row_offset - ptr_buf2D->cols;

@@ -76,6 +76,56 @@ WORD32 xa_nn_fully_connected_f32
 }
 #endif /* #if !HAVE_VFPU */
 
+#if !HAVE_HP_VFPU
+DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_fully_connected_f16,
+    (WORD16 *__restrict__ p_out
+     ,const WORD16 *__restrict__ p_weight
+     ,const WORD16 *__restrict__ p_inp
+     ,const WORD16 *__restrict__ p_bias
+     ,WORD32  weight_depth
+     ,WORD32  out_depth
+    )
+    )
+#else /* #if !HAVE_HP_VFPU */
+WORD32 xa_nn_fully_connected_f16
+  (WORD16 *__restrict__ p_out
+   ,const WORD16 *__restrict__ p_weight
+   ,const WORD16 *__restrict__ p_inp
+   ,const WORD16 *__restrict__ p_bias
+   ,WORD32  weight_depth
+   ,WORD32  out_depth
+  )
+{
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_weight, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD16), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_weight, sizeof(WORD16), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD16), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD16), -1);
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND((out_depth <= 0), -1);
+
+  WORD32 ret = 0;
+  ret = xa_nn_matXvec_f16xf16_f16
+    (p_out
+     ,(WORD16 *)p_weight
+     ,0
+     ,(WORD16 *)p_inp
+     ,0
+     ,(WORD16 *)p_bias
+     ,out_depth
+     ,weight_depth
+     ,0
+     ,weight_depth
+     ,0
+    );
+  return ret;
+}
+#endif /* #if !HAVE_HP_VFPU */
+
 WORD32 xa_nn_fully_connected_16x16_16
   (pWORD16 __restrict__ p_out
    ,pWORD16  __restrict__ p_weight
@@ -425,6 +475,65 @@ WORD32 xa_nn_fully_connected_asym8sxasym8s_asym8s
      ,out_multiplier
      ,out_shift
      ,out_zero_bias
+    );
+  return ret;
+}
+
+WORD32 xa_nn_fully_connected_asym4sxasym8s_asym8s
+  (WORD8 *__restrict__ p_out
+   ,const WORD8 *__restrict__ p_weight
+   ,const WORD8 *__restrict__ p_inp
+   ,const WORD32 *__restrict__ p_bias
+   ,WORD32  weight_depth
+   ,WORD32  out_depth
+   ,WORD32  input_zero_bias
+   ,WORD32  weight_zero_bias
+   ,WORD32  out_multiplier
+   ,WORD32  out_shift
+   ,WORD32  out_zero_bias
+   ,VOID *p_scratch
+  )
+{
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_weight, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_weight, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD32), -1);
+
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND((out_depth <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND((input_zero_bias < -127 || input_zero_bias > 128), -1);
+  XA_NNLIB_ARG_CHK_COND((weight_zero_bias < -127 || weight_zero_bias > 128), -1);
+  XA_NNLIB_ARG_CHK_COND((out_shift < -31 || out_shift > 31), -1);
+  XA_NNLIB_ARG_CHK_COND((out_zero_bias < -128 || out_zero_bias > 127), -1);
+  XA_NNLIB_ARG_CHK_COND(((weight_depth % 2) != 0), -1);
+
+  WORD32 ret = 0;
+  ret = xa_nn_matXvec_asym4sxasym8s_asym8s
+    (p_out
+     ,p_weight
+     ,0
+     ,p_inp
+     ,0
+     ,p_bias
+     ,out_depth
+     ,weight_depth
+     ,0
+     ,weight_depth
+     ,0
+     ,weight_zero_bias
+     ,0
+     ,input_zero_bias
+     ,0
+     ,out_multiplier
+     ,out_shift
+     ,out_zero_bias
+     ,p_scratch
     );
   return ret;
 }

@@ -509,6 +509,35 @@
 			WORD32 row_stride1,                           /*!< [in] row stride for mat1 */
 			WORD32 row_stride2                            /*!< [in] row stride for mat2 */
 			);
+			
+#if XCHAL_HAVE_HIFI5_HP_VFPU
+	WORD32 xa_nn_matXvec_f16xf16_f16(
+			WORD16  * __restrict__ p_out,                /*!< [out] f16b result: rows x 1 */
+			const WORD16  * __restrict__ p_mat1,         /*!< [in] f16b mat1: rows x cols1 */
+			const WORD16  * __restrict__ p_mat2,         /*!< [in] f16b mat2: rows x cols2 */
+			const WORD16  * __restrict__ p_vec1,         /*!< [in] f16b vec1: cols1 x 1 */
+			const WORD16  * __restrict__ p_vec2,         /*!< [in] f16b vec2: cols2 x 1 */
+			const WORD16  * __restrict__ p_bias,         /*!< [in] f16b bias: rows x 1 */
+			WORD32 rows,                                  /*!< [in] number of rows */
+			WORD32 cols1,                                 /*!< [in] number of columns of mat1 */
+			WORD32 cols2,                                 /*!< [in] number of columns of mat2 */
+			WORD32 row_stride1,                           /*!< [in] row stride for mat1 */
+			WORD32 row_stride2                            /*!< [in] row stride for mat2 */
+			);
+
+    WORD32 xa_nn_matmul_f16xf16_f16(
+            WORD16 * __restrict__ p_out,          
+            const WORD16 * __restrict__ p_mat1,   
+            const WORD16 * __restrict__ p_vec1,   
+            const WORD16 * __restrict__ p_bias,   
+            WORD32 rows,
+            WORD32 cols1,
+            WORD32 row_stride1,                    
+            WORD32 vec_count,                      
+            WORD32 vec_offset,
+            WORD32 out_offset,
+            WORD32 out_stride);
+#endif
 
 	WORD32 xa_nn_matXvec_batch_f32xf32_f32(
 			FLOAT32  ** __restrict__ p_out,               /*!< [out] f32b result: rows x vec_count */
@@ -623,6 +652,27 @@
       WORD32 out_multiplier,
       WORD32 out_shift,
       WORD32 out_zero_bias);
+
+  WORD32 xa_nn_matXvec_asym4sxasym8s_asym8s(
+      WORD8 * __restrict__ p_out,
+      const WORD8 * __restrict__ p_mat1,
+      const WORD8 * __restrict__ p_mat2,
+      const WORD8 * __restrict__ p_vec1,
+      const WORD8 * __restrict__ p_vec2,
+      const WORD32 * __restrict__ p_bias,
+      WORD32 rows,
+      WORD32 cols1,
+      WORD32 cols2,
+      WORD32 row_stride1,
+      WORD32 row_stride2,
+      WORD32 mat1_zero_bias,
+      WORD32 mat2_zero_bias,
+      WORD32 vec1_zero_bias,
+      WORD32 vec2_zero_bias,
+      WORD32 out_multiplier,
+      WORD32 out_shift,
+      WORD32 out_zero_bias,
+      pVOID p_scratch);
 
 	WORD32 xa_nn_vec_sigmoid_32_32(
 			WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
@@ -923,6 +973,17 @@
 			WORD32 out_channels,
 			WORD32 input_precision);
 
+	WORD32 xa_nn_conv2d_std_getsize_sym4s(
+			WORD32 input_height,
+			WORD32 input_channels,
+			WORD32 kernel_height,
+			WORD32 kernel_width,
+			WORD32 y_stride,
+			WORD32 y_padding,
+			WORD32 out_height,
+			WORD32 out_channels,
+			WORD32 input_precision);
+
 	WORD32 xa_nn_dilated_conv2d_std_getsize(
 			WORD32 input_height,
 			WORD32 input_channels,
@@ -1022,6 +1083,28 @@
 			WORD32 out_data_format,
 			VOID *p_handle);
 
+#if XCHAL_HAVE_HIFI5_HP_VFPU
+    WORD32 xa_nn_conv2d_std_f16(
+            WORD16* __restrict__ p_out,
+            const WORD16* __restrict__ p_inp,
+            const WORD16* __restrict__ p_kernel,
+            const WORD16* __restrict__ p_bias,
+            WORD32 input_height,
+            WORD32 input_width,
+            WORD32 input_channels,
+            WORD32 kernel_height,
+            WORD32 kernel_width,
+            WORD32 out_channels,
+            WORD32 x_stride,
+            WORD32 y_stride,
+            WORD32 x_padding,
+            WORD32 y_padding,
+            WORD32 out_height,
+            WORD32 out_width,
+            WORD32 out_data_format,
+            VOID *p_scratch);
+#endif
+
 	WORD32 xa_nn_conv2d_pointwise_f32(
 			FLOAT32* __restrict__ p_out,
 			FLOAT32* __restrict__ p_kernel,
@@ -1032,6 +1115,19 @@
 			WORD32  input_channels,
 			WORD32  out_channels,
 			WORD32  out_data_format);
+
+#if XCHAL_HAVE_HIFI5_HP_VFPU
+	WORD32 xa_nn_conv2d_pointwise_f16(
+			WORD16* __restrict__ p_out,
+			WORD16* __restrict__ p_kernel,
+			WORD16* __restrict__ p_inp,
+			WORD16* __restrict__ p_bias,
+			WORD32  input_height,
+			WORD32  input_width,
+			WORD32  input_channels,
+			WORD32  out_channels,
+			WORD32  out_data_format);
+#endif
 
 	WORD32 xa_nn_conv2d_pointwise_8x16
 		(pWORD16 __restrict__ p_out
@@ -1164,6 +1260,29 @@
 			WORD32  inp_data_format,
 			WORD32  out_data_format,
 			pVOID p_scratch);
+
+#if XCHAL_HAVE_HIFI5_HP_VFPU
+	WORD32 xa_nn_conv2d_depthwise_f16(
+			WORD16* __restrict__ p_out,
+			const WORD16* __restrict__ p_kernel,
+			const WORD16* __restrict__ p_inp,
+			const WORD16* __restrict__ p_bias,
+			WORD32  input_height,
+			WORD32  input_width,
+			WORD32  input_channels,
+			WORD32  kernel_height,
+			WORD32  kernel_width,
+			WORD32  channels_multiplier,
+			WORD32  x_stride,
+			WORD32  y_stride,
+			WORD32  x_padding,
+			WORD32  y_padding,
+			WORD32  out_height,
+			WORD32  out_width,
+			WORD32  inp_data_format,
+			WORD32  out_data_format,
+			pVOID p_scratch);
+#endif
 
 	WORD32 xa_nn_conv2d_depthwise_8x16
 		(pWORD16 __restrict__ p_out
@@ -1405,6 +1524,17 @@
 			WORD32 inp_data_format,
 			WORD32 out_data_format);
 
+#if XCHAL_HAVE_HIFI5_HP_VFPU
+	WORD32 xa_nn_fully_connected_f16
+		(WORD16 *__restrict__ p_out
+		 ,const WORD16 *__restrict__ p_weight
+		 ,const WORD16 *__restrict__ p_inp
+		 ,const WORD16 *__restrict__ p_bias
+		 ,WORD32  weight_depth
+		 ,WORD32  out_depth
+		);
+#endif
+
 	WORD32 xa_nn_fully_connected_f32
 		(FLOAT32 *__restrict__ p_out
 		 ,const FLOAT32 *__restrict__ p_weight
@@ -1497,6 +1627,21 @@
      ,WORD32  out_multiplier
      ,WORD32  out_shift
      ,WORD32  out_zero_bias
+    );
+
+  WORD32 xa_nn_fully_connected_asym4sxasym8s_asym8s
+    (WORD8 *__restrict__ p_out
+     ,const WORD8 *__restrict__ p_weight
+     ,const WORD8 *__restrict__ p_inp
+     ,const WORD32 *__restrict__ p_bias
+     ,WORD32  weight_depth
+     ,WORD32  out_depth
+     ,WORD32  input_zero_bias
+     ,WORD32  weight_zero_bias
+     ,WORD32  out_multiplier
+     ,WORD32  out_shift
+     ,WORD32  out_zero_bias
+     ,VOID *p_scratch
     );
 
 	WORD32 xa_nn_vec_activation_min_max_asym8u_asym8u(
@@ -1741,6 +1886,55 @@
 			WORD32 out_zero_bias,
 			WORD32 out_data_format,
 			VOID *p_scratch);
+
+    WORD32 xa_nn_conv2d_group_sym8sxasym8s(
+			WORD8* __restrict__ p_out,
+			const WORD8* __restrict__ p_inp,
+			const WORD8* __restrict__ p_kernel,
+			const WORD32* __restrict__ p_bias,
+			WORD32 input_height,
+			WORD32 input_width,
+			WORD32 input_channels,
+			WORD32 kernel_height,
+			WORD32 kernel_width,
+            WORD32 kernel_channels,
+			WORD32 out_channels,
+			WORD32 x_stride,
+			WORD32 y_stride,
+			WORD32 x_padding,
+			WORD32 y_padding,
+			WORD32 out_height,
+			WORD32 out_width,
+			WORD32 input_zero_bias,
+			WORD32 * p_out_multiplier,
+			WORD32 * p_out_shift,
+			WORD32 out_zero_bias,
+			WORD32 out_data_format,
+			VOID *p_scratch);
+
+	WORD32 xa_nn_conv2d_std_per_chan_sym4sxasym8s(
+			WORD8* __restrict__ p_out,
+			const WORD8* __restrict__ p_inp,
+			const WORD8* __restrict__ p_kernel,
+			const WORD32* __restrict__ p_bias,
+			WORD32 input_height,
+			WORD32 input_width,
+			WORD32 input_channels,
+			WORD32 kernel_height,
+			WORD32 kernel_width,
+			WORD32 out_channels,
+			WORD32 x_stride,
+			WORD32 y_stride,
+			WORD32 x_padding,
+			WORD32 y_padding,
+			WORD32 out_height,
+			WORD32 out_width,
+			WORD32 input_zero_bias,
+			WORD32 * p_out_multiplier,
+			WORD32 * p_out_shift,
+			WORD32 out_zero_bias,
+			WORD32 out_data_format,
+			VOID *p_scratch);			
 
 	WORD32 xa_nn_dilated_conv2d_std_per_chan_sym8sxasym8s(
 			WORD8* __restrict__ p_out,

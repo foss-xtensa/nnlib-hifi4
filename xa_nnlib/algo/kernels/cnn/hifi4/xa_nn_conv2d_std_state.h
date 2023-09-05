@@ -72,6 +72,20 @@ VOID xa_nn_conv2d_std_init_state(
     WORD32 input_precision,
     WORD32 kernel_precision);
 
+VOID xa_nn_conv2d_group_init_state(
+    VOID *p_scratch,
+    VOID *p_kernel,
+    WORD32 input_height,
+    WORD32 kernel_channels,
+    WORD32 kernel_height,
+    WORD32 kernel_width,
+    WORD32 y_stride,
+    WORD32 y_padding,
+    WORD32 out_height,
+    WORD32 output_channels,
+    WORD32 input_precision,
+    WORD32 kernel_precision);    
+
 VOID xa_nn_dilated_conv2d_std_init_circ_buf(
     VOID *p_handle,
     VOID *p_kernel,
@@ -210,6 +224,21 @@ VOID conv2d_std_init_cir_buf(
     VOID **pp_inp,
     xa_nn_conv_state_t *p_state);
 
+VOID conv2d_std_update_cir_buf_slow(
+    WORD32 input_channels,
+    WORD32 input_channels_pad,
+    WORD32 input_bytewidth,
+    WORD32 input_width,
+    WORD32 input_height,
+    WORD32 y_padding,
+    WORD32 y_b_pad,
+    WORD32 x_padding,
+    WORD32 kernel_width,
+    WORD32 x_stride,
+    VOID **pp_inp,
+    WORD32 idx_beg_inp_width_pad,
+    xa_nn_conv_state_t *p_state);
+
 VOID conv2d_std_update_cir_buf(
     WORD32 input_channels,
     WORD32 input_channels_pad,
@@ -228,6 +257,22 @@ VOID conv2d_std_update_cir_buf(
 VOID conv2d_std_init_cir_buf_asym8(
     WORD32 input_channels,
     WORD32 input_channels_pad,
+    WORD32 input_bytewidth,
+    WORD32 input_width,
+    WORD32 input_height,
+    WORD32 y_padding,
+    WORD32 y_b_pad,
+    WORD32 x_padding,
+    WORD32 kernel_width,
+    WORD32 x_stride,
+    VOID **pp_inp,
+    xa_nn_conv_state_t *p_state,
+    WORD32 pad_val);
+
+VOID conv2d_group_init_cir_buf_asym8(
+    WORD32 input_channels,
+    WORD32 kernel_channels_pad,
+    WORD32 kernel_channels,
     WORD32 input_bytewidth,
     WORD32 input_width,
     WORD32 input_height,
@@ -270,6 +315,23 @@ VOID xa_nn_dilated_conv2d_std_load_cir_buf_asym8(
 VOID conv2d_std_update_cir_buf_asym8(
     WORD32 input_channels,
     WORD32 input_channels_pad,
+    WORD32 input_bytewidth,
+    WORD32 input_width,
+    WORD32 input_height,
+    WORD32 y_padding,
+    WORD32 y_b_pad,
+    WORD32 x_padding,
+    WORD32 kernel_width,
+    WORD32 x_stride,
+    VOID **pp_inp,
+    WORD32 idx_beg_inp_width_pad,
+    xa_nn_conv_state_t *p_state,
+    WORD32 pad_val);
+
+VOID conv2d_group_update_cir_buf_asym8(
+    WORD32 input_channels,
+    WORD32 kernel_channels_pad,
+    WORD32 kernel_channels,
     WORD32 input_bytewidth,
     WORD32 input_width,
     WORD32 input_height,

@@ -284,6 +284,73 @@ static inline void _xa_nn_dot_product_4_rows_1_vecs_aligned
   *out_2_2 = out2;
   *out_3_3 = out3;
 }
+#else
+/* vec aligned, mat not required to be aligned */
+static inline void _xa_nn_dot_product_4_rows_1_vecs_aligned
+( ae_int64* out_0_0
+ ,ae_int64* out_1_1
+ ,ae_int64* out_2_2
+ ,ae_int64* out_3_3
+ ,WORD8*      p_mat_0
+ ,WORD8*      p_mat_1
+ ,WORD8*      p_mat_2
+ ,WORD8*      p_mat_3
+ ,WORD16*      p_vec_0
+ ,WORD32      cols1)
+{
+  ae_int16x4 *pvec0 = (ae_int16x4*)p_vec_0;
+  ae_int16x4 d_mat0_0, d_mat1_0, d_mat2_0, d_mat3_0, d_vec0;
+  ae_int64 d_out0, d_out1, d_out2, d_out3;
+
+  d_out0 = *out_0_0;
+  d_out1 = *out_1_1;
+  d_out2 = *out_2_2;
+  d_out3 = *out_3_3;
+
+  ae_valign align_m0, align_m1, align_m2, align_m3;
+  align_m0 = AE_LA64_PP(p_mat_0);
+  align_m1 = AE_LA64_PP(p_mat_1);
+  align_m2 = AE_LA64_PP(p_mat_2);
+  align_m3 = AE_LA64_PP(p_mat_3);
+
+  int c_itr = 0;
+  for(;c_itr<(cols1>>2); c_itr++)
+  {
+    AE_L16X4_IP(d_vec0, pvec0, 8);
+    AE_LA8X4S_IP(d_mat0_0, align_m0, p_mat_0);
+    AE_LA8X4S_IP(d_mat1_0, align_m1, p_mat_1);
+    AE_LA8X4S_IP(d_mat2_0, align_m2, p_mat_2);
+    AE_LA8X4S_IP(d_mat3_0, align_m3, p_mat_3);
+
+    AE_MULAAAAQ16(d_out0, d_mat0_0, d_vec0);
+    AE_MULAAAAQ16(d_out1, d_mat1_0, d_vec0);
+    AE_MULAAAAQ16(d_out2, d_mat2_0, d_vec0);
+    AE_MULAAAAQ16(d_out3, d_mat3_0, d_vec0);
+  }
+
+  int64_t out0 = d_out0;
+  int64_t out1 = d_out1;
+  int64_t out2 = d_out2;
+  int64_t out3 = d_out3;
+  p_vec_0 = (WORD16 *)pvec0;
+
+  for(c_itr=0; c_itr<(cols1&0x03); c_itr++)
+  {
+    out0 += (*p_mat_0)*(*p_vec_0);
+    out1 += (*p_mat_1)*(*p_vec_0);
+    out2 += (*p_mat_2)*(*p_vec_0);
+    out3 += (*p_mat_3)*(*p_vec_0);
+    p_mat_0++;
+    p_mat_1++;
+    p_mat_2++;
+    p_mat_3++;
+    p_vec_0++;
+  }
+  *out_0_0 = out0;
+  *out_1_1 = out1;
+  *out_2_2 = out2;
+  *out_3_3 = out3;
+}
 #endif
 
 static inline void _xa_nn_dot_product_1_rows_1_vecs_unaligned
@@ -359,13 +426,24 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s(
     bias_flag = 1;
   }
   
-  int mat1_align_flag=0, mat2_align_flag=0;
+  int align_flag1=0, align_flag2=0;
+#if XCHAL_HAVE_HIFI1
+  /* HiFi1 core has unaligned support for 8-bit load, hence only vec needs to be aligned */
+  if( (unsigned)p_vec1 % 4 == 0) {
+    align_flag1 = 1;
+  }
+  if( (unsigned)p_vec2 % 4 == 0) {
+    align_flag2 = 1;
+  }
+#else
+  /* No 8-bit unaligned support, require each matrix row to be aligned */
   if( ((unsigned)p_mat1 % 4 == 0) && (row_stride1%4 == 0) ){
-    mat1_align_flag = 1;
+    align_flag1 = 1;
   }
   if( ((unsigned)p_mat2 % 4 == 0) && (row_stride2%4 == 0) ){
-    mat2_align_flag = 1;
+    align_flag2 = 1;
   }
+#endif
  
   ae_valign align_out;
   align_out = AE_ZALIGN64();
@@ -392,14 +470,7 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s(
       acc_row3_vec0 = p_bias[m_itr+3];
     }
 
-#if XCHAL_HAVE_HIFI1
-      _xa_nn_dot_product_4_rows_1_vecs_unaligned
-       (&acc_row0_vec0, &acc_row1_vec0, &acc_row2_vec0, &acc_row3_vec0
-       ,p_mat1_0, p_mat1_1, p_mat1_2, p_mat1_3
-       ,p_vec1_0, cols1
-       );
-#else //XCHAL_HAVE_HIFI1
-    if(mat1_align_flag) {
+    if(align_flag1) {
       _xa_nn_dot_product_4_rows_1_vecs_aligned
        (&acc_row0_vec0, &acc_row1_vec0, &acc_row2_vec0, &acc_row3_vec0
        ,p_mat1_0, p_mat1_1, p_mat1_2, p_mat1_3
@@ -412,7 +483,6 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s(
        ,p_vec1_0, cols1
        );
     }
-#endif //XCHAL_HAVE_HIFI1
 
     if(p_mat2 != NULL){
       WORD8 *p_mat2_0 = (WORD8 *)(p_mat2+(m_itr * row_stride2));
@@ -421,14 +491,7 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s(
       WORD8 *p_mat2_3 = (WORD8 *)(p_mat2+((m_itr+3) * row_stride2));
       WORD16 *p_vec2_0 = (WORD16 *)(p_vec2);
 
-#if XCHAL_HAVE_HIFI1
-        _xa_nn_dot_product_4_rows_1_vecs_unaligned
-         (&acc_row0_vec0, &acc_row1_vec0, &acc_row2_vec0, &acc_row3_vec0
-         ,p_mat2_0, p_mat2_1, p_mat2_2, p_mat2_3
-         ,p_vec2_0, cols2
-         );
-#else //XCHAL_HAVE_HIFI1
-      if(mat2_align_flag) {
+      if(align_flag2) {
         _xa_nn_dot_product_4_rows_1_vecs_aligned
          (&acc_row0_vec0, &acc_row1_vec0, &acc_row2_vec0, &acc_row3_vec0
          ,p_mat2_0, p_mat2_1, p_mat2_2, p_mat2_3
@@ -441,7 +504,6 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s(
          ,p_vec2_0, cols2
          );
       }
-#endif //XCHAL_HAVE_HIFI1
     }
     ae_int32x2 res0 = MultiplyByQuantizedMultiplier_x2_opt(acc_row0_vec0, acc_row1_vec0, out_multiplier, out_shift);
     ae_int32x2 res2 = MultiplyByQuantizedMultiplier_x2_opt(acc_row2_vec0, acc_row3_vec0, out_multiplier, out_shift);
