@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -19,7 +19,7 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 #include "xa_type_def.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_conv2d_depthwise_state.h"
@@ -1217,7 +1217,7 @@ static void xa_nn_dilated_conv2d_depthwise_nhwc_f32(
 
     WORD32 dh_count, dw_count;
     WORD32 y_padding_dh, x_padding_dw;
-    WORD32 y_stride_dh, x_stride_dw;
+    WORD32 /*y_stride_dh,*/ x_stride_dw;
     WORD32 out_height_dh, out_width_dw;
     WORD32 rem_dh, rem_dw;
     WORD32 gcd_h, gcd_w;
@@ -1228,7 +1228,7 @@ static void xa_nn_dilated_conv2d_depthwise_nhwc_f32(
     dh_count = dilation_height/gcd_h;
     dw_count = dilation_width/gcd_w;
     y_padding_dh = y_padding;
-    y_stride_dh = y_stride * dh_count;
+    //y_stride_dh = y_stride * dh_count;
     out_height_dh = out_height / dh_count;
     out_width_dw = out_width / dw_count;
     rem_dh = out_height - out_height_dh * dh_count;

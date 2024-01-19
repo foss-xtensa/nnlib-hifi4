@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -487,6 +487,18 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define MATMUL_FN_SYM4S_ASYM8S(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_matmul_asym4sxasym8s_asym8s ( \
+          (WORD8 *)p_out->p, (WORD8 *) p_mat1->p, (WORD8 *)p_vec1->p, (WORD32 *)p_bias->p, \
+          cfg.rows, cfg.cols1, p_mat1->row_offset, \
+          cfg.vec_count, cfg.cols1, cfg.rows, 1, \
+          cfg.mat1_zero_bias, cfg.inp1_zero_bias, \
+          cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias, p_scratch->p);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define MATMUL_FN_SYM8S_SYM16S(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
       XTPWR_PROFILER_START(0);\
@@ -656,6 +668,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #define PROCESS_MATMUL \
     MATMUL_FN_ASYM8S(-4, -4, -4) \
     else MATMUL_FN_SYM8S_SYM16S(-5, -8, -8) \
+    else MATMUL_FN_SYM4S_ASYM8S(-13, -4, -4) \
     else MATMUL_FN_PLAIN(8, 16, 16) \
     else MATMUL_FN_PLAIN(16, 16, 16) \
     else MATMUL_FN_PLAIN_F32(-1, -1, -1) \
@@ -665,6 +678,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #define PROCESS_MATMUL \
     MATMUL_FN_ASYM8S(-4, -4, -4) \
     else MATMUL_FN_SYM8S_SYM16S(-5, -8, -8) \
+    else MATMUL_FN_SYM4S_ASYM8S(-13, -4, -4) \
     else MATMUL_FN_PLAIN(8, 16, 16) \
     else MATMUL_FN_PLAIN(16, 16, 16) \
     else MATMUL_FN_PLAIN_F32(-1, -1, -1) \
@@ -675,6 +689,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #define PROCESS_MATMUL \
     MATMUL_FN_ASYM8S(-4, -4, -4) \
     else MATMUL_FN_SYM8S_SYM16S(-5, -8, -8) \
+    else MATMUL_FN_SYM4S_ASYM8S(-13, -4, -4) \
     else MATMUL_FN_PLAIN(8, 16, 16) \
     else MATMUL_FN_PLAIN(16, 16, 16) \
     else MATMUL_FN_PLAIN_F16(-2, -2, -2) \
@@ -683,6 +698,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #define PROCESS_MATMUL \
     MATMUL_FN_ASYM8S(-4, -4, -4) \
     else MATMUL_FN_SYM8S_SYM16S(-5, -8, -8) \
+    else MATMUL_FN_SYM4S_ASYM8S(-13, -4, -4) \
     else MATMUL_FN_PLAIN(8, 16, 16) \
     else MATMUL_FN_PLAIN(16, 16, 16) \
     else { printf("unsupported multiplication\n"); return -1;}
@@ -821,6 +837,9 @@ int xa_nn_main_process(int argc, char *argv[])
     if(cfg.fc == 1){
       sprintf(profiler_name,"fully_connected_asym4sxasym8s_asym8s");
     }
+    else if(cfg.matmul == 1) {
+      sprintf(profiler_name,"matmul_asym4sxasym8s_asym8s");
+    }
     else{
       printf("%s: NOT TESTED\n", profiler_name);
     }
@@ -926,6 +945,10 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     // scratch size required for fully_connected_asym4sxasym8s kernel
     scratch_size = 16 + cfg.cols1;
+    // matmul requires higher scratch-size
+    if(cfg.matmul == 1) {
+      scratch_size = 4*(32 + cfg.cols1)+32;
+    }
   }
   else
   {

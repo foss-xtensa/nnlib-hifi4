@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -408,6 +408,7 @@ WORD32 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s(
         acc_row3_vec0 = AE_SEL32_LL(AE_MOVINT32X2_FROMINT64(d_out0_1), AE_MOVINT32X2_FROMINT64(d_out1_1));
 
 #if XCHAL_HAVE_HIFI1
+        (void)max_int8;(void)min_int8;
         MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_HIFI1(acc_row1_vec0, acc_row1_vec0, AE_MOVDA32X2(p_out_multiplier[m_itr+0], p_out_multiplier[m_itr+1]), l_shift[0], l_shift[1], r_shift[0], r_shift[1]);
         MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_HIFI1(acc_row3_vec0, acc_row3_vec0, AE_MOVDA32X2(p_out_multiplier[m_itr+0], p_out_multiplier[m_itr+1]), l_shift[0], l_shift[1], r_shift[0], r_shift[1]);
 

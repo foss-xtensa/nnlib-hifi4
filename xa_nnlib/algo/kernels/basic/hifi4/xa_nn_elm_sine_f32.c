@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -20,8 +20,8 @@
 
 ******************************************************************************/
 /* Common helper macros. */
-#include "common_fpu.h"
-#include "NatureDSP_Signal_math.h"
+#include "xa_nnlib_common_fpu.h"
+#include "../../../ndsp/hifi4/include/NatureDSP_Signal_math.h"
 #include "xa_nnlib_common.h"
 
 #if !HAVE_VFPU
@@ -47,7 +47,7 @@ WORD32 xa_nn_elm_sine_f32_f32(FLOAT32 * __restrict__ p_out,
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((num_elm <= 0), -1);
 
-  vec_sinef(p_out,
+  xa_nnlib_vec_sinef(p_out,
             p_inp,
             num_elm);
 

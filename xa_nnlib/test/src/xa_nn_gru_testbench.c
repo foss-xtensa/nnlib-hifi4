@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -780,14 +780,34 @@ int xa_nn_main_process(int argc, char *argv[])
 #error "Unsupported in this version\n"
 #endif
 
-    xa_nnlib_gru_set_config(gru_handle, XA_NNLIB_GRU_WEIGHT, &weights);
-    xa_nnlib_gru_set_config(gru_handle, XA_NNLIB_GRU_BIAS,   &biases);
+    err=xa_nnlib_gru_set_config(gru_handle, XA_NNLIB_GRU_WEIGHT, &weights);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    }
+    err=xa_nnlib_gru_set_config(gru_handle, XA_NNLIB_GRU_BIAS,   &biases);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    }
   }
 
 
-  xa_nnlib_gru_get_config(gru_handle, XA_NNLIB_GRU_INPUT_SHAPE, &input_shape);PRINT_VAR(input_shape.dim.vector.length);
-  xa_nnlib_gru_get_config(gru_handle, XA_NNLIB_GRU_OUTPUT_SHAPE, &output_shape);PRINT_VAR(output_shape.dim.vector.length);
-  
+  err=xa_nnlib_gru_get_config(gru_handle, XA_NNLIB_GRU_INPUT_SHAPE, &input_shape);PRINT_VAR(input_shape.dim.vector.length);
+  if(XA_NNLIB_NO_ERROR != err)
+  {
+    error_code_parse(err);
+    return err;
+  }
+
+  err=xa_nnlib_gru_get_config(gru_handle, XA_NNLIB_GRU_OUTPUT_SHAPE, &output_shape);PRINT_VAR(output_shape.dim.vector.length);
+  if(XA_NNLIB_NO_ERROR != err)
+  {
+    error_code_parse(err);
+    return err;
+  }
   //Restore context for gru state. This restores the 
   // reference context so that we can match output
   PRINT_STR("GRU restore context")
@@ -820,7 +840,12 @@ int xa_nn_main_process(int argc, char *argv[])
     }
     
 
-    xa_nnlib_gru_set_config(gru_handle, XA_NNLIB_GRU_RESTORE_CONTEXT, prev_h);
+    err=xa_nnlib_gru_set_config(gru_handle, XA_NNLIB_GRU_RESTORE_CONTEXT, prev_h);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    }
 
     fclose(prev_h_file);
     free(prev_h);

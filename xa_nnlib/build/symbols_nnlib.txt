@@ -48,14 +48,7 @@ xa_nn_matmul_sym8sxsym16s_sym16s
 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s
 xa_nn_matmul_f32xf32_f32
 xa_nn_matmul_f16xf16_f16
-
-xa_nn_vec_sigmoid_32_32
-xa_nn_vec_tanh_32_32
-xa_nn_vec_relu_32_32
-xa_nn_vec_relu_std_32_32
-xa_nn_vec_relu1_32_32
-xa_nn_vec_relu6_32_32
-xa_nn_vec_softmax_32_32
+xa_nn_matmul_asym4sxasym8s_asym8s
 
 xa_nn_vec_relu_8_8
 xa_nn_vec_relu_std_8_8
@@ -69,6 +62,8 @@ xa_nn_vec_activation_min_max_16_16
 
 xa_nn_vec_sigmoid_f32_f32
 xa_nn_vec_tanh_f32_f32
+xa_nn_vec_sigmoid_f16_f16
+xa_nn_vec_tanh_f16_f16
 xa_nn_vec_relu_std_f32_f32
 xa_nn_vec_relu_f32_f32
 xa_nn_vec_relu1_f32_f32
@@ -112,15 +107,17 @@ xa_nn_conv2d_std_8x8
 xa_nn_conv2d_std_16x16
 xa_nn_conv2d_std_asym8uxasym8u
 xa_nn_conv2d_std_per_chan_sym8sxasym8s
-xa_nn_conv2d_group_sym8sxasym8s
+xa_nn_conv2d_per_chan_sym8sxasym8s
 xa_nn_conv2d_std_per_chan_sym4sxasym8s
 xa_nn_dilated_conv2d_std_per_chan_sym8sxasym8s
 xa_nn_conv2d_std_f32
 xa_nn_conv2d_std_f16
 xa_nn_conv2d_std_getsize
+xa_nn_conv2d_getsize
 xa_nn_conv2d_std_getsize_sym4s
 xa_nn_dilated_conv2d_std_getsize
 xa_nn_conv2d_std_per_chan_sym8sxsym16s
+xa_nn_conv2d_per_chan_sym8sxsym16s
 
 
 xa_nn_conv2d_pointwise_16x16
@@ -229,6 +226,7 @@ xa_nn_lstm_cell_state_update_16
 
 xa_nn_l2_norm_f32
 xa_nn_l2_norm_asym8s_asym8s
+xa_nn_batch_norm_3D_8_8
 
 xa_nn_vec_softmax_asym8u_asym8u
 xa_nn_vec_softmax_asym8s_asym8s
@@ -277,6 +275,8 @@ xa_nn_strided_slice_int8
 xa_nn_pad_16_16
 xa_nn_pad_32_32
 xa_nn_transpose_8_8
+xa_nn_resize_bilinear_8_8
+xa_nn_resize_nearest_neighbour_8_8
 
 xa_nnlib_cnn_get_persistent_fast
 xa_nnlib_cnn_get_scratch_fast

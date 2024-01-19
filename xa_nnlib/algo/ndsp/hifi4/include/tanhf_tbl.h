@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -41,16 +41,13 @@
 #ifndef TANHF_TBL_H__
 #define TANHF_TBL_H__
 #include "NatureDSP_types.h"
-#include "common.h"
+#include "xa_nn_common.h"
 
-/* Renaming the symbols to avoid multiple definitions */
-#define halfln3       xa_ndsp_halfln3
-#define polytanhf_tbl xa_ndsp_polytanhf_tbl
 
 #define TANHF_ALG 0 /* 0 - 2 ULP, 1 - 1 ULP */
 
-extern const union ufloat32uint32 ALIGN(8) polytanhf_tbl[];
+extern const union ufloat32uint32 ALIGN(8) xa_nnlib_polytanhf_tbl[];
 
-extern const union ufloat32uint32 halfln3 ; /* log(3)/2 - tanh(log(3)/2)==0.5 */
+extern const union ufloat32uint32 xa_nnlib_halfln3 ; /* log(3)/2 - tanh(log(3)/2)==0.5 */
 
 #endif

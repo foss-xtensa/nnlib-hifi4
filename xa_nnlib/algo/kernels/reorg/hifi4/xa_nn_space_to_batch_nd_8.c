@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include "xa_type_def.h"
-#include "common.h"
+#include "xa_nn_common.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nnlib_common_macros.h"
 #include "xa_nnlib_err_chk.h"

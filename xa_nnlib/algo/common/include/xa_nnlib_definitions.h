@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -29,17 +29,17 @@
 /* Identification Strings */
 #ifdef hifi5
 #define LIBNAME "HiFi5 Neural Network Library"
-#define LIBVERSION "3.3.0"
+#define LIBVERSION "4.0.0"
 
 #define LIB_APIVERSION_MAJOR 1
-#define LIB_APIVERSION_MINOR 7
+#define LIB_APIVERSION_MINOR 8
 
 #else /* #ifdef hifi5 */
 #define LIBNAME "HiFi Neural Network Library"
-#define LIBVERSION "3.3.0"
+#define LIBVERSION "4.0.0"
 
 #define LIB_APIVERSION_MAJOR 1
-#define LIB_APIVERSION_MINOR 7
+#define LIB_APIVERSION_MINOR 8
 
 #endif /* #ifdef hifi5 */
 

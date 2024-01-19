@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -42,9 +42,9 @@
 #define SQRT2F_H__
 
 #include "NatureDSP_types.h"
-#include "common.h"
+#include "xa_nn_common.h"
 
-externC const union ufloat32uint32 sqrt2f  ; /* sqrt(2)   */
-externC const union ufloat32uint32 sqrt0_5f; /* sqrt(0.5) */
+externC const union ufloat32uint32 xa_nnlib_sqrt2f  ; /* sqrt(2)   */
+externC const union ufloat32uint32 xa_nnlib_sqrt0_5f; /* sqrt(0.5) */
 
 #endif /* SQRT2F_H__ */

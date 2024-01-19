@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -42,9 +42,9 @@ static inline unsigned char  AE_MOVAB2( xtbool2 b2){
 #endif
 
 #define GET_INV_SQRT_QUANTIZED_MULTIPLIER_EXP(output_inv_sqrt, output_shift, input, reverse_shift){\
-  ae_int32x2 CT_Q31_minus_1, CT_Q31, CT_Q29, CT_ONE;\
+  ae_int32x2 CT_Q31_minus_1, /*CT_Q31,*/ CT_Q29, CT_ONE;\
   CT_Q31_minus_1 = AE_MOVDA32(Q31_minus_1);\
-  CT_Q31 = AE_MOVDA32(Q31);\
+  /*CT_Q31 = AE_MOVDA32(Q31);*/\
   CT_Q29 = AE_MOVDA32(Q29);\
   CT_ONE = AE_MOVDA32(1);\
 \
@@ -134,7 +134,7 @@ static inline int AE_NSA32_L(ae_int32x2 d0)
 #endif
 
 static const int Q31_minus_1 = 0x7fffffff;
-static const int Q31         = 0x80000000;
+//static const int Q31         = 0x80000000;
 static const int Q29         = 0x20000000;
 static const int FIXED_POINT_HALF_THREE = 0x18000000;
 static const int FIXED_POINT_ONE = 0x10000000;

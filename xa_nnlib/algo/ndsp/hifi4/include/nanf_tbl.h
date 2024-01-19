@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -44,17 +44,12 @@
 /* Portable data types. */
 #include "NatureDSP_types.h"
 /* Common utility macros. */
-#include "common.h"
+#include "xa_nn_common.h"
 
-/* Renaming the symbols to avoid multiple definitions */
-#define minus_qNaNf xa_ndsp_minus_qNaNf
-#define minus_sNaNf xa_ndsp_minus_sNaNf
-#define qNaNf       xa_ndsp_qNaNf
-#define sNaNf       xa_ndsp_sNaNf
 
-externC const union ufloat32uint32 sNaNf;       /* Signalling NaN          */
-externC const union ufloat32uint32 qNaNf;       /* Quiet NaN               */
-externC const union ufloat32uint32 minus_sNaNf; /* Negative Signalling NaN */
-externC const union ufloat32uint32 minus_qNaNf; /* Negative Quiet NaN      */
+externC const union ufloat32uint32 xa_nnlib_sNaNf;       /* Signalling NaN          */
+externC const union ufloat32uint32 xa_nnlib_qNaNf;       /* Quiet NaN               */
+externC const union ufloat32uint32 xa_nnlib_minus_sNaNf; /* Negative Signalling NaN */
+externC const union ufloat32uint32 xa_nnlib_minus_qNaNf; /* Negative Quiet NaN      */
 
 #endif /* __NANF_TBL_H */

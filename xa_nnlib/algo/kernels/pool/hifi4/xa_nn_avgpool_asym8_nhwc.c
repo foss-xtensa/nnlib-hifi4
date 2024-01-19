@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -19,7 +19,7 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 #include "xa_nnlib_common.h"
 #include "xa_nn_avgpool_state.h"
 
@@ -712,11 +712,11 @@ const UWORD8* __restrict__ p_inp,
                     {
                         ae_int32x2 i1, i2, i3, out;
 
-                        i1 = AE_MOVDA32(((WORD32 *)p_src2_temp_w)[i]);
+                        i1 = AE_MOVDA32(((WORD32 *)p_src1_temp_w)[i]);
                         i2 = AE_MOVDA32(((WORD32 *)p_src2_temp_w)[i]);
                         i3 = AE_MOVDA32(((WORD32 *)p_src3_temp_w)[i]);
 
-                        out = AE_ADD32S(i2, i2);
+                        out = AE_ADD32S(i1, i2);
                         out = AE_ADD32S(out, i3);
 
                         AE_S32_L_IP(out, (ae_int32 *)p_dst_temp, sizeof(WORD32));

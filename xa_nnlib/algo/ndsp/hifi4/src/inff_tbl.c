@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,9 +40,9 @@
 */
 
 #include "NatureDSP_types.h"
-#include "inff_tbl.h"
+#include "../include/inff_tbl.h"
 
-const union ufloat32uint32 minusInff ={0xff800000}; /* -Inf */
-const union ufloat32uint32 plusInff  ={0x7f800000}; /* +Inf */
-const union ufloat32uint32 realmaxf  ={0x7f7fffff}; /* maximum floating point number */
-const union ufloat32uint32 realminf  ={0x00800000}; /* minimum floating point number */
+const union ufloat32uint32 xa_nnlib_minusInff ={0xff800000}; /* -Inf */
+const union ufloat32uint32 xa_nnlib_plusInff  ={0x7f800000}; /* +Inf */
+const union ufloat32uint32 xa_nnlib_realmaxf  ={0x7f7fffff}; /* maximum floating point number */
+const union ufloat32uint32 xa_nnlib_realminf  ={0x00800000}; /* minimum floating point number */

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -846,7 +846,7 @@ int CpuExecutor::executeOperation(const Operation& operation) {
                 PROFILER_START("CONV_2D float32");
                 if(success) success = 
                           convFloat32(reinterpret_cast<const float*>(input.buffer), input.shape(),
-                                      reinterpret_cast<const float*>(filter_padded.buffer), filter.shape(),
+                                      reinterpret_cast<const float*>(filter.buffer), filter.shape(),
                                       reinterpret_cast<const float*>(bias.buffer), bias.shape(),
                                       padding_left, padding_right,
                                       padding_top, padding_bottom,

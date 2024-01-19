@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -41,19 +41,16 @@
 #ifndef POW2F_TBL_H__
 #define POW2F_TBL_H__
 #include "NatureDSP_types.h"
-#include "common.h"
+#include "xa_nn_common.h"
 
-/* Renaming the symbols to avoid multiple definitions */
-#define log2f_coef    xa_ndsp_log2f_coef
-#define polypow2f_tbl xa_ndsp_polypow2f_tbl
-#define pow2f_coef    xa_ndsp_pow2f_coef
+
 /*
         polynomial coefficients for 2.^x, x=[-1...0)
         x=(-1:pow2(1,-16):0); y=2.^x; p=polyfit(x,y,6);
 */
-externC const union ufloat32uint32 ALIGN(32) polypow2f_tbl[];
-externC const union ufloat32uint32 ALIGN(32) log2f_coef[];
+externC const union ufloat32uint32 ALIGN(32) xa_nnlib_polypow2f_tbl[];
+externC const union ufloat32uint32 ALIGN(32) xa_nnlib_log2f_coef[];
 
 /* polynomial coefficients for 2^x, x=-0.5...0.5 */
-externC const union ufloat32uint32 ALIGN(32) pow2f_coef[];
+externC const union ufloat32uint32 ALIGN(32) xa_nnlib_pow2f_coef[];
 #endif

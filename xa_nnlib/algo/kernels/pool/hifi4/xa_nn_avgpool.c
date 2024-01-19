@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -20,7 +20,7 @@
 
 ******************************************************************************/
 #include "xa_type_def.h"
-#include "common.h"
+#include "xa_nn_common.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_avgpool_state.h"
 #include "xa_nnlib_err_chk.h"
@@ -52,25 +52,25 @@ WORD32 xa_nn_avgpool_getsize_nchw(
     int total_size, state_size, tmp_out_size;
     int den_array_size;     /* Array to store 1/den for out_height and out_width */
     int full_buf_width, full_out_width;
-    int inp_bytewidth, acc_bytewidth;
+    int /*inp_bytewidth,*/ acc_bytewidth;
 
     /* Precision check is taken care here */
     switch(inp_precision)
     {
         case 8:
-            inp_bytewidth = sizeof(WORD8);
+            //inp_bytewidth = sizeof(WORD8);
             acc_bytewidth = sizeof(WORD32);
             break;
         case 16:
-            inp_bytewidth = sizeof(WORD16);
+            //inp_bytewidth = sizeof(WORD16);
             acc_bytewidth = sizeof(WORD32);
             break;
         case -1:
-            inp_bytewidth = sizeof(WORD32);
+            //inp_bytewidth = sizeof(WORD32);
             acc_bytewidth = sizeof(WORD32);
             break;
         case -3:
-            inp_bytewidth = sizeof(UWORD8);
+            //inp_bytewidth = sizeof(UWORD8);
             acc_bytewidth = sizeof(WORD32);
             break;
         default:
@@ -330,6 +330,7 @@ WORD32 xa_nn_avgpool_getsize(
 }
 #endif
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 VOID xa_nn_avgpool_init(
     WORD32 inp_precision,
     pVOID  p_scratch,
@@ -339,6 +340,7 @@ VOID xa_nn_avgpool_init(
     pWORD8 p_mem = (pVOID)p_scratch;
     xa_nn_avgpool_state_t *p_state = (xa_nn_avgpool_state_t *)p_mem;
     int state_size;
+#if 0
     int inp_bytewidth;
 
     switch(inp_precision)
@@ -358,7 +360,7 @@ VOID xa_nn_avgpool_init(
         default:
             break;
     }
-
+#endif
     state_size = ALIGNED_SIZE(sizeof(xa_nn_avgpool_state_t), ALIGNMENT);
 
     p_mem = (p_mem + state_size);
@@ -378,3 +380,4 @@ VOID xa_nn_avgpool_init(
     /* Initialize output scratch pointer */
     p_state->p_tmp_out = (pVOID)ALIGN_PTR(p_mem, ALIGNMENT);
 }
+#endif // #ifndef ENABLE_SCRATCH_SIZE_API_ONLY

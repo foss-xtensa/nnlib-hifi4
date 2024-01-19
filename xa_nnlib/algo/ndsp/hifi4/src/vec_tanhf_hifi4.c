@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,18 +40,18 @@
     Code optimized for HiFi4 core
     IntegrIT, 2006-2018
 */
-#include "NatureDSP_Signal_math.h"
+#include "../include/NatureDSP_Signal_math.h"
 #include "NatureDSP_types.h"
-#include "common.h"
-#include "common_fpu.h"
+#include "xa_nn_common.h"
+#include "xa_nnlib_common_fpu.h"
 
 #include "xa_nnlib_common.h"
 
 /* Tables and constants. */
-#include "tanhf_tbl.h"
-#include "expf_tbl.h"
-#include "nanf_tbl.h"
-#include "pow2f_tbl.h"
+#include "../include/tanhf_tbl.h"
+#include "../include/expf_tbl.h"
+#include "../include/nanf_tbl.h"
+#include "../include/pow2f_tbl.h"
 
 /*-------------------------------------------------------------------------
   Hyperbolic Tangent
@@ -76,13 +76,13 @@
   return result, Q16.15 or floating point
 -------------------------------------------------------------------------*/
 #if !HAVE_VFPU && !HAVE_FPU
-DISCARD_FUN(void,vec_tanhf,(float32_t* y, const float32_t* x, int N))
+DISCARD_FUN(void,xa_nnlib_vec_tanhf,(float32_t* y, const float32_t* x, int N))
 #elif HAVE_VFPU
-void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
+void xa_nnlib_vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
 {
 #define SCR_SZ (MAX_ALLOCA_SZ/(2*sizeof(float32_t)))
     float32_t ALIGN(8) scratch[SCR_SZ];
-    const ae_int32* restrict pPolytanhf=(const ae_int32*)polytanhf_tbl;
+    const ae_int32* restrict pPolytanhf=(const ae_int32*)xa_nnlib_polytanhf_tbl;
           xtfloatx2 * restrict pScrWr;
     const xtfloatx2 * restrict pScrRd;
     ae_valign aX,aY;
@@ -95,7 +95,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
     if (N<=0) return;
     if (N&1) 
     {
-        *y++=scl_tanhf(*x++); N--;
+        *y++=xa_nnlib_scl_tanhf(*x++); N--;
     }
     if (N<=0) return;
     for (m=0; m<N; m+=SCR_SZ/2,x+=SCR_SZ/2,y+=SCR_SZ/2)
@@ -118,7 +118,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             t=(xtfloatx2)80.f; d = XT_MIN_SX2(d, t);
 
             /* scale input to 1/ln(2) */
-            p0 = XT_MUL_SX2(d, log2_e[0].f);
+            p0 = XT_MUL_SX2(d, xa_nnlib_log2_e[0].f);
             #if defined(XT_FIROUND_SX2)
             p0 = XT_FIROUND_SX2(p0);
             #else
@@ -126,8 +126,8 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             #endif
             dy = XT_NEG_SX2(p0);
 
-            XT_MADD_SX2(dy, d, log2_e[0].f);
-            XT_MADD_SX2(dy, d, log2_e[1].f);
+            XT_MADD_SX2(dy, d, xa_nnlib_log2_e[0].f);
+            XT_MADD_SX2(dy, d, xa_nnlib_log2_e[1].f);
             XT_SSX2IP(dy ,pScrWr,sizeof(xtfloatx2));
             /* saturating p0 to the right values */
             t=(xtfloatx2) 129.f; p0=XT_MIN_SX2(p0,t);
@@ -138,7 +138,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         __Pragma("no_reorder")
         pScrRd=(const xtfloatx2*)scratch;
         pScrWr=(      xtfloatx2*)scratch;
-        pPolytanhf=(const ae_int32*)pow2f_coef;
+        pPolytanhf=(const ae_int32*)xa_nnlib_pow2f_coef;
         for (n = 0; n < (M>>1); n++) 
         {
             xtfloatx2 dy, y0,y1, y2, y3, y4, y5, y6, y7, dy2;
@@ -150,8 +150,8 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             AE_L32_IP(tmp,pPolytanhf,sizeof(float32_t));           y2 = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp);
             AE_L32_IP(tmp,pPolytanhf,sizeof(float32_t));           y3 = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp);
             AE_L32_XP(tmp,pPolytanhf,-4*(int)sizeof(float32_t));   y4 = XT_AE_MOVXTFLOATX2_FROMINT32X2(tmp);
-            y5 = pow2f_coef[5].f;
-            y6 = pow2f_coef[6].f;
+            y5 = xa_nnlib_pow2f_coef[5].f;
+            y6 = xa_nnlib_pow2f_coef[6].f;
             XT_MADD_SX2(y1, y0, dy);
             XT_MADD_SX2(y3, y2, dy);
             XT_MADD_SX2(y5, y4, dy);
@@ -203,7 +203,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         pX    =(const xtfloatx2*)x;
         pScrWr=(( xtfloatx2*)scratch)+1;
         aX=AE_LA64_PP(pX); 
-        pPolytanhf=(const ae_int32*)polytanhf_tbl;
+        pPolytanhf=(const ae_int32*)xa_nnlib_polytanhf_tbl;
         for (n = 0; n < (M>>1); n++) 
         {
             xtfloatx2 z, x1, x2, x3, tn0, tn1, tn2, tn3;
@@ -238,7 +238,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             ux = XT_AE_MOVINT32X2_FROMXTFLOATX2(d); 
             bsign=AE_LT32(ux,0);
             d = XT_ABS_SX2(d);
-            bbig = XT_OLT_SX2(halfln3.f,d);
+            bbig = XT_OLT_SX2(xa_nnlib_halfln3.f,d);
             XT_LSX2IP(zbig,pScrRd,sizeof(xtfloatx2));
             XT_LSX2IP(z   ,pScrRd,sizeof(xtfloatx2));
             XT_MOVT_SX2(z,zbig,bbig);
@@ -251,7 +251,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
 }
 #else
 // code for scalar FPU
-void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
+void xa_nnlib_vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
 {
     xtfloat zero, one, two, half;
     int n;
@@ -273,7 +273,7 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
         ux = XT_RFR(x); 
         ux = (ux & 0x80000000);
         x = XT_ABS_S(x);
-        bsmall = XT_OLT_S(halfln3.f,x);
+        bsmall = XT_OLT_S(xa_nnlib_halfln3.f,x);
         xin=x;
         /* compute output for smaller argument */
         {
@@ -288,26 +288,26 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             }
 
             /* scale input to 1/ln(2) */
-            p0 = XT_MUL_S(x, log2_e[0].f);
+            p0 = XT_MUL_S(x, xa_nnlib_log2_e[0].f);
             #if defined(XT_FIROUND_S)
             p0 = XT_FIROUND_S(p0);
             #else
             p0 = XT_FLOAT_S(XT_ROUND_S(p0, 0), 0);
             #endif
             dy = XT_NEG_S(p0);
-            XT_MADD_S(dy, x, log2_e[0].f);
-            XT_MADD_S(dy, x, log2_e[1].f);
+            XT_MADD_S(dy, x, xa_nnlib_log2_e[0].f);
+            XT_MADD_S(dy, x, xa_nnlib_log2_e[1].f);
             /* compute 2^x */
             {
                 float32_t y0, y2, y3, y4, y5, y6, dy2;
                 dy2 = XT_MUL_S(dy, dy);
-                y0 = pow2f_coef[0].f;
-                y1 = pow2f_coef[1].f;
-                y2 = pow2f_coef[2].f;
-                y3 = pow2f_coef[3].f;
-                y4 = pow2f_coef[4].f;
-                y5 = pow2f_coef[5].f;
-                y6 = pow2f_coef[6].f;
+                y0 = xa_nnlib_pow2f_coef[0].f;
+                y1 = xa_nnlib_pow2f_coef[1].f;
+                y2 = xa_nnlib_pow2f_coef[2].f;
+                y3 = xa_nnlib_pow2f_coef[3].f;
+                y4 = xa_nnlib_pow2f_coef[4].f;
+                y5 = xa_nnlib_pow2f_coef[5].f;
+                y6 = xa_nnlib_pow2f_coef[6].f;
                 XT_MADD_S(y1, y0, dy);
                 XT_MADD_S(y3, y2, dy);
                 XT_MADD_S(y5, y4, dy);
@@ -362,10 +362,10 @@ void vec_tanhf(float32_t* restrict y, const float32_t* restrict x, int N)
             float32_t x2, x3, tn0, tn1, tn2, tn3;
             x2 = XT_MUL_S(x, x);
             x3 = XT_MUL_S(x, x2);
-            tn0 = polytanhf_tbl[0].f;
-            tn1 = polytanhf_tbl[1].f;
-            tn2 = polytanhf_tbl[2].f;
-            tn3 = polytanhf_tbl[3].f;
+            tn0 = xa_nnlib_polytanhf_tbl[0].f;
+            tn1 = xa_nnlib_polytanhf_tbl[1].f;
+            tn2 = xa_nnlib_polytanhf_tbl[2].f;
+            tn3 = xa_nnlib_polytanhf_tbl[3].f;
             XT_MADD_S(tn1, tn0, x2);
             XT_MADD_S(tn2, tn1, x2);
             XT_MADD_S(tn3, tn2, x2);

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,8 +40,8 @@
 */
 
 #include "NatureDSP_types.h"
-#include "inv2pif_tbl.h"
+#include "../include/inv2pif_tbl.h"
 
-const int64_t inv2pif_Q53 = {0x517cc1b727220c00LL>>10}; /* 1/(2pi) in Q53 */
-const union ufloat32uint32 inv4pif={0x3fa2f983}; /* 4/pi */
-const union ufloat32uint32 inv2pif = { 0x3f22f983 }; /* 2/pi */
+const int64_t xa_nnlib_inv2pif_Q53 = {0x517cc1b727220c00LL>>10}; /* 1/(2pi) in Q53 */
+const union ufloat32uint32 xa_nnlib_inv4pif={0x3fa2f983}; /* 4/pi */
+const union ufloat32uint32 xa_nnlib_inv2pif = { 0x3f22f983 }; /* 2/pi */

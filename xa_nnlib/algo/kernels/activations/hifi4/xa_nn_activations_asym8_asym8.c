@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -661,9 +661,9 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
   int i;
   int rem_length = (vec_length & 3);
   ae_int32x2 x32, x10;
-  ae_int32x2 z, mul, zero;
+  ae_int32x2 /* z,*/ mul, zero;
   ae_int16x4 CONST_255_16x4 = AE_MOVDA16(255);
-  ae_int32x2 radius, minus_radius;
+//  ae_int32x2 radius, minus_radius;
   ae_int16x4 radius_16, minus_radius_16;
   xtbool4 b3210, d3210;
   ae_int32x2 dequantized_x32, dequantized_x10;
@@ -685,13 +685,13 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
   PRIME_8X4F(p_in, align_src);
 #endif
 
-  radius = AE_MOVDA32(input_range_radius);
-  minus_radius = AE_NEG32(radius);
+  //radius = AE_MOVDA32(input_range_radius);
+  //minus_radius = AE_NEG32(radius);
 
   radius_16 = AE_MOVDA16(input_range_radius);
   minus_radius_16 = AE_NEG16S(radius_16);
 
-  z = AE_MOVDA32(zero_point);
+  //z = AE_MOVDA32(zero_point);
   z_16x4 = AE_MOVDA16(zero_point);
   mul = AE_MOVDA32(input_multiplier);
   zero = AE_ZERO32();
@@ -730,6 +730,7 @@ WORD32 xa_nn_vec_sigmoid_asym8s_asym8s(WORD8 *p_out,
     MPY_BY_QUANT_MULT_X2_OUT32(dequantized_x10, x10, mul, left_shift, right_shift);
 
 #if defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4)
+    (void)zero_16x4; (void)zero;
     x32 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x32), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x32), 15));
     x10 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x10), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x10), 15));
 
@@ -1930,10 +1931,10 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
   int i;
   int rem_length = (vec_length & 3);
   ae_int32x2 x32, x10;
-  ae_int32x2 z, mul, zero;
+  ae_int32x2 /*z,*/ mul, zero;
   ae_int16x4 CONST_127_16x4 = AE_MOVDA16(127);
   ae_int16x4 CONST_MINUS_128_16x4 = AE_MOVDA16(-128);
-  ae_int32x2 radius, minus_radius;
+//  ae_int32x2 radius, minus_radius;
   ae_int16x4 radius_16, minus_radius_16;
   xtbool4 b3210, d3210;
   ae_int32x2  dequantized_x32, dequantized_x10;
@@ -1952,13 +1953,13 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
   PRIME_8X4F(p_in, align_src);
 #endif
 
-  radius = AE_MOVDA32(input_range_radius);
-  minus_radius = AE_NEG32(radius);
+//  radius = AE_MOVDA32(input_range_radius);
+//  minus_radius = AE_NEG32(radius);
 
   radius_16 = AE_MOVDA16(input_range_radius);
   minus_radius_16 = AE_NEG16S(radius_16);
 
-  z = AE_MOVDA32(zero_point);
+  //z = AE_MOVDA32(zero_point);
   z_16x4 = AE_MOVDA16(zero_point);
   mul = AE_MOVDA32(input_multiplier);
   zero = AE_ZERO32();
@@ -1997,6 +1998,7 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
     MPY_BY_QUANT_MULT_X2_OUT32(dequantized_x10, x10, mul, left_shift, right_shift)
 
 #if defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4)
+    (void)zero_16x4; (void)zero;
     x32 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x32), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x32), 15));
     x10 = AE_ROUND32X2F64SSYM(AE_SRAA64(AE_CVT64F32_H(dequantized_x10), 15), AE_SRAA64(AE_CVT64F32_L(dequantized_x10), 15));
 

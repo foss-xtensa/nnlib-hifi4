@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -35,7 +35,7 @@
 #define PROF_ALLOCATE
 #include "xt_profiler.h"
 
-#define MAX_KERNEL_NAME_LENGTH 20
+#define MAX_KERNEL_NAME_LENGTH 25
 
 #define XA_MAX_CMD_LINE_LENGTH 200
 #define XA_MAX_ARGS 100
@@ -77,13 +77,17 @@ typedef struct _test_config_t
   int crop_or_pad_sizes[2*(MAX_DIMS)-2];
   char read_block_sizes_str[SHAPE_ARGS_LENGTH];
   char read_crop_or_pad_sizes_str[SHAPE_ARGS_LENGTH];
+  int input_batch;
   int input_height;
   int input_width;
   int input_channels;
   int block_size;
+  int out_batch;
   int out_height;
   int out_width;
   int out_channels;
+  int align_corners;
+  int half_pixel_centers;
   int inp_precision;
   int out_precision;
   int start_0,stop_0;
@@ -112,13 +116,17 @@ int default_config(test_config_t *p_cfg)
     p_cfg->num_pad_dims  = 2;
     p_cfg->num_out_dims  = 4;
     p_cfg->pad_value  = 0;
+    p_cfg->input_batch = 1;
     p_cfg->input_height = 16;
     p_cfg->input_width = 16;
     p_cfg->input_channels = 16;
     p_cfg->block_size = 2;
+    p_cfg->out_batch = 1;
     p_cfg->out_height = 32;
     p_cfg->out_width = 32;
     p_cfg->out_channels = 4;
+    p_cfg->align_corners = 0;
+    p_cfg->half_pixel_centers = 0;
     p_cfg->inp_precision = 8;
     p_cfg->out_precision = 8;
     p_cfg->start_0 = 0;
@@ -189,13 +197,17 @@ void show_usage(void)
     printf("\t-num_pad_dims: number of pad dimensions; Default=2\n");
     printf("\t-num_out_dims: number of output dimensions; Default=4\n");
     printf("\t-pad_value: input to be padded with this pad value; Default=0\n");
+    printf("\t-input_batch: input batch; Default=1\n");
     printf("\t-input_height: input height; Default=16\n");
     printf("\t-input_width: input width; Default=16\n");
     printf("\t-input_channels: input channels; Default=16\n");
     printf("\t-block_size: block size; Default=2\n");
+    printf("\t-out_batch: output batch; Default=1\n");
     printf("\t-out_height: output height; Default=16\n");
     printf("\t-out_width: output width; Default=16\n");
     printf("\t-out_channels: output channels; Default=4\n");
+    printf("\t-align_corners: align corners while resizing, 0 or 1; Default=0\n");
+    printf("\t-half_pixel_centers: half pixel center for resizing, 0 or 1; Default=0\n");
     printf("\t-start_0: begin point for dimention 0; Default=0\n");
     printf("\t-start_1: begin point for dimention 1; Default=0\n");
     printf("\t-start_2: begin point for dimention 2; Default=0\n");
@@ -214,7 +226,7 @@ void show_usage(void)
     printf("\t-inp_precision: 8, 16; Default=8\n");
     printf("\t-out_precision: 8, 16; Default=8\n");
     printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: depth_to_space, space_to_depth, pad, batch_to_space_nd, space_to_batch_nd, strided_slice; Default=""depth_to_space""\n");
+    printf("\t-kernel_name: depth_to_space, space_to_depth, pad, batch_to_space_nd, space_to_batch_nd, strided_slice, resize_bilinear, resize_nearest_neighbour; Default=""depth_to_space""\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp) \n");
     printf("\t-read_ref_file_name: Full filename for reading reference output \n");
@@ -249,14 +261,18 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-num_inp_dims", p_cfg->num_inp_dims);                  
     ARGTYPE_ONETIME_CONFIG("-num_pad_dims", p_cfg->num_pad_dims);                     
     ARGTYPE_ONETIME_CONFIG("-num_out_dims", p_cfg->num_out_dims);                   
-    ARGTYPE_ONETIME_CONFIG("-pad_value", p_cfg->pad_value);                   
+    ARGTYPE_ONETIME_CONFIG("-pad_value", p_cfg->pad_value);     
+    ARGTYPE_ONETIME_CONFIG("-input_batch",p_cfg->input_batch);
     ARGTYPE_ONETIME_CONFIG("-input_height",p_cfg->input_height);
     ARGTYPE_ONETIME_CONFIG("-input_width",p_cfg->input_width);
     ARGTYPE_ONETIME_CONFIG("-input_channels",p_cfg->input_channels);
     ARGTYPE_ONETIME_CONFIG("-block_size",p_cfg->block_size);
+    ARGTYPE_ONETIME_CONFIG("-out_batch",p_cfg->out_batch);
     ARGTYPE_ONETIME_CONFIG("-out_height",p_cfg->out_height);
     ARGTYPE_ONETIME_CONFIG("-out_width",p_cfg->out_width);
     ARGTYPE_ONETIME_CONFIG("-out_channels",p_cfg->out_channels);
+    ARGTYPE_ONETIME_CONFIG("-align_corners",p_cfg->align_corners);
+    ARGTYPE_ONETIME_CONFIG("-half_pixel_centers",p_cfg->half_pixel_centers);
     ARGTYPE_ONETIME_CONFIG("-start_0",p_cfg->start_0);
     ARGTYPE_ONETIME_CONFIG("-stop_0",p_cfg->stop_0);
     ARGTYPE_ONETIME_CONFIG("-start_1",p_cfg->start_1);
@@ -375,6 +391,69 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define RESIZE_BILINEAR_FN(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) { \
+    WORD32 height_scale_10, width_scale_10, height_bias, width_bias; \
+    height_scale_10 = ((cfg.input_height << 10) + cfg.out_height / 2) / cfg.out_height; \
+    width_scale_10 = ((cfg.input_width << 10)+ cfg.out_width / 2) / cfg.out_width; \
+    if(cfg.align_corners && cfg.out_height > 1) \
+      height_scale_10 = (((cfg.input_height - 1) << 10) + (cfg.out_height - 1) / 2) / (cfg.out_height - 1); \
+    if(cfg.align_corners && cfg.out_width > 1) \
+      width_scale_10 = (((cfg.input_width - 1) << 10) + (cfg.out_width - 1) / 2) / (cfg.out_width - 1); \
+    height_bias = 0; \
+    width_bias = 0; \
+    if(cfg.half_pixel_centers) \
+    { \
+      height_bias = height_scale_10 / 2 - (1 << 9); \
+      width_bias = width_scale_10 / 2 - (1 << 9); \
+    } \
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_##IPREC##_##OPREC ( \
+        (WORD##OPREC *)p_out->p, \
+        (WORD##IPREC *) p_inp->p, \
+        cfg.input_batch, \
+        cfg.input_height, \
+        cfg.input_width, \
+        cfg.input_channels, \
+        cfg.out_batch, \
+        cfg.out_height, \
+        cfg.out_width, \
+        cfg.out_channels, \
+        height_scale_10, \
+        width_scale_10, \
+        height_bias, \
+        width_bias); \
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define RESIZE_NEAREST_NEIGHBOUR_FN(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) { \
+    float height_scale, width_scale, height_bias, width_bias; \
+    height_scale = (cfg.align_corners && cfg.out_height > 1) ? (cfg.input_height - 1) / ((float)(cfg.out_height - 1)) : cfg.input_height / ((float)(cfg.out_height)); \
+    width_scale = (cfg.align_corners && cfg.out_width > 1) ? (cfg.input_width - 1) / ((float)(cfg.out_width - 1)) : cfg.input_width / ((float)(cfg.out_width)); \
+    height_bias = cfg.half_pixel_centers ? 0.5f : 0.0f; \
+    width_bias = cfg.half_pixel_centers ? 0.5f : 0.0f; \
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_##IPREC##_##OPREC ( \
+        (WORD##OPREC *)p_out->p, \
+        (WORD##IPREC *) p_inp->p, \
+        cfg.input_batch, \
+        cfg.input_height, \
+        cfg.input_width, \
+        cfg.input_channels, \
+        cfg.out_batch, \
+        cfg.out_height, \
+        cfg.out_width, \
+        cfg.out_channels, \
+        height_scale, \
+        width_scale, \
+        height_bias, \
+        width_bias, \
+        cfg.align_corners); \
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#if HIFI_VFPU
 #define PROCESS_REORG \
     DEPTH_SPACE_KERNEL_FN(depth_to_space, 8, 8) \
     else DEPTH_SPACE_KERNEL_FN(space_to_depth, 8, 8) \
@@ -387,7 +466,25 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else STRIDED_SLICE_FN(strided_slice, 32, 32) \
     else STRIDED_SLICE_FN(strided_slice, 8, 8) \
     else TRANSPOSE_KERNEL_FN(transpose, 8, 8) \
+    else RESIZE_BILINEAR_FN(resize_bilinear, 8, 8) \
+    else RESIZE_NEAREST_NEIGHBOUR_FN(resize_nearest_neighbour, 8, 8) \
     else {  printf("unsupported reorg operation\n"); return -1;}
+#else
+#define PROCESS_REORG \
+    DEPTH_SPACE_KERNEL_FN(depth_to_space, 8, 8) \
+    else DEPTH_SPACE_KERNEL_FN(space_to_depth, 8, 8) \
+    else BATCH_SPACE_ND_KERNEL_FN(batch_to_space_nd, 8, 8) \
+    else SPACE_TO_BATCH_ND_KERNEL_FN(space_to_batch_nd, 8, 8) \
+    else PAD_KERNEL_FN(pad, 8, 8) \
+    else PAD_KERNEL_FN(pad, 16, 16) \
+    else PAD_KERNEL_FN(pad, 32, 32) \
+    else STRIDED_SLICE_FN(strided_slice, 16, 16) \
+    else STRIDED_SLICE_FN(strided_slice, 32, 32) \
+    else STRIDED_SLICE_FN(strided_slice, 8, 8) \
+    else TRANSPOSE_KERNEL_FN(transpose, 8, 8) \
+    else RESIZE_BILINEAR_FN(resize_bilinear, 8, 8) \
+    else {  printf("unsupported reorg operation\n"); return -1;}
+#endif
 
 int xa_nn_main_process(int argc, char *argv[])
 {
@@ -397,7 +494,7 @@ int xa_nn_main_process(int argc, char *argv[])
   int pass_count=0;
   char profiler_name[MAX_PROFILER_NAME_LENGTH];
   char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
-  int inp_size, out_size, pad_values_size;
+  int inp_size, out_size/*, pad_values_size*/;
   int num_pts=0;
 
   test_config_t cfg;
@@ -439,7 +536,7 @@ int xa_nn_main_process(int argc, char *argv[])
     inp_size = 1; 
     out_size = 1;
     /* Calculating input , pad_values and output size from respective shapes for Pad ops */
-    pad_values_size = 1;
+//    pad_values_size = 1;
     int itr;
     for(itr = 0; itr < cfg.num_inp_dims; itr++)
     {
@@ -447,7 +544,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
     for(itr = 0; itr < cfg.num_pad_dims; itr++)
     {
-      pad_values_size *= cfg.pad_shape[itr]; 
+//      pad_values_size *= cfg.pad_shape[itr]; 
     }
     for(itr = 0; itr < cfg.num_out_dims; itr++)
     {
@@ -467,7 +564,7 @@ int xa_nn_main_process(int argc, char *argv[])
      for(i = 4 ; i > 4 - cfg.num_inp_dims; i--)
      {
         cfg.input_shape_extended[i] = cfg.input_shape[rev_itr -1];
-	rev_itr--;
+        rev_itr--;
      }
      
      out_dim_calc = (float)(cfg.stop_0 - cfg.start_0)/(float)cfg.stride_0;
@@ -507,7 +604,7 @@ int xa_nn_main_process(int argc, char *argv[])
     inp_size = 1; 
     out_size = 1;
     /* Calculating input, output size from respective shapes for transpose */
-    pad_values_size = 1;
+//    pad_values_size = 1;
     int itr;
     for(itr = 0; itr < cfg.num_inp_dims; itr++)
     {
@@ -517,6 +614,11 @@ int xa_nn_main_process(int argc, char *argv[])
     {
       out_size *= cfg.output_shape[itr]; 
     }
+  }
+  else if(strcmp(cfg.kernel_name, "resize_bilinear") == 0 || strcmp(cfg.kernel_name, "resize_nearest_neighbour") == 0)
+  {
+    inp_size = cfg.input_batch * cfg.input_height * cfg.input_width * cfg.input_channels;
+    out_size = cfg.out_batch * cfg.out_height * cfg.out_width * cfg.out_channels;
   }
   else
   {
@@ -579,6 +681,11 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_params, "input_shape= %s output_shape= %s permute_vec= %s\n", cfg.read_inp_shape_str, cfg.read_out_shape_str, cfg.read_permute_vec_str);
   }
+  else if(strcmp(cfg.kernel_name, "resize_bilinear") == 0 || strcmp(cfg.kernel_name, "resize_nearest_neighbour") == 0)
+  {
+    sprintf(profiler_params, "input_batch=%d, input_height=%d, input_width=%d, input_channels=%d, out_batch=%d, out_height=%d, out_width=%d, out_channels=%d",
+      cfg.input_batch, cfg.input_height, cfg.input_width, cfg.input_channels, cfg.out_batch, cfg.out_height, cfg.out_width, cfg.out_channels);
+  }
   else
   {
     sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, out_height=%d, out_width=%d, out_channels =%d",
@@ -636,7 +743,9 @@ int xa_nn_main_process(int argc, char *argv[])
      || !strcmp(cfg.kernel_name,"space_to_depth")
      || !strcmp(cfg.kernel_name,"batch_to_space_nd")
      || !strcmp(cfg.kernel_name,"space_to_batch_nd")
-     || !strcmp(cfg.kernel_name,"strided_slice"))
+     || !strcmp(cfg.kernel_name,"strided_slice")
+     || !strcmp(cfg.kernel_name,"resize_bilinear")
+     || !strcmp(cfg.kernel_name,"resize_nearest_neighbour"))
   {
     num_pts = out_size;
   }

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,10 +40,10 @@
     Code optimized for HiFi4 core
   IntegrIT, 2006-2018
 */
-#include "NatureDSP_Signal_math.h"
+#include "../include/NatureDSP_Signal_math.h"
 #include "NatureDSP_types.h"
-#include "common.h"
-#include "common_fpu.h"
+#include "xa_nn_common.h"
+#include "xa_nnlib_common_fpu.h"
 #include <math.h>
 
 /*-------------------------------------------------------------------------
@@ -68,9 +68,9 @@
   return result, Q16.15 or floating point
 -------------------------------------------------------------------------*/
 #if !HAVE_VFPU && !HAVE_FPU
-DISCARD_FUN_FOR_NONVOID_RETURN(float32_t,scl_sigmoidf,(float32_t x))
+DISCARD_FUN_FOR_NONVOID_RETURN(float32_t,xa_nnlib_scl_sigmoidf,(float32_t x))
 #else
-float32_t scl_sigmoidf(float32_t x)
+float32_t xa_nnlib_scl_sigmoidf(float32_t x)
 {
     static const union ufloat32uint32 c[]={{0x3fb8aa3b},{0x32a57060}};
     static const union ufloat32uint32 p[]={{0x39222a75},{0x3aaf9334},{0x3c1d94fc},{0x3d63578b},{0x3e75fdf0},{0x3f317218},{0x3f800000}};

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -21,7 +21,7 @@
 ******************************************************************************/
 #include "xa_nnlib_common.h"
 
-static inline ae_int32x2 MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
+static inline ae_int32x2 __attribute__((always_inline)) MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
                                              int32_t quantized_multiplier,
                                              int shift){
   // Inputs:
@@ -47,7 +47,7 @@ static inline ae_int32x2 MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
   return result;
 }
 
-static inline ae_int32x2 MultiplyByQuantizedMultiplier_x2_opt(ae_int64 d_x1, ae_int64 d_x2,
+static inline ae_int32x2 __attribute__((always_inline))  MultiplyByQuantizedMultiplier_x2_opt(ae_int64 d_x1, ae_int64 d_x2,
                                              int32_t quantized_multiplier,
                                              int shift) {
   ae_int32x2 d_q_mul = AE_MOVDA32(quantized_multiplier);
@@ -162,7 +162,7 @@ static inline void _xa_nn_dot_product_4_rows_1_vecs_aligned
   *out_3_3 = d_out3;
 }
 #else //XCHAL_HAVE_HIFI1
-static inline void _xa_nn_dot_product_4_rows_2_vecs_aligned
+static inline void __attribute__((always_inline)) _xa_nn_dot_product_4_rows_2_vecs_aligned
 (ae_int64* out_0_0
  ,ae_int64* out_1_1
  ,ae_int64* out_2_2
@@ -220,7 +220,7 @@ static inline void _xa_nn_dot_product_4_rows_2_vecs_aligned
   *out_7_7 = AE_SRAI64(d_out7, 8);
 }
 
-static inline void _xa_nn_dot_product_4_rows_1_vecs_aligned
+static inline void __attribute__((always_inline)) _xa_nn_dot_product_4_rows_1_vecs_aligned
 (ae_int64* out_0_0
  ,ae_int64* out_1_1
  ,ae_int64* out_2_2

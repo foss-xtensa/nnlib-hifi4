@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -366,6 +366,24 @@ int load_pool_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp)
 }
 
 int load_norm_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp) 
+{
+  if(write_file)                                                                     
+  {                                                                                  
+    /* Set random input data */                                                      
+    set_rand_inp_buf1D(p_inp);                                                      
+    
+    /* Write input data into file */                                                 
+    write_buf1D_to_file(fptr_inp, p_inp);                  
+  }                                                           
+  else                                                        
+  {                                                           
+    /* Read input data from file */                           
+    read_buf1D_from_file(fptr_inp, p_inp);                  
+  }                                                                                  
+  return 0;
+}
+
+int load_batch_norm_3D_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_alpha, buf1D_t *p_beta) 
 {
   if(write_file)                                                                     
   {                                                                                  

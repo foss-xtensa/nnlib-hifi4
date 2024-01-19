@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -127,6 +127,7 @@ bool tanhFloat32(const float* inputData, const Shape& inputShape,
 #else
     int err;
     err = xa_nn_vec_tanh_f32_f32(outputData, inputData, numElements); 
+    (void)err; /* Unused return value */
 #endif
     return true;
 }
@@ -141,6 +142,7 @@ bool logisticFloat32(const float* inputData, const Shape& inputShape,
 #else
     int err;
     err = xa_nn_vec_sigmoid_f32_f32(outputData, inputData, numElements);
+    (void)err; /* Unused return value */
 #endif
     return true;
 }
@@ -208,6 +210,7 @@ bool softmaxFloat32(const float* inputData, const Shape& inputShape,
                 }
             }
         }
+        (void)err; /* Unused return value */
     }
 #endif
     return true;
@@ -339,6 +342,7 @@ bool logisticQuant8(const uint8_t* inputData, const Shape& inputShape,
                                input_multiplier,
                                input_left_shift, 
                                size);
+    (void)err; /* Unused return value */
 #endif
 
 #ifndef HIFI_WARNINGS
@@ -431,6 +435,7 @@ bool softmaxQuant8(const uint8_t* inputData, const Shape& inputShape,
                 }
             }
         }
+        (void)err; /* Unused return value */
     }
 #endif
     return true;

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -85,6 +85,7 @@ static bool validateOperands(const hidl_vec<Operand>& operands,
                              const hidl_vec<uint8_t>& operandValues,
                              const hidl_vec<hidl_memory>& pools) {
     uint32_t index = 0;
+    (void)index; /* To remove LLVM15 warning */
     MemoryAccessVerifier poolVerifier(pools);
     for (auto& operand : operands) {
         // Validate type and dimensions.

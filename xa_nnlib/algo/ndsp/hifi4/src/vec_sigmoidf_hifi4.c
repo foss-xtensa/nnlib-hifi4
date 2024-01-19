@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,10 +40,10 @@
     Code optimized for HiFi4 core
   IntegrIT, 2006-2018
 */
-#include "NatureDSP_Signal_math.h"
+#include "../include/NatureDSP_Signal_math.h"
 #include "NatureDSP_types.h"
-#include "common.h"
-#include "common_fpu.h"
+#include "xa_nn_common.h"
+#include "xa_nnlib_common_fpu.h"
 
 /*-------------------------------------------------------------------------
   Sigmoid
@@ -67,9 +67,9 @@
   return result, Q16.15 or floating point
 -------------------------------------------------------------------------*/
 #if !HAVE_VFPU && !HAVE_FPU
-DISCARD_FUN(void,vec_sigmoidf,(float32_t * y, const float32_t * x, int N))
+DISCARD_FUN(void,xa_nnlib_vec_sigmoidf,(float32_t * y, const float32_t * x, int N))
 #elif HAVE_VFPU
-void vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
+void xa_nnlib_vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
 {
 #define SCR_SZ (MAX_ALLOCA_SZ/(2*sizeof(int32_t)))
     int32_t ALIGN(8) scratch[SCR_SZ*2];
@@ -85,7 +85,7 @@ void vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
 
     int k;
     if (N<0) return;
-    if (N&1) { *y++=scl_sigmoidf(*x++); N--; }
+    if (N&1) { *y++=xa_nnlib_scl_sigmoidf(*x++); N--; }
     if (N<0) return;
     for (m=0; m<N; m+=SCR_SZ,x+=SCR_SZ,y+=SCR_SZ)
     {
@@ -96,12 +96,12 @@ void vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
         aX=AE_LA64_PP(pX); 
         for (k = 0; k < (M>>1); k++) 
         {
-            xtbool2 s;
+            //xtbool2 s;
             ae_int32x2 n;
             xtfloatx2 d0,d1,d2;
             XT_LASX2IP(d0,aX,pX);
 
-            s=XT_OLT_SX2(d0,XT_CONST_S(0));
+            //s=XT_OLT_SX2(d0,XT_CONST_S(0));
             d0=XT_NEG_SX2(XT_ABS_SX2(d0));
             d0=XT_MAX_SX2(-103.9721f,d0);
             /* compute d1+n=log2(e)*x */
@@ -193,7 +193,7 @@ void vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
 }
 #else
 // code for scalar FPU
-void vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
+void xa_nnlib_vec_sigmoidf    (float32_t * y, const float32_t * x, int N)
 {
     static const union ufloat32uint32 c[]={{0x3fb8aa3b},{0x32a57060}}; 
     static const union ufloat32uint32 p[]={{0x39222a75},{0x3aaf9334},{0x3c1d94fc},{0x3d63578b},{0x3e75fdf0},{0x3f317218},{0x3f800000}};

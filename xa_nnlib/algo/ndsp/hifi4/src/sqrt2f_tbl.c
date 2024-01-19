@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -39,8 +39,8 @@
     sqrt(2) and sqrt(0.5) constants for single precision routines
 */
 #include "NatureDSP_types.h"
-#include "common.h"
-#include "sqrt2f_tbl.h"
+#include "xa_nn_common.h"
+#include "../include/sqrt2f_tbl.h"
 
-const union ufloat32uint32 sqrt2f  ={0x3fb504f3}; /* sqrt(2)   */
-const union ufloat32uint32 sqrt0_5f={0x3f3504f3}; /* sqrt(0.5) */
+const union ufloat32uint32 xa_nnlib_sqrt2f  ={0x3fb504f3}; /* sqrt(2)   */
+const union ufloat32uint32 xa_nnlib_sqrt0_5f={0x3f3504f3}; /* sqrt(0.5) */

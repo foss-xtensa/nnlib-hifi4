@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -26,9 +26,6 @@ LDSCRIPT = ldscript_$(CODEC_NAME).txt
 SYMFILE  = symbols_$(CODEC_NAME).txt
 DETECTED_CORE?=
 
-has_mul16 = $(shell grep -w "IsaUseMul16" "$$XTENSA_SYSTEM/$$XTENSA_CORE"-params | awk  -- '{ print $$3 }')
-has_mul32 = $(shell grep -w "IsaUse32bitMul" "$$XTENSA_SYSTEM/$$XTENSA_CORE"-params | awk  -- '{ print $$3 }')
-
 ifeq ($(CPU), x86)
     S = /
     AR = ar
@@ -44,6 +41,7 @@ ifeq ($(CPU), x86)
     CP = cp -f
     INCLUDES += \
     -I$(ROOTDIR)/test/include
+	IFEXIST =
 else
     #switch to xt-clang default RI.7
     AR = xt-ar $(XTCORE)
@@ -55,6 +53,24 @@ else
     ISS = xt-run $(XTCORE)
     CONFIGDIR := $(shell $(ISS) --show-config=config)
     include $(CONFIGDIR)/misc/hostenv.mk
+	GREPARGS =
+	WINNUL =
+	IFEXIST =
+	ifeq ($(HOSTTYPE),win)
+	GREPARGS = /c:
+	WINNUL = 2>nul
+	IFEXIST = if exist
+	endif
+	has_mul16_tmp = $(shell $(GREP) $(GREPARGS)"IsaUseMul16 = 1"  "$(XTENSA_SYSTEM)$(S)$(XTENSA_CORE)-params")
+	has_mul32_tmp = $(shell $(GREP) $(GREPARGS)"IsaUse32bitMul = 1" "$(XTENSA_SYSTEM)$(S)$(XTENSA_CORE)-params")
+	has_mul16=1
+	has_mul32=1
+	ifeq (,$(has_mul16_tmp))
+	has_mul16=0
+	endif
+	ifeq (,$(has_mul32_tmp))
+	has_mul32=0
+	endif
     CFLAGS += -Wall 
     ifeq ($(WARNING_AS_ERROR),1)
       CFLAGS += -Werror
@@ -81,6 +97,8 @@ OBJ_LIBOSOBJS = $(addprefix $(OBJDIR)/,$(LIBOSOBJS))
 OBJ_LIBO2CPPOBJS = $(addprefix $(OBJDIR)/,$(LIBO2CPPOBJS))
 OBJ_LIBO2CCOBJS = $(addprefix $(OBJDIR)/,$(LIBO2CCOBJS))
 OBJ_LIBOSCPPOBJS = $(addprefix $(OBJDIR)/,$(LIBOSCPPOBJS))
+
+#$(info OBJ_LIBO2OBJS="$(OBJ_LIBO2OBJS)")
 
 ALL_OBJS := \
   $(OBJ_LIBO2OBJS) \
@@ -180,8 +198,21 @@ $(LIB): %.a: $(OBJDIR)/%.o
 	@echo "Creating Library $@"
 	$(QUIET) $(AR) rc $@ $^
 
+
+ifeq ($(HOSTTYPE),win)
+clean:
+	-$(IFEXIST) xa_$(CODEC_NAME)$(DETECTED_CORE).a $(RM) xa_$(CODEC_NAME)$(DETECTED_CORE).a 
+	-$(IFEXIST) xgcc_$(CODEC_NAME)$(DETECTED_CORE).a $(RM) xgcc_$(CODEC_NAME)$(DETECTED_CORE).a 
+	-$(IFEXIST) $(LIBDIR)$(S)xa_$(CODEC_NAME)$(DETECTED_CORE).a $(RM) $(LIBDIR)$(S)xa_$(CODEC_NAME)$(DETECTED_CORE).a
+	-$(IFEXIST) $(LIBDIR)$(S)xgcc_$(CODEC_NAME)$(DETECTED_CORE).a $(RM) $(LIBDIR)$(S)xgcc_$(CODEC_NAME)$(DETECTED_CORE).a
+	-$(IFEXIST) $(MAPFILE) $(RM) $(MAPFILE)
+	-$(IFEXIST) $(OBJDIR)$(S)*.o $(RM) $(OBJDIR)$(S)*.o
+	-$(IFEXIST) $(OBJDIR)$(S)*.d $(RM) $(OBJDIR)$(S)*.d
+	-$(IFEXIST) $(LIBDIR)  $(RM_R) $(LIBDIR)
+else
 clean:
 	-$(RM) xa_$(CODEC_NAME)$(DETECTED_CORE).a xgcc_$(CODEC_NAME)$(DETECTED_CORE).a $(LIBDIR)$(S)xa_$(CODEC_NAME)$(DETECTED_CORE).a $(LIBDIR)$(S)xgcc_$(CODEC_NAME)$(DETECTED_CORE).a $(MAPFILE)
 	-$(RM) $(OBJDIR)$(S)*.o
 	-$(RM) $(ALL_DEPS)
-	-$(RM_R) $(LIBDIR) 
+	-$(RM_R) $(LIBDIR)
+endif

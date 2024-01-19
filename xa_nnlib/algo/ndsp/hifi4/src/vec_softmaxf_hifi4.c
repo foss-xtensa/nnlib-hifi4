@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,12 +40,12 @@
     Code optimized for HiFi4 core
   IntegrIT, 2006-2018
 */
-#include "NatureDSP_Signal_math.h"
+#include "../include/NatureDSP_Signal_math.h"
 #include "NatureDSP_types.h"
-#include "common.h"
-#include "common_fpu.h"
-#include "inff_tbl.h"
-#include "nanf_tbl.h"
+#include "xa_nn_common.h"
+#include "xa_nnlib_common_fpu.h"
+#include "../include/inff_tbl.h"
+#include "../include/nanf_tbl.h"
 /*-------------------------------------------------------------------------
   Softmax
   The function computes the softmax (normalized exponential function) of 
@@ -71,9 +71,9 @@
 
 -------------------------------------------------------------------------*/
 #if !HAVE_VFPU && !HAVE_FPU
-DISCARD_FUN(void,vec_softmaxf,(float32_t * y, const float32_t * x,int N))
+DISCARD_FUN(void,xa_nnlib_vec_softmaxf,(float32_t * y, const float32_t * x,int N))
 #elif HAVE_VFPU
-void vec_softmaxf    (float32_t * y, const float32_t * x,int N)
+void xa_nnlib_vec_softmaxf    (float32_t * y, const float32_t * x,int N)
 {
     ae_valign aX,aY;
     const xtfloatx2* restrict pX=(const xtfloatx2*)x;
@@ -82,7 +82,7 @@ void vec_softmaxf    (float32_t * y, const float32_t * x,int N)
     xtfloatx2 xmax,ysum,t;
     if (N<=0) return;
     /* compute maximum of x */
-    xmax=minusInff.f;
+    xmax=xa_nnlib_minusInff.f;
     aX=AE_LA64_PP(pX);
     for (n=0; n<(N&~1); n+=2)
     {
@@ -127,7 +127,7 @@ void vec_softmaxf    (float32_t * y, const float32_t * x,int N)
         }
     }
     /* compute exp() */
-    vec_antilognf(y,y,N);
+    xa_nnlib_vec_antilognf(y,y,N);
     /* sum results */
     pY=(xtfloatx2*)y;
     aY=AE_LA64_PP(pY);
@@ -201,7 +201,7 @@ void vec_softmaxf    (float32_t * y, const float32_t * x,int N)
 }
 #else
 // code for scalar FPU
-void vec_softmaxf    (float32_t * y, const float32_t * x,int N)
+void xa_nnlib_vec_softmaxf    (float32_t * y, const float32_t * x,int N)
 {
     const xtfloat* restrict pX=(const xtfloat*)x;
           xtfloat* restrict pY=(      xtfloat*)y;
@@ -209,7 +209,7 @@ void vec_softmaxf    (float32_t * y, const float32_t * x,int N)
     xtfloat xmax,ysum;
     if (N<0) return;
     /* compute maximum of x */
-    xmax=minusInff.f;
+    xmax=xa_nnlib_minusInff.f;
     for (n=0; n<N; n++)
     {
         xtfloat t;
@@ -226,7 +226,7 @@ void vec_softmaxf    (float32_t * y, const float32_t * x,int N)
         XT_SSIP(t,pY,sizeof(xtfloat));
     }
     /* compute exp() */
-    vec_antilognf(y,y,N);
+    xa_nnlib_vec_antilognf(y,y,N);
     /* sum results */
     pY=(xtfloat*)y;
     ysum=XT_CONST_S(0);

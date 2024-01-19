@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -26,6 +26,7 @@
 #define ALIGNED_SIZE(x, bytes)  (((x)+(bytes-1))&(~(bytes-1)))
 #define ALIGN_PTR(x, bytes)     ((((unsigned)(x))+(bytes-1))&(~(bytes-1)))
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 #define SUB_128(inp){\
           ae_int64 temp;\
           temp = AE_MOVINT64_FROMINT32X2(inp);\
@@ -462,6 +463,10 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
         o1 = AE_MOVAD32_H(out32);
         *p_out++ = (UWORD8)o1;
 #endif
+
+#if XCHAL_HAVE_HIFI1
+        (void)a_max; /* Unused in HiFi1. This removes LLVM15 warning */
+#endif
     }
 
     return 0;
@@ -484,7 +489,7 @@ WORD32 xa_nn_vec_softmax_asym8s_asym8s( WORD8 * __restrict__ p_out,
     XA_NNLIB_ARG_CHK_ALIGN(p_vec, sizeof(WORD8), -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND(((input_beta_left_shift < -31) || (input_beta_left_shift > 31)), -1);
+    XA_NNLIB_ARG_CHK_COND(((input_beta_left_shift < 0) || (input_beta_left_shift > 31)), -1);
     XA_NNLIB_ARG_CHK_COND((input_beta_multiplier < 0), -1);
 
     int i;
@@ -728,7 +733,7 @@ WORD32 xa_nn_vec_softmax_asym8s_16( WORD16 * __restrict__ p_out,
     XA_NNLIB_ARG_CHK_ALIGN(p_vec, sizeof(WORD8), -1);
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
-    XA_NNLIB_ARG_CHK_COND(((input_beta_left_shift < -31) || (input_beta_left_shift > 31)), -1);
+    XA_NNLIB_ARG_CHK_COND(((input_beta_left_shift < 0) || (input_beta_left_shift > 31)), -1);
     XA_NNLIB_ARG_CHK_COND((input_beta_multiplier < 0), -1);
 
     int i;
@@ -977,9 +982,11 @@ WORD32 xa_nn_vec_softmax_asym8s_16( WORD16 * __restrict__ p_out,
 
     return 0;
 }
+#endif // #ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 
 int get_softmax_scratch_size(int inp_precision, int out_precision, int length)
 {
+    XA_NNLIB_ARG_CHK_COND((length <= 0), -1);
     int size_of_one_elm_in_bytes, total_bytes;
     (void) out_precision;
 
@@ -1006,6 +1013,8 @@ int get_softmax_scratch_size(int inp_precision, int out_precision, int length)
         case -4:
             size_of_one_elm_in_bytes = 4;
             break;
+        default:
+            return -1;
     }
 
     total_bytes = size_of_one_elm_in_bytes*length;

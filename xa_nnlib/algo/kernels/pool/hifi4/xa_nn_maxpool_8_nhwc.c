@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -19,7 +19,7 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 #include "xa_nnlib_common.h"
 #include "xa_nn_maxpool_state.h"
 
@@ -100,7 +100,7 @@ const WORD8* __restrict__ p_inp,
     ae_int16x4 * __restrict__ p_dst, * __restrict__ p_dst_temp;
     WORD8 *p_out_temp;
     ae_int16x4 * p_src1_scratch;
-    ae_valign align_src1, align_src2, align_src3, align_dst;
+    ae_valign align_src1, align_src2, align_src3/*, align_dst*/;
     ALIGN_REGISTER_TYPE i1_la, i2_la, i3_la;
     int i;
     WORD16 *p_dst_pad;
@@ -135,7 +135,7 @@ const WORD8* __restrict__ p_inp,
             p_src3 = p_src2;
             INCR_PLANE_IF_HEIGHT(p_src3, pool_height, plane_size);
 
-            align_dst = AE_ZALIGN64(); // zero alignment reg
+            //align_dst = AE_ZALIGN64(); // zero alignment reg
             /* 1st instance: Compare three rows per iteration */
             {
                 p_dst_temp = p_dst;

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -42,16 +42,11 @@
 #define INFF_H__
 
 #include "NatureDSP_types.h"
-#include "common.h"
+#include "xa_nn_common.h"
 
-/* Renaming the symbols to avoid multiple definitions */
-#define minusInff  xa_ndsp_minusInff
-#define plusInff   xa_ndsp_plusInff
-#define realmaxf   xa_ndsp_realmaxf
-#define realminf   xa_ndsp_realminf
 
-externC const union ufloat32uint32 minusInff; /* -Inf */
-externC const union ufloat32uint32 plusInff ; /* +Inf */
-externC const union ufloat32uint32 realmaxf ; /* maximum floating point number */
+externC const union ufloat32uint32 xa_nnlib_minusInff; /* -Inf */
+externC const union ufloat32uint32 xa_nnlib_plusInff ; /* +Inf */
+externC const union ufloat32uint32 xa_nnlib_realmaxf ; /* maximum floating point number */
 
 #endif /* INFF_H__ */

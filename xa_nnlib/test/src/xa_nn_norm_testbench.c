@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -53,6 +53,14 @@ typedef struct _test_config_t
 {
   int help;
   int num_elms;
+  int io_height;
+  int io_width;
+  int io_channels;
+  int out_shift;
+  int out_activation_min;
+  int out_activation_max;
+  int inp_data_format;
+  int out_data_format;
   int inp_precision;
   int out_precision;
   char kernel_name[MAX_KERNEL_NAME_LENGTH];
@@ -70,15 +78,23 @@ typedef struct _test_config_t
 int default_config(test_config_t *p_cfg)
 {
   if(p_cfg)
-  { 
+  {
 
     p_cfg->help     = 0;
     p_cfg->num_elms = 256;
+    p_cfg->io_height = 40;
+    p_cfg->io_width = 32;
+    p_cfg->io_channels = 32;
+    p_cfg->out_shift = -16;
+    p_cfg->out_activation_min = -128;
+    p_cfg->out_activation_max = 127;
+    p_cfg->inp_data_format = 0;
+    p_cfg->out_data_format = 0;
     p_cfg->inp_precision = 16;
     p_cfg->out_precision = 16;
     strcpy(p_cfg->kernel_name, "l2_norm");
-    p_cfg->frames   = 2;  
-    p_cfg->write_file = 0;  
+    p_cfg->frames   = 2;
+    p_cfg->write_file = 0;
     p_cfg->read_inp_file_name[0] = '\0';
     p_cfg->read_ref_file_name[0] = '\0';
     p_cfg->write_inp_file_name[0]='\0';
@@ -97,6 +113,14 @@ void show_usage(void)
 {
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-num_elms: Number of elements; Default=256\n");
+    printf("\t-io_height: Height for 3D input/output; Default=40\n");
+    printf("\t-io_width: Width for 3D input/output; Default=32\n");
+    printf("\t-io_channels: Number of channels for 3D input/output; Default=32\n");
+    printf("\t-out_shift: Output shift; Default=-16\n");
+    printf("\t-out_activation_min: Output minimum limit; Default=-128 for 8-bit output\n");
+    printf("\t-out_activation_min: Output maximum limit; Default=127 for 8-bit output\n");
+    printf("\t-inp_data_format: Input data format, 0 : NHWC; Default=0\n");
+    printf("\t-out_data_format: Output data format, 0 : NHWC; Default=0\n");
     printf("\t-inp_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
     printf("\t-out_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
     printf("\t-frames: Positive number; Default=2\n");
@@ -126,6 +150,14 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_INDICATE("-help", p_cfg->help);
     ARGTYPE_INDICATE("-h", p_cfg->help);
     ARGTYPE_ONETIME_CONFIG("-num_elms",p_cfg->num_elms);
+    ARGTYPE_ONETIME_CONFIG("-io_height",p_cfg->io_height);
+    ARGTYPE_ONETIME_CONFIG("-io_width",p_cfg->io_width);
+    ARGTYPE_ONETIME_CONFIG("-io_channels",p_cfg->io_channels);
+    ARGTYPE_ONETIME_CONFIG("-out_shift",p_cfg->out_shift);
+    ARGTYPE_ONETIME_CONFIG("-out_activation_min",p_cfg->out_activation_min);
+    ARGTYPE_ONETIME_CONFIG("-out_activation_max",p_cfg->out_activation_max);
+    ARGTYPE_ONETIME_CONFIG("-inp_data_format",p_cfg->inp_data_format);
+    ARGTYPE_ONETIME_CONFIG("-out_data_format",p_cfg->out_data_format);
     ARGTYPE_ONETIME_CONFIG("-inp_precision",p_cfg->inp_precision);
     ARGTYPE_ONETIME_CONFIG("-out_precision",p_cfg->out_precision);
     ARGTYPE_STRING("-kernel_name",p_cfg->kernel_name, MAX_KERNEL_NAME_LENGTH);
@@ -172,9 +204,22 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define BATCH_NORM_3D_KERNEL_8_FN(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) { \
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_8_8 ( \
+        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, \
+        (WORD16 *)p_alpha->p, (WORD32 *)p_beta->p, \
+        cfg.io_height, cfg.io_width, cfg.io_channels, cfg.out_shift, \
+        cfg.out_activation_min, cfg.out_activation_max, \
+        cfg.inp_data_format, cfg.out_data_format); \
+    XTPWR_PROFILER_STOP(0); \
+  }
+
 #define PROCESS_NORM \
     L2_NORM_KERNEL_F_FN(l2_norm, -1, -1) \
     else L2_NORM_KERNEL_ASYM8S_FN(l2_norm, -4, -4) \
+    else BATCH_NORM_3D_KERNEL_8_FN(batch_norm_3D, 8, 8) \
     else {  printf("unsupported normalization operation\n"); return -1;}
 
 int xa_nn_main_process(int argc, char *argv[])
@@ -183,8 +228,8 @@ int xa_nn_main_process(int argc, char *argv[])
   int frame;
   int err = 0;
   int pass_count=0;
-  char profiler_name[MAX_PROFILER_NAME_LENGTH]; 
-  char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
+  char profiler_name[MAX_PROFILER_NAME_LENGTH];
+  char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
   int inp_size, out_size;
   int num_ops=0;
 
@@ -192,6 +237,8 @@ int xa_nn_main_process(int argc, char *argv[])
 
   buf1D_t *p_inp;
   buf1D_t *p_out;
+  buf1D_t *p_alpha;
+  buf1D_t *p_beta;
   buf1D_t *p_ref = NULL;
 
   FILE *fptr_inp;
@@ -219,10 +266,21 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  inp_size = cfg.num_elms;
-  out_size = cfg.num_elms;
+  if(!strcmp(cfg.kernel_name, "batch_norm_3D"))
+  {
+    if(cfg.io_height >= 0 && cfg.io_width >= 0 && cfg.io_channels >= 0)
+      inp_size = cfg.io_height * cfg.io_width * cfg.io_channels;
+    else
+      inp_size = 0;
+    out_size = inp_size;
+  }
+  else
+  {
+    inp_size = cfg.num_elms;
+    out_size = cfg.num_elms;
+  }
 
-  // Set profiler name 
+  // Set profiler name
   if(cfg.kernel_name[0])
   {
     strcpy(profiler_name,cfg.kernel_name);
@@ -231,7 +289,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_params, "_f32");
     strcat(profiler_name, profiler_params);
-    
+
     // If VFPU is not supported, return
     if(!HIFI_VFPU)
     {
@@ -246,19 +304,27 @@ int xa_nn_main_process(int argc, char *argv[])
   }
   else
   {
-    sprintf(profiler_params, "_%d", 
+    sprintf(profiler_params, "_%d",
         cfg.inp_precision);
     strcat(profiler_name, profiler_params);
   }
-  
+
   // Set profiler parameters
-  sprintf(profiler_params, "num_elms=%d", cfg.num_elms);
+  if(!strcmp(cfg.kernel_name,"batch_norm_3D"))
+  {
+    sprintf(profiler_params, "io_height=%d, io_width = %d, io_channels = %d, inp_data_format = %d, out_data_format %d",
+            cfg.io_height, cfg.io_width, cfg.io_channels, cfg.inp_data_format, cfg.out_data_format);
+  }
+  else
+  {
+    sprintf(profiler_params, "num_elms=%d", cfg.num_elms);
+  }
 
   // Open input file
   if(cfg.write_file)
   {
     /* If write_file (generate test vectors) is enabled, random data would be generated and
-       used; the input data and output data generated would be written into files. 
+       used; the input data and output data generated would be written into files.
      */
     fptr_inp = file_open(pb_input_file_path, cfg.write_inp_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
   }
@@ -276,17 +342,28 @@ int xa_nn_main_process(int argc, char *argv[])
   // Open reference file if verify flag is enabled
   if(cfg.verify)
   {
-    p_ref = create_buf1D(out_size, cfg.out_precision); 
-    
+    p_ref = create_buf1D(out_size, cfg.out_precision);
+
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
 
   // Allocate Memory
   p_inp = create_buf1D(inp_size, cfg.inp_precision);                              VALIDATE_PTR(p_inp);
   p_out = create_buf1D(out_size, cfg.out_precision);                              VALIDATE_PTR(p_out);
-  
+
+  if(!strcmp(cfg.kernel_name,"batch_norm_3D"))
+  {
+    p_alpha = create_buf1D(cfg.io_channels, 16);                                  VALIDATE_PTR(p_alpha);
+    p_beta = create_buf1D(cfg.io_channels, 32);                                   VALIDATE_PTR(p_beta);
+    /*p_alpha & p_beta arrays are not read through bin files, hence initialized here*/
+    memset(p_alpha->p, -20, cfg.io_channels* 2);
+    memset(p_beta->p,  -20, cfg.io_channels* 4);
+  }
+
   if(!strcmp(cfg.kernel_name,"l2_norm"))
     num_ops = 2*cfg.num_elms;   // First calculated square root of energy and then divide input by it
+  else if(!strcmp(cfg.kernel_name,"batch_norm_3D"))
+    num_ops = inp_size;
 
   XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, num_ops, "OPs/cyc", 1);
 
@@ -294,7 +371,10 @@ int xa_nn_main_process(int argc, char *argv[])
   for(frame = 0; frame < cfg.frames; frame++)
   {
     // If write_file enabled, generate random data for input, else read from file
-    load_norm_input_data(cfg.write_file, fptr_inp, p_inp);
+    if(!strcmp(cfg.kernel_name,"batch_norm_3D"))
+      load_batch_norm_3D_input_data(cfg.write_file, fptr_inp, p_inp, p_alpha, p_beta);
+    else
+      load_norm_input_data(cfg.write_file, fptr_inp, p_inp);
 
     // Call the cnn kernel_name specified on command line
     PROCESS_NORM;
@@ -417,7 +497,7 @@ int main (int argc, char *argv[])
                 else strcpy((char *)pb_ref_file_path, "");
                 continue;
             }
-            
+
             if(strcmp(fargv[0], "@Start") == 0)
             {
                 processcmd = 1;

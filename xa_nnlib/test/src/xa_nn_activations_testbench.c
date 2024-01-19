@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -136,8 +136,8 @@ void show_usage(void)
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-num_elements : number of elements; Default=32\n");
     printf("\t-relu_threshold : threshold for relu in Q16.15; Default=32768 (=1 in Q16.15)\n");
-    printf("\t-inp_precision : 16, 32, -1(single prec float), -3 (asym8u), -4 (asym8s), -7 (asym16s) or -8 (sym16s); Default=32\n");
-    printf("\t-out_precision : 16, 32, -1(single prec float), -3 (asym8u), -4 (asym8s), -7 (asym16s) or -8 (sym16s); Default=32\n");
+    printf("\t-inp_precision : 16, 32, -1(single prec float),-2(half prec float), -3 (asym8u), -4 (asym8s), -7 (asym16s) or -8 (sym16s); Default=32\n");
+    printf("\t-out_precision : 16, 32, -1(single prec float),-2(half prec float), -3 (asym8u), -4 (asym8s), -7 (asym16s) or -8 (sym16s); Default=32\n");
     printf("\t-integer_bits : number of integer bits in input for tanh_16_16 (0-6); Default=3\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-activation: sigmoid, tanh, relu, relu_std, relu1, relu6, leaky_relu, prelu, hard_swish, activation_min_max or softmax; Default=sigmoid\n");
@@ -502,6 +502,21 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         printf("unsupported activation\n"); return -1;} 
 #endif
 
+#if HIFI_HP_VFPU && hifi5
+#define ACTIVATION_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_vec_##ACTIVATION##_f16_f16 ( \
+                (WORD16 *)p_out->p, (WORD16 *)p_inp->p, \
+                cfg.num_elements);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+#else
+#define ACTIVATION_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+        printf("unsupported activation\n"); return -1;} 
+#endif
+
 #if HIFI_VFPU
 #define RELU_FN_F32(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
@@ -519,19 +534,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #endif
 
 #define PROCESS_ACTIVATION \
-    ACTIVATION_FN(32, 32, sigmoid) \
-    else ACTIVATION_FN(32, 32, tanh) \
-    else RELU_FN(32, 32, relu) \
-    else RELU_FN(16, 16, relu) \
+    RELU_FN(16, 16, relu) \
     else RELU_FN(8, 8, relu) \
-    else ACTIVATION_FN(32, 32, relu1) \
-    else ACTIVATION_FN(32, 32, relu6) \
     else ACTIVATION_FN(8, 8, relu_std) \
     else ACTIVATION_MIN_MAX_FN(8, 8, activation_min_max) \
     else ACTIVATION_FN(16, 16, relu_std) \
     else ACTIVATION_MIN_MAX_FN(16, 16, activation_min_max) \
-    else ACTIVATION_FN(32, 32, relu_std) \
-    else ACTIVATION_FN(32, 32, softmax) \
     else ACTIVATION_FN(32, 16, sigmoid) \
     else ACTIVATION_FN(32, 16, tanh) \
     else ACTIVATION_FN(32, 8, sigmoid) \
@@ -540,6 +548,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else ACTIVATION_FN_VAR_QFORMAT(16, 16, tanh) \
     else ACTIVATION_FN_F32(-1, -1, sigmoid) \
     else ACTIVATION_FN_F32(-1, -1, tanh) \
+    else ACTIVATION_FN_F16(-2, -2, sigmoid) \
+    else ACTIVATION_FN_F16(-2, -2, tanh) \
     else RELU_FN_F32(-1, -1, relu) \
     else ACTIVATION_FN_F32(-1, -1, relu1) \
     else ACTIVATION_FN_F32(-1, -1, relu6) \
@@ -624,6 +634,17 @@ int xa_nn_main_process(int argc, char *argv[])
     
     // If VFPU is not supported, return
     if(!HIFI_VFPU)
+    {
+      printf("%s: NOT TESTED\n", profiler_name);
+      return 0;
+    }
+  }
+  else if ((cfg.inp_precision == -2) || (cfg.out_precision == -2))
+  {
+    sprintf(profiler_name, "%s_f16xf16", cfg.activation);
+    
+    // If VFPU is not supported, return
+    if(!HIFI_HP_VFPU)
     {
       printf("%s: NOT TESTED\n", profiler_name);
       return 0;

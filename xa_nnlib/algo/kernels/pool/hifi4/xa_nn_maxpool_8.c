@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -153,7 +153,7 @@ const WORD8* __restrict__ p_inp,
             /* reminder loop for input_width */
             for(i = 0 ; i < (loop_count & 3); i++)
             {
-                src2 = AE_MOVDA16(((WORD8 *)p_src2_temp)[0] << 8);
+                src2 = AE_MOVDA16(((UWORD8)((WORD8 *)p_src2_temp)[0]) << 8);
                 p_src2_temp = (ae_int16x4 *)((WORD8 *)p_src2_temp + 1);
 
                 AE_S16_0_IP(src2, (ae_int16 *)p_dst_temp, 2);
@@ -203,7 +203,7 @@ const WORD8* __restrict__ p_inp,
                 for(i = 0 ; i < (loop_count & 3); i++)
                 {
                     AE_L16_IP(src1,  (ae_int16 *)p_src1_temp, 2);
-                    src2 = AE_MOVDA16(((WORD8 *)p_src2_temp)[0] << 8);
+                    src2 = AE_MOVDA16((UWORD8)(((WORD8 *)p_src2_temp)[0]) << 8);
                     p_src2_temp = (ae_int16x4 *)((WORD8 *)p_src2_temp + 1);
 
                     MAX_16X4(src1, src2);

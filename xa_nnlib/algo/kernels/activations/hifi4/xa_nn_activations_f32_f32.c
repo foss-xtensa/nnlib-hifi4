@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -20,9 +20,9 @@
 
 ******************************************************************************/
 /* Common helper macros. */
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 #include "xa_type_def.h"
-#include "NatureDSP_Signal_math.h"
+#include "../../../ndsp/hifi4/include/NatureDSP_Signal_math.h"
 #include "xa_nnlib_err_chk.h"
 #include <math.h>
 
@@ -126,7 +126,7 @@ WORD32 xa_nn_vec_sigmoid_f32_f32(
     const FLOAT32 * __restrict__ p_vec,        /* input data, floating point */
     WORD32        vec_length)                  /* length of vectors */
 {
-  vec_sigmoidf(p_out, p_vec, vec_length);
+  xa_nnlib_vec_sigmoidf(p_out, p_vec, vec_length);
   return 0;
 }
 #endif /* !HAVE_VFPU */
@@ -142,7 +142,7 @@ WORD32 xa_nn_vec_tanh_f32_f32(
     const FLOAT32 * __restrict__ p_vec,        /* input data, floating point */
     WORD32        vec_length)                  /* length of vectors */
 {
-  vec_tanhf(p_out, p_vec, vec_length);
+  xa_nnlib_vec_tanhf(p_out, p_vec, vec_length);
   return 0;
 }
 #endif /* !HAVE_VFPU */
@@ -224,7 +224,7 @@ WORD32 xa_nn_vec_relu_f32_f32(
     FLOAT32       threshold,                   /* threshold, floating point */
     WORD32        vec_length)                  /* length of vectors */
 {
-  vec_reluf(p_out, p_vec, threshold, vec_length);
+  xa_nnlib_vec_reluf(p_out, p_vec, threshold, vec_length);
   return 0;
 }
 #endif /* !HAVE_VFPU */
@@ -240,7 +240,7 @@ WORD32 xa_nn_vec_relu1_f32_f32(
     const FLOAT32 * __restrict__ p_vec,        /* input data, floating point */
     WORD32        vec_length)                  /* length of vectors */
 {
-  vec_reluf(p_out, p_vec, 1.0f, vec_length);
+  xa_nnlib_vec_reluf(p_out, p_vec, 1.0f, vec_length);
   return 0;
 }
 #endif /* !HAVE_VFPU */
@@ -256,7 +256,7 @@ WORD32 xa_nn_vec_relu6_f32_f32(
     const FLOAT32 * __restrict__ p_vec,        /* input data, floating point */
     WORD32        vec_length)                  /* length of vectors */
 {
-  vec_reluf(p_out, p_vec, 6.0f, vec_length);
+  xa_nnlib_vec_reluf(p_out, p_vec, 6.0f, vec_length);
   return 0;
 }
 #endif /* !HAVE_VFPU */
@@ -272,7 +272,7 @@ WORD32 xa_nn_vec_softmax_f32_f32(
     const FLOAT32 * __restrict__ p_vec,        /* input data, floating point */
     WORD32        vec_length)                  /* length of vectors */
 {
-  vec_softmaxf(p_out, p_vec, vec_length);
+  xa_nnlib_vec_softmaxf(p_out, p_vec, vec_length);
   return 0;
 }
 #endif /* !HAVE_VFPU */

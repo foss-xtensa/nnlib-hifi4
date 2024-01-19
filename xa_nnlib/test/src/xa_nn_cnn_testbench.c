@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -691,8 +691,18 @@ int xa_nn_main_process(int argc, char *argv[])
       kernel[1] = p_kernel_point->p;
       bias[1]   = p_bias_point->p;
     }
-    xa_nnlib_cnn_set_config(cnn_handle, XA_NNLIB_CNN_KERNEL, &kernel[0]); 
-    xa_nnlib_cnn_set_config(cnn_handle, XA_NNLIB_CNN_BIAS, &bias[0]); 
+    err=xa_nnlib_cnn_set_config(cnn_handle, XA_NNLIB_CNN_KERNEL, &kernel[0]);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    } 
+    err=xa_nnlib_cnn_set_config(cnn_handle, XA_NNLIB_CNN_BIAS, &bias[0]);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    } 
   }  
 
   /* Execution Loop */

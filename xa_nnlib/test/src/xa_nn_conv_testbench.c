@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -187,7 +187,7 @@ void show_usage(void)
     printf("\t-out_shift : Output shift for quantized 8-bit(asym8u and asym8s), 31 to -31; Default=-8\n");
     printf("\t-out_zero_bias : Output zero bias for quantized 8-bit, 0 to 255 for asym8u, -128 to 127 for asym8s, ignored for symmetric 16-bit signed ; Default=128\n");
     printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: conv2d_std, dilated_conv2d_std, conv2d_depth, dilated_conv2d_depth, conv2d_point, conv1d_std, transpose_conv , conv2d_group; Default="" : conv2d_std\n");
+    printf("\t-kernel_name: conv2d_std, dilated_conv2d_std, conv2d_depth, dilated_conv2d_depth, conv2d_point, conv1d_std, transpose_conv , conv2d; Default="" : conv2d_std\n");
     printf("\t-pointwise_profile_only: Applicable only when kernel_name is conv2d_depth, 0 (print conv2d depthwise and pointwise profile info), 1(print only conv2d pointwise profile info); Default=0\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp_file_name: Full filename for reading inputs (order - input, kernel, bias, (pointwise kernel, pointwise bias for depth separable)) \n");
@@ -308,15 +308,27 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
-#define CONV_GROUP_KERNEL_SYM8S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+#define CONV_UN_KERNEL_SYM8S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
-    err = xa_nn_##KERNEL##_sym8sxasym8s ( \
+    err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
         (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width,cfg.kernel_channels,cfg.out_channels, \
+        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width,cfg.kernel_channels,cfg.dilation_height,cfg.dilation_width,cfg.out_channels, \
         cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+        cfg.input_zero_bias,cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
         cfg.out_data_format, p_scratch);\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define CONV_UN_KERNEL_SYM8SXSYM16S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_per_chan_sym8sxsym16s ( \
+        (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
+        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width,cfg.kernel_channels,cfg.dilation_height,cfg.dilation_width,cfg.out_channels, \
+        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+        0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+        cfg.out_data_format,p_scratch);\
     XTPWR_PROFILER_STOP(0);\
   }
 
@@ -620,7 +632,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
     err = xa_nn_dilated_conv2d_depthwise_per_chan_sym8sxasym8s ( \
-        (WORD8 *) p_dw_out->p, (const WORD8 *) p_kernel->p, (const WORD8 *) p_inp->p, (const WORD32 *)p_bias->p, \
+        (WORD8 *) p_out->p, (const WORD8 *) p_kernel->p, (const WORD8 *) p_inp->p, (const WORD32 *)p_bias->p, \
         cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, cfg.dilation_height, cfg.dilation_width, \
         cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
         cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
@@ -637,7 +649,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
     else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
     else if CONV_KERNEL_SYM4S_PC_FN(conv2d_std,-12,-4,-4, 32) \
-    else if CONV_GROUP_KERNEL_SYM8S_PC_FN(conv2d_group,-5,-4,-4, 32) \
+    else if CONV_UN_KERNEL_SYM8S_PC_FN(conv2d,-5,-4,-4, 32) \
+    else if CONV_UN_KERNEL_SYM8SXSYM16S_PC_FN(conv2d,-5,-8,-8, 64) \
     else if CONV_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_std,-5,-8,-8, 64) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(transpose_conv,-5,-4,-4, 32) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
@@ -670,7 +683,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
     else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
     else if CONV_KERNEL_SYM4S_PC_FN(conv2d_std,-12,-4,-4, 32) \
-    else if CONV_GROUP_KERNEL_SYM8S_PC_FN(conv2d_group,-5,-4,-4, 32) \
+    else if CONV_UN_KERNEL_SYM8S_PC_FN(conv2d,-5,-4,-4, 32) \
+    else if CONV_UN_KERNEL_SYM8SXSYM16S_PC_FN(conv2d,-5,-8,-8, 64) \
     else if CONV_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_std,-5,-8,-8, 64) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(transpose_conv,-5,-4,-4, 32) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
@@ -703,7 +717,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
     else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
     else if CONV_KERNEL_SYM4S_PC_FN(conv2d_std,-12,-4,-4, 32) \
-    else if CONV_GROUP_KERNEL_SYM8S_PC_FN(conv2d_group,-5,-4,-4, 32) \
+    else if CONV_UN_KERNEL_SYM8S_PC_FN(conv2d,-5,-4,-4, 32) \
+    else if CONV_UN_KERNEL_SYM8SXSYM16S_PC_FN(conv2d,-5,-8,-8, 64) \
     else if CONV_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_std,-5,-8,-8, 64) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(transpose_conv,-5,-4,-4, 32) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
@@ -731,7 +746,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
     else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
     else if CONV_KERNEL_SYM4S_PC_FN(conv2d_std,-12,-4,-4, 32) \
-    else if CONV_GROUP_KERNEL_SYM8S_PC_FN(conv2d_group,-5,-4,-4, 32) \
+    else if CONV_UN_KERNEL_SYM8S_PC_FN(conv2d,-5,-4,-4, 32) \
+    else if CONV_UN_KERNEL_SYM8SXSYM16S_PC_FN(conv2d,-5,-8,-8, 64) \
     else if CONV_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_std,-5,-8,-8, 64) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(transpose_conv,-5,-4,-4, 32) \
     else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
@@ -763,7 +779,7 @@ int xa_nn_main_process(int argc, char *argv[])
   char profiler_params[MAX_PROFILER_PARAMS_LENGTH]; 
   void *p_scratch;
   int inp_size=0, kernel_size, out_size;
-  int kernel_size_pad, input_channels_pad;
+  int kernel_size_pad, input_channels_pad,kernel_channels_pad;
   int kernel_channels;
   int input_channelsXwidth_pad;
   int kernel_point_size, dw_out_size;
@@ -806,7 +822,7 @@ int xa_nn_main_process(int argc, char *argv[])
     }
   }
 
-  const char *kernel_names_supported[] = {"conv2d_std", "dilated_conv2d_std", "conv2d_depth", "dilated_conv2d_depth", "conv2d_point", "conv1d_std", "transpose_conv","conv2d_group"};
+  const char *kernel_names_supported[] = {"conv2d_std", "dilated_conv2d_std", "conv2d_depth", "dilated_conv2d_depth", "conv2d_point", "conv1d_std", "transpose_conv","conv2d"};
   int num_kernel_names = 8;
   int ker_name_itr = 0;
   bool is_ker_name_supported = 0;
@@ -854,28 +870,35 @@ int xa_nn_main_process(int argc, char *argv[])
       }
     }
   }
-  else if((!strcmp(cfg.kernel_name,"conv2d_group")))
+  else if((!strcmp(cfg.kernel_name,"conv2d")))
   {
-    cfg.input_channels=cfg.kernel_channels*cfg.groups;
-    inp_size = cfg.input_height * cfg.input_width * cfg.input_channels;
-    kernel_size = cfg.kernel_height * cfg.kernel_width * cfg.kernel_channels;
-    if(cfg.inp_precision == -1)
-    {
-      input_channels_pad = (cfg.input_channels + 2 - 1) & ~(2 - 1);
-    }
-    else
-    {
-      if(cfg.inp_precision == PREC_8 || cfg.inp_precision == PREC_ASYM8U || cfg.inp_precision == PREC_ASYM8S || cfg.inp_precision == PREC_SYM16S || cfg.inp_precision == PREC_ASYM16S)
-        input_channels_pad = cfg.input_channels;
-      else
-        input_channels_pad = (cfg.input_channels + 4 - 1) & ~(4 - 1);
-    }
-    if((cfg.out_channels%cfg.groups)!=0)
+    if(((cfg.input_channels%cfg.kernel_channels)!=0))
     {
       printf("[Error] : Invalid output channels \n");
       return -1;
     }
-    kernel_size_pad = cfg.kernel_height * cfg.kernel_width * cfg.kernel_channels;
+    cfg.groups=cfg.input_channels/cfg.kernel_channels;
+    if(((cfg.out_channels%cfg.groups)!=0))
+    {
+      printf("[Error] : Invalid output channels \n");
+      return -1;
+    }
+    
+    inp_size = cfg.input_height * cfg.input_width * cfg.input_channels;
+    kernel_size = cfg.kernel_height * cfg.kernel_width * cfg.kernel_channels;
+    if(cfg.inp_precision == -1)
+    {
+      kernel_channels_pad = (cfg.kernel_channels + 2 - 1) & ~(2 - 1);
+    }
+    else
+    {
+      if(cfg.inp_precision == PREC_8 || cfg.inp_precision == PREC_ASYM8U || cfg.inp_precision == PREC_ASYM8S || cfg.inp_precision == PREC_SYM16S || cfg.inp_precision == PREC_ASYM16S)
+        kernel_channels_pad = cfg.kernel_channels;
+      else
+        kernel_channels_pad = (cfg.kernel_channels + 4 - 1) & ~(4 - 1);
+    }
+
+    kernel_size_pad = cfg.kernel_height * cfg.kernel_width * kernel_channels_pad;
     bias_size = cfg.out_channels;
     out_size = cfg.out_height * cfg.out_width * cfg.out_channels;
     if(cfg.inp_precision == -4 || cfg.inp_precision == -8 || cfg.inp_precision == -7)
@@ -1112,8 +1135,8 @@ int xa_nn_main_process(int argc, char *argv[])
     }
     else
     {
-      sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d,kernel_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d", 
-      cfg.input_height, cfg.input_width, cfg.input_channels,cfg.kernel_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, cfg.out_height, cfg.out_width);
+      sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d,kernel_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d,dilation_height=%d, dilation_width=%d", 
+      cfg.input_height, cfg.input_width, cfg.input_channels,cfg.kernel_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, cfg.out_height, cfg.out_width,cfg.dilation_height,cfg.dilation_width);
 
     }  
   }
@@ -1163,9 +1186,9 @@ int xa_nn_main_process(int argc, char *argv[])
 
     XTPWR_PROFILER_OPEN(0, profiler_name_0, profiler_params, out_size * kernel_size, "MACs/cyc", 1);
   }
-  else if( (!strcmp(cfg.kernel_name,"conv2d_group")) )
+  else if( (!strcmp(cfg.kernel_name,"conv2d")) )
   {
-    p_kernel = create_buf2D(cfg.out_channels * cfg.kernel_height * cfg.kernel_width, cfg.kernel_channels, cfg.kernel_channels, cfg.kernel_precision, 0);    VALIDATE_PTR(p_kernel);
+    p_kernel = create_buf2D(cfg.out_channels * cfg.kernel_height * cfg.kernel_width, cfg.kernel_channels, kernel_channels_pad, cfg.kernel_precision, 0);    VALIDATE_PTR(p_kernel);
     p_bias = create_buf1D(bias_size, cfg.bias_precision);                            VALIDATE_PTR(p_bias);
 
     XTPWR_PROFILER_OPEN(0, profiler_name_0, profiler_params, out_size * kernel_size, "MACs/cyc", 1);
@@ -1188,11 +1211,12 @@ int xa_nn_main_process(int argc, char *argv[])
       p_kernel = create_buf2D(kernel_channels * cfg.kernel_height, cfg.kernel_width, cfg.kernel_width, cfg.kernel_precision, 0);            VALIDATE_PTR(p_kernel);
     }
     p_bias = create_buf1D(bias_size, cfg.bias_precision);                      VALIDATE_PTR(p_bias);
+
     if(!strcmp(cfg.kernel_name, "conv2d_depth"))
     {
       p_kernel_point = create_buf1D(kernel_point_size, cfg.kernel_precision);  VALIDATE_PTR(p_kernel_point);
-      p_dw_out = create_buf1D(dw_out_size, cfg.out_precision);                 VALIDATE_PTR(p_dw_out);
       p_bias_point = create_buf1D(bias_point_size, cfg.bias_precision);        VALIDATE_PTR(p_bias_point);
+      p_dw_out = create_buf1D(dw_out_size, cfg.out_precision);                 VALIDATE_PTR(p_dw_out);      
     }
 
     int total_conv2d_depth_MACS = (
@@ -1262,14 +1286,49 @@ int xa_nn_main_process(int argc, char *argv[])
     }
     else
     {
-    scratch_size = xa_nn_conv2d_std_getsize(cfg.input_height,cfg.input_channels,cfg.kernel_height,cfg.kernel_width,cfg.y_stride,cfg.y_padding,
-        cfg.out_height, cfg.out_channels, cfg.inp_precision); PRINT_VAR(scratch_size)
+    scratch_size=xa_nn_conv2d_std_getsize(cfg.input_height
+                                          ,cfg.input_width
+                                          ,cfg.input_channels
+                                          ,cfg.kernel_height
+                                          ,cfg.kernel_width
+                                          ,cfg.input_channels
+                                          ,cfg.y_stride
+                                          ,cfg.y_padding
+                                          ,cfg.x_stride
+                                          ,cfg.x_padding
+                                          ,cfg.out_height
+                                          ,cfg.out_width
+                                          ,cfg.out_channels
+                                          ,cfg.inp_precision
+                                          ,cfg.kernel_precision
+                                          ,cfg.dilation_height
+                                          ,cfg.dilation_width
+                                          ,cfg.out_data_format
+                                          ); PRINT_VAR(scratch_size)
     }
   }
-  else if((!strcmp(cfg.kernel_name,"conv2d_group")))
+  else if((!strcmp(cfg.kernel_name,"conv2d")))
   {
-    scratch_size = xa_nn_conv2d_std_getsize(cfg.input_height,cfg.kernel_channels,cfg.kernel_height,cfg.kernel_width,cfg.y_stride,cfg.y_padding,
-        cfg.out_height, cfg.out_channels, cfg.inp_precision); PRINT_VAR(scratch_size)
+    scratch_size=xa_nn_conv2d_getsize(cfg.input_height
+                                      ,cfg.input_width
+                                      ,cfg.input_channels
+                                      ,cfg.kernel_height
+                                      ,cfg.kernel_width
+                                      ,cfg.kernel_channels
+                                      ,cfg.dilation_height
+                                      ,cfg.dilation_width
+                                      ,cfg.y_stride
+                                      ,cfg.y_padding
+                                      ,cfg.x_stride
+                                      ,cfg.x_padding
+                                      ,cfg.out_height
+                                      ,cfg.out_width
+                                      ,cfg.out_channels
+                                      ,cfg.inp_precision
+                                      ,cfg.kernel_precision
+                                      ,cfg.out_data_format
+                                    );
+        PRINT_VAR(scratch_size)
   }
   else if(!strcmp(cfg.kernel_name,"dilated_conv2d_std"))
   {
@@ -1331,6 +1390,7 @@ int xa_nn_main_process(int argc, char *argv[])
 
   if(strcmp(cfg.kernel_name,"conv2d_point"))
   {
+    scratch_size=scratch_size<0?0:scratch_size;
     p_scratch = (xa_nnlib_handle_t)malloc(scratch_size); PRINT_PTR(p_scratch)
 
     fprintf(stdout, "\nScratch size: %d bytes\n", scratch_size);
@@ -1340,8 +1400,10 @@ int xa_nn_main_process(int argc, char *argv[])
   for(frame = 0; frame < cfg.frames; frame++)
   {
     // If write_file enabled, generate random data for input, else read from file
-    if( (!strcmp(cfg.kernel_name,"conv2d_std")) || (!strcmp(cfg.kernel_name,"dilated_conv2d_std")) || (!strcmp(cfg.kernel_name,"transpose_conv")) || (!strcmp(cfg.kernel_name,"conv2d_group")))
+    if( (!strcmp(cfg.kernel_name,"conv2d_std")) || (!strcmp(cfg.kernel_name,"dilated_conv2d_std")) || (!strcmp(cfg.kernel_name,"transpose_conv")))
       load_conv2d_std_input_data(cfg.write_file, fptr_inp, p_inp, p_kernel, p_bias, cfg.input_channels, input_channels_pad, -cfg.kernel_zero_bias);
+    else if(!strcmp(cfg.kernel_name,"conv2d"))
+      load_conv2d_std_input_data(cfg.write_file, fptr_inp, p_inp, p_kernel, p_bias, cfg.kernel_channels, kernel_channels_pad, -cfg.kernel_zero_bias);
     else if(!strcmp(cfg.kernel_name,"conv2d_depth"))
       load_conv2d_ds_input_data(cfg.write_file, fptr_inp, p_inp, p_kernel, p_bias, p_kernel_point, p_bias_point, -cfg.kernel_zero_bias);
     else if(!strcmp(cfg.kernel_name,"dilated_conv2d_depth"))

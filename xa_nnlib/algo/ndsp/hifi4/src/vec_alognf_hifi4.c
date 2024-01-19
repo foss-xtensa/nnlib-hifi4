@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -36,16 +36,16 @@
 /* ------------------------------------------------------------------------ */
 
 /* DSP Library API */
-#include "NatureDSP_Signal_math.h"
+#include "../include/NatureDSP_Signal_math.h"
 /* Common helper macros. */
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 /* Tables */
-#include "expf_tbl.h"
+#include "../include/expf_tbl.h"
 /* sNaN/qNaN, single precision. */
-#include "nanf_tbl.h"
+#include "../include/nanf_tbl.h"
 
 #if !HAVE_VFPU && !HAVE_FPU
-DISCARD_FUN(void,vec_antilognf,( float32_t * restrict y, const float32_t* restrict x, int N ))
+DISCARD_FUN(void,xa_nnlib_vec_antilognf,( float32_t * restrict y, const float32_t* restrict x, int N ))
 #elif HAVE_VFPU
 /*===========================================================================
   Vector matematics:
@@ -86,7 +86,7 @@ DISCARD_FUN(void,vec_antilognf,( float32_t * restrict y, const float32_t* restri
   x,y - aligned on 8-byte boundary
   N   - multiple of 2
 -------------------------------------------------------------------------*/
-void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
+void xa_nnlib_vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
 {
   /*
     int32_t t, y;
@@ -94,31 +94,31 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
     int64_t a;
 
     if (isnan(x)) return x;
-    if (x>expfminmax[1].f) x = expfminmax[1].f;
-    if (x<expfminmax[0].f) x = expfminmax[0].f;
+    if (x>xa_nnlib_expfminmax[1].f) x = xa_nnlib_expfminmax[1].f;
+    if (x<xa_nnlib_expfminmax[0].f) x = xa_nnlib_expfminmax[0].f;
 
     / scale input to 1/ln(2) and convert to Q31 /
     x = frexpf(x, &e);
 
     t = (int32_t)STDLIB_MATH(ldexpf)(x, e + 24);
-    a = ((int64_t)t*invln2_Q30) >> 22; / Q24*Q30->Q32 /
+    a = ((int64_t)t*xa_nnlib_invln2_Q30) >> 22; / Q24*Q30->Q32 /
     t = ((uint32_t)a) >> 1;
     e = (int32_t)(a >> 32);
     / compute 2^t in Q30 where t is in Q31 /
-    y = expftbl_Q30[0];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[1];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[2];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[3];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[4];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[5];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[6];
+    y = xa_nnlib_expftbl_Q30[0];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[1];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[2];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[3];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[4];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[5];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[6];
     / convert back to the floating point /
     x = STDLIB_MATH(ldexpf)((float32_t)y, e - 30);
   */
 
   const xtfloatx2 *          X0  = (xtfloatx2*)x;
         xtfloatx2 * restrict Y   = (xtfloatx2*)y;
-  const ae_int32  * restrict TBL = (ae_int32 *)expftbl_Q30;
+  const ae_int32  * restrict TBL = (ae_int32 *)xa_nnlib_expftbl_Q30;
 
   ae_valign X0_va, Y_va;
   
@@ -143,8 +143,8 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
 
     /* scale input by 1/ln(2) and convert to Q31 */
     u0 = XT_TRUNC_SX2(x0, 24);
-    wh = AE_MUL32_HH(u0, invln2_Q30);
-    wl = AE_MUL32_LL(u0, invln2_Q30);
+    wh = AE_MUL32_HH(u0, xa_nnlib_invln2_Q30);
+    wl = AE_MUL32_LL(u0, xa_nnlib_invln2_Q30);
     e0 = AE_TRUNCA32X2F64S(wh, wl, -22);
     wh = AE_SLLI64(wh, 32-22);
     wl = AE_SLLI64(wl, 32-22);
@@ -177,7 +177,7 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
     y0 = XT_AE_MOVXTFLOATX2_FROMINT32X2(e0);
     y1 = XT_AE_MOVXTFLOATX2_FROMINT32X2(e1);
 
-    XT_MOVT_SX2(y1, qNaNf.f, b_nan);
+    XT_MOVT_SX2(y1, xa_nnlib_qNaNf.f, b_nan);
 
     y0 = XT_MUL_SX2(y0, y1);
     y0 = XT_MUL_SX2(x0, y0);
@@ -195,21 +195,21 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
 
     /* scale input by 1/ln(2) and convert to Q31 */
     u0 = XT_TRUNC_SX2(x0, 24);
-    wh = AE_MUL32_HH(u0, invln2_Q30);
-    wl = AE_MUL32_LL(u0, invln2_Q30);
+    wh = AE_MUL32_HH(u0, xa_nnlib_invln2_Q30);
+    wl = AE_MUL32_LL(u0, xa_nnlib_invln2_Q30);
     e0 = AE_TRUNCA32X2F64S(wh, wl, -22);
     wh = AE_SLLI64(wh, 32-22);
     wl = AE_SLLI64(wl, 32-22);
     u0 = AE_TRUNCI32X2F64S(wh, wl, 0);
     u0 = AE_SRLI32(u0, 1);
 
-    tb0 = expftbl_Q30[0];
-    tb1 = expftbl_Q30[1];
-    tb2 = expftbl_Q30[2];
-    tb3 = expftbl_Q30[3];
-    tb4 = expftbl_Q30[4];
-    tb5 = expftbl_Q30[5];
-    tb6 = expftbl_Q30[6];
+    tb0 = xa_nnlib_expftbl_Q30[0];
+    tb1 = xa_nnlib_expftbl_Q30[1];
+    tb2 = xa_nnlib_expftbl_Q30[2];
+    tb3 = xa_nnlib_expftbl_Q30[3];
+    tb4 = xa_nnlib_expftbl_Q30[4];
+    tb5 = xa_nnlib_expftbl_Q30[5];
+    tb6 = xa_nnlib_expftbl_Q30[6];
 
     n0 = tb0; f0 = tb1;
     AE_MULAFP32X2RAS(f0, u0, n0); n0 = f0; f0 = tb2;
@@ -237,7 +237,7 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
     XT_SSI( y0, (xtfloat*)Y, 0 );
   }
 
-} /* vec_antilognf() */ 
+} /* xa_nnlib_vec_antilognf() */ 
 
 #elif HAVE_FPU
 #define sz_i32 (int)sizeof(int32_t)
@@ -277,7 +277,7 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
 
 -------------------------------------------------------------------------*/
 
-void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
+void xa_nnlib_vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
 {
   /*
     int32_t t, y;
@@ -285,31 +285,31 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
     int64_t a;
 
     if (isnan(x)) return x;
-    if (x>expfminmax[1].f) x = expfminmax[1].f;
-    if (x<expfminmax[0].f) x = expfminmax[0].f;
+    if (x>xa_nnlib_expfminmax[1].f) x = xa_nnlib_expfminmax[1].f;
+    if (x<xa_nnlib_expfminmax[0].f) x = xa_nnlib_expfminmax[0].f;
 
     / scale input to 1/ln(2) and convert to Q31 /
     x = frexpf(x, &e);
 
     t = (int32_t)STDLIB_MATH(ldexpf)(x, e + 24);
-    a = ((int64_t)t*invln2_Q30) >> 22; / Q24*Q30->Q32 /
+    a = ((int64_t)t*xa_nnlib_invln2_Q30) >> 22; / Q24*Q30->Q32 /
     t = ((uint32_t)a) >> 1;
     e = (int32_t)(a >> 32);
     / compute 2^t in Q30 where t is in Q31 /
-    y = expftbl_Q30[0];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[1];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[2];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[3];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[4];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[5];
-    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + expftbl_Q30[6];
+    y = xa_nnlib_expftbl_Q30[0];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[1];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[2];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[3];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[4];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[5];
+    y = satQ31((((int64_t)t*y) + (1LL << (31 - 1))) >> 31) + xa_nnlib_expftbl_Q30[6];
     / convert back to the floating point /
     x = STDLIB_MATH(ldexpf)((float32_t)y, e - 30);
   */
 
   const xtfloat  *          X0  = (xtfloat*)x;
   const xtfloat  *          X1  = (xtfloat*)x;
-  const ae_int32 *          TBL = (ae_int32*)expftbl_Q30;
+  const ae_int32 *          TBL = (ae_int32*)xa_nnlib_expftbl_Q30;
         xtfloat  * restrict Y   = (xtfloat*)y;
 
   xtfloat    x0, x1, x0_, x1_, y0, y1, z0, z1;
@@ -334,8 +334,8 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
     u0 = XT_TRUNC_S( XT_MUL_S( x0, XT_FLOAT_S( 1<<9, 0 ) ), 15 );
     u1 = XT_TRUNC_S( XT_MUL_S( x1, XT_FLOAT_S( 1<<9, 0 ) ), 15 );
 
-	w0 = AE_MUL32_HH(u0, invln2_Q30);
-	w1 = AE_MUL32_HH(u1, invln2_Q30);
+	w0 = AE_MUL32_HH(u0, xa_nnlib_invln2_Q30);
+	w1 = AE_MUL32_HH(u1, xa_nnlib_invln2_Q30);
     e0 = ae_int32x2_rtor_int32(AE_TRUNCA32X2F64S(w0, w0, -22));
     e1 = ae_int32x2_rtor_int32(AE_TRUNCA32X2F64S(w1, w1, -22));
     r0 = AE_SLLI64(w0, 32-22);
@@ -384,8 +384,8 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
 	XT_LSIP(x1_, X1, sz_f32);
 	b_nan0 = XT_UN_S(x0_, x0_);
 	b_nan1 = XT_UN_S(x1_, x1_);
-    XT_MOVT_S(z0, qNaNf.f, b_nan0);
-    XT_MOVT_S(z1, qNaNf.f, b_nan1);
+    XT_MOVT_S(z0, xa_nnlib_qNaNf.f, b_nan0);
+    XT_MOVT_S(z1, xa_nnlib_qNaNf.f, b_nan1);
 
     y0 = XT_MUL_S(y0, z0);
     y1 = XT_MUL_S(y1, z1);
@@ -407,7 +407,7 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
     /* scale input by 1/ln(2) and convert to Q31 */
     u0 = XT_TRUNC_S( XT_MUL_S( x0, XT_FLOAT_S( 1<<9, 0 ) ), 15 );
 
-	w0 = AE_MUL32_HH(u0, invln2_Q30);
+	w0 = AE_MUL32_HH(u0, xa_nnlib_invln2_Q30);
     e0 = ae_int32x2_rtor_int32(AE_TRUNCA32X2F64S(w0, w0, -22));
     r0 = AE_SLLI64(w0, 32-22);
     u0 = ae_int32x2_rtor_int32(AE_TRUNCI32X2F64S(r0, r0, 0));
@@ -445,12 +445,12 @@ void vec_antilognf( float32_t * restrict y, const float32_t* restrict x, int N )
 
 	XT_LSIP(x0_, X1, sz_f32);
 	b_nan0 = XT_UN_S(x0_, x0_);
-    XT_MOVT_S(z0, qNaNf.f, b_nan0);
+    XT_MOVT_S(z0, xa_nnlib_qNaNf.f, b_nan0);
 
     y0 = XT_MUL_S(y0, z0);
     y0 = XT_MUL_S(x0, y0);
 
 	XT_SSIP(y0, Y, sz_f32);
   }
-} /* vec_antilognf() */ 
+} /* xa_nnlib_vec_antilognf() */ 
 #endif

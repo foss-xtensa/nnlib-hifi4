@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -26,6 +26,42 @@ Cadence HiFi 4 Neural Network (NN) Library
 ======================================================================
 Revision History
 ======================================================================
+
+
+Version 4.0.0 API 1.8: January 12, 2024
+
++ GA Release of HiFi4 NN Library
++ Tested using the RI-2023.11 tools and xt-clang/xt-clang++ compiler
++ Adds the following kernels:
+  xa_nn_batch_norm_3D_8_8
+  xa_nn_resize_bilinear_8_8
+  xa_nn_resize_nearest_neighbour_8_8
++ Adds the TFLM CONV operator xa_nn_conv2d_per_chan_sym8sxsym16s. This kernel also supports group convolution.
++ Replaces the group convolution kernel xa_nn_conv2d_group_sym8sxasym8s with xa_nn_conv2d_per_chan_sym8sxasym8s.
++ Removes following kernels (The functionality of these kernels can be obtained from the HiFi Nature DSP Library):
+  xa_nn_vec_sigmoid_32_32
+  xa_nn_vec_tanh_32_32
+  xa_nn_vec_relu_std_32_32
+  xa_nn_vec_relu_32_32
+  xa_nn_vec_relu1_32_32
+  xa_nn_vec_relu6_32_32
+  xa_nn_vec_softmax_32_32
++ Improves performance of the conv2d_std (sym8sxsym16s precision) kernel for SEANet-specific use-cases.
++ Fixes known issues to improve stability. Arguments of the xa_nn_conv2d_std_getsize API are altered for one fix.
+
+Note:
+> Processor Configuration must be built with the SP-VFP option to compile floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for the C++11 standard. 
+  This is supported only with the Xtensa C library. 
+
+Known issues
+> Compiler optimizations are not available for the ANN C++ source files.
+> 3 failures were seen in the ANN testcases because of differences in reference code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
 
 Version 3.3.0 API 1.7: September 5, 2023
 

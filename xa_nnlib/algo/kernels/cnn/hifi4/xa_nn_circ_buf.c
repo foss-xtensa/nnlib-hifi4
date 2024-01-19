@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -20,7 +20,7 @@
 
 ******************************************************************************/
 #include "xa_type_def.h"
-#include "common.h"
+#include "xa_nn_common.h"
 #include <string.h>
 #include "xa_nn_circ_buf.h"
 #include "xa_nnlib_common_macros.h"
@@ -68,6 +68,7 @@ int xa_nn_circ_buf_nchw_getsize(
   }
 }
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 VOID xa_nn_circ_buf_nchw_init(
     xa_nn_circ_buf_t *p_circ_buf,
     pVOID p_mem,
@@ -331,7 +332,8 @@ void xa_nn_circ_buf_nchw_add_rows_with_pad_val(
         p_circ_buf->p_curr = (pVOID)p_dst;
     }
 }
-
+#endif // #ifndef ENABLE_SCRATCH_SIZE_API_ONLY
+#if 0 /* This function is unused in hifi4 nnlib */
 int xa_nn_circ_buf_nhwc_getsize(
     WORD32 bytewidth,
     WORD32 input_height,
@@ -369,7 +371,7 @@ int xa_nn_circ_buf_nhwc_getsize(
     return size_in_bytes;
   }
 }
-
+#endif 
 int xa_nn_dilated_circ_buf_nhwc_getsize(
     WORD32 bytewidth,
     WORD32 input_height,
@@ -410,6 +412,7 @@ int xa_nn_dilated_circ_buf_nhwc_getsize(
   }
 }
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 VOID xa_nn_circ_buf_nhwc_init(
     xa_nn_circ_buf_t *p_circ_buf,
     pVOID p_mem,
@@ -677,7 +680,7 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                              | (pad_val_u8 << 8)
                                              | (pad_val_u8 << 16)
-                                             | (pad_val_u8 << 24));
+                                             | ((UWORD32)pad_val_u8 << 24));
             for(k = 0; k < loop_count; k++)
                 p_ae_dst[k] = pad_val_32;
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
@@ -697,7 +700,7 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                          | (pad_val_u8 << 8)
                                          | (pad_val_u8 << 16)
-                                         | (pad_val_u8 << 24));
+                                         | ((UWORD32)pad_val_u8 << 24));
             for(k = 0; k < loop_count; k++)
                 p_ae_dst[k] = pad_val_32;
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
@@ -739,7 +742,7 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                          | (pad_val_u8 << 8)
                                          | (pad_val_u8 << 16)
-                                         | (pad_val_u8 << 24));
+                                         | ((UWORD32)pad_val_u8 << 24));
             for(k = 0; k < loop_count; k++)
                 p_ae_dst[k] = pad_val_32;
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
@@ -759,7 +762,7 @@ void xa_nn_circ_buf_nhwc_add_cols_with_pad_val(
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                              | (pad_val_u8 << 8)
                                              | (pad_val_u8 << 16)
-                                             | (pad_val_u8 << 24));
+                                             | ((UWORD32)pad_val_u8 << 24));
             for(k = 0; k < loop_count; k++)
               p_ae_dst[k] = pad_val_32;
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
@@ -970,7 +973,7 @@ void xa_nn_dilated_circ_buf_nhwc_add_cols_with_pad_val(
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                              | (pad_val_u8 << 8)
                                              | (pad_val_u8 << 16)
-                                             | (pad_val_u8 << 24));
+                                             | ((UWORD32)pad_val_u8 << 24));
             for(k = 0; k < loop_count; k++)
                 p_ae_dst[k] = pad_val_32;
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
@@ -990,7 +993,7 @@ void xa_nn_dilated_circ_buf_nhwc_add_cols_with_pad_val(
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                          | (pad_val_u8 << 8)
                                          | (pad_val_u8 << 16)
-                                         | (pad_val_u8 << 24));
+                                         | ((UWORD32)pad_val_u8 << 24));
             for(k = 0; k < loop_count; k++)
                 p_ae_dst[k] = pad_val_32;
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
@@ -1032,7 +1035,7 @@ void xa_nn_dilated_circ_buf_nhwc_add_cols_with_pad_val(
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                          | (pad_val_u8 << 8)
                                          | (pad_val_u8 << 16)
-                                         | (pad_val_u8 << 24));
+                                         | ((UWORD32)pad_val_u8 << 24));
             for(k = 0; k < loop_count; k++)
                 p_ae_dst[k] = pad_val_32;
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
@@ -1052,7 +1055,7 @@ void xa_nn_dilated_circ_buf_nhwc_add_cols_with_pad_val(
             ae_int32 pad_val_32 = AE_MOVDA32(pad_val_u8
                                              | (pad_val_u8 << 8)
                                              | (pad_val_u8 << 16)
-                                             | (pad_val_u8 << 24));
+                                             | ((UWORD32)pad_val_u8 << 24));
             for(k = 0; k < loop_count; k++)
               p_ae_dst[k] = pad_val_32;
             AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, p_circ_buf->row_offset*circ_buf_width);
@@ -1062,3 +1065,4 @@ void xa_nn_dilated_circ_buf_nhwc_add_cols_with_pad_val(
     /* Update current pointer for circular buffer */
     AE_ADDCIRC16X4_XC((ae_int16x4 *)p_circ_buf->p_curr, (-circ_buf_width)*p_circ_buf->row_offset);
 }
+#endif // #ifndef ENABLE_SCRATCH_SIZE_API_ONLY

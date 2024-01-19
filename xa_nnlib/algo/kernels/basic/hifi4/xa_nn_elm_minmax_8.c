@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -387,7 +387,7 @@ WORD32 xa_nn_elm_min_8x8_8( WORD8* __restrict__ p_out,
  * xa_nn_elm_min_8D_Bcast_8x8_8(), xa_nn_elm_max_8D_Bcast_8x8_8().
  *
  * Although the number of dimensions is theoretically unrestricted, TFLM, as of v2.4.1, implements broadcast for 4/5/8D tensors only.
- * (Look for SubscriptToIndex() in common.h)
+ * (Look for SubscriptToIndex() in xa_nn_common.h)
  *
  * So, HiFi5 NNLib, as of v1.5.0, contains two sets of functions, each implementing broadcast for 4D and 8D tensors.
  * 2/3 D tensors must be scaled up to 4D and use the 4D set of functions. Similary 5/6/7D must promote to 8D and use the 8D set.

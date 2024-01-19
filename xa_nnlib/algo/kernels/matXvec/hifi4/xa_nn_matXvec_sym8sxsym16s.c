@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -417,9 +417,9 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s(
   int m_itr=0;
 
   /* Shifts to match with Tensorflow */
-  int left_shift, right_shift;
-  left_shift = out_shift<0?0:out_shift;
-  right_shift = out_shift>0?0:-out_shift;
+//  int left_shift, right_shift;
+//  left_shift = out_shift<0?0:out_shift;
+//  right_shift = out_shift>0?0:-out_shift;
 
   int bias_flag = 0;
   if(p_bias != NULL){

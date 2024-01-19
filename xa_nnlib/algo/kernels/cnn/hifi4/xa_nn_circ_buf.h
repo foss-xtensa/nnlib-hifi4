@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -437,7 +437,7 @@ in horizontal direction */
                             ); \
     UPDATE_COLS_ADDED(cols_added, cols_to_add) \
 
-
+#if 0 /* This function is unused in hifi4 nnlib */
 WORD32 xa_nn_circ_buf_nhwc_getsize(
     WORD32 bytewidth,
     WORD32 input_height,
@@ -448,6 +448,7 @@ WORD32 xa_nn_circ_buf_nhwc_getsize(
     WORD32 y_stride,
     WORD32 y_padding,
     WORD32 output_height);
+#endif
 
 VOID xa_nn_circ_buf_nhwc_init(
     xa_nn_circ_buf_t *p_circ_buf,

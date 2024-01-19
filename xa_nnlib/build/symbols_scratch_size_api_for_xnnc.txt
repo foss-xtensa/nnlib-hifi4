@@ -1,0 +1,7 @@
+xa_nn_avgpool_getsize
+xa_nn_conv2d_std_getsize
+xa_nn_conv2d_std_getsize_sym4s
+xa_nn_dilated_conv2d_std_getsize
+xa_nn_conv2d_depthwise_getsize
+get_softmax_scratch_size
+

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -596,24 +596,53 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxasym8s(
 
   p_scratch = ALIGNED_ADDR(p_scratch, ALIGNMENT);
   xa_nn_conv_state_t *p_state = (xa_nn_conv_state_t *)p_scratch;
+  WORD32 inp_h, inp_w, ker_h, ker_w, x_str, y_str, x_pad, y_pad, out_h, out_w;
+
+  if ((input_height == 1) && (kernel_height == 1) && (out_height == 1))
+  {
+    inp_h = input_width;
+    inp_w = input_height;
+    ker_h = kernel_width;
+    ker_w = kernel_height;
+    x_str = y_stride;
+    y_str = x_stride;
+    x_pad = y_padding;
+    y_pad = x_padding;
+    out_h = out_width;
+    out_w = out_height;
+  }
+  else
+  {
+    inp_h = input_height;
+    inp_w = input_width;
+    ker_h = kernel_height;
+    ker_w = kernel_width;
+    x_str = x_stride;
+    y_str = y_stride;
+    x_pad = x_padding;
+    y_pad = y_padding;
+    out_h = out_height;
+    out_w = out_width;
+  }
+
   xa_nn_conv2d_std_init_state((void*)p_state
       ,(void*)p_kernel
-      ,input_height
+      ,inp_h
       ,input_channels
-      ,kernel_height
+      ,ker_h
       ,kernel_width
-      ,y_stride
-      ,y_padding
-      ,out_height
+      ,y_str
+      ,y_pad
+      ,out_h
       ,out_channels
       ,PREC_ASYM8S
       ,PREC_SYM8S);
 
-  WORD32 out_channels_offset = out_data_format ? out_height * out_width : 1;
-  WORD32 out_height_offset = out_data_format ? out_width : out_width * out_channels;
+  WORD32 out_channels_offset = out_data_format ? out_h * out_w : 1;
+  WORD32 out_height_offset = out_data_format ? out_w : out_w * out_channels;
   WORD32 out_width_offset = out_data_format ? 1 : out_channels;
 
-  WORD32 x_padding_var = x_padding;
+  WORD32 x_padding_var = x_pad;
   WORD32 input_channels_pad;
 
 #if !ENABLE_PADDING_CONV2D_STD
@@ -632,44 +661,44 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxasym8s(
 
   /* When kernel convolves over x-left pad region only */
   WORD32 out_width_over_x_pad = 0;
-  if(x_padding_var >= kernel_width)
+  if(x_padding_var >= ker_w)
   {
-    out_width_over_x_pad = conv_x_left_pad(x_padding, kernel_width, x_stride, out_width, out_height, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift, out_zero_bias);
-    x_padding_var -= out_width_over_x_pad * x_stride;
+    out_width_over_x_pad = conv_x_left_pad(x_pad, ker_w, x_str, out_w, out_h, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift, out_zero_bias);
+    x_padding_var -= out_width_over_x_pad * x_str;
   }
 
   /* When kernel convolves over x-right pad region only */
   WORD32 out_width_over_x_r_pad = 0;
   // Determine x-right padding
-  WORD32 x_r_pad = kernel_width + (out_width - 1) * x_stride - (x_padding + input_width);
+  WORD32 x_r_pad = ker_w + (out_w - 1) * x_str - (x_pad + inp_w);
   x_r_pad = x_r_pad < 0 ? 0 : x_r_pad;
-  if(x_r_pad >= kernel_width)
+  if(x_r_pad >= ker_w)
   {
-    out_width_over_x_r_pad = conv_x_right_pad(x_padding, input_width, x_stride, out_width, out_height, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift, out_zero_bias);
+    out_width_over_x_r_pad = conv_x_right_pad(x_pad, inp_w, x_str, out_w, out_h, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift, out_zero_bias);
   }
 
   /* When kernel convolves over input region */
   p_out += out_width_over_x_pad * out_width_offset;
   // Initialize circular buffer
   // Determine y-bottom padding
-  WORD32 y_b_pad = kernel_height + (out_height - 1) * y_stride - (y_padding + input_height);
+  WORD32 y_b_pad = ker_h + (out_h - 1) * y_str - (y_pad + inp_h);
   y_b_pad = y_b_pad < 0 ? 0 : y_b_pad;
 
-  conv2d_std_init_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, p_state, -input_zero_bias);
+  conv2d_std_init_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, inp_w, inp_h, y_pad, y_b_pad, x_padding_var, ker_w, x_str, (VOID**)&pp_inp, p_state, -input_zero_bias);
 
   // Index to padded input width
-  WORD32 idx_beg_inp_width_pad = kernel_width - x_stride;
+  WORD32 idx_beg_inp_width_pad = ker_w - x_str;
   idx_beg_inp_width_pad = idx_beg_inp_width_pad < 0 ? 0 : idx_beg_inp_width_pad;
 
 
-  // Process Loop to compute one output plane [out_height x out_channels] per iteration
-  for(j=0;j<out_width-out_width_over_x_pad-out_width_over_x_r_pad;j++)
+  // Process Loop to compute one output plane [out_h x out_channels] per iteration
+  for(j=0;j<out_w-out_width_over_x_pad-out_width_over_x_r_pad;j++)
   {
-    // Add x_stride x (input_height x input_channels) new planes to circular buffer
-    conv2d_std_update_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, input_width, input_height, y_padding, y_b_pad, x_padding_var, kernel_width, x_stride, (VOID**)&pp_inp, idx_beg_inp_width_pad, p_state, -input_zero_bias);
+    // Add x_str x (inp_h x input_channels) new planes to circular buffer
+    conv2d_std_update_cir_buf_asym8(input_channels, input_channels_pad, input_bytewidth, inp_w, inp_h, y_pad, y_b_pad, x_padding_var, ker_w, x_str, (VOID**)&pp_inp, idx_beg_inp_width_pad, p_state, -input_zero_bias);
 
     // Update index to input width padded
-    idx_beg_inp_width_pad += x_stride;
+    idx_beg_inp_width_pad += x_str;
 
     // Convolution using matXvec with matrix as circular buffer
     xa_nn_matXvec_sym8sxasym8s_asym8s_circ
@@ -677,11 +706,11 @@ WORD32 xa_nn_conv2d_std_per_chan_sym8sxasym8s(
        ,p_state->cir_buf.p_curr/* matrix: rows x cols */
        ,p_state->p_kernel_padded /* vec: cols */
        ,p_bias /* bias */
-       ,out_height /* rows */
-       ,input_channels_pad * kernel_width * kernel_height /* cols */
-       ,input_channels_pad * kernel_width * y_stride/* row_offset */
+       ,out_h /* rows */
+       ,input_channels_pad * ker_w * ker_h /* cols */
+       ,input_channels_pad * ker_w * y_str/* row_offset */
        ,out_channels /* vec_count */
-       ,input_channels_pad * kernel_width * kernel_height /* vec_stride */
+       ,input_channels_pad * ker_w * ker_h /* vec_stride */
        ,out_channels_offset /* out_col_offset */
        ,out_height_offset /* out_row_offset */
        ,input_zero_bias

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -36,17 +36,17 @@
 /* ------------------------------------------------------------------------ */
 
 /* DSP Library API */
-#include "NatureDSP_Signal_math.h"
+#include "../include/NatureDSP_Signal_math.h"
 /* Common helper macros. */
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 /* Tables */
-#include "inv2pif_tbl.h"
-#include "sinf_tbl.h"
+#include "../include/inv2pif_tbl.h"
+#include "../include/sinf_tbl.h"
 /* sNaN/qNaN, single precision. */
-#include "nanf_tbl.h"
+#include "../include/nanf_tbl.h"
 
 #if !HAVE_VFPU && !HAVE_FPU
-DISCARD_FUN(void,vec_sinef,( float32_t * restrict y, const float32_t * restrict x, int N ))
+DISCARD_FUN(void,xa_nnlib_vec_sinef,( float32_t * restrict y, const float32_t * restrict x, int N ))
 #elif HAVE_VFPU
 
 #define sz_f32    (int)sizeof(float32_t)
@@ -63,7 +63,7 @@ DISCARD_FUN(void,vec_sinef,( float32_t * restrict y, const float32_t * restrict 
   Floating point functions compute sin(x) or cos(x)
   Two versions of functions available: regular version (vec_sine16x16, 
   vec_cosine16x16, vec_sine24x24, vec_cosine24x24, vec_sine32x32, 
-  vec_cosine32x32, , vec_sinef, vec_cosinef) with arbitrary arguments and 
+  vec_cosine32x32, , xa_nnlib_vec_sinef, xa_nnlib_vec_cosinef) with arbitrary arguments and 
   faster version (vec_sine24x24_fast, vec_cosine24x24_fast, 
   vec_sine32x32_fast, vec_cosine32x32_fast) that apply some restrictions.
   NOTE:
@@ -87,7 +87,7 @@ DISCARD_FUN(void,vec_sinef,( float32_t * restrict y, const float32_t * restrict 
 
   Restriction:
   Regular versions (vec_sine24x24, vec_cosine24x24, vec_sine32x32, 
-  vec_cosine32x32, vec_sinef, vec_cosinef):
+  vec_cosine32x32, xa_nnlib_vec_sinef, xa_nnlib_vec_cosinef):
   x,y - should not overlap
 
   Faster versions (vec_sine24x24_fast, vec_cosine24x24_fast, 
@@ -101,7 +101,7 @@ DISCARD_FUN(void,vec_sinef,( float32_t * restrict y, const float32_t * restrict 
   return result in Q31,Q15 or floating point
 -------------------------------------------------------------------------*/
 
-void vec_sinef( float32_t * restrict y,
+void xa_nnlib_vec_sinef( float32_t * restrict y,
                 const float32_t * restrict x, int N )
 {
   /*
@@ -109,9 +109,9 @@ void vec_sinef( float32_t * restrict y,
     int sx,n,j,k,ss;
     sx=takesignf(x);
     x=sx?-x:x;
-    if(x>sinf_maxval.f) return 0;
+    if(x>xa_nnlib_sinf_maxval.f) return 0;
     argument reduction 
-    k = (int)STDLIB_MATH(floorf)(x*inv4pif.f);
+    k = (int)STDLIB_MATH(floorf)(x*xa_nnlib_inv4pif.f);
     n = k + 1;
     j = n&~1;
 
@@ -137,14 +137,14 @@ void vec_sinef( float32_t * restrict y,
     ss = sx ^ (((n) >> 2) & 1);
       compute sine/cosine via minmax polynomial  
     x2 = x*x;
-    ys = polysinf_tbl[0].f;
-    ys = ys*x2 + polysinf_tbl[1].f;
-    ys = ys*x2 + polysinf_tbl[2].f;
+    ys = xa_nnlib_polysinf_tbl[0].f;
+    ys = ys*x2 + xa_nnlib_polysinf_tbl[1].f;
+    ys = ys*x2 + xa_nnlib_polysinf_tbl[2].f;
     ys = ys*x2;
     ys = ys*x + x;
-    yc = polycosf_tbl[0].f;
-    yc = yc*x2 + polycosf_tbl[1].f;
-    yc = yc*x2 + polycosf_tbl[2].f;
+    yc = xa_nnlib_polycosf_tbl[0].f;
+    yc = yc*x2 + xa_nnlib_polycosf_tbl[1].f;
+    yc = yc*x2 + xa_nnlib_polycosf_tbl[2].f;
     yc = yc*x2 + 1.f;
     select sine/cosine 
     y = (n & 2) ? yc : ys;
@@ -207,7 +207,7 @@ void vec_sinef( float32_t * restrict y,
      *       xn = fabsf( x[blkIx*blkSize+n] );
      *   
      *       // Determine the pi/2-wide segment the input value belongs to.
-     *       ji = ( ( (int)floorf( xn*inv4pif.f ) + 1 ) & ~1 );
+     *       ji = ( ( (int)floorf( xn*xa_nnlib_inv4pif.f ) + 1 ) & ~1 );
      *       jf = (float32_t)ji;
      *   
      *       // Calculate the difference between the segment midpoint and input value.
@@ -259,7 +259,7 @@ void vec_sinef( float32_t * restrict y,
          */
         
         xn = XT_ABS_SX2( xn );
-        t = XT_MUL_SX2( xn, inv4pif.f );
+        t = XT_MUL_SX2( xn, xa_nnlib_inv4pif.f );
         ji = XT_TRUNC_SX2( t, 0 );
         ji = AE_ADD32( ji, AE_MOVI(1) );
         ji = AE_AND32( ji, AE_NOT32( AE_MOVI(1) ) );
@@ -306,7 +306,7 @@ void vec_sinef( float32_t * restrict y,
      *       xn = x[blkIx*blkSize+n];
      *   
      *       // Determine the pi/2-wide segment the input value belongs to.
-     *       ji = (int)floorf( fabsf(xn)*inv4pif.f ) + 1;
+     *       ji = (int)floorf( fabsf(xn)*xa_nnlib_inv4pif.f ) + 1;
      *   
      *       // Adjust the sign.
      *       sx = takesignf( xn );
@@ -319,21 +319,21 @@ void vec_sinef( float32_t * restrict y,
      *       p = scr[n];
      *       p2 = p*p;
      *   
-     *       ys = polysinf_tbl[0].f;
-     *       ys = polysinf_tbl[1].f + ys*p2;
-     *       ys = polysinf_tbl[2].f + ys*p2;
+     *       ys = xa_nnlib_polysinf_tbl[0].f;
+     *       ys = xa_nnlib_polysinf_tbl[1].f + ys*p2;
+     *       ys = xa_nnlib_polysinf_tbl[2].f + ys*p2;
      *       ys = ys*p2;
      *       ys = ys*p + p;
      *   
-     *       yc = polycosf_tbl[0].f;
-     *       yc = polycosf_tbl[1].f + yc*p2;
-     *       yc = polycosf_tbl[2].f + yc*p2;
+     *       yc = xa_nnlib_polycosf_tbl[0].f;
+     *       yc = xa_nnlib_polycosf_tbl[1].f + yc*p2;
+     *       yc = xa_nnlib_polycosf_tbl[2].f + yc*p2;
      *       yc = yc*p2 + 1.f;
      *   
      *       // Select sine or cosine.
      *       yn = ( (ji&2) ? yc : ys );
      *       // Check for input domain.
-     *       if ( fabsf(xn) > sinf_maxval.f ) yn = qNaNf.f;
+     *       if ( fabsf(xn) > xa_nnlib_sinf_maxval.f ) yn = xa_nnlib_qNaNf.f;
      *       // Apply the sign.
      *       y[blkIx*blkSize+n] = changesignf( yn, sy );
      *   
@@ -343,8 +343,8 @@ void vec_sinef( float32_t * restrict y,
      *   
      *       #if VEC_SINEF_ERRH != 0
      *       {
-     *         if ( isnan(xn)    || fabsf(xn) > sinf_maxval.f ) i2_edom    = 1;
-     *         if ( is_snanf(xn) || fabsf(xn) > sinf_maxval.f ) i2_fe_inv  = 1;
+     *         if ( isnan(xn)    || fabsf(xn) > xa_nnlib_sinf_maxval.f ) i2_edom    = 1;
+     *         if ( is_snanf(xn) || fabsf(xn) > xa_nnlib_sinf_maxval.f ) i2_fe_inv  = 1;
      *       }
      *       #endif
      *     }
@@ -371,8 +371,8 @@ void vec_sinef( float32_t * restrict y,
 
       X_va = AE_LA64_PP( X );
       Y_va = AE_ZALIGN64();
-      T = (xtfloat  *)polysinf_tbl;
-      T2 = (xtfloat  *)polycosf_tbl;
+      T = (xtfloat  *)xa_nnlib_polysinf_tbl;
+      T2 = (xtfloat  *)xa_nnlib_polycosf_tbl;
       T3 = (xtfloat  *)&cc;
       for ( n=0; n<blkLen/2; n++ )
       {
@@ -384,7 +384,7 @@ void vec_sinef( float32_t * restrict y,
         sx = AE_SLAI32( sx, 31 );
         /* Determine the pi/2-wide segment the input value belongs to. */
         xn = XT_ABS_SX2( xn );
-        t = XT_MUL_SX2( xn, inv4pif.f );
+        t = XT_MUL_SX2( xn, xa_nnlib_inv4pif.f );
         ji = XT_TRUNC_SX2( t, 0 );
         ji = AE_ADD32( ji, AE_MOVI(1) );
 
@@ -438,8 +438,8 @@ void vec_sinef( float32_t * restrict y,
         yn = XT_AE_MOVXTFLOATX2_FROMINT32X2( yi );
 
         /* Set result to NaN for an out-of-domain input value. */
-        b_ndom = XT_OLT_SX2( sinf_maxval.f, xn );
-        XT_MOVT_SX2( yn, qNaNf.f, b_ndom );
+        b_ndom = XT_OLT_SX2( xa_nnlib_sinf_maxval.f, xn );
+        XT_MOVT_SX2( yn, xa_nnlib_qNaNf.f, b_ndom );
 
         XT_SASX2IP( yn, Y_va, Y );
       }
@@ -458,7 +458,7 @@ void vec_sinef( float32_t * restrict y,
         
         /* Determine the pi/2-wide segment the input value belongs to. */
         xn = XT_ABS_SX2( xn );
-        t = XT_MUL_SX2( xn, inv4pif.f );
+        t = XT_MUL_SX2( xn, xa_nnlib_inv4pif.f );
         ji = XT_TRUNC_SX2( t, 0 );
         ji = AE_ADD32( ji, AE_MOVI(1) );
 
@@ -508,8 +508,8 @@ void vec_sinef( float32_t * restrict y,
         yn = XT_AE_MOVXTFLOATX2_FROMINT32X2( yi );
 
         /* Set result to NaN for an out-of-domain input value. */
-        b_ndom = XT_OLT_SX2( sinf_maxval.f, xn );
-        XT_MOVT_SX2( yn, qNaNf.f, b_ndom );
+        b_ndom = XT_OLT_SX2( xa_nnlib_sinf_maxval.f, xn );
+        XT_MOVT_SX2( yn, xa_nnlib_qNaNf.f, b_ndom );
 
         XT_SSI( yn, (xtfloat*)Y, 0 );
       }
@@ -517,7 +517,7 @@ void vec_sinef( float32_t * restrict y,
 
   } /* for ( blkIx=0; blkIx<blkNum; blkIx++ ) */
 
-} /* vec_sinef() */
+} /* xa_nnlib_vec_sinef() */
 #else
 /*===========================================================================
   Vector matematics:
@@ -530,7 +530,7 @@ void vec_sinef( float32_t * restrict y,
   in Q31 or Q15 format. Return results in the same format. 
   Floating point functions compute sin(x) or cos(x)
   Two versions of functions available: regular version (vec_sine32x32, 
-  vec_cosine32x32, , vec_sinef, vec_cosinef) 
+  vec_cosine32x32, , xa_nnlib_vec_sinef, xa_nnlib_vec_cosinef) 
   with arbitrary arguments and faster version (vec_sine32x32_fast, 
   vec_cosine32x32_fast) that apply some restrictions.
   NOTE:
@@ -551,8 +551,8 @@ void vec_sinef( float32_t * restrict y,
   y[N]  output data,Q31 or floating point
 
   Restriction:
-  Regular versions (vec_sine32x32, vec_cosine32x32, vec_sinef, 
-  vec_cosinef):
+  Regular versions (vec_sine32x32, vec_cosine32x32, xa_nnlib_vec_sinef, 
+  xa_nnlib_vec_cosinef):
   x,y - should not overlap
 
   Faster versions (vec_sine32x32_fast, vec_cosine32x32_fast):
@@ -564,7 +564,7 @@ void vec_sinef( float32_t * restrict y,
   ----------------
   return result in Q31 or floating point
 -------------------------------------------------------------------------*/
-void vec_sinef( float32_t * restrict y,
+void xa_nnlib_vec_sinef( float32_t * restrict y,
           const float32_t * restrict x,
           int N )
 {
@@ -573,9 +573,9 @@ void vec_sinef( float32_t * restrict y,
     int sx,n,j,k,ss;
     sx=takesignf(x);
     x=sx?-x:x;
-    if(x>sinf_maxval.f) return 0;
+    if(x>xa_nnlib_sinf_maxval.f) return 0;
     argument reduction 
-    k = (int)STDLIB_MATH(floorf)(x*inv4pif.f);
+    k = (int)STDLIB_MATH(floorf)(x*xa_nnlib_inv4pif.f);
     n = k + 1;
     j = n&~1;
 
@@ -601,14 +601,14 @@ void vec_sinef( float32_t * restrict y,
     ss = sx ^ (((n) >> 2) & 1);
       compute sine/cosine via minmax polynomial  
     x2 = x*x;
-    ys = polysinf_tbl[0].f;
-    ys = ys*x2 + polysinf_tbl[1].f;
-    ys = ys*x2 + polysinf_tbl[2].f;
+    ys = xa_nnlib_polysinf_tbl[0].f;
+    ys = ys*x2 + xa_nnlib_polysinf_tbl[1].f;
+    ys = ys*x2 + xa_nnlib_polysinf_tbl[2].f;
     ys = ys*x2;
     ys = ys*x + x;
-    yc = polycosf_tbl[0].f;
-    yc = yc*x2 + polycosf_tbl[1].f;
-    yc = yc*x2 + polycosf_tbl[2].f;
+    yc = xa_nnlib_polycosf_tbl[0].f;
+    yc = yc*x2 + xa_nnlib_polycosf_tbl[1].f;
+    yc = yc*x2 + xa_nnlib_polycosf_tbl[2].f;
     yc = yc*x2 + 1.f;
     select sine/cosine 
     y = (n & 2) ? yc : ys;
@@ -670,7 +670,7 @@ void vec_sinef( float32_t * restrict y,
      *       xn = fabsf( x[blkIx*blkSize+n] );
      *   
      *       // Determine the pi/2-wide segment the input value belongs to.
-     *       jf = roundf( xn*inv2pif.f );
+     *       jf = roundf( xn*xa_nnlib_inv2pif.f );
      *   
      *       // Calculate the difference between the segment midpoint and input value.
      *       p = xn;
@@ -722,7 +722,7 @@ void vec_sinef( float32_t * restrict y,
          */
         
         xn = XT_ABS_SX2( xn );
-        jf = XT_MUL_SX2( xn, inv2pif.f );
+        jf = XT_MUL_SX2( xn, xa_nnlib_inv2pif.f );
         jf = XT_FIROUND_SX2( jf );
 
         /*
@@ -767,7 +767,7 @@ void vec_sinef( float32_t * restrict y,
      *       xn = x[blkIx*blkSize+n];
      *   
      *       // Determine the pi/2-wide segment the input value belongs to.
-     *       ji = (int)roundf( fabsf(xn)*inv2pif.f );
+     *       ji = (int)roundf( fabsf(xn)*xa_nnlib_inv2pif.f );
      *   
      *       // Adjust the sign.
      *       sx = takesignf( xn );
@@ -780,21 +780,21 @@ void vec_sinef( float32_t * restrict y,
      *       p = scr[n];
      *       p2 = p*p;
      *   
-     *       ys = polysinf_tbl[0].f;
-     *       ys = polysinf_tbl[1].f + ys*p2;
-     *       ys = polysinf_tbl[2].f + ys*p2;
+     *       ys = xa_nnlib_polysinf_tbl[0].f;
+     *       ys = xa_nnlib_polysinf_tbl[1].f + ys*p2;
+     *       ys = xa_nnlib_polysinf_tbl[2].f + ys*p2;
      *       ys = ys*p2;
      *       ys = ys*p + p;
      *   
-     *       yc = polycosf_tbl[0].f;
-     *       yc = polycosf_tbl[1].f + yc*p2;
-     *       yc = polycosf_tbl[2].f + yc*p2;
+     *       yc = xa_nnlib_polycosf_tbl[0].f;
+     *       yc = xa_nnlib_polycosf_tbl[1].f + yc*p2;
+     *       yc = xa_nnlib_polycosf_tbl[2].f + yc*p2;
      *       yc = yc*p2 + 1.f;
      *   
      *       // Select sine or cosine.
      *       yn = ( (ji&1) ? yc : ys );
      *       // Check for input domain.
-     *       if ( fabsf(xn) > sinf_maxval.f ) yn = qNaNf.f;
+     *       if ( fabsf(xn) > xa_nnlib_sinf_maxval.f ) yn = xa_nnlib_qNaNf.f;
      *       // Apply the sign.
      *       y[blkIx*blkSize+n] = changesignf( yn, sy );
      *     }
@@ -832,7 +832,7 @@ void vec_sinef( float32_t * restrict y,
         
         /* Determine the pi/2-wide segment the input value belongs to. */
         xn = XT_ABS_SX2( xn );
-        t = XT_MUL_SX2( xn, inv2pif.f );
+        t = XT_MUL_SX2( xn, xa_nnlib_inv2pif.f );
         t = XT_FIROUND_SX2( t );
         ji = XT_TRUNC_SX2( t, 0 );
 
@@ -842,13 +842,13 @@ void vec_sinef( float32_t * restrict y,
          */
 
         /* Here, the XT_LSX provides better schedule than XT_LSI. */
-        cf_s0 = XT_LSX( (xtfloat*)polysinf_tbl, 0*sz_f32 );
-        cf_s1 = XT_LSX( (xtfloat*)polysinf_tbl, 1*sz_f32 );
-        cf_s2 = XT_LSX( (xtfloat*)polysinf_tbl, 2*sz_f32 );
+        cf_s0 = XT_LSX( (xtfloat*)xa_nnlib_polysinf_tbl, 0*sz_f32 );
+        cf_s1 = XT_LSX( (xtfloat*)xa_nnlib_polysinf_tbl, 1*sz_f32 );
+        cf_s2 = XT_LSX( (xtfloat*)xa_nnlib_polysinf_tbl, 2*sz_f32 );
 
-        cf_c0 = XT_LSX( (xtfloat*)polycosf_tbl, 0*sz_f32 );
-        cf_c1 = XT_LSX( (xtfloat*)polycosf_tbl, 1*sz_f32 );
-        cf_c2 = XT_LSX( (xtfloat*)polycosf_tbl, 2*sz_f32 );
+        cf_c0 = XT_LSX( (xtfloat*)xa_nnlib_polycosf_tbl, 0*sz_f32 );
+        cf_c1 = XT_LSX( (xtfloat*)xa_nnlib_polycosf_tbl, 1*sz_f32 );
+        cf_c2 = XT_LSX( (xtfloat*)xa_nnlib_polycosf_tbl, 2*sz_f32 );
 
         XT_LSX2IP( p, S_rd, +2*sz_f32 );
         p2 = XT_MUL_SX2( p, p );
@@ -877,8 +877,8 @@ void vec_sinef( float32_t * restrict y,
         yn = XT_AE_MOVXTFLOATX2_FROMINT32X2( yi );
 
         /* Set result to NaN for an out-of-domain input value. */
-        b_ndom = XT_OLT_SX2( sinf_maxval.f, xn );
-        XT_MOVT_SX2( yn, qNaNf.f, b_ndom );
+        b_ndom = XT_OLT_SX2( xa_nnlib_sinf_maxval.f, xn );
+        XT_MOVT_SX2( yn, xa_nnlib_qNaNf.f, b_ndom );
 
         XT_SASX2IP( yn, Y_va, Y );
       }
@@ -897,7 +897,7 @@ void vec_sinef( float32_t * restrict y,
         
         /* Determine the pi/2-wide segment the input value belongs to. */
         xn = XT_ABS_SX2( xn );
-        t = XT_MUL_SX2( xn, inv2pif.f );
+        t = XT_MUL_SX2( xn, xa_nnlib_inv2pif.f );
         t = XT_FIROUND_SX2( t );
         ji = XT_TRUNC_SX2( t, 0 );
 
@@ -906,13 +906,13 @@ void vec_sinef( float32_t * restrict y,
          * reducted input value.
          */
 
-        cf_s0 = (xtfloatx2)polysinf_tbl[0].f;
-        cf_s1 = (xtfloatx2)polysinf_tbl[1].f;
-        cf_s2 = (xtfloatx2)polysinf_tbl[2].f;
+        cf_s0 = (xtfloatx2)xa_nnlib_polysinf_tbl[0].f;
+        cf_s1 = (xtfloatx2)xa_nnlib_polysinf_tbl[1].f;
+        cf_s2 = (xtfloatx2)xa_nnlib_polysinf_tbl[2].f;
 
-        cf_c0 = (xtfloatx2)polycosf_tbl[0].f;
-        cf_c1 = (xtfloatx2)polycosf_tbl[1].f;
-        cf_c2 = (xtfloatx2)polycosf_tbl[2].f;
+        cf_c0 = (xtfloatx2)xa_nnlib_polycosf_tbl[0].f;
+        cf_c1 = (xtfloatx2)xa_nnlib_polycosf_tbl[1].f;
+        cf_c2 = (xtfloatx2)xa_nnlib_polycosf_tbl[2].f;
 
         p = XT_LSI( (xtfloat*)S_rd, 0 );
         p2 = XT_MUL_SX2( p, p );
@@ -941,8 +941,8 @@ void vec_sinef( float32_t * restrict y,
         yn = XT_AE_MOVXTFLOATX2_FROMINT32X2( yi );
 
         /* Set result to NaN for an out-of-domain input value. */
-        b_ndom = XT_OLT_SX2( sinf_maxval.f, xn );
-        XT_MOVT_SX2( yn, qNaNf.f, b_ndom );
+        b_ndom = XT_OLT_SX2( xa_nnlib_sinf_maxval.f, xn );
+        XT_MOVT_SX2( yn, xa_nnlib_qNaNf.f, b_ndom );
 
         XT_SSI( yn, (xtfloat*)Y, 0 );
       }
@@ -950,7 +950,7 @@ void vec_sinef( float32_t * restrict y,
 
   } /* for ( blkIx=0; blkIx<blkNum; blkIx++ ) */
 
-} /* vec_sinef() */
+} /* xa_nnlib_vec_sinef() */
 #endif /*XCHAL_HAVE_HIFI1*/
 #elif HAVE_FPU
 #define sz_f32    (int)sizeof(float32_t)
@@ -966,7 +966,7 @@ void vec_sinef( float32_t * restrict y,
   in Q31 or Q15 format. Return results in the same format. 
   Floating point functions compute sin(x) or cos(x)
   Two versions of functions available: regular version (vec_sine32x32, 
-  vec_cosine32x32, , vec_sinef, vec_cosinef) 
+  vec_cosine32x32, , xa_nnlib_vec_sinef, xa_nnlib_vec_cosinef) 
   with arbitrary arguments and faster version (vec_sine32x32_fast, 
   vec_cosine32x32_fast) that 
   apply some restrictions.
@@ -988,7 +988,7 @@ void vec_sinef( float32_t * restrict y,
   y[N]  output data,Q31 or floating point
 
   Restriction:
-  Regular versions (vec_sine32x32, vec_cosine32x32, vec_sinef, vec_cosinef):
+  Regular versions (vec_sine32x32, vec_cosine32x32, xa_nnlib_vec_sinef, xa_nnlib_vec_cosinef):
   x,y - should not overlap
 
   Faster versions (vec_sine32x32_fast, vec_cosine32x32_fast):
@@ -1002,7 +1002,7 @@ void vec_sinef( float32_t * restrict y,
 -------------------------------------------------------------------------*/
 
 // Taken from Fusion
-void vec_sinef( float32_t * restrict y, const float32_t * restrict x, int N )
+void xa_nnlib_vec_sinef( float32_t * restrict y, const float32_t * restrict x, int N )
 {
   const xtfloat *          X;
   const xtfloat *          S_rd;
@@ -1053,7 +1053,7 @@ void vec_sinef( float32_t * restrict y, const float32_t * restrict x, int N )
     *       xn = fabsf( x[blkIx*blkSize+n] );
     *
     *       // Determine the pi/2-wide segment the input value belongs to.
-    *       ji = ( ( (int)floorf( xn*inv4pif.f ) + 1 ) & ~1 );
+    *       ji = ( ( (int)floorf( xn*xa_nnlib_inv4pif.f ) + 1 ) & ~1 );
     *       jf = (float32_t)ji;
     *
     *       // Calculate the difference between the segment midpoint and input value.
@@ -1151,7 +1151,7 @@ void vec_sinef( float32_t * restrict y, const float32_t * restrict x, int N )
     *       xn = x[blkIx*blkSize+n];
     *
     *       // Determine the pi/2-wide segment the input value belongs to.
-    *       ji = (int)floorf( fabsf(xn)*inv4pif.f ) + 1;
+    *       ji = (int)floorf( fabsf(xn)*xa_nnlib_inv4pif.f ) + 1;
     *
     *       // Adjust the sign.
     *       sx = takesignf( xn );
@@ -1164,21 +1164,21 @@ void vec_sinef( float32_t * restrict y, const float32_t * restrict x, int N )
     *       p = scr[n];
     *       p2 = p*p;
     *
-    *       ys = polysinf_tbl[0].f;
-    *       ys = polysinf_tbl[1].f + ys*p2;
-    *       ys = polysinf_tbl[2].f + ys*p2;
+    *       ys = xa_nnlib_polysinf_tbl[0].f;
+    *       ys = xa_nnlib_polysinf_tbl[1].f + ys*p2;
+    *       ys = xa_nnlib_polysinf_tbl[2].f + ys*p2;
     *       ys = ys*p2;
     *       ys = ys*p + p;
     *
-    *       yc = polycosf_tbl[0].f;
-    *       yc = polycosf_tbl[1].f + yc*p2;
-    *       yc = polycosf_tbl[2].f + yc*p2;
+    *       yc = xa_nnlib_polycosf_tbl[0].f;
+    *       yc = xa_nnlib_polycosf_tbl[1].f + yc*p2;
+    *       yc = xa_nnlib_polycosf_tbl[2].f + yc*p2;
     *       yc = yc*p2 + 1.f;
     *
     *       // Select sine or cosine.
     *       yn = ( (ji&2) ? yc : ys );
     *       // Check for input domain.
-    *       if ( fabsf(xn) > sinf_maxval.f ) yn = qNaNf.f;
+    *       if ( fabsf(xn) > xa_nnlib_sinf_maxval.f ) yn = xa_nnlib_qNaNf.f;
     *       // Apply the sign.
     *       y[blkIx*blkSize+n] = changesignf( yn, sy );
     *
@@ -1188,8 +1188,8 @@ void vec_sinef( float32_t * restrict y, const float32_t * restrict x, int N )
     *
     *       #if VEC_SINEF_ERRH != 0
     *       {
-    *         if ( isnan(xn)    || fabsf(xn) > sinf_maxval.f ) i2_edom    = 1;
-    *         if ( is_snanf(xn) || fabsf(xn) > sinf_maxval.f ) i2_fe_inv  = 1;
+    *         if ( isnan(xn)    || fabsf(xn) > xa_nnlib_sinf_maxval.f ) i2_edom    = 1;
+    *         if ( is_snanf(xn) || fabsf(xn) > xa_nnlib_sinf_maxval.f ) i2_fe_inv  = 1;
     *       }
     *       #endif
     *     }
@@ -1206,8 +1206,8 @@ void vec_sinef( float32_t * restrict y, const float32_t * restrict x, int N )
       X = (xtfloat*)((uintptr_t)x + blkIx*blkSize*sz_f32);
       pY = (int32_t*)((uintptr_t)y + blkIx*blkSize*sz_f32);
       S_rd = (xtfloat*)scr;
-      TBLS = (const xtfloat *)polysinf_tbl;
-      TBLC = (const xtfloat *)polycosf_tbl;
+      TBLS = (const xtfloat *)xa_nnlib_polysinf_tbl;
+      TBLC = (const xtfloat *)xa_nnlib_polycosf_tbl;
       __Pragma("loop_count min=1");
       for (n = 0; n<blkLen ; n++)
       {
@@ -1218,7 +1218,7 @@ void vec_sinef( float32_t * restrict y, const float32_t * restrict x, int N )
 
         /* Determine the pi/2-wide segment the input value belongs to. */
         xn = XT_ABS_S(xn);
-        t0 = XT_MUL_S(xn, inv4pif.f);
+        t0 = XT_MUL_S(xn, xa_nnlib_inv4pif.f);
         j0 = (int)XT_TRUNC_S(t0, 0);
 
         n0 = j0 + 1;
@@ -1268,15 +1268,15 @@ void vec_sinef( float32_t * restrict y, const float32_t * restrict x, int N )
         n0 = XT_XOR(n0, sx);
 
         /* Set result to NaN for an out-of-domain input value. */
-        b_ndom = XT_OLT_S(sinf_maxval.f, xn);
+        b_ndom = XT_OLT_S(xa_nnlib_sinf_maxval.f, xn);
 
         {
           unsigned int t = n0;
-          XT_MOVT(t, qNaNf.u, b_ndom); n0=t;
+          XT_MOVT(t, xa_nnlib_qNaNf.u, b_ndom); n0=t;
         }
         *pY++=n0;
       }
     }
   }
-} /* vec_sinef() */
+} /* xa_nnlib_vec_sinef() */
 #endif

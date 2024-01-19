@@ -3,9 +3,6 @@
 @Output_path ../test_out/
 @Ref_path ../test_ref/
 
-//inp_32, out_32 variants
--num_elements 64 -read_inp_file_name inp_activation_inp_32_N_64.bin -write_out_file_name out_sigmoid_inp_32_out_32_N_64.bin -read_ref_file_name out_sigmoid_inp_32_out_32_N_64.bin -write_file 0 -verify 1 -activation sigmoid -inp_precision 32 -out_precision 32
-
 //inp_32, out_16 variants
 -num_elements 80 -read_inp_file_name inp_activation_inp_32_N_80.bin -write_out_file_name out_sigmoid_inp_32_out_16_N_80.bin -read_ref_file_name out_sigmoid_inp_32_out_16_N_80.bin -write_file 0 -verify 1 -activation sigmoid -inp_precision 32 -out_precision 16
 

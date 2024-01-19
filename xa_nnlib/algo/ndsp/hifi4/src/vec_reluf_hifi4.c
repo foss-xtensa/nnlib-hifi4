@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,10 +40,10 @@
     Code optimized for HiFi4 core
   IntegrIT, 2006-2018
 */
-#include "NatureDSP_Signal_math.h"
+#include "../include/NatureDSP_Signal_math.h"
 #include "NatureDSP_types.h"
-#include "common.h"
-#include "common_fpu.h"
+#include "xa_nn_common.h"
+#include "xa_nnlib_common_fpu.h"
 
 /*-------------------------------------------------------------------------
   Rectifier function
@@ -70,9 +70,9 @@
   return result, Q16.15 or floating point
 -------------------------------------------------------------------------*/
 #if !HAVE_VFPU && !HAVE_FPU
-DISCARD_FUN(void,vec_reluf,(float32_t * y, const float32_t * x, float32_t K, int N))
+DISCARD_FUN(void,xa_nnlib_vec_reluf,(float32_t * y, const float32_t * x, float32_t K, int N))
 #elif HAVE_VFPU
-void vec_reluf     (float32_t * y, const float32_t * x, float32_t K, int N)
+void xa_nnlib_vec_reluf     (float32_t * y, const float32_t * x, float32_t K, int N)
 {
     ae_valign aY;
     const xtfloatx2* restrict pX=(const xtfloatx2*)x;
@@ -110,7 +110,7 @@ void vec_reluf     (float32_t * y, const float32_t * x, float32_t K, int N)
 }
 #else
 // code for scalar FPU
-void vec_reluf     (float32_t * y, const float32_t * x, float32_t K, int N)
+void xa_nnlib_vec_reluf     (float32_t * y, const float32_t * x, float32_t K, int N)
 {
     const xtfloat* restrict pX=(const xtfloat*)x;
           xtfloat* restrict pY=(      xtfloat*)y;

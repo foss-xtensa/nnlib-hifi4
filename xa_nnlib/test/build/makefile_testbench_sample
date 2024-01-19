@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -128,7 +128,11 @@ NORMBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_norm_test
 REORGBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_reorg_test
 ANNBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_ann_test
 
-OBJDIR = objs/$(DETECTED_CORE)
+ifeq ($(DETECTED_CORE),)
+OBJDIR = objs
+else
+OBJDIR = objs$(S)$(DETECTED_CORE)
+endif
 
 MATMULOBJS = \
     xa_nn_matXvec_testbench.o 

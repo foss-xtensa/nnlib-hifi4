@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,15 +40,15 @@
 */
 
 #include "NatureDSP_types.h"
-#include "sinf_tbl.h"
-#include "common.h"
+#include "../include/sinf_tbl.h"
+#include "xa_nn_common.h"
 
-const union ufloat32uint32 sinf_maxval={0x47c90e00};
+const union ufloat32uint32 xa_nnlib_sinf_maxval={0x47c90e00};
 
 /* pi/4 represented as a sum of exacly represented numbers.
     derived from hex value of pi: 3.243F6A8885A308D313198A2E037073
 */
-const union ufloat64uint64 pi4fc[]=
+const union ufloat64uint64 xa_nnlib_pi4fc[]=
 {
     {0x3fe9220000000000}, /*  3217/2^12                   */
     {0xbec2aeef4b9ee59e}  /*  -8.9089102067615373566e-6/4 */
@@ -61,7 +61,7 @@ const union ufloat64uint64 pi4fc[]=
    y=sin(x)./x;
    p=polyfit(x,y,6); p=p(1:2:end); p(end)=[];
 */
-const union ufloat32uint32 ALIGN(8) polysinf_tbl[]=
+const union ufloat32uint32 ALIGN(8) xa_nnlib_polysinf_tbl[]=
 { 
     {0xb94cbf8d}, /*-1.9526313755e-004*/
     {0x3c0883d8}, /* 8.3322152879e-003*/
@@ -76,7 +76,7 @@ const union ufloat32uint32 ALIGN(8) polysinf_tbl[]=
    y=cos(x);
    p=polyfit(x,y,6); p=p(1:2:end); p(end)=[];
 */
-const union ufloat32uint32 ALIGN(8) polycosf_tbl[]=
+const union ufloat32uint32 ALIGN(8) xa_nnlib_polycosf_tbl[]=
 {
 #if SINNCOSF_ALG==0
     {0xbab255cf}, /*-1.3605895053e-003*/

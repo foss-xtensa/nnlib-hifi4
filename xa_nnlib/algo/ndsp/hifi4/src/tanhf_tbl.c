@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -39,7 +39,7 @@
 */
 
 #include "NatureDSP_types.h"
-#include "tanhf_tbl.h"
+#include "../include/tanhf_tbl.h"
 
 /* polynomial approximation of tanh(x) in range [-log(3)/2...-log(3)/2]
     only odd coefficients are non zero
@@ -49,7 +49,7 @@
     p=polyfit(x,z,8);
     p=p(1:2:end); p(end)=[];
 */
-const union ufloat32uint32 ALIGN(8) polytanhf_tbl[]=
+const union ufloat32uint32 ALIGN(8) xa_nnlib_polytanhf_tbl[]=
 {
     {0x3c86a7d1UL},/* 1.6437442973e-002*/
     {0xbd57b3abUL},/*-5.2661579102e-002*/
@@ -57,4 +57,4 @@ const union ufloat32uint32 ALIGN(8) polytanhf_tbl[]=
     {0xbeaaaa0fUL} /*-3.3332869411e-001*/
 };
 
-const union ufloat32uint32 halfln3={0x3f0c9f54UL} ; /* log(3)/2 - tanh(log(3)/2)==0.5 */
+const union ufloat32uint32 xa_nnlib_halfln3={0x3f0c9f54UL} ; /* log(3)/2 - tanh(log(3)/2)==0.5 */

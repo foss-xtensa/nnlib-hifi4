@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,8 +40,8 @@
 */
 
 #include "NatureDSP_types.h"
-#include "lognf_tbl.h"
-#include "common.h"
+#include "../include/lognf_tbl.h"
+#include "xa_nn_common.h"
 /*
   polynomial coefficients for ln(x) / (1 - x)
   derived by MATLAB code :
@@ -52,7 +52,7 @@
 
   last coefficient is omitted because it is equal to one
 */
-const union ufloat32uint32 ALIGN(8) lognf_tbl[]=
+const union ufloat32uint32 ALIGN(8) xa_nnlib_lognf_tbl[]=
 {
   { 0xbdb0cd23 },/*-8.6328767986e-002*/
   { 0xbe115eaa },/*-1.4196267345e-001*/
@@ -64,4 +64,4 @@ const union ufloat32uint32 ALIGN(8) lognf_tbl[]=
   { 0xbefffffe } /*-4.9999994403e-001*/
 };
 
-const union ufloat32uint32 ln2 = { 0x3f317218 }; /* ln(2) */
+const union ufloat32uint32 xa_nnlib_ln2 = { 0x3f317218 }; /* ln(2) */

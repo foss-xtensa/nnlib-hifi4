@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -20,7 +20,7 @@
 
 ******************************************************************************/
 #include "xa_nnlib_common.h"
-#include "NatureDSP_Signal_math.h"
+#include "../../../ndsp/hifi4/include/NatureDSP_Signal_math.h"
 
 #if XCHAL_HAVE_HIFI1
 
@@ -192,6 +192,11 @@ WORD32 xa_nn_vec_sigmoid_32_8(
         % scale to Q15 with rounding
         y=bitshift(y+128,-8);
     */
+
+    XA_NNLIB_ARG_CHK_PTR(y, -1);
+    XA_NNLIB_ARG_CHK_PTR(x, -1);
+    XA_NNLIB_ARG_CHK_ALIGN(x, sizeof(WORD32), -1);
+
     static const int32_t polypow2[] = { 14685184, -114217216 , 514075392, -1488269056, 2147483647, 2061584302 };// coefficients in q31 format
     int n;
     ae_int32x2 X, X0, X1, E, Y, Z, D;

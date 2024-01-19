@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -22,7 +22,7 @@
 #include <string.h>
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_gru_api.h"
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 
 #ifdef hifi4
 #define XA_PAD_BYTES   8
@@ -236,7 +236,7 @@ Int32 xa_nnlib_gru_get_scratch_fast(
   return scratch_size;
 }
 
-int xa_nnlib_gru_init(
+int __attribute__((optimize ("-O0"))) xa_nnlib_gru_init(
     xa_nnlib_handle_t handle,
     xa_nnlib_gru_init_config_t *config )
 {

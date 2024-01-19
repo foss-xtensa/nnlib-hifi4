@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -42,6 +42,7 @@ int load_conv2d_pt_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp,
 int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_inp_alpha, char *kernel_name); 
 int load_pool_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);
 int load_norm_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);
+int load_batch_norm_3D_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_alpha, buf1D_t *p_beta);
 int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, buf1D_t *p_inp1, buf1D_t *p_inp2);
 int load_reorg_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);
 int write_output_data(FILE *fptr_out, buf1D_t *p_out); 

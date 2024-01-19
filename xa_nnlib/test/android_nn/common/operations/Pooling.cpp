@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -127,6 +127,7 @@ bool averagePoolFloat32(const float* inputData, const Shape& inputShape,
                                          output_activation_max,
                                          total_elements
                                         );
+    (void)err_f; /* Unused return error */
 #endif
 
     return true;
@@ -198,6 +199,7 @@ bool averagePoolQuant8(const uint8_t* inputData, const Shape& inputShape,
                                            output_activation_max,
                                            total_elements
                                           );
+    (void)err_f; /* Unused return error */
 #endif
 
     return true;
@@ -296,6 +298,7 @@ bool maxPoolFloat32(const float* inputData, const Shape& inputShape,
                                          output_activation_max,
                                          total_elements
                                         );
+    (void)err_f; /* Unused return error */
 #endif
 
     return true;
@@ -366,6 +369,7 @@ bool maxPoolQuant8(const uint8_t* inputData, const Shape& inputShape,
                                            output_activation_max,
                                            total_elements
                                           );
+    (void)err_f; /* Unused return error */
 #endif
 
     return true;

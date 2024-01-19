@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -21,7 +21,7 @@
 ******************************************************************************/
 #include <string.h>
 #include "xa_nnlib_common.h"
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 #include "xa_nnlib_cnn_api.h"
 
 #define ALIGN_SIZE(n) (((n)+7)&(~7))
@@ -29,7 +29,8 @@
 #define CHECK_PTR_ALIGN(ptr, alignment, err) if((((unsigned)(ptr))&(alignment-1)) != 0) return err;
 
 #define  IO_PRECISION_BITS(prec) ((prec == XA_NNLIB_CNN_16bx16b || prec == XA_NNLIB_CNN_8bx16b) ? 16 : ((prec == XA_NNLIB_CNN_8bx8b)   ?  8 : -1))
-#define IO_PRECISION_BYTES(prec) ((prec == XA_NNLIB_CNN_16bx16b || prec == XA_NNLIB_CNN_8bx16b) ?  2 : ((prec == XA_NNLIB_CNN_8bx8b)   ?  1 : 4))
+#define  KER_PRECISION_BITS(prec) ((prec == XA_NNLIB_CNN_8bx8b || prec == XA_NNLIB_CNN_8bx16b) ? 8 : ((prec == XA_NNLIB_CNN_16bx16b)   ?  16 : -1))
+#define  IO_PRECISION_BYTES(prec) ((prec == XA_NNLIB_CNN_16bx16b || prec == XA_NNLIB_CNN_8bx16b) ?  2 : ((prec == XA_NNLIB_CNN_8bx8b)   ?  1 : 4))
 
 /* HiFi_LE: clang warning - always true condition checks
 Changed type in comparisons to shape.shape_type as they are verfied to be equal on first check */
@@ -307,7 +308,7 @@ Int32 xa_nnlib_cnn_get_scratch_fast(
        xa_nnlib_cnn_init_config_t *config )
 {
   int scratch_size = 0, ret;
-  int inp_precision, out_bytewidth;
+  int inp_precision,ker_precision, out_bytewidth;
   CHECK_PTR(config, XA_NNLIB_FATAL_MEM_ALLOC);
 
   ret = validate_config(config);
@@ -326,15 +327,26 @@ Int32 xa_nnlib_cnn_get_scratch_fast(
   }
   else if(config->algo == XA_NNLIB_CNN_CONV2D_STD)
   {
+     ker_precision=KER_PRECISION_BITS(config->precision);
      scratch_size = xa_nn_conv2d_std_getsize(config->input_shape.dim.cube.height,
+                                             config->input_shape.dim.cube.width,
                                              config->input_shape.dim.cube.depth,
                                              config->kernel_std_shape.dim.cube.height,
                                              config->kernel_std_shape.dim.cube.width,
+                                             config->kernel_std_shape.dim.cube.depth,
                                              config->y_stride,
                                              config->y_padding,
+                                             config->x_stride,
+                                             config->x_padding,
                                              config->output_height,
+                                             config->output_width,
                                              config->output_channels,
-                                             inp_precision);
+                                             inp_precision,
+                                             ker_precision,
+                                             1,
+                                             1,
+                                             config->output_format
+                                             );
   }
   else if(config->algo == XA_NNLIB_CNN_CONV2D_DS)
   {
@@ -359,7 +371,7 @@ Int32 xa_nnlib_cnn_get_scratch_fast(
   return scratch_size;
 }
 
-int xa_nnlib_cnn_init(
+int __attribute__((optimize ("-O0"))) xa_nnlib_cnn_init(
     xa_nnlib_handle_t handle,
     xa_nnlib_cnn_init_config_t *config )
 {

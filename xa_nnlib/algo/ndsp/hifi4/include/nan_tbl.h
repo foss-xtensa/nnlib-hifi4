@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -44,7 +44,7 @@
 /* Portable data types. */
 #include "NatureDSP_types.h"
 /* Common utility macros. */
-#include "common.h"
+#include "xa_nn_common.h"
 
 externC const union ufloat64uint64 sNaN;       /* Signalling NaN          */
 externC const union ufloat64uint64 qNaN;       /* Quiet NaN               */

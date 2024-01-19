@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -27,7 +27,7 @@
 #include "xa_nnlib_standards.h"
 #include "xa_nnlib_err_chk.h"
 #include "xa_nnlib_hifi_isa_compat.h"
-#include "common.h"
+#include "xa_nn_common.h"
 #include "xa_nnlib_common_internal.h"
 #endif /* __XA_NNLIB_LEGACY_COMPAT_H__ */
 

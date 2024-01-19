@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -208,7 +208,7 @@ Int32 xa_nnlib_lstm_get_scratch_fast(
   return scratch_size;
 }
 
-int xa_nnlib_lstm_init(
+int __attribute__((optimize ("-O0"))) xa_nnlib_lstm_init(
     xa_nnlib_handle_t handle,
     xa_nnlib_lstm_init_config_t *config )
 {

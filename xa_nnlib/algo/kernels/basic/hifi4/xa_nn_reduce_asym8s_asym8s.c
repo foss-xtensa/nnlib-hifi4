@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -1220,9 +1220,9 @@ static inline void xa_nn_reduce_sum_4D_asym8s_asym8s(const WORD8 * __restrict__ 
   WORD8 *p_src2, *p_src3;
   ae_int32x2 *p_src1;
   ae_int32x2 * p_dst;
-  ae_valign align_dst;
+//  ae_valign align_dst;
   ALIGN_REGISTER_TYPE align_src2;
-  align_dst = AE_ZALIGN64();
+//  align_dst = AE_ZALIGN64();
 
   int axis_dims_count = num_axis_dims;
   if(axis_dims_count)

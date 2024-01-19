@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -667,14 +667,40 @@ int xa_nn_main_process(int argc, char *argv[])
 #error "Unsupported in this version\n"
 #endif
 
-    xa_nnlib_lstm_set_config(lstm_handle, XA_NNLIB_LSTM_WEIGHT, &weights);
-    xa_nnlib_lstm_set_config(lstm_handle, XA_NNLIB_LSTM_BIAS,   &biases);
+    err=xa_nnlib_lstm_set_config(lstm_handle, XA_NNLIB_LSTM_WEIGHT, &weights);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    }
+    
+    err=xa_nnlib_lstm_set_config(lstm_handle, XA_NNLIB_LSTM_BIAS,   &biases);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    }
   }
 
 
-  xa_nnlib_lstm_get_config(lstm_handle, XA_NNLIB_LSTM_INPUT_SHAPE, &input_shape);PRINT_VAR(input_shape.dim.vector.length);
-  xa_nnlib_lstm_get_config(lstm_handle, XA_NNLIB_LSTM_OUTPUT_SHAPE, &output_shape);PRINT_VAR(output_shape.dim.vector.length);
-  xa_nnlib_lstm_get_config(lstm_handle, XA_NNLIB_LSTM_OUTPUT_SHAPE, &cell_shape);PRINT_VAR(cell_shape.dim.vector.length);
+  err=xa_nnlib_lstm_get_config(lstm_handle, XA_NNLIB_LSTM_INPUT_SHAPE, &input_shape);PRINT_VAR(input_shape.dim.vector.length);
+  if(XA_NNLIB_NO_ERROR != err)
+  {
+    error_code_parse(err);
+    return err;
+  }
+  err=xa_nnlib_lstm_get_config(lstm_handle, XA_NNLIB_LSTM_OUTPUT_SHAPE, &output_shape);PRINT_VAR(output_shape.dim.vector.length);
+  if(XA_NNLIB_NO_ERROR != err)
+  {
+    error_code_parse(err);
+    return err;
+  }
+  err=xa_nnlib_lstm_get_config(lstm_handle, XA_NNLIB_LSTM_OUTPUT_SHAPE, &cell_shape);PRINT_VAR(cell_shape.dim.vector.length);
+  if(XA_NNLIB_NO_ERROR != err)
+  {
+    error_code_parse(err);
+    return err;
+  }
 
   //Restore context for lstm state. This restores the 
   // reference context so that we can match output
@@ -696,7 +722,12 @@ int xa_nn_main_process(int argc, char *argv[])
 
     fread(p_context,sizeof(vect_t),output_shape.dim.vector.length,context_file);
 
-    xa_nnlib_lstm_set_config(lstm_handle, XA_NNLIB_LSTM_RESTORE_CONTEXT_OUTPUT, p_context);
+    err=xa_nnlib_lstm_set_config(lstm_handle, XA_NNLIB_LSTM_RESTORE_CONTEXT_OUTPUT, p_context);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    }
 
     fclose(context_file);
     free(p_context);
@@ -712,7 +743,12 @@ int xa_nn_main_process(int argc, char *argv[])
 
     fread(p_context_c,sizeof(int),cell_shape.dim.vector.length,context_file);
 
-    xa_nnlib_lstm_set_config(lstm_handle, XA_NNLIB_LSTM_RESTORE_CONTEXT_CELL, p_context_c);
+    err=xa_nnlib_lstm_set_config(lstm_handle, XA_NNLIB_LSTM_RESTORE_CONTEXT_CELL, p_context_c);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    }
 
     fclose(context_file);
     free(p_context_c);
@@ -853,7 +889,12 @@ int xa_nn_main_process(int argc, char *argv[])
     PRINT_STR("LSTM Process loop ended");
 
     // Write cell output
-    xa_nnlib_lstm_get_config(lstm_handle, XA_NNLIB_LSTM_RESTORE_CONTEXT_CELL, p_cell_output);
+    err=xa_nnlib_lstm_get_config(lstm_handle, XA_NNLIB_LSTM_RESTORE_CONTEXT_CELL, p_cell_output);
+    if(XA_NNLIB_NO_ERROR != err)
+    {
+      error_code_parse(err);
+      return err;
+    }
     fwrite(p_cell_output, sizeof(int), cell_shape.dim.vector.length, output_cell_file);
 
 #ifdef VERIFY

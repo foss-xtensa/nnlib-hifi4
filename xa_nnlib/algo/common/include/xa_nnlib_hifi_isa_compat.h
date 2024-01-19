@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -73,7 +73,7 @@
     ls_##p_char = 64; \
     tmp = AE_ZERO16(); \
     while(((unsigned int)p_char + offset_##p_char) & 3) {\
-        ae_int16x4 tmp2 = AE_MOVDA16(((short)*(p_char+offset_##p_char)) << 8); \
+        ae_int16x4 tmp2 = AE_MOVDA16(((unsigned short)*(p_char+offset_##p_char)) << 8); \
         tmp2 = AE_MOVINT16X4_FROMINT64(AE_SRLA64(AE_MOVINT64_FROMINT16X4(tmp2), 48)); \
         tmp = AE_MOVINT16X4_FROMINT64(AE_SLAI64(AE_MOVINT64_FROMINT16X4(tmp), 16)); \
         tmp = AE_OR16(tmp, tmp2); \

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -19,7 +19,7 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 #include "xa_type_def.h"
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_kernels_api.h"
@@ -360,6 +360,10 @@ const WORD16* __restrict__ p_inp,
                     d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
                 }
 
+
+#if XCHAL_HAVE_HIFI1 /* Perf fix on RI11 */
+#pragma concurrent
+#endif
                 for(i=0; i<input_channels; i++)
                 {
                     d_out1 = AE_MOVDA32(p_out1[i]);

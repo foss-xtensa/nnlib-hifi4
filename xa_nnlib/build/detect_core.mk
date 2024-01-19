@@ -1,4 +1,14 @@
 
+
+ISS = xt-run $(XTCORE)
+CONFIGDIR := $(shell $(ISS) --show-config=config)
+include $(CONFIGDIR)/misc/hostenv.mk
+
+GREPARGS =
+ifeq ($(HOSTTYPE),win)
+GREPARGS = /c:
+endif
+
 ifeq ("", "$(detected_core)")
 
 hifi5="0"
@@ -8,14 +18,13 @@ hifi3="0"
 hifi1="0"
 
 #simple logic to differentiate cores; need to optimize this logic
-hifi5_tmp:=$(shell grep "IsaUseHiFi5 = 1"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
-hifi4_tmp:=$(shell grep "IsaUseHiFi4 = 1"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
-hifi3z_tmp:=$(shell grep "IsaUseHiFi3Z = 1" "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
-hifi3_tmp:=$(shell grep "IsaUseHiFi3 = 1"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
-hifi1_tmp:=$(shell grep "IsaUseHiFi1 = 1"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
+hifi5_tmp:=$(shell $(GREP) $(GREPARGS)"IsaUseHiFi5 = 1"  "$(XTENSA_SYSTEM)$(S)$(XTENSA_CORE)-params")
+hifi4_tmp:=$(shell $(GREP) $(GREPARGS)"IsaUseHiFi4 = 1"  "$(XTENSA_SYSTEM)$(S)$(XTENSA_CORE)-params")
+hifi3z_tmp:=$(shell $(GREP) $(GREPARGS)"IsaUseHiFi3Z = 1" "$(XTENSA_SYSTEM)$(S)$(XTENSA_CORE)-params")
+hifi3_tmp:=$(shell $(GREP) $(GREPARGS)"IsaUseHiFi3 = 1"  "$(XTENSA_SYSTEM)$(S)$(XTENSA_CORE)-params")
+hifi1_tmp:=$(shell $(GREP) $(GREPARGS)"IsaUseHiFi1 = 1"  "$(XTENSA_SYSTEM)$(S)$(XTENSA_CORE)-params")
 
 #check exclusively for hifi5 or hifi4
-ifeq (, $(filter $(CPU), gcc x86))
     ifneq ("", "$(hifi5_tmp)")
         detected_core=hifi5
     else
@@ -35,9 +44,6 @@ ifeq (, $(filter $(CPU), gcc x86))
             endif
         endif
     endif
-else
-    detected_core=ref
-endif
 
 endif
 
@@ -77,7 +83,7 @@ else
     endif
 endif
 
-xclib_tmp:=$(shell grep "SW_CLibrary = xclib"  "$(XTENSA_SYSTEM)/$(XTENSA_CORE)-params")
+xclib_tmp:=$(shell $(GREP) $(GREPARGS)"SW_CLibrary = xclib"  "$(XTENSA_SYSTEM)$(S)$(XTENSA_CORE)-params")
 ifneq ("", "$(xclib_tmp)")
     xclib=1
 else

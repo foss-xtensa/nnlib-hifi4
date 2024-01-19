@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -330,13 +330,26 @@ bool convPrepare(const Shape& input,
     } else if (input.type == OperandType::TENSOR_FLOAT32) {
         input_precision = -1;
     }
-    scratch_size = xa_nn_conv2d_std_getsize(height, (int32_t)getSizeOfDimension(input, 3),
-                                            filterHeight, filterWidth,
+    int32_t filter_precision=0;
+    if (filter.type == OperandType::TENSOR_QUANT8_ASYMM) {
+        filter_precision = -3;
+    } else if (filter.type == OperandType::TENSOR_FLOAT32) {
+        filter_precision = -1;
+    }
+    scratch_size = xa_nn_conv2d_std_getsize(height,width, (int32_t)getSizeOfDimension(input, 3),
+                                            filterHeight, filterWidth,(int32_t)getSizeOfDimension(input, 3),
                                             stride_height,
                                             padding_top,
+                                            stride_width,
+                                            padding_bottom,
                                             outHeight,
+                                            outWidth,
                                             channels_out,
-                                            input_precision);
+                                            input_precision,
+                                            filter_precision,
+                                            1,
+                                            1,
+                                            1 );
 #endif
     return true;
 }

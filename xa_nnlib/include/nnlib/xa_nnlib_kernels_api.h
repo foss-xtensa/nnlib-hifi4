@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -674,21 +674,9 @@
       WORD32 out_zero_bias,
       pVOID p_scratch);
 
-	WORD32 xa_nn_vec_sigmoid_32_32(
-			WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
-			const WORD32 * __restrict__ p_vec,         /*!< [in] input data: vec_length x 1, Q6.25 */
-			WORD32       vec_length                    /*!< [in] length of vectors */
-			);
-
 	WORD32 xa_nn_vec_sigmoid_16_16(
 			WORD16       *p_out,                       /*!< [out] result: vec_length x 1, Q0.15 */
 			const WORD16 *p_vec,                       /*!< [in] input data: vec_length x 1, Q3.12 */
-			WORD32       vec_length                    /*!< [in] length of vectors */
-			);
-
-	WORD32 xa_nn_vec_tanh_32_32(
-			WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
-			const WORD32 * __restrict__ p_vec,         /*!< [in] input data: vec_length x 1, Q6.25 */
 			WORD32       vec_length                    /*!< [in] length of vectors */
 			);
 
@@ -699,48 +687,25 @@
 			WORD32       vec_length                    /*!< [in] length of vectors */
 			);
 
-	WORD32 xa_nn_vec_relu_std_32_32(
-			WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
-			const WORD32 * __restrict__ p_vec,         /*!< [in] input data: vec_length x 1, Q6.25 */
-			WORD32       vec_length                    /*!< [in] length of vectors */
-			);
-
-	WORD32 xa_nn_vec_relu_32_32(
-			WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
-			const WORD32 * __restrict__ p_vec,         /*!< [in] input data: vec_length x 1, Q6.25 */
-			WORD32       threshold,                    /*!< [in] threshold, Q16.15 */
-			WORD32       vec_length                    /*!< [in] length of vectors */
-			);
-
-	WORD32 xa_nn_vec_relu1_32_32(
-			WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
-			const WORD32 * __restrict__ p_vec,         /*!< [in] input data: vec_length x 1, Q6.25 */
-			WORD32       vec_length                    /*!< [in] length of vectors */
-			);
-
-	WORD32 xa_nn_vec_relu6_32_32(
-			WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
-			const WORD32 * __restrict__ p_vec,         /*!< [in] input data: vec_length x 1, Q6.25 */
-			WORD32       vec_length                    /*!< [in] length of vectors */
-			);
-
-	WORD32 xa_nn_vec_softmax_32_32(
-			WORD32       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q16.15 */
-			const WORD32 * __restrict__ p_vec,         /*!< [in] input data: vec_length x 1, Q6.25 */
-			WORD32       vec_length                    /*!< [in] length of vectors */
-			);
-
 	WORD32 xa_nn_vec_sigmoid_f32_f32(
 			FLOAT32       * __restrict__ p_out,        /*!< [out] result: vec_length x 1, floating point */
 			const FLOAT32 * __restrict__ p_vec,        /*!< [in] input data: vec_length x 1, floating point */
 			WORD32        vec_length                   /*!< [in] length of vectors */
 			);
+	WORD32 xa_nn_vec_sigmoid_f16_f16(
+			WORD16       * __restrict__ p_out,        /* result, floating point */
+			const WORD16 * __restrict__ p_vec,        /* input data, floating point */
+			WORD32        vec_length);                  /* length of vectors */
 
 	WORD32 xa_nn_vec_tanh_f32_f32(
 			FLOAT32       * __restrict__ p_out,        /*!< [out] result: vec_length x 1, floating point */
 			const FLOAT32 * __restrict__ p_vec,        /*!< [in] input data: vec_length x 1, floating point */
 			WORD32        vec_length                   /*!< [in] length of vectors */
 			);
+	WORD32 xa_nn_vec_tanh_f16_f16(
+			WORD16       * __restrict__ p_out,        /* result, floating point */
+			const WORD16 * __restrict__ p_vec,        /* input data, floating point */
+			WORD32        vec_length);                  /* length of vectors */
 
 	WORD32 xa_nn_vec_relu_f32_f32(
 			FLOAT32       * __restrict__ p_out,        /*!< [out] result: vec_length x 1, floating point */
@@ -964,14 +929,44 @@
 
 	WORD32 xa_nn_conv2d_std_getsize(
 			WORD32 input_height,
+			WORD32 input_width,
 			WORD32 input_channels,
 			WORD32 kernel_height,
 			WORD32 kernel_width,
+			WORD32 kernel_channels,
 			WORD32 y_stride,
 			WORD32 y_padding,
+			WORD32 x_stride,
+			WORD32 x_padding,
 			WORD32 out_height,
-			WORD32 out_channels,
-			WORD32 input_precision);
+			WORD32 out_width,
+			WORD32 output_channels,
+			WORD32 input_precision,
+			WORD32 kernel_precision,
+			WORD32 dilation_height,
+			WORD32 dilation_width,
+			WORD32 out_data_format);
+	
+	WORD32 xa_nn_conv2d_getsize(
+			WORD32 input_height,
+			WORD32 input_width,
+			WORD32 input_channels,
+			WORD32 kernel_height,
+			WORD32 kernel_width,
+			WORD32 kernel_channels,
+			WORD32 dilation_height,
+    		WORD32 dilation_width,
+			WORD32 y_stride,
+			WORD32 y_padding,
+			WORD32 x_stride,
+			WORD32 x_padding,
+			WORD32 out_height,
+			WORD32 out_width,
+			WORD32 output_channels,
+			WORD32 input_precision,
+			WORD32 kernel_precision,
+			WORD32 out_data_format
+			);
 
 	WORD32 xa_nn_conv2d_std_getsize_sym4s(
 			WORD32 input_height,
@@ -1863,6 +1858,33 @@
 			WORD32 out_data_format,
 			VOID *p_scratch);
 
+	WORD32 xa_nn_conv2d_per_chan_sym8sxsym16s(
+			WORD16* __restrict__ p_out,
+			const WORD16* __restrict__ p_inp,
+			const WORD8* __restrict__ p_kernel,
+			const WORD64* __restrict__ p_bias,
+			WORD32 input_height,
+			WORD32 input_width,
+			WORD32 input_channels,
+			WORD32 kernel_height,
+			WORD32 kernel_width,
+			WORD32 kernel_channels,
+			WORD32 dilation_height,
+			WORD32 dilation_width,
+			WORD32 out_channels,
+			WORD32 x_stride,
+			WORD32 y_stride,
+			WORD32 x_padding,
+			WORD32 y_padding,
+			WORD32 out_height,
+			WORD32 out_width,
+			WORD32 input_zero_bias,
+			WORD32 * p_out_multiplier,
+			WORD32 * p_out_shift,
+			WORD32 out_zero_bias,
+			WORD32 out_data_format,
+			VOID *p_scratch);
+
 	WORD32 xa_nn_conv2d_std_per_chan_sym8sxasym8s(
 			WORD8* __restrict__ p_out,
 			const WORD8* __restrict__ p_inp,
@@ -1887,7 +1909,7 @@
 			WORD32 out_data_format,
 			VOID *p_scratch);
 
-    WORD32 xa_nn_conv2d_group_sym8sxasym8s(
+    WORD32 xa_nn_conv2d_per_chan_sym8sxasym8s(
 			WORD8* __restrict__ p_out,
 			const WORD8* __restrict__ p_inp,
 			const WORD8* __restrict__ p_kernel,
@@ -1898,6 +1920,8 @@
 			WORD32 kernel_height,
 			WORD32 kernel_width,
             WORD32 kernel_channels,
+			WORD32 dilation_height,
+			WORD32 dilation_width,
 			WORD32 out_channels,
 			WORD32 x_stride,
 			WORD32 y_stride,
@@ -2012,6 +2036,25 @@
 			WORD32 out_multiplier,
 			WORD32 out_shift,
 			WORD32 out_zero_bias);
+
+	WORD32 xa_nn_matmul_asym4sxasym8s_asym8s(
+			WORD8 * __restrict__ p_out,
+			const WORD8 * __restrict__ p_mat1,
+			const WORD8 * __restrict__ p_mat2,
+			const WORD32 * __restrict__ p_bias,
+			WORD32 rows,
+			WORD32 cols,
+			WORD32 row_stride,
+			WORD32 vec_count,
+			WORD32 vec_offset,
+			WORD32 out_offset,
+			WORD32 out_stride,
+			WORD32 mat1_zero_bias,
+			WORD32 vec1_zero_bias,
+			WORD32 out_multiplier,
+			WORD32 out_shift,
+			WORD32 out_zero_bias,
+            void * pscratch);
 
 	WORD32 xa_nn_matmul_per_chan_sym8sxasym8s_asym8s(
 			WORD8 * __restrict__ p_out,
@@ -2995,6 +3038,50 @@
                     ,const WORD32 * __restrict__ p_permute_vec
                     ,WORD32 num_out_dims
                     ,WORD32 num_inp_dims);
+
+  WORD32 xa_nn_batch_norm_3D_8_8(WORD8 * __restrict__ p_out
+                    ,const WORD8 * __restrict__ p_inp
+                    ,const WORD16 * __restrict__ p_alpha
+                    ,const WORD32 * __restrict__ p_beta
+                    ,WORD32 io_height
+                    ,WORD32 io_width
+                    ,WORD32 io_depth
+                    ,WORD32 out_shift
+                    ,WORD32 out_activation_min
+                    ,WORD32 out_activation_max
+                    ,WORD32 inp_data_format
+                    ,WORD32 out_data_format);
+
+  WORD32 xa_nn_resize_bilinear_8_8(pWORD8 __restrict__ p_out
+                    ,const WORD8 *__restrict__ p_inp
+                    ,WORD32  input_batch
+                    ,WORD32  input_height
+                    ,WORD32  input_width
+                    ,WORD32  input_channels
+                    ,WORD32  out_batch
+                    ,WORD32  out_height
+                    ,WORD32  out_width
+                    ,WORD32  out_channels
+                    ,WORD32  height_scale_10
+                    ,WORD32  width_scale_10
+                    ,WORD32  height_shift
+                    ,WORD32  width_shift);
+
+WORD32 xa_nn_resize_nearest_neighbour_8_8(pWORD8 __restrict__ p_out
+                    ,const WORD8 *__restrict__ p_inp
+                    ,WORD32  input_batch
+                    ,WORD32  input_height
+                    ,WORD32  input_width
+                    ,WORD32  input_channels
+                    ,WORD32  out_batch
+                    ,WORD32  out_height
+                    ,WORD32  out_width
+                    ,WORD32  out_channels
+                    ,FLOAT32 height_scale
+                    ,FLOAT32 width_scale
+                    ,FLOAT32 height_offset
+                    ,FLOAT32 width_offset
+                    ,WORD32  align_corners);
 
 
 	/* Mapping the functions names from previous naming convension for backward compatibility */

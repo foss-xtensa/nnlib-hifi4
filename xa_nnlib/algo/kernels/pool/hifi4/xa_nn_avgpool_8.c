@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -388,8 +388,8 @@ const WORD8* __restrict__ p_inp,
     XA_NNLIB_ARG_CHK_COND((out_data_format != 0) && (out_data_format != 1), -1);
 #endif
     /* Implementation dependent checks */
-    XA_NNLIB_ARG_CHK_COND((kernel_height > 256), -1);
-    XA_NNLIB_ARG_CHK_COND((kernel_width > 256), -1);
+    XA_NNLIB_ARG_CHK_COND((kernel_height > 1024), -1);
+    XA_NNLIB_ARG_CHK_COND((kernel_width > 1024), -1);
 
 #ifdef NNLIB_V2
     XA_NNLIB_ARG_CHK_COND((inp_data_format != 0) && (inp_data_format != 1), -1);

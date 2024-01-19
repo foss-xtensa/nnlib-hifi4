@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -38,15 +38,15 @@
     tables for 2^x approximation
 */
 #include "NatureDSP_types.h"
-#include "pow2f_tbl.h"
-#include "common.h"
+#include "../include/pow2f_tbl.h"
+#include "xa_nn_common.h"
 
 #if 0
 /*
         polynomial coefficients for 2.^x, x=[-1...0)
         x=(-1:pow2(1,-16):0); y=2.^x; p=polyfit(x,y,6);
 */
-const union ufloat32uint32 ALIGN(8) polypow2f_tbl[]=
+const union ufloat32uint32 ALIGN(8) xa_nnlib_polypow2f_tbl[]=
 {
         {0x38e55635},/*1.0935628112e-004f */
         {0x3aa72691},/*1.2752582519e-003f */
@@ -65,7 +65,7 @@ p=polyfit(z,y,11);
 p(end)=p(end)+1;
 num2hex(single(-p))
 */
-const union ufloat32uint32 ALIGN(8) log2f_coef[] =
+const union ufloat32uint32 ALIGN(8) xa_nnlib_log2f_coef[] =
 {
   { 0x3d726a49 },
   { 0x3dd91c88 },
@@ -86,7 +86,7 @@ const union ufloat32uint32 ALIGN(8) log2f_coef[] =
 #endif
 
 /* polynomial coefficients for 2^x, x=-0.5...0.5 */
-const union ufloat32uint32 ALIGN(8) pow2f_coef[] =
+const union ufloat32uint32 ALIGN(8) xa_nnlib_pow2f_coef[] =
 {
   { 0x39222a65 },
   { 0x3aaf931c },

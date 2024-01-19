@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -124,6 +124,7 @@ WORD32 xa_nn_broadcast_8_8( WORD8* __restrict__ p_out,      /* pointer to write 
 
     res = broadcast_node(bcast_expansion_steps, num_dims-1,
             p_out, p_in);
+    (void)res; /* Unused return value */
 
     return 0;
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -43,23 +43,23 @@
 #include <errno.h>
 #include <fenv.h>
 
-#include "NatureDSP_Signal_math.h"
+#include "../include/NatureDSP_Signal_math.h"
 #include "NatureDSP_types.h"
-#include "common.h"
-#include "common_fpu.h"
+#include "xa_nn_common.h"
+#include "xa_nnlib_common_fpu.h"
 
 #include "xa_nnlib_common.h"
 
 /* Tables and constants. */
-#include "tanhf_tbl.h"
-#include "expf_tbl.h"
+#include "../include/tanhf_tbl.h"
+#include "../include/expf_tbl.h"
 #if 0
 #include "baseop.h"
 #endif
 #include <math.h>
 /* Constants and polynomial coeffs for exp(x) approximation. */
-#include "expf_tbl.h"
-#include "pow2f_tbl.h"
+#include "../include/expf_tbl.h"
+#include "../include/pow2f_tbl.h"
 
 /* If non-zero, set errno and raise floating-point exceptions on errors. */
 #if 0
@@ -89,9 +89,9 @@ float32_t halfexpf(float32_t* dy, float32_t x );
   return result, Q16.15 or floating point
 -------------------------------------------------------------------------*/
 #if !HAVE_VFPU && !HAVE_FPU
-DISCARD_FUN_FOR_NONVOID_RETURN(float32_t,scl_tanhf,(float32_t x))
+DISCARD_FUN_FOR_NONVOID_RETURN(float32_t,xa_nnlib_scl_tanhf,(float32_t x))
 #else
-float32_t scl_tanhf( float32_t x )
+float32_t xa_nnlib_scl_tanhf( float32_t x )
 {
     float32_t zero, one, two, half, z, r, eps;
     float32_t y;
@@ -119,7 +119,7 @@ float32_t scl_tanhf( float32_t x )
     ux = XT_RFR(x);
     ux = (ux & 0x80000000);
     x = XT_ABS_S(x);
-    if (x > halfln3.f)
+    if (x > xa_nnlib_halfln3.f)
     {
         /*
         * For a large input value tanh(x) is computed from exp(2*x)/2, using
@@ -132,26 +132,26 @@ float32_t scl_tanhf( float32_t x )
         }
 
         /* scale input to 1/ln(2) */
-        p0 = XT_MUL_S(x, log2_e[0].f);
+        p0 = XT_MUL_S(x, xa_nnlib_log2_e[0].f);
         #if defined(XT_FIROUND_S)
         p0 = XT_FIROUND_S(p0);
         #else
         p0 = XT_FLOAT_S(XT_ROUND_S(p0, 0), 0);
         #endif
         dy = XT_NEG_S(p0);
-        XT_MADD_S(dy, x, log2_e[0].f);
-        XT_MADD_S(dy, x, log2_e[1].f);
+        XT_MADD_S(dy, x, xa_nnlib_log2_e[0].f);
+        XT_MADD_S(dy, x, xa_nnlib_log2_e[1].f);
         /* compute 2^x */
         {
             float32_t y0, y2, y3, y4, y5, y6, dy2;
             dy2 = XT_MUL_S(dy, dy);
-            y0 = pow2f_coef[0].f;
-            y1 = pow2f_coef[1].f;
-            y2 = pow2f_coef[2].f;
-            y3 = pow2f_coef[3].f;
-            y4 = pow2f_coef[4].f;
-            y5 = pow2f_coef[5].f;
-            y6 = pow2f_coef[6].f;
+            y0 = xa_nnlib_pow2f_coef[0].f;
+            y1 = xa_nnlib_pow2f_coef[1].f;
+            y2 = xa_nnlib_pow2f_coef[2].f;
+            y3 = xa_nnlib_pow2f_coef[3].f;
+            y4 = xa_nnlib_pow2f_coef[4].f;
+            y5 = xa_nnlib_pow2f_coef[5].f;
+            y6 = xa_nnlib_pow2f_coef[6].f;
             XT_MADD_S(y1, y0, dy);
             XT_MADD_S(y3, y2, dy);
             XT_MADD_S(y5, y4, dy);
@@ -206,10 +206,10 @@ float32_t scl_tanhf( float32_t x )
         float32_t x2, x3, tn0, tn1, tn2, tn3;
         x2 = XT_MUL_S(x, x);
         x3 = XT_MUL_S(x, x2);
-        tn0 = polytanhf_tbl[0].f;
-        tn1 = polytanhf_tbl[1].f;
-        tn2 = polytanhf_tbl[2].f;
-        tn3 = polytanhf_tbl[3].f;
+        tn0 = xa_nnlib_polytanhf_tbl[0].f;
+        tn1 = xa_nnlib_polytanhf_tbl[1].f;
+        tn2 = xa_nnlib_polytanhf_tbl[2].f;
+        tn3 = xa_nnlib_polytanhf_tbl[3].f;
         XT_MADD_S(tn1, tn0, x2);
         XT_MADD_S(tn2, tn1, x2);
         XT_MADD_S(tn3, tn2, x2);

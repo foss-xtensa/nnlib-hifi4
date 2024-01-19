@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -20,7 +20,7 @@
 
 ******************************************************************************/
 #include "xa_type_def.h"
-#include "common.h"
+#include "xa_nn_common.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_maxpool_state.h"
 #include "xa_nnlib_err_chk.h"
@@ -37,7 +37,7 @@ WORD32 xa_nn_maxpool_getsize_nchw(
 {
     int total_size, state_size, scratch_size;
     int full_buf_width, full_out_width;
-    int inp_bytewidth, acc_bytewidth;
+    int /*inp_bytewidth,*/ acc_bytewidth;
 
     XA_NNLIB_CHK_COND((input_width <= 0), -1);
     XA_NNLIB_CHK_COND((kernel_height <= 0), -1);
@@ -52,19 +52,19 @@ WORD32 xa_nn_maxpool_getsize_nchw(
     switch(inp_precision)
     {
         case 8:
-            inp_bytewidth = sizeof(WORD8);
+            //inp_bytewidth = sizeof(WORD8);
             acc_bytewidth = sizeof(WORD16);
             break;
         case 16:
-            inp_bytewidth = sizeof(WORD16);
+            //inp_bytewidth = sizeof(WORD16);
             acc_bytewidth = sizeof(WORD16);
             break;
         case -1:
-            inp_bytewidth = sizeof(WORD32);
+            //inp_bytewidth = sizeof(WORD32);
             acc_bytewidth = sizeof(WORD32);
             break;
         case -3:
-            inp_bytewidth = sizeof(UWORD8);
+            //inp_bytewidth = sizeof(UWORD8);
             acc_bytewidth = sizeof(WORD32);
             break;
         default:
@@ -271,6 +271,7 @@ WORD32 xa_nn_maxpool_init(
     pWORD8 p_mem = (pVOID)p_scratch;
     xa_nn_maxpool_state_t *p_state = (xa_nn_maxpool_state_t *)p_mem;
     int state_size;
+#if 0
     int inp_bytewidth;
 
     switch(inp_precision)
@@ -290,6 +291,7 @@ WORD32 xa_nn_maxpool_init(
         default:
             break;
     }
+#endif
 
     state_size = ALIGNED_SIZE(sizeof(xa_nn_maxpool_state_t), ALIGNMENT);
 

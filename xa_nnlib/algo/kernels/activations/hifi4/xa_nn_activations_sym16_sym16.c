@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -52,10 +52,6 @@ static const uint16_t sigmoid_table_uint16[256] = {
     65533, 65533, 65533, 65534, 65534, 65534, 65534, 65534, 65534, 65534, 65534,
     65534, 65534, 65535};
 
-static inline UWORD32 abs(WORD32 input)
-{
-  return ((UWORD32)((-1)*input));
-}
 #endif
 
 static void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
@@ -194,7 +190,7 @@ static void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
   /* Following code is directly adapted from TFLM ref code */
   for (i = 0; i < (vec_length & 3); ++i, p_vec++, p_out++) {
     WORD32 input_data = ((*p_vec) * input_multiplier);
-    UWORD32 abs_input_data = abs(input_data);
+    UWORD32 abs_input_data =(UWORD32)AE_MOVAD32_L(AE_ABS32S(AE_MOVDA32(input_data)));
     UWORD32 uh = abs_input_data >> 9;
     UWORD32 result;
     if (uh >= 255) {
@@ -395,7 +391,7 @@ WORD32 xa_nn_vec_sigmoid_sym16s_sym16s(WORD16 *p_out,
   for (i = 0; i < (vec_length & 3); ++i, p_vec++, p_out++) {
     WORD32 input_data = ((*p_vec) * input_multiplier + round) >> input_left_shift;
 
-    UWORD32 abs_input_data = abs(input_data);
+    UWORD32 abs_input_data = (UWORD32)AE_MOVAD32_L(AE_ABS32S(AE_MOVDA32(input_data)));
 
     UWORD32 uh = abs_input_data >> 9;
     UWORD32 result;
@@ -593,7 +589,7 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
     WORD32 input_data =
         ((*p_vec) * input_multiplier + round) >> input_left_shift;
 
-    UWORD32 abs_input_data = abs(input_data);
+    UWORD32 abs_input_data = (UWORD32)AE_MOVAD32_L(AE_ABS32S(AE_MOVDA32(input_data)));
     UWORD32 uh = abs_input_data >> 8;
     WORD32 result;
 

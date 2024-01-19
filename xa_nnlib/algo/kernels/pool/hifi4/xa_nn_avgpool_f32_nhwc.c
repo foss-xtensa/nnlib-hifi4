@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -19,7 +19,7 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ******************************************************************************/
-#include "common_fpu.h"
+#include "xa_nnlib_common_fpu.h"
 #include "xa_type_def.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_avgpool_state.h"
@@ -215,7 +215,7 @@ const FLOAT32* __restrict__ p_inp,
         p_rec_den = (FLOAT32 *)p_den + itr_oh*out_width;
         for(itr_ow = 0; itr_ow < out_width; itr_ow++)
         {
-            xtfloatx2 recip_den;
+            //xtfloatx2 recip_den;
             xtfloat recip_den_s;
             p_scratch_zeros = p_zeros_mem;
 
@@ -226,7 +226,7 @@ const FLOAT32* __restrict__ p_inp,
             pool_width = end_row - start_row;
             p_dst = (xtfloatx2 *)((FLOAT32 *)p_out + (itr_oh*out_width*input_channels) + (itr_ow*input_channels));
             XT_LSIP(recip_den_s, p_rec_den, sizeof(FLOAT32));
-            recip_den = recip_den_s;
+            //recip_den = recip_den_s;
 
             if(pool_width)
             {

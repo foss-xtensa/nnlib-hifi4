@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -122,8 +122,8 @@ static void internal_elm_sub_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
     WORD32 const1 = 1 << left_shift;
     ae_int32x2 const1_32x2 =  AE_MOVDA32X2(const1,const1);
 
-    WORD32 const2_inp1 = inp1_zero_bias << left_shift;
-    WORD32 const2_inp2 = inp2_zero_bias << left_shift;
+    WORD32 const2_inp1 = (WORD32)((UWORD32)inp1_zero_bias << left_shift);
+    WORD32 const2_inp2 = (WORD32)((UWORD32)inp2_zero_bias << left_shift);
 
     ae_int32x2 const2_32x2_LO_1 =  AE_MOVDA32X2(const2_inp1,const2_inp1);
     ae_int32x2 const2_32x2_LO_2 =  AE_MOVDA32X2(const2_inp2,const2_inp2);
@@ -195,6 +195,7 @@ static void internal_elm_sub_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
         MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_out78, raw_sum78, op_multiplier, out_right_shift)
 #else
        (void)inp1_right_shift; (void)inp2_right_shift; (void)out_right_shift;
+       (void)multiplier1; (void)multiplier2; (void)op_multiplier;
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v1, d_0, inp1_multiplier, inp1_left_shift);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v2, d_1, inp1_multiplier, inp1_left_shift);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v3, d_2, inp1_multiplier, inp1_left_shift);
@@ -442,6 +443,7 @@ static void internal_elm_sub_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
       MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_out34, raw_sum34, op_multiplier, out_right_shift)
 #else
       (void)inp1_right_shift; (void)inp2_right_shift; (void)out_right_shift;
+       (void)multiplier1; (void)multiplier2; (void)op_multiplier;
 
       MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v1, d_0, inp1_multiplier, inp1_left_shift);
       MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v2, d_1, inp1_multiplier, inp1_left_shift);

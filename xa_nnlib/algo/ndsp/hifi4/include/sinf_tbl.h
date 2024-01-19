@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2023 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -42,16 +42,16 @@
 #define SINFTBL_H__
 
 #include "NatureDSP_types.h"
-#include "common.h"
+#include "xa_nn_common.h"
 
 #define SINNCOSF_ALG 0 /* 0 - 2 ULP, 1 - 1 ULP */
 
-externC const union ufloat32uint32 sinf_maxval; /* domain ranges - zero outside */
+externC const union ufloat32uint32 xa_nnlib_sinf_maxval; /* domain ranges - zero outside */
 
 /* pi/4 represented as a sum of exacly represented numbers.
     derived from hex value of pi: 3.243F6A8885A308D313198A2E037073
 */
-externC const union ufloat64uint64 ALIGN(8) pi4fc[];
+externC const union ufloat64uint64 ALIGN(8) xa_nnlib_pi4fc[];
 
 /* 
    polynomial coefficients for sin(x)/x, [-pi/4...pi/4]
@@ -60,7 +60,7 @@ externC const union ufloat64uint64 ALIGN(8) pi4fc[];
    y=sin(x)./x;
    p=polyfit(x,y,6); p=p(1:2:end); p(end)=[];
 */
-externC const union ufloat32uint32 ALIGN(8) polysinf_tbl[];
+externC const union ufloat32uint32 ALIGN(8) xa_nnlib_polysinf_tbl[];
 
 /* 
    polynomial coefficients for cos(x), [-pi/4...pi/4]
@@ -69,6 +69,6 @@ externC const union ufloat32uint32 ALIGN(8) polysinf_tbl[];
    y=cos(x);
    p=polyfit(x,y,6); p=p(1:2:end); p(end)=[];
 */
-externC const union ufloat32uint32 ALIGN(8) polycosf_tbl[];
+externC const union ufloat32uint32 ALIGN(8) xa_nnlib_polycosf_tbl[];
 
 #endif /* SINFTBL_H__ */
