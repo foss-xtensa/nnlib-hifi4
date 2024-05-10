@@ -22,6 +22,28 @@
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_common_macros.h"
 
+#if XCHAL_HAVE_HIFI1S
+static inline ae_int32x2 MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
+                                             int32_t quantized_multiplier,
+                                             int shift){
+  ae_int32x2 d_q_mul = AE_MOVDA32(quantized_multiplier);
+  ae_int16x4 d_red_mul16 = AE_ROUND16X4F32SASYM(d_q_mul, d_q_mul);
+  ae_int64 q = AE_MUL48X16_0(d_x, d_red_mul16);
+  ae_int32x2 result = AE_ROUNDAV32X2F64SASYM (q, q, shift);
+  return result;
+}
+
+static inline ae_int32x2 MultiplyByQuantizedMultiplier_x2_opt(ae_int64 d_x1, ae_int64 d_x2,
+                                             int32_t quantized_multiplier,
+                                             int shift) {
+  ae_int32x2 d_q_mul = AE_MOVDA32(quantized_multiplier);
+  ae_int16x4 d_red_mul16 = AE_ROUND16X4F32SASYM(d_q_mul, d_q_mul);
+  ae_int64 q1 = AE_MUL48X16_0(d_x1, d_red_mul16);
+  ae_int64 q2 = AE_MUL48X16_0(d_x2, d_red_mul16);
+  ae_int32x2 result = AE_ROUNDAV32X2F64SASYM (q1, q2, shift);
+  return result;
+}
+#else // XCHAL_HAVE_HIFI1S
 static inline ae_int32x2 MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
                                              int32_t quantized_multiplier,
                                              int shift){
@@ -53,8 +75,81 @@ static inline ae_int32x2 MultiplyByQuantizedMultiplier_x2_opt(ae_int64 d_x1, ae_
   ae_int32x2 result = AE_ROUND32X2F64SASYM(q1, q2);
   return result;
 }
+#endif // XCHAL_HAVE_HIFI1S
 
 #if XCHAL_HAVE_HIFI1
+#if XCHAL_HAVE_HIFI1S
+static inline void _xa_nn_dot_product_4_rows_1_vecs_unaligned
+( ae_int64* out_0_0
+ ,ae_int64* out_1_1
+ ,ae_int64* out_2_2
+ ,ae_int64* out_3_3
+ ,WORD8*      p_mat_0
+ ,WORD8*      p_mat_1
+ ,WORD8*      p_mat_2
+ ,WORD8*      p_mat_3
+ ,WORD16*      p_vec_0
+ ,WORD32      cols1)
+{
+  ae_int16x4 *pvec0 = (ae_int16x4*)p_vec_0;
+  ae_int8x8 d_mat0_0, d_mat1_0, d_mat2_0, d_mat3_0;
+  ae_int16x4 d_vec0, d_vec1;
+  ae_int64 d_out0, d_out1, d_out2, d_out3;
+
+  d_out0 = *out_0_0;
+  d_out1 = *out_1_1;
+  d_out2 = *out_2_2;
+  d_out3 = *out_3_3;
+
+  ae_valign align_m0, align_m1, align_m2, align_m3;
+  align_m0 = AE_LA64_PP((ae_int8x8 *)p_mat_0);
+  align_m1 = AE_LA64_PP((ae_int8x8 *)p_mat_1);
+  align_m2 = AE_LA64_PP((ae_int8x8 *)p_mat_2);
+  align_m3 = AE_LA64_PP((ae_int8x8 *)p_mat_3);
+  ae_valign align_v0;
+  align_v0 = AE_LA64_PP((ae_int16x4 *)pvec0);
+
+  int c_itr = 0;
+    
+  for(;c_itr<(cols1>>3); c_itr++)
+  {
+    AE_LA16X4_IP(d_vec0, align_v0, (ae_int16x4 *)pvec0);
+    AE_LA16X4_IP(d_vec1, align_v0, (ae_int16x4 *)pvec0);
+	
+    AE_LA8X8_IP(d_mat0_0, align_m0, (ae_int8x8 *)p_mat_0);
+    AE_LA8X8_IP(d_mat1_0, align_m1, (ae_int8x8 *)p_mat_1);
+    AE_LA8X8_IP(d_mat2_0, align_m2, (ae_int8x8 *)p_mat_2);
+    AE_LA8X8_IP(d_mat3_0, align_m3, (ae_int8x8 *)p_mat_3);
+
+    AE_MULAO8X16(d_out0, d_vec0, d_vec1, d_mat0_0);
+    AE_MULAO8X16(d_out1, d_vec0, d_vec1, d_mat1_0);
+    AE_MULAO8X16(d_out2, d_vec0, d_vec1, d_mat2_0);
+    AE_MULAO8X16(d_out3, d_vec0, d_vec1, d_mat3_0);
+  }
+  int reminder = cols1&0x07;
+	
+  if(reminder)
+  {
+    AE_LA16X4_IP(d_vec0, align_v0, pvec0);	
+    AE_LA16X4_IP(d_vec1, align_v0, pvec0);
+	
+    AE_LAV8X8_XP(d_mat0_0, align_m0, (ae_int8x8 *)p_mat_0, reminder );
+    AE_LAV8X8_XP(d_mat1_0, align_m1, (ae_int8x8 *)p_mat_1, reminder );
+    AE_LAV8X8_XP(d_mat2_0, align_m2, (ae_int8x8 *)p_mat_2, reminder );
+    AE_LAV8X8_XP(d_mat3_0, align_m3, (ae_int8x8 *)p_mat_3, reminder );
+
+    AE_MULAO8X16(d_out0, d_vec0, d_vec1, d_mat0_0);
+    AE_MULAO8X16(d_out1, d_vec0, d_vec1, d_mat1_0);
+    AE_MULAO8X16(d_out2, d_vec0, d_vec1, d_mat2_0);
+    AE_MULAO8X16(d_out3, d_vec0, d_vec1, d_mat3_0);
+  }
+  
+  *out_0_0 = d_out0;
+  *out_1_1 = d_out1;
+  *out_2_2 = d_out2;
+  *out_3_3 = d_out3;
+}
+#else // XCHAL_HAVE_HIFI1S
 static inline void _xa_nn_dot_product_4_rows_1_vecs_unaligned
 ( ae_int64* out_0_0
  ,ae_int64* out_1_1
@@ -140,6 +235,7 @@ static inline void _xa_nn_dot_product_4_rows_1_vecs_unaligned
   *out_3_3 = out3;
 #endif //( XCHAL_HW_VERSION >= RI9_HWVERSION )
 }
+#endif // XCHAL_HAVE_HIFI1S
 #else//XCHAL_HAVE_HIFI1
 static inline void _xa_nn_dot_product_4_rows_1_vecs_unaligned
 ( ae_int64* out_0_0
@@ -286,6 +382,76 @@ static inline void _xa_nn_dot_product_4_rows_1_vecs_aligned
 }
 #else
 /* vec aligned, mat not required to be aligned */
+#if XCHAL_HAVE_HIFI1S
+static inline void _xa_nn_dot_product_4_rows_1_vecs_aligned
+( ae_int64* out_0_0
+ ,ae_int64* out_1_1
+ ,ae_int64* out_2_2
+ ,ae_int64* out_3_3
+ ,WORD8*      p_mat_0
+ ,WORD8*      p_mat_1
+ ,WORD8*      p_mat_2
+ ,WORD8*      p_mat_3
+ ,WORD16*      p_vec_0
+ ,WORD32      cols1)
+{
+  ae_int16x4 *pvec0 = (ae_int16x4*)p_vec_0;
+  ae_int8x8 d_mat0_0, d_mat1_0, d_mat2_0, d_mat3_0;
+  ae_int16x4 d_vec0, d_vec1;
+  ae_int64 d_out0, d_out1, d_out2, d_out3;
+
+  d_out0 = *out_0_0;
+  d_out1 = *out_1_1;
+  d_out2 = *out_2_2;
+  d_out3 = *out_3_3;
+
+  ae_valign align_m0, align_m1, align_m2, align_m3;
+  align_m0 = AE_LA64_PP((ae_int8x8 *)p_mat_0);
+  align_m1 = AE_LA64_PP((ae_int8x8 *)p_mat_1);
+  align_m2 = AE_LA64_PP((ae_int8x8 *)p_mat_2);
+  align_m3 = AE_LA64_PP((ae_int8x8 *)p_mat_3);
+
+  int c_itr = 0;
+    
+  for(;c_itr<(cols1>>3); c_itr++)
+  {
+    AE_L16X4_IP(d_vec0, pvec0, 8);	
+    AE_L16X4_IP(d_vec1, pvec0, 8);
+	
+    AE_LA8X8_IP(d_mat0_0, align_m0, (ae_int8x8 *)p_mat_0);
+    AE_LA8X8_IP(d_mat1_0, align_m1, (ae_int8x8 *)p_mat_1);
+    AE_LA8X8_IP(d_mat2_0, align_m2, (ae_int8x8 *)p_mat_2);
+    AE_LA8X8_IP(d_mat3_0, align_m3, (ae_int8x8 *)p_mat_3);
+
+    AE_MULAO8X16(d_out0, d_vec0, d_vec1, d_mat0_0);
+    AE_MULAO8X16(d_out1, d_vec0, d_vec1, d_mat1_0);
+    AE_MULAO8X16(d_out2, d_vec0, d_vec1, d_mat2_0);
+    AE_MULAO8X16(d_out3, d_vec0, d_vec1, d_mat3_0);
+  }
+  int reminder = cols1&0x07;
+	
+  if(reminder)
+  {
+    AE_L16X4_IP(d_vec0, pvec0, 8);	
+    AE_L16X4_IP(d_vec1, pvec0, 8);
+	
+    AE_LAV8X8_XP(d_mat0_0, align_m0, (ae_int8x8 *)p_mat_0, reminder );
+    AE_LAV8X8_XP(d_mat1_0, align_m1, (ae_int8x8 *)p_mat_1, reminder );
+    AE_LAV8X8_XP(d_mat2_0, align_m2, (ae_int8x8 *)p_mat_2, reminder );
+    AE_LAV8X8_XP(d_mat3_0, align_m3, (ae_int8x8 *)p_mat_3, reminder );
+
+    AE_MULAO8X16(d_out0, d_vec0, d_vec1, d_mat0_0);
+    AE_MULAO8X16(d_out1, d_vec0, d_vec1, d_mat1_0);
+    AE_MULAO8X16(d_out2, d_vec0, d_vec1, d_mat2_0);
+    AE_MULAO8X16(d_out3, d_vec0, d_vec1, d_mat3_0);
+  }
+  
+  *out_0_0 = d_out0;
+  *out_1_1 = d_out1;
+  *out_2_2 = d_out2;
+  *out_3_3 = d_out3;
+}
+#else // XCHAL_HAVE_HIFI1S
 static inline void _xa_nn_dot_product_4_rows_1_vecs_aligned
 ( ae_int64* out_0_0
  ,ae_int64* out_1_1
@@ -351,6 +517,7 @@ static inline void _xa_nn_dot_product_4_rows_1_vecs_aligned
   *out_2_2 = out2;
   *out_3_3 = out3;
 }
+#endif // XCHAL_HAVE_HIFI1S
 #endif
 
 static inline void _xa_nn_dot_product_1_rows_1_vecs_unaligned
@@ -404,7 +571,7 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s(
   XA_NNLIB_ARG_CHK_COND((rows <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((cols1 <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((row_stride1 < cols1), -1);
-  XA_NNLIB_ARG_CHK_COND((out_shift < -31 || out_shift > 31), -1);
+  XA_NNLIB_ARG_CHK_COND((out_shift < -31 || out_shift > 15), -1);
 
   if(p_mat2 != NULL)
   {
@@ -416,11 +583,10 @@ WORD32 xa_nn_matXvec_sym8sxsym16s_sym16s(
 
   int m_itr=0;
 
-  /* Shifts to match with Tensorflow */
-//  int left_shift, right_shift;
-//  left_shift = out_shift<0?0:out_shift;
-//  right_shift = out_shift>0?0:-out_shift;
-
+#if XCHAL_HAVE_HIFI1S  
+  out_shift = 15 - out_shift;
+  out_shift = (out_shift << 16) | (out_shift); 
+#endif
   int bias_flag = 0;
   if(p_bias != NULL){
     bias_flag = 1;

@@ -25,7 +25,7 @@
 ROOTDIR = ..
 
 ifeq ($(BUILD_SCRATCH_SIZE_LIB), 1)
-CODEC_NAME = scratch_size_api_for_xnnc
+CODEC_NAME = nnlib_scratch_size_api_hifi4
 else
 CODEC_NAME = nnlib
 endif
@@ -100,7 +100,8 @@ ACTIVATIONSO2OBJS = \
   xa_nn_activations_8_8.o \
   xa_nn_activations_16_16.o \
   xa_nn_activations_asym16_asym16.o \
-  xa_nn_activations_sym16_sym16.o
+  xa_nn_activations_sym16_sym16.o \
+  xa_nn_softmax_sym16s_16.o
 
 
 NDSPO2OBJS = \
@@ -270,18 +271,24 @@ REORGO2OBJS = \
   xa_nn_stride_slice_int16.o \
   xa_nn_stride_slice_int8.o \
   xa_nn_transpose_8.o \
+  xa_nn_transpose_16.o \
   xa_nn_resize_bilinear_8.o \
-  xa_nn_resize_nearest_neighbour_8.o
+  xa_nn_resize_nearest_neighbour_8.o \
+  xa_nn_concat_8.o \
+  xa_nn_split_v_8.o
 
 
 ifeq ($(BUILD_SCRATCH_SIZE_LIB), 1)
 CFLAGS += -DENABLE_SCRATCH_SIZE_API_ONLY 
 LIBO2OBJS = \
   xa_nn_avgpool.o \
+  xa_nn_maxpool.o \
   xa_nn_conv2d_std_circ_buf.o \
   xa_nn_conv2d_depthwise.o \
   xa_nn_circ_buf.o \
-  xa_nn_softmax_asym8_asym8.o
+  xa_nn_transpose_conv_circ_buf.o \
+  xa_nn_softmax_asym8_asym8.o \
+  xa_nn_reduce_asym8s_asym8s.o
 else
 LIBO2OBJS = $(MATXVECO2OBJS) $(ACTIVATIONSO2OBJS) $(NDSPO2OBJS) $(CONVO2OBJS) $(FCO2OBJS) $(POOLO2OBJS) $(GRUO2OBJS) $(LSTMO2OBJS) $(CNNO2OBJS) $(BASICOBJS) $(NORMO2OBJS) $(REORGO2OBJS)
 LIBOSOBJS = $(COMMONOSOBJS)
@@ -303,6 +310,7 @@ ifeq ($(CC), xt-xcc)
 endif
 
 ifeq ($(CPU), x86)
+ifneq ($(BUILD_SCRATCH_SIZE_LIB), 1)
 cfg_path = $(shell grep -w "config-prefix"  "$$XTENSA_SYSTEM/$$XTENSA_CORE"-params | awk -- '{ print $$3 }')
 vpath %.c $(cfg_path)/src/cstub
 LIBOSOBJS := $(shell find $(cfg_path)/src/cstub -name '*.c' | sed 's/.*cstub\///' | sed 's/\.c/\.o/')
@@ -312,6 +320,7 @@ INCLUDES += \
 
 CFLAGS += -m32
 LIBLDFLAGS += -m32
+endif
 endif
 
 include $(ROOTDIR)/build/common.mk

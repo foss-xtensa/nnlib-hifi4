@@ -709,8 +709,13 @@ static inline void conv2d_per_chan_nhwc_sym8sxasym8s
             for(itr_kw = 0; itr_kw < kernel_height * kernel_width; itr_kw++)
             {
 #if XCHAL_HAVE_HIFI1
+#if XCHAL_HAVE_HIFI1S
+                AE_L8X4S_XC(d_inp0, pt_inp0, out_channels_pad);
+                AE_L8X4S_XC(d_inp1, pt_inp1, out_channels_pad);
+#else // XCHAL_HAVE_HIFI1S
                 d_inp0 = AE_L8X4S_I(pt_inp0, 0);
                 d_inp1 = AE_L8X4S_I(pt_inp1, 0);
+#endif // XCHAL_HAVE_HIFI1S                
                 AE_L8X4S_IP(d_ker, p_ker_scr, 4);
 #else
                 d_inp0 = AE_L8X4F_I(pt_inp0, 0);
@@ -724,8 +729,10 @@ static inline void conv2d_per_chan_nhwc_sym8sxasym8s
                 d_inp1 = AE_ADD16(d_inp1, AE_MOVDA16(input_zero_bias));
                 AE_MULA16X4(d_acc0, d_acc1, d_inp0, d_ker);
                 AE_MULA16X4(d_acc2, d_acc3, d_inp1, d_ker);
+#if !(XCHAL_HAVE_HIFI1S)
                 AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp0, out_channels_pad);
                 AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp1, out_channels_pad);
+#endif                
             }
             d_acc0 = AE_ADD32S(d_acc0, d_bias0);
             d_acc1 = AE_ADD32S(d_acc1, d_bias1);
@@ -770,6 +777,170 @@ static inline void conv2d_per_chan_nhwc_sym8sxasym8s
 
 #ifndef DISABLE_DEPTHWISE_CONV2D_K3X3_SPECIAL_CASE
 /* Special case for kernel dimension 3x3 */
+#if XCHAL_HAVE_HIFI1
+static inline void conv2d_per_chan_nhwc_sym8sxasym8s_k3x3
+(pWORD8 __restrict__ p_out
+ ,const WORD8 *__restrict__ p_ker
+ ,const WORD8 *__restrict__ p_inp
+ ,const WORD32 *p_bias
+ ,int kernel_width
+ ,int out_height
+ ,int out_width
+ ,int out_channels
+ ,int y_stride
+ ,WORD32  input_zero_bias
+ ,const WORD32 *p_out_multiplier
+ ,const WORD32 *p_out_shift
+ ,WORD32  out_zero_bias
+ )
+{
+    WORD32 itr_oh, itr_ch, itr_kw;
+    pWORD8 pt_inp0, pt_inp1;
+    WORD8 *pt_ker;
+    pWORD8 out_ptr0, out_ptr1;
+    ae_int16x4 d_inp0, d_inp1, d_ker;
+    const ae_int32x2 *pt_bias;
+    ae_valign bias_a;
+    ae_int32x2 d_acc0, d_acc1, d_bias0, d_bias1;
+    ae_int32x2 d_acc2, d_acc3;
+
+    ae_valign out_valign;
+    WORD32 *p_out_multiplier_align = (WORD32 *)p_out_multiplier;
+    out_valign = AE_LA64_PP(p_out_multiplier_align);
+
+    pt_bias = (const ae_int32x2 *)p_bias;
+    bias_a = AE_LA64_PP(pt_bias);
+    for(itr_ch = 0; itr_ch < out_channels; itr_ch+=4)
+    {
+	ae_int32x2 out_0, out_1;
+        AE_LA32X2_IP(out_0, out_valign, (ae_int32x2 *)p_out_multiplier_align);
+        AE_LA32X2_IP(out_1, out_valign, (ae_int32x2 *)p_out_multiplier_align);
+        AE_LA32X2_IP(d_bias0, bias_a, pt_bias);
+        AE_LA32X2_IP(d_bias1, bias_a, pt_bias);
+
+        pt_ker = (WORD8 *)(&p_ker[itr_ch]);
+        int i = 0;
+        ae_int32x2 temp_acc0, temp_acc1;
+        temp_acc0 = d_bias0;
+        temp_acc1 = d_bias1;
+        for(i=0; i<9; i++)
+        {
+            d_ker = AE_L8X4S_I(pt_ker, 0);
+            AE_MULA16X4(temp_acc0, temp_acc1, d_ker, AE_MOVDA16(input_zero_bias));
+            pt_ker += out_channels;
+        }
+        int l_shift[4], r_shift[4];
+#if TFLITE_SINGLE_ROUNDING
+        l_shift[0] = p_out_shift[itr_ch+0];
+        l_shift[1] = p_out_shift[itr_ch+1];
+        l_shift[2] = p_out_shift[itr_ch+2];
+        l_shift[3] = p_out_shift[itr_ch+3];
+#if XCHAL_HAVE_HIFI1S     
+        l_shift[0] = ((31 - l_shift[1]) << 16) | (31 - l_shift[0]);
+        l_shift[2] = ((31 - l_shift[3]) << 16) | (31 - l_shift[2]);
+#endif
+        /* Single rounding macro doesn't need two shifts so this is not used */
+        (void)r_shift[0];
+        (void)r_shift[1];
+        (void)r_shift[2];
+        (void)r_shift[3];
+#else /* #if TFLITE_SINGLE_ROUNDING */
+        l_shift[0] = p_out_shift[itr_ch+0] < 0 ? 0 :  p_out_shift[itr_ch+0];
+        r_shift[0] = p_out_shift[itr_ch+0] > 0 ? 0 : -p_out_shift[itr_ch+0];
+        l_shift[1] = p_out_shift[itr_ch+1] < 0 ? 0 :  p_out_shift[itr_ch+1];
+        r_shift[1] = p_out_shift[itr_ch+1] > 0 ? 0 : -p_out_shift[itr_ch+1];
+        l_shift[2] = p_out_shift[itr_ch+2] < 0 ? 0 :  p_out_shift[itr_ch+2];
+        r_shift[2] = p_out_shift[itr_ch+2] > 0 ? 0 : -p_out_shift[itr_ch+2];
+        l_shift[3] = p_out_shift[itr_ch+3] < 0 ? 0 :  p_out_shift[itr_ch+3];
+        r_shift[3] = p_out_shift[itr_ch+3] > 0 ? 0 : -p_out_shift[itr_ch+3];
+#endif /* #if TFLITE_SINGLE_ROUNDING */
+
+        for(itr_oh = 0; itr_oh < (out_height); itr_oh+=2)        
+        {
+            out_ptr0 = (WORD8 *)(&p_out[itr_oh*out_channels*out_width]);
+            out_ptr1 = (WORD8 *)(&p_out[(itr_oh+1)*out_channels*out_width]);
+
+            pt_inp0 = (WORD8 *)p_inp;
+            pt_inp1 = (WORD8 *)p_inp;
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp0, itr_ch + itr_oh*y_stride*kernel_width*out_channels);
+            AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp1, itr_ch + (itr_oh+1)*y_stride*kernel_width*out_channels);
+            pt_ker = (WORD8 *)(&p_ker[itr_ch]);
+            d_acc0 = temp_acc0;
+            d_acc1 = temp_acc1;
+            d_acc2 = temp_acc0;
+            d_acc3 = temp_acc1;
+#pragma no_unroll
+#pragma loop_count min=9
+            for(itr_kw = 0; itr_kw < 9; itr_kw++)
+            {
+#if XCHAL_HAVE_HIFI1S
+                AE_L8X4S_XC(d_inp0, pt_inp0, out_channels);
+                AE_L8X4S_XC(d_inp1, pt_inp1, out_channels);
+#else // XCHAL_HAVE_HIFI1S
+                d_inp0 = AE_L8X4S_I(pt_inp0, 0);
+                d_inp1 = AE_L8X4S_I(pt_inp1, 0);
+#endif // XCHAL_HAVE_HIFI1S
+#if (XCHAL_HW_VERSION >= RI9_HWVERSION)
+                AE_L8X4S_XP(d_ker, pt_ker, out_channels);
+#else // (XCHAL_HW_VERSION >= RI9_HWVERSION)
+                d_ker = AE_L8X4F_I(pt_ker, 0);
+                d_ker = AE_SRAI16(d_ker, 8);
+                pt_ker += out_channels;
+#endif // (XCHAL_HW_VERSION >= RI9_HWVERSION)                
+                AE_MULA16X4(d_acc0, d_acc1, d_inp0, d_ker);
+                AE_MULA16X4(d_acc2, d_acc3, d_inp1, d_ker);
+#if !(XCHAL_HAVE_HIFI1S)
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp0, out_channels);
+                AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp1, out_channels);
+#endif                
+            }
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+            MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_REVERSE_OUTPUT_HIFI1S(d_acc0, d_acc0, out_0, l_shift[0]);
+            MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_REVERSE_OUTPUT_HIFI1S(d_acc1, d_acc1, out_1, l_shift[2]);
+
+            d_acc0 = AE_ADD32S(d_acc0, AE_MOVDA32(out_zero_bias));
+            d_acc1 = AE_ADD32S(d_acc1, AE_MOVDA32(out_zero_bias));
+	
+            ae_int8x8 d_acc8x8 = AE_SAT8X4X32_H(d_acc1, d_acc0);
+            AE_S32_H_I(AE_MOVINT32X2_FROMINT8X8(d_acc8x8), (ae_int32*)&out_ptr0[itr_ch], 0);
+			
+            MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_REVERSE_OUTPUT_HIFI1S(d_acc2, d_acc2, out_0, l_shift[0]);
+            MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_REVERSE_OUTPUT_HIFI1S(d_acc3, d_acc3, out_1, l_shift[2]);
+			
+            d_acc2 = AE_ADD32S(d_acc2, AE_MOVDA32(out_zero_bias));
+            d_acc3 = AE_ADD32S(d_acc3, AE_MOVDA32(out_zero_bias));
+			
+            d_acc8x8 = AE_SAT8X4X32_H(d_acc3, d_acc2);
+            AE_S32_H_I(AE_MOVINT32X2_FROMINT8X8(d_acc8x8), (ae_int32*)&out_ptr1[itr_ch], 0);
+#else
+
+            MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(d_acc0, d_acc0, out_0, l_shift[0], l_shift[1], r_shift[0], r_shift[1]);
+            MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(d_acc1, d_acc1, out_1, l_shift[2], l_shift[3], r_shift[2], r_shift[3]);
+
+            d_acc0 = AE_ADD32S(d_acc0, AE_MOVDA32(out_zero_bias));
+            d_acc1 = AE_ADD32S(d_acc1, AE_MOVDA32(out_zero_bias));
+            d_acc0 = AE_SRAI32(AE_SLAI32S(d_acc0, 24), 24);
+            d_acc1 = AE_SRAI32(AE_SLAI32S(d_acc1, 24), 24);
+
+            ae_int16x4 d_acc16x4 = AE_SAT16X4(d_acc0, d_acc1);
+            WORD8 *pout_ptr0 = &out_ptr0[itr_ch];
+            AE_S8X4_I(d_acc16x4, pout_ptr0, 0);
+
+            MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(d_acc2, d_acc2, out_0, l_shift[0], l_shift[1], r_shift[0], r_shift[1]);
+            MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(d_acc3, d_acc3, out_1, l_shift[2], l_shift[3], r_shift[2], r_shift[3]);
+            d_acc2 = AE_ADD32S(d_acc2, AE_MOVDA32(out_zero_bias));
+            d_acc3 = AE_ADD32S(d_acc3, AE_MOVDA32(out_zero_bias));
+            d_acc2 = AE_SRAI32(AE_SLAI32S(d_acc2, 24), 24);
+            d_acc3 = AE_SRAI32(AE_SLAI32S(d_acc3, 24), 24);
+
+            d_acc16x4 = AE_SAT16X4(d_acc2, d_acc3);
+            WORD8 *pout_ptr1 = &out_ptr1[itr_ch];
+            AE_S8X4_I(d_acc16x4, pout_ptr1, 0);
+#endif            
+        }
+    }
+}
+#else
 static inline void conv2d_per_chan_nhwc_sym8sxasym8s_k3x3
 (pWORD8 __restrict__ p_out
  ,const WORD8 *__restrict__ p_ker
@@ -805,7 +976,7 @@ static inline void conv2d_per_chan_nhwc_sym8sxasym8s_k3x3
     bias_a = AE_LA64_PP(pt_bias);
     for(itr_ch = 0; itr_ch < out_channels; itr_ch+=4)
     {
-	ae_int32x2 out_0, out_1;
+        ae_int32x2 out_0, out_1;
         AE_LA32X2_IP(out_0, out_valign, (ae_int32x2 *)p_out_multiplier_align);
         AE_LA32X2_IP(out_1, out_valign, (ae_int32x2 *)p_out_multiplier_align);
         AE_LA32X2_IP(d_bias0, bias_a, pt_bias);
@@ -817,11 +988,7 @@ static inline void conv2d_per_chan_nhwc_sym8sxasym8s_k3x3
         temp_acc0 = temp_acc1 = AE_ZERO32();
         for(i=0; i<9; i++)
         {
-#if XCHAL_HAVE_HIFI1
-            d_ker = AE_L8X4S_I(pt_ker, 0);
-#else
             d_ker = AE_L8X4F_I(pt_ker, 0);
-#endif
             AE_MULA16X4(temp_acc0, temp_acc1, d_ker, AE_MOVDA16(input_zero_bias));
             pt_ker += out_channels;
         }
@@ -865,28 +1032,22 @@ static inline void conv2d_per_chan_nhwc_sym8sxasym8s_k3x3
 #pragma loop_count min=9
             for(itr_kw = 0; itr_kw < 9; itr_kw++)
             {
-#if XCHAL_HAVE_HIFI1
-                d_inp0 = AE_L8X4S_I(pt_inp0, 0);
-                d_inp1 = AE_L8X4S_I(pt_inp1, 0);
-                d_ker = AE_L8X4S_I(pt_ker, 0);
-#else
                 d_inp0 = AE_L8X4F_I(pt_inp0, 0);
                 d_inp1 = AE_L8X4F_I(pt_inp1, 0);
                 d_ker = AE_L8X4F_I(pt_ker, 0);
                 d_ker = AE_SRAI16(d_ker, 8);
-#endif
+
                 AE_MULA16X4(d_acc0, d_acc1, d_inp0, d_ker);
                 AE_MULA16X4(d_acc2, d_acc3, d_inp1, d_ker);
                 AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp0, out_channels);
                 AE_ADDCIRC16X4_XC((ae_int16x4 *)pt_inp1, out_channels);
                 pt_ker += out_channels;
             }
-#if !XCHAL_HAVE_HIFI1
+
             d_acc0 = AE_SRAI32(d_acc0, 8);
             d_acc1 = AE_SRAI32(d_acc1, 8);
             d_acc2 = AE_SRAI32(d_acc2, 8);
             d_acc3 = AE_SRAI32(d_acc3, 8);
-#endif
 
             d_acc0 = AE_ADD32S(d_acc0, d_bias0);
             d_acc1 = AE_ADD32S(d_acc1, d_bias1);
@@ -901,15 +1062,11 @@ static inline void conv2d_per_chan_nhwc_sym8sxasym8s_k3x3
             d_acc1 = AE_SRAI32(AE_SLAI32S(d_acc1, 24), 24);
 
             d_acc16x4 = AE_SAT16X4(d_acc0, d_acc1);
-#if XCHAL_HAVE_HIFI1
-            WORD8 *pout_ptr0 = &out_ptr0[itr_ch];
-            AE_S8X4_I(d_acc16x4, pout_ptr0, 0);
-#else
+
             out_ptr0[itr_ch+0] = (UWORD8)AE_MOVAD16_3(d_acc16x4);
             out_ptr0[itr_ch+1] = (UWORD8)AE_MOVAD16_2(d_acc16x4);
             out_ptr0[itr_ch+2] = (UWORD8)AE_MOVAD16_1(d_acc16x4);
             out_ptr0[itr_ch+3] = (UWORD8)AE_MOVAD16_0(d_acc16x4);
-#endif
 
             MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(d_acc2, d_acc2, out_0, l_shift[0], l_shift[1], r_shift[0], r_shift[1]);
             MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(d_acc3, d_acc3, out_1, l_shift[2], l_shift[3], r_shift[2], r_shift[3]);
@@ -919,18 +1076,14 @@ static inline void conv2d_per_chan_nhwc_sym8sxasym8s_k3x3
             d_acc3 = AE_SRAI32(AE_SLAI32S(d_acc3, 24), 24);
 
             d_acc16x4 = AE_SAT16X4(d_acc2, d_acc3);
-#if XCHAL_HAVE_HIFI1
-            WORD8 *pout_ptr1 = &out_ptr1[itr_ch];
-            AE_S8X4_I(d_acc16x4, pout_ptr1, 0);
-#else
             out_ptr1[itr_ch+0] = (UWORD8)AE_MOVAD16_3(d_acc16x4);
             out_ptr1[itr_ch+1] = (UWORD8)AE_MOVAD16_2(d_acc16x4);
             out_ptr1[itr_ch+2] = (UWORD8)AE_MOVAD16_1(d_acc16x4);
             out_ptr1[itr_ch+3] = (UWORD8)AE_MOVAD16_0(d_acc16x4);
-#endif
         }
     }
 }
+#endif
 #endif
 
 static void xa_nn_conv2d_depthwise_per_chan_nhwc_sym8sxasym8s

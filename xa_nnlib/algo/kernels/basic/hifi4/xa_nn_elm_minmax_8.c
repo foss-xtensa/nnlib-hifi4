@@ -453,6 +453,9 @@ WORD32 xa_nn_elm_min_4D_Bcast_8x8_8(
 #if XCHAL_HAVE_HIFI3Z
 #pragma no_unroll
 #endif
+#if XCHAL_HAVE_HIFI1
+#pragma no_simd
+#endif
                 for(dim[3]=0; dim[3]<out_extents[3]; dim[3]++){
 
                     /*
@@ -541,6 +544,9 @@ WORD32 xa_nn_elm_max_4D_Bcast_8x8_8(
                 index[3][in2] = index[2][in2];
 #if XCHAL_HAVE_HIFI3Z
 #pragma no_unroll
+#endif
+#if XCHAL_HAVE_HIFI1
+#pragma no_simd
 #endif
                 for(dim[3]=0; dim[3]<out_extents[3]; dim[3]++){
     
@@ -649,6 +655,9 @@ WORD32 xa_nn_elm_min_8D_Bcast_8x8_8(
 #if XCHAL_HAVE_HIFI3Z
 #pragma no_unroll
 #endif
+#if XCHAL_HAVE_HIFI1
+#pragma no_simd
+#endif
                                 for(dim[7]=0; dim[7]<out_extents[7]; dim[7]++){
 
                                     index[in1][7] = index[in1][6] + dim[7]*in1_strides[7];
@@ -752,6 +761,9 @@ WORD32 xa_nn_elm_max_8D_Bcast_8x8_8(
 
 #if XCHAL_HAVE_HIFI3Z
 #pragma no_unroll
+#endif
+#if XCHAL_HAVE_HIFI1
+#pragma no_simd
 #endif
                                 for(dim[7]=0; dim[7]<out_extents[7]; dim[7]++){
                                     index[in1][7] = index[in1][6] + dim[7]*in1_strides[7];

@@ -170,6 +170,7 @@
 }
 #endif
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 #ifndef AE_MULZAAAAQ16
 static inline ae_int64 AE_MULZAAAAQ16(ae_int16x4 d0,ae_int16x4  d1) 
 { 
@@ -182,6 +183,7 @@ static inline ae_int64 AE_MULZAAAAQ16(ae_int16x4 d0,ae_int16x4  d1)
   return q0; 
 }
 #endif
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 
 #ifndef AE_MOVBA
 #define AE_MOVBA(a) (xtbool)((unsigned int)a&1)
@@ -209,6 +211,7 @@ static inline ae_int64 AE_MULZAAAAQ16(ae_int16x4 d0,ae_int16x4  d1)
 }
 #endif
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 /* Implement AE_L8X4S_IP using AE_L8X4F_IP and AE_SRAI16 */
 #if !defined(AE_L8X4S_IP)
   #if defined(AE_L8X4F_IP) && defined(AE_SRAI16)
@@ -236,6 +239,7 @@ static inline ae_int16x4 AE_L8X4F_I(const WORD8 *p, int inc)
   return d;
 }
 #endif
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 
 #ifndef AE_SEL16_7531
 #define AE_SEL16_7531(d0, d1) \

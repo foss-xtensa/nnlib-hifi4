@@ -326,8 +326,8 @@ const WORD16* __restrict__ p_inp,
     XA_NNLIB_ARG_CHK_COND((out_data_format != 0) && (out_data_format != 1), -1);
 #endif
     /* Implementation dependent checks */
-    XA_NNLIB_ARG_CHK_COND((kernel_height > 256), -1);
-    XA_NNLIB_ARG_CHK_COND((kernel_width > 256), -1);
+    XA_NNLIB_ARG_CHK_COND((kernel_height > 1024), -1);
+    XA_NNLIB_ARG_CHK_COND((kernel_width > 1024), -1);
 
 #ifdef NNLIB_V2
     XA_NNLIB_ARG_CHK_COND((inp_data_format != 0) && (inp_data_format != 1), -1);

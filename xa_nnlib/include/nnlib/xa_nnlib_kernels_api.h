@@ -22,7 +22,6 @@
 #ifndef __XA_NNLIB_KERNELS_API_H__
 #define __XA_NNLIB_KERNELS_API_H__
 
-
 /**
  * @file xa_nnlib_kernels_api.h
  * @brief This file gives the API definition for the HiFi NNLIB
@@ -127,6 +126,38 @@
 	extern "C"
 {
 #endif
+
+#ifdef ENABLE_SCRATCH_SIZE_API_ONLY
+
+#if defined(hifi5)
+#define get_softmax_scratch_size                get_softmax_scratch_size_hifi5
+#define xa_nn_avgpool_getsize                   xa_nn_avgpool_getsize_hifi5
+#define xa_nn_conv2d_depthwise_getsize          xa_nn_conv2d_depthwise_getsize_hifi5
+#define xa_nn_conv2d_getsize                    xa_nn_conv2d_getsize_hifi5
+#define xa_nn_conv2d_std_getsize                xa_nn_conv2d_std_getsize_hifi5
+#define xa_nn_conv2d_std_getsize_sym4s          xa_nn_conv2d_std_getsize_sym4s_hifi5
+#define xa_nn_dilated_conv2d_depthwise_getsize  xa_nn_dilated_conv2d_depthwise_getsize_hifi5
+#define xa_nn_dilated_conv2d_std_getsize        xa_nn_dilated_conv2d_std_getsize_hifi5
+#define xa_nn_maxpool_getsize                   xa_nn_maxpool_getsize_hifi5
+#define xa_nn_reduce_getsize_nhwc               xa_nn_reduce_getsize_nhwc_hifi5
+#define xa_nn_transpose_conv_getsize            xa_nn_transpose_conv_getsize_hifi5
+
+#elif defined(hifi4)
+#define get_softmax_scratch_size                get_softmax_scratch_size_hifi4
+#define xa_nn_avgpool_getsize                   xa_nn_avgpool_getsize_hifi4
+#define xa_nn_conv2d_depthwise_getsize          xa_nn_conv2d_depthwise_getsize_hifi4
+#define xa_nn_conv2d_getsize                    xa_nn_conv2d_getsize_hifi4
+#define xa_nn_conv2d_std_getsize                xa_nn_conv2d_std_getsize_hifi4
+#define xa_nn_conv2d_std_getsize_sym4s          xa_nn_conv2d_std_getsize_sym4s_hifi4
+#define xa_nn_dilated_conv2d_depthwise_getsize  xa_nn_dilated_conv2d_depthwise_getsize_hifi4
+#define xa_nn_dilated_conv2d_std_getsize        xa_nn_dilated_conv2d_std_getsize_hifi4
+#define xa_nn_maxpool_getsize                   xa_nn_maxpool_getsize_hifi4
+#define xa_nn_reduce_getsize_nhwc               xa_nn_reduce_getsize_nhwc_hifi4
+#define xa_nn_transpose_conv_getsize            xa_nn_transpose_conv_getsize_hifi4
+
+#endif
+
+#endif /* #ifdef ENABLE_SCRATCH_SIZE_API_ONLY */
 
 	WORD32 xa_nn_matXvec_16x16_16(
 			WORD16 * __restrict__ p_out,                /*!< [out] 16b result: rows x 1 */
@@ -817,9 +848,9 @@
 			int filter_height, int filter_width,
 			int output_height, int output_width,
 			int num_elements,
-      int input_offset, int output_offset,
+			int input_offset, int output_offset,
 			int *output_shift, int *output_multiplier,
-			WORD32* scratch_buffer);
+			void* scratch_buffer);
 
 	WORD32 xa_nn_transpose_conv_sym8sxsym16s(
 			WORD16* output_data,
@@ -834,7 +865,7 @@
 			int output_height, int output_width,
 			int num_elements,
 			int *output_shift, int *output_multiplier,
-			WORD64* scratch_buffer);
+			void* scratch_buffer);
 
     WORD32 xa_nn_transpose_conv_f32(
             FLOAT32* output_data,
@@ -848,7 +879,7 @@
             int filter_height, int filter_width,
             int output_height, int output_width,
             int num_elements,
-            FLOAT32* scratch_buffer);
+            void* scratch_buffer);
 
 	WORD32 xa_nn_conv1d_std_getsize(
 			WORD32 kernel_height,
@@ -1675,6 +1706,12 @@
 			WORD32  input_beta_multiplier,
 			WORD32  vec_length,
 			pVOID   p_scratch);
+
+  WORD32 xa_nn_vec_softmax_sym16s_16( WORD16 * __restrict__ p_out,
+      const   WORD16 * __restrict__ p_vec,
+      WORD32  input_beta_left_shift,
+      WORD32  input_beta_multiplier,
+      WORD32  vec_length);
 
 	WORD32 xa_nn_vec_sigmoid_asym8u_asym8u(UWORD8 *p_out,
 			const UWORD8 *p_vec,
@@ -2571,6 +2608,14 @@
             WORD32 clip,
             WORD32 num_elms);
 
+  WORD32 xa_nn_elm_requantize_asym8u_asym8s(WORD8 * __restrict__ p_out, 
+      const UWORD8 * __restrict__ p_inp, 
+      WORD32 inp_zero_bias, 
+      WORD32 out_zero_bias, 
+      WORD32 out_shift, 
+      WORD32 out_multiplier, 
+      WORD32 num_elm);
+
 	WORD32 xa_nn_elm_requantize_asym16s_asym8s(WORD8 * __restrict__ p_out,
 			const WORD16 * __restrict__ p_inp,
 			WORD32  inp_zero_bias,
@@ -3039,6 +3084,14 @@
                     ,WORD32 num_out_dims
                     ,WORD32 num_inp_dims);
 
+  WORD32 xa_nn_transpose_16_16(WORD16 * __restrict__ p_out
+                    ,const WORD32 *const p_out_shape
+                    ,const WORD16 * __restrict__ p_inp
+                    ,const WORD32 *const p_inp_shape
+                    ,const WORD32 * __restrict__ p_permute_vec
+                    ,WORD32 num_out_dims
+                    ,WORD32 num_inp_dims);
+
   WORD32 xa_nn_batch_norm_3D_8_8(WORD8 * __restrict__ p_out
                     ,const WORD8 * __restrict__ p_inp
                     ,const WORD16 * __restrict__ p_alpha
@@ -3083,6 +3136,23 @@ WORD32 xa_nn_resize_nearest_neighbour_8_8(pWORD8 __restrict__ p_out
                     ,FLOAT32 width_offset
                     ,WORD32  align_corners);
 
+WORD32 xa_nn_concat_8_8(WORD8 * __restrict__ p_out
+        ,const WORD32 *const p_out_shape
+        ,const WORD8 **p_inps
+        ,const WORD32 *const *pp_inps_shape
+        ,WORD32 num_out_dims
+        ,WORD32 num_inp
+        ,WORD32 num_inp_dims
+        ,WORD32 axis);
+        
+WORD32 xa_nn_split_v_8_8(WORD8 ** __restrict__ pp_outs
+                        ,const WORD32 *const *pp_outs_shape
+                        ,const WORD8 *p_inp
+                        ,const WORD32 *const p_inp_shape
+                        ,WORD32 num_out
+                        ,WORD32 num_out_dims
+                        ,WORD32 num_inp_dims
+                        ,WORD32 axis);
 
 	/* Mapping the functions names from previous naming convension for backward compatibility */
 #define xa_nn_matXvec_asym8xasym8_asym8 xa_nn_matXvec_asym8uxasym8u_asym8u

@@ -23,6 +23,11 @@
 #ifndef __XA_NN_CIRC_BUF_H__
 #define __XA_NN_CIRC_BUF_H__
 
+#ifdef ENABLE_SCRATCH_SIZE_API_ONLY
+#define xa_nn_circ_buf_nchw_getsize     xa_nn_circ_buf_nchw_getsize_hifi4
+#define xa_nn_circ_buf_nhwc_getsize     xa_nn_circ_buf_nhwc_getsize_hifi4
+#endif
+
 #define OUT_HEIGHT_PER_ITER 2
 
 #define ALIGNMENT   8   /* 8 bytes alignment */

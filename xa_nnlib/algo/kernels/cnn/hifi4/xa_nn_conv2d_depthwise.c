@@ -76,7 +76,7 @@ static WORD32 xa_nn_dilated_conv2d_depthwise_nchw_getsize
     circ_buf_size = ALIGNED_SIZE(circ_buf_size, ALIGNMENT);
 
     circ_buf_width = dilated_kernel_width + ((output_width - 1) * x_stride);
-    circ_buf_width = XT_MAX(circ_buf_width, x_padding+input_width);
+    circ_buf_width = MAX(circ_buf_width, x_padding+input_width);
     circ_buf_width = ALIGNED_SIZE(circ_buf_width, 4);
 
     /* Please note for future output_width_for_x_stride_1 calculation for getting output_width_for_x_stride_1
@@ -107,6 +107,7 @@ static WORD32 xa_nn_dilated_conv2d_depthwise_nchw_getsize
     }
 }
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 static VOID xa_nn_conv2d_depthwise_nchw_init
 (pVOID p_scratch
  ,WORD32 input_width
@@ -197,6 +198,7 @@ static VOID xa_nn_dilated_conv2d_depthwise_nchw_init
     p_mem = (p_mem + circ_buf_size);
     p_state->p_scratch = (pVOID)p_mem;
 }
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 
 static WORD32 gcd(WORD32 a, WORD32 b)
 {
@@ -266,6 +268,7 @@ static WORD32 xa_nn_dilated_conv2d_depthwise_nhwc_getsize
     }
 }
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 static VOID xa_nn_conv2d_depthwise_nhwc_init
 (pVOID p_scratch
  ,WORD32 input_height
@@ -353,6 +356,7 @@ static VOID xa_nn_dilated_conv2d_depthwise_nhwc_init
     p_mem = (p_mem + circ_buf_size);
     p_state->p_scratch = (pVOID)p_mem;
 }
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 
 static WORD32 xa_nn_dilated_conv2d_depthwise_getsize_generic
 (WORD32 input_height
@@ -492,6 +496,8 @@ WORD32 xa_nn_conv2d_depthwise_getsize
 
   return total_size;
 }
+
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 VOID xa_nn_conv2d_depthwise_init
 (pVOID p_scratch
  ,WORD32 input_height
@@ -632,6 +638,7 @@ VOID xa_nn_dilated_conv2d_depthwise_init
                 ,p_pad_val);
     }
 }
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 
 WORD32 xa_nn_dilated_conv2d_depthwise_getsize
 (WORD32 input_height

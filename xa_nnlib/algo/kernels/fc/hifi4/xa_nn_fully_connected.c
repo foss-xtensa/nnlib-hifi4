@@ -415,7 +415,7 @@ WORD32 xa_nn_fully_connected_sym8sxsym16s_sym16s
   XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD64), -1);
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((out_depth <= 0), -1);
-  XA_NNLIB_ARG_CHK_COND((out_shift < -31 || out_shift > 31), -1);
+  XA_NNLIB_ARG_CHK_COND((out_shift < -31 || out_shift > 15), -1);
 
   WORD32 ret = 0;
   ret = xa_nn_matXvec_sym8sxsym16s_sym16s

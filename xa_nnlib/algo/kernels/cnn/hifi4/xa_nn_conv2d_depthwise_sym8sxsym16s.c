@@ -28,6 +28,17 @@
 
 #include "xa_nnlib_common.h"
 
+#if XCHAL_HAVE_HIFI1S
+static inline ae_int32x2 MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
+                                             int32_t quantized_multiplier,
+                                             int shift){
+  ae_int32x2 d_q_mul = AE_MOVDA32(quantized_multiplier);
+  ae_int16x4 d_red_mul16 = AE_ROUND16X4F32SASYM(d_q_mul, d_q_mul);
+  ae_int64 q = AE_MUL48X16_0(d_x, d_red_mul16);
+  ae_int32x2 result = AE_ROUNDAV32X2F64SASYM (q, q, 15 - shift);   // only lower 32 is valid result
+  return result;
+}
+#else
 static inline ae_int32x2 MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
                                              int32_t quantized_multiplier,
                                              int shift){
@@ -41,6 +52,7 @@ static inline ae_int32x2 MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
   ae_int32x2 result = AE_ROUND32F64SASYM(q);
   return result;
 }
+#endif
 
 #if 0
 static inline ae_int32x2 MultiplyByQuantizedMultiplier_x2_opt(ae_int64 d_x1, ae_int64 d_x2,
@@ -217,7 +229,11 @@ static inline void conv2d_nchw_sym8sxsym16s_hf4_convmul
             accu_int64_0 = AE_ADD64S(accu_int64_0, _ae_int64_sat_bias);
             ae_int32x2 outval32 = MultiplyByQuantizedMultiplier_ref(accu_int64_0, out_multiplier, out_shift);
             ae_int16x4 outval16 = AE_SAT16X4(outval32, outval32);
+#if XCHAL_HAVE_HIFI1S
+            out_ptr[(j * out_stride)] = AE_MOVAD16_0(outval16);
+#else
             out_ptr[(j * out_stride)] = AE_MOVAD16_3(outval16);
+#endif
         }
     }
 }
@@ -424,7 +440,7 @@ static inline void conv2d_per_chan_nhwc_sym8sxsym16s
  )
 {
     WORD32 out_channels_pad;
-    WORD32 i, itr_oh, itr_ch, itr_kw;
+    WORD32 itr_oh, itr_ch, itr_kw;
     ae_int16x4 * pt_inp0, *pt_inp1;
     const WORD8 *pt_ker;
     WORD8 *p_ker_scr;
@@ -533,11 +549,19 @@ static inline void conv2d_per_chan_nhwc_sym8sxsym16s
 
             d_acc16x4 = AE_SAT16X4(d32_acc0, d32_acc1);
 
+#if XCHAL_HAVE_HIFI1S
+            ae_valign align_out = AE_ZALIGN64();
+            ae_int16x4 * st_ptr = (ae_int16x4 *)&out_ptr0[itr_ch];
+            AE_SAV16X4_XP(d_acc16x4, align_out, st_ptr, (XT_MIN(out_channels-itr_ch, 4))<<1);
+            AE_SA64POS_FP(align_out, st_ptr);
+#else
+            WORD32 i;
             for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
             {
                 out_ptr0[itr_ch+i] =(WORD16)(AE_MOVAD16_3(d_acc16x4));
                 d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
             }
+#endif
 
             if(out_height - itr_oh >= 2)
             {
@@ -549,11 +573,18 @@ static inline void conv2d_per_chan_nhwc_sym8sxsym16s
               ae_int32x2 d32_acc3 = AE_SEL32_LL(tmp32_2, tmp32_3);
                 
               d_acc16x4 = AE_SAT16X4(d32_acc2, d32_acc3);
+#if XCHAL_HAVE_HIFI1S
+              ae_valign align_out1 = AE_ZALIGN64();
+              ae_int16x4 * st_ptr1 = (ae_int16x4 *)&out_ptr1[itr_ch];
+              AE_SAV16X4_XP(d_acc16x4, align_out1, st_ptr1, (XT_MIN(out_channels-itr_ch, 4))<<1);
+              AE_SA64POS_FP(align_out1, st_ptr1);
+#else
               for(i = 0; i < XT_MIN(out_channels-itr_ch, 4); i++)
               {
                 out_ptr1[itr_ch+i] = (WORD16)(AE_MOVAD16_3(d_acc16x4));
                 d_acc16x4 = AE_SEL16_6543(d_acc16x4, d_acc16x4);
               }
+#endif
             }
         }
     }
@@ -724,7 +755,7 @@ WORD32 xa_nn_conv2d_depthwise_per_chan_sym8sxsym16s
     XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
     XA_NNLIB_ARG_CHK_COND(input_zero_bias != 0, -1);
     for(i = 0; i < input_channels*channels_multiplier; i++)
-      XA_NNLIB_ARG_CHK_COND((p_out_shift[i] < -31 || p_out_shift[i] > 31), -1);
+      XA_NNLIB_ARG_CHK_COND((p_out_shift[i] < -31 || p_out_shift[i] > 15), -1);
     XA_NNLIB_ARG_CHK_COND((out_zero_bias != 0 ), -1);
     XA_NNLIB_ARG_CHK_COND((inp_data_format != 0 && inp_data_format != 1), -1);
     XA_NNLIB_ARG_CHK_COND((out_data_format != 0), -1);

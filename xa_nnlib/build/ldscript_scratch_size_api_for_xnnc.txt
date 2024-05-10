@@ -1,7 +1,0 @@
-EXTERN(xa_nn_avgpool_getsize)
-EXTERN(xa_nn_conv2d_std_getsize)
-EXTERN(xa_nn_conv2d_std_getsize_sym4s)
-EXTERN(xa_nn_dilated_conv2d_std_getsize)
-EXTERN(xa_nn_conv2d_depthwise_getsize)
-EXTERN(get_softmax_scratch_size)
-

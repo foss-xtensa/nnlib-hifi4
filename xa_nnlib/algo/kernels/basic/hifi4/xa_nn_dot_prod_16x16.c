@@ -72,6 +72,10 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
 
 #if TFLITE_SINGLE_ROUNDING
     left_shift = out_shift;
+#if XCHAL_HAVE_HIFI1S
+    left_shift = 31 - left_shift ;
+    left_shift = left_shift << 16 | left_shift;
+#endif    
     /* Single rounding requires only original shift value */
     (void)right_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
@@ -103,6 +107,11 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
 
     align_inp1 = AE_LA64_PP(pt_inp1);
     align_inp2 = AE_LA64_PP(pt_inp2);
+
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    ae_valign align_store = AE_ZALIGN64();
+#endif
+
     /* TBD: multiple vec_count processing in a single loop can be done */
     for(loopcnt = 0; loopcnt < vec_count; loopcnt++)
     {
@@ -116,14 +125,26 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       AE_LA16X4_IP(d_inp2_0, align_inp2, pt_inp2);
       AE_MULAAAAQ16(d_out64_0, d_inp1_0, d_inp2_0);
 
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+      d_out32 = AE_TRUNCA32X2F64S(d_out64_0, d_out64_0, 32);
+      d_out32 = AE_ADD32S(d_out32, d_bias);
+      ae_int64 out64_tmp = AE_MUL32_LL(d_out32, AE_MOVDA32(out_multiplier));
+      d_out32 = AE_ROUNDAV32X2F64SASYM(out64_tmp, out64_tmp, left_shift);    
+      d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
+      ae_int8x8 d_out_8b = AE_SAT8X4X32_H(d_out32,d_out32);
+      AE_SAV8X8_XP(d_out_8b, align_store, (ae_int8x8 *)p_out, 1);
+#else
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
-
       MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
+#endif      
     }
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    AE_SA64POS_FP(align_store, p_out);	
+#endif    
   }
   else if(vec_length == 32)
   {
@@ -136,27 +157,46 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
 
     align_inp1 = AE_LA64_PP(pt_inp1);
     align_inp2 = AE_LA64_PP(pt_inp2);
+
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    ae_valign align_store = AE_ZALIGN64();
+#endif
     /* TBD: multiple vec_count processing in a single loop can be done */
     for(loopcnt = 0; loopcnt < vec_count; loopcnt++)
     {
       AE_L32_XP(d_bias, (ae_int32 *)p_bias_load, bias_address_increment);
 
       d_out64_0 = ZERO64;
+#if !(XCHAL_HAVE_HIFI1S)
 #pragma loop_count min=3
+#endif
       for(i = 0; i < (vec_length >> 2); i++)
       {
         AE_LA16X4_IP(d_inp1_0, align_inp1, pt_inp1);
         AE_LA16X4_IP(d_inp2_0, align_inp2, pt_inp2);
         AE_MULAAAAQ16(d_out64_0, d_inp1_0, d_inp2_0);
       }
-      AE_SAT32X2_HIFI4(d_out32, d_out64_0);
-      d_out32 = AE_ADD32S(d_out32, d_bias);
-
-      MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
-      d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
-      AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
-      *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    d_out32 = AE_TRUNCA32X2F64S(d_out64_0, d_out64_0, 32);
+    d_out32 = AE_ADD32S(d_out32, d_bias);
+    ae_int64 out64_tmp = AE_MUL32_LL(d_out32, AE_MOVDA32(out_multiplier));
+    d_out32 = AE_ROUNDAV32X2F64SASYM(out64_tmp, out64_tmp, left_shift);   
+    d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
+    ae_int8x8 d_out_8b = AE_SAT8X4X32_H(d_out32,d_out32);
+    AE_SAV8X8_XP(d_out_8b, align_store, (ae_int8x8 *)p_out, 1);
+#else
+    AE_SAT32X2_HIFI4(d_out32, d_out64_0);
+    d_out32 = AE_ADD32S(d_out32, d_bias);
+    MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)    
+    d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
+    AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
+    *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
+#endif
     }
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+  AE_SA64POS_FP(align_store, p_out);
+#endif  
+
   }
   /* inp1 and inp2 8-byte aligned case */
   else if(((vec_length & 3) == 0) && (((int)p_inp1_start & 7) == 0) && (((int)p_inp2_start & 7) == 0))
@@ -183,8 +223,11 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       }
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
-
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(d_out32, d_out32, out_multiplier, left_shift, right_shift)
+#else
       MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
+#endif      
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
@@ -216,8 +259,11 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       }
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
-
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(d_out32, d_out32, out_multiplier, left_shift, right_shift)
+#else
       MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
+#endif      
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
@@ -250,8 +296,11 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
       }
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
-
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(d_out32, d_out32, out_multiplier, left_shift, right_shift)
+#else
       MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
+#endif
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);
@@ -292,8 +341,11 @@ WORD32 xa_nn_dot_prod_16x16_asym8s(
 #endif
       AE_SAT32X2_HIFI4(d_out32, d_out64_0);
       d_out32 = AE_ADD32S(d_out32, d_bias);
-
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(d_out32, d_out32, out_multiplier, left_shift, right_shift)
+#else
       MPY_BY_QUANT_MULT_X2_OUT32(d_out32, d_out32, out_multiplier, left_shift, right_shift)
+#endif
       d_out32 = AE_ADD32S(d_out32 ,out_zero_bias);
       AE_MINMAX32_HIFI4(d_out32, min_int8, max_int8);
       *p_out++ = (WORD8)AE_MOVAD32_L(d_out32);

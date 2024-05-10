@@ -110,10 +110,8 @@ const WORD8 *__restrict__ p_inp,
 #pragma no_unroll
             for(i = 0; i < pre_loop_count; i++)
             {
-                ae_int16x4 i1, shift = AE_MOVDA16(1<<8);
-                ae_int32x2 wi1, wi2;
-                i1 = AE_MOVDA16(*p_src1_temp++);
-                AE_MUL16X4(wi1, wi2, i1, shift);
+                ae_int32x2 wi1;
+                wi1 = AE_MOVDA32(*p_src1_temp++);
                 *p_dst_temp32++ = wi1;
             }
 
@@ -124,6 +122,7 @@ const WORD8 *__restrict__ p_inp,
                 ae_int16x4 i1;
                 ae_int32x2 wi1, wi2;
                 AE_L8X4F_IP(i1, p_src1_temp, 4);
+                i1 = AE_SRAI16(i1, 8);
                 wi1 = AE_SEXT32X2D16_32(i1);
                 wi2 = AE_SEXT32X2D16_10(i1);
                 AE_SA32X2_IP(wi1, align_dst, p_dst_temp);
@@ -135,10 +134,8 @@ const WORD8 *__restrict__ p_inp,
 #pragma no_unroll
             for(i = 0; i < post_loop_count; i++)
             {
-                ae_int16x4 i1, shift = AE_MOVDA16(1<<8);
-                ae_int32x2 wi1, wi2;
-                i1 = AE_MOVDA16(p_src1_temp[i]);
-                AE_MUL16X4(wi1, wi2, i1, shift);
+                ae_int32x2 wi1;
+                wi1 = AE_MOVDA32(p_src1_temp[i]);
                 ((ae_int32 *)p_dst_temp)[i] = wi1;
             }
 
@@ -161,12 +158,10 @@ const WORD8 *__restrict__ p_inp,
 #pragma no_unroll
                 for(i = 0; i < pre_loop_count; i++)
                 {
-                    ae_int16x4 i1, shift = AE_MOVDA16(1<<8);
-                    ae_int32x2 wi1, wi2=0;
+                    ae_int32x2 wi1;
 
                     wi1 = *p_wsrc1_temp32++;
-                    i1 = AE_MOVDA16(*p_src2_temp++);
-                    AE_MULA16X4(wi1, wi2, i1, shift);
+                    wi1 = AE_ADD32S(wi1, AE_MOVDA32(*p_src2_temp++));
                     *p_dst_temp32++ = wi1;
                 }
 
@@ -183,6 +178,7 @@ const WORD8 *__restrict__ p_inp,
                     AE_LA32X2_IP(wi1, align_wsrc1, p_wsrc1_temp);
                     AE_LA32X2_IP(wi2, align_wsrc1, p_wsrc1_temp);
                     AE_L8X4F_IP(i1, p_src2_temp, 4);
+                    i1 = AE_SRAI16(i1, 8);
                     AE_MULA16X4(wi1, wi2, i1, one);
                     AE_SA32X2_IP(wi1, align_dst, p_dst_temp);
                     AE_SA32X2_IP(wi2, align_dst, p_dst_temp);
@@ -193,12 +189,10 @@ const WORD8 *__restrict__ p_inp,
 #pragma no_unroll
                 for(i = 0; i < post_loop_count; i++)
                 {
-                    ae_int16x4 i1, shift = AE_MOVDA16(1<<8);
-                    ae_int32x2 wi1, wi2=0;
+                    ae_int32x2 wi1;
 
                     wi1 = ((ae_int32 *)p_wsrc1_temp)[i];
-                    i1 = AE_MOVDA16(p_src2_temp[i]);
-                    AE_MULA16X4(wi1, wi2, i1, shift);
+                    wi1 = AE_ADD32S(wi1, AE_MOVDA32(p_src2_temp[i]));
                     ((ae_int32 *)p_dst_temp)[i] = wi1;
                 }
                 pool_height--;
@@ -292,8 +286,6 @@ const WORD8 *__restrict__ p_inp,
                 den_hw = inv_256_tbl[p_den_height[itr_oh] * p_den_width[itr_ow]];
                 d_out1 = *(ae_int32 *)(&ptr_out1[itr_ow*x_stride]);
                 d_tmp32 = AE_MOVDA32(den_hw);
-                /* Remove left shift of 8 introduced by L8X4F loads */
-                d_out1 = AE_SRAI32(d_out1, 8);
 #if XCHAL_HAVE_HIFI1
                 d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
 #if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
@@ -320,8 +312,6 @@ const WORD8 *__restrict__ p_inp,
                 den_w = AE_MOVDA32(inv_256_tbl[p_den_width[itr_ow]]);
                 d_out1 = *(ae_int32 *)(&ptr_out1[itr_ow*x_stride]);
                 d_tmp = AE_MUL32U_LL(den_h, den_w);
-                /* Remove left shift of 8 introduced by L8X4F loads */
-                d_out1 = AE_SRAI32(d_out1, 8);
                 /* Max value of den_h or den_w is 0x80000000
                 so 1 left shift is possible without overflow */
                 d_tmp32 = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);

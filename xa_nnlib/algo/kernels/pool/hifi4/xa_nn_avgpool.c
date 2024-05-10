@@ -24,8 +24,9 @@
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_avgpool_state.h"
 #include "xa_nnlib_err_chk.h"
+#include "xa_nnlib_common_macros.h"
 
-WORD32 xa_nn_avgpool_getsize_nchw(
+static WORD32 xa_nn_avgpool_getsize_nchw(
     WORD32 inp_precision,
     WORD32 input_width,
     WORD32 kernel_height,
@@ -40,9 +41,9 @@ WORD32 xa_nn_avgpool_getsize_nchw(
     XA_NNLIB_CHK_COND((kernel_height <= 0), -1);
     XA_NNLIB_CHK_COND((kernel_width <= 0), -1);
     XA_NNLIB_CHK_COND((kernel_width > input_width), -1);
-    /* For 8 and 16 bit variants kernel_height and kernel_width should be less than or equal to 256 */
-    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_height > 256), -1);
-    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_width > 256), -1);
+    /* For 8 and 16 bit variants kernel_height and kernel_width should be less than or equal to 1024 */
+    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_height > 1024), -1);
+    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_width > 1024), -1);
     XA_NNLIB_CHK_COND((x_stride <= 0), -1);
     XA_NNLIB_CHK_COND((y_stride <= 0), -1);
     XA_NNLIB_CHK_COND((x_padding < 0), -1);
@@ -86,7 +87,7 @@ WORD32 xa_nn_avgpool_getsize_nchw(
         den_array_size = 0;
     /* Output scratch buffer size */
     full_buf_width = kernel_width + (out_width - 1)*x_stride;
-    full_buf_width = XT_MAX(full_buf_width, ALIGNED_SIZE(x_padding, 2)+input_width);
+    full_buf_width = MAX(full_buf_width, ALIGNED_SIZE(x_padding, 2)+input_width);
     full_buf_width = ALIGNED_SIZE(full_buf_width, ALIGNMENT/2);
     /* Need 2 rows of padded input width as acratch for temp output */
     full_out_width = ALIGNED_SIZE(full_buf_width + kernel_width, 4);
@@ -97,7 +98,7 @@ WORD32 xa_nn_avgpool_getsize_nchw(
     return total_size;
 }
 
-WORD32 xa_nn_avgpool_getsize_nhwc(
+static WORD32 xa_nn_avgpool_getsize_nhwc(
     WORD32 inp_precision,
     WORD32 input_channels,
     WORD32 input_width,
@@ -110,9 +111,9 @@ WORD32 xa_nn_avgpool_getsize_nhwc(
     WORD32 out_width)
 {
     //XA_NNLIB_CHK_COND((kernel_width > input_width), -1);
-    /* For 8 and 16 bit variants kernel_height and kernel_width should be less than or equal to 256 */
-    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_height > 256), -1);
-    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_width > 256), -1);
+    /* For 8 and 16 bit variants kernel_height and kernel_width should be less than or equal to 1024 */
+    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_height > 1024), -1);
+    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_width > 1024), -1);
 
     int total_size;
     int den_array_size;     /* Array to store 1/den for out_height and out_width */
@@ -150,7 +151,7 @@ WORD32 xa_nn_avgpool_getsize_nhwc(
 
         if(kernel_height <= (int)MAX_HEIGHT_16_BIT_ACC) // Accumulation in 16 bit container
         {
-            zero_mem_bytes = XT_MAX(sizeof(UWORD8)*cw_plane_size, sizeof(WORD16)*input_channels);
+            zero_mem_bytes = MAX((int)(sizeof(UWORD8)*cw_plane_size), (int)(sizeof(WORD16)*input_channels));
 
             total_size = ALIGNED_SIZE(sizeof(WORD32)* out_height, ALIGNMENT) +
                          ALIGNED_SIZE(sizeof(WORD32)* out_width, ALIGNMENT) +
@@ -162,7 +163,7 @@ WORD32 xa_nn_avgpool_getsize_nhwc(
         }
         else  // Accumulation in 32 bit container
         {
-            zero_mem_bytes = XT_MAX(sizeof(UWORD8)*cw_plane_size, sizeof(WORD32)*input_channels);
+            zero_mem_bytes = MAX((int)(sizeof(UWORD8)*cw_plane_size), (int)(sizeof(WORD32)*input_channels));
 
             total_size = ALIGNED_SIZE(sizeof(WORD32)*out_height, ALIGNMENT) +
                          ALIGNED_SIZE(sizeof(WORD32)*out_width, ALIGNMENT) +
@@ -179,7 +180,7 @@ WORD32 xa_nn_avgpool_getsize_nhwc(
         int zero_mem_bytes;
 
         cw_plane_size = input_width*input_channels;
-        zero_mem_bytes = XT_MAX(sizeof(WORD16)*cw_plane_size, sizeof(WORD32)*input_channels);
+        zero_mem_bytes = MAX((int)(sizeof(WORD16)*cw_plane_size), (int)(sizeof(WORD32)*input_channels));
 
         total_size = ALIGNED_SIZE(sizeof(WORD32)*out_height, ALIGNMENT) +
             ALIGNED_SIZE(sizeof(WORD32)*out_width, ALIGNMENT) +
@@ -213,9 +214,9 @@ WORD32 xa_nn_avgpool_getsize(
     XA_NNLIB_CHK_COND((kernel_height <= 0), -1);
     XA_NNLIB_CHK_COND((kernel_width <= 0), -1);
     XA_NNLIB_CHK_COND((kernel_width > input_width), -1);
-    /* For 8 and 16 bit variants kernel_height and kernel_width should be less than or equal to 256 */
-    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_height > 256), -1);
-    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_width > 256), -1);
+    /* For 8 and 16 bit variants kernel_height and kernel_width should be less than or equal to 1024 */
+    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_height > 1024), -1);
+    XA_NNLIB_CHK_COND((inp_precision != -1 && kernel_width > 1024), -1);
     XA_NNLIB_CHK_COND((x_stride <= 0), -1);
     XA_NNLIB_CHK_COND((y_stride <= 0), -1);
     XA_NNLIB_CHK_COND((x_padding < 0), -1);
@@ -259,7 +260,7 @@ WORD32 xa_nn_avgpool_getsize(
         den_array_size = 0;
     /* Output scratch buffer size */
     full_buf_width = kernel_width + (out_width - 1)*x_stride;
-    full_buf_width = XT_MAX(full_buf_width, ALIGNED_SIZE(x_padding, 2)+input_width);
+    full_buf_width = MAX(full_buf_width, ALIGNED_SIZE(x_padding, 2)+input_width);
     full_buf_width = ALIGNED_SIZE(full_buf_width, ALIGNMENT/2);
     /* Need 2 rows of padded input width as acratch for temp output */
     full_out_width = ALIGNED_SIZE(full_buf_width + kernel_width, 4);

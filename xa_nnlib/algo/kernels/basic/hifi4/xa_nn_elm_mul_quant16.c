@@ -43,6 +43,10 @@ static void internal_elm_mul_broadcast_2D_sym16sxsym16s_sym16s(WORD16 * __restri
 #if TFLITE_SINGLE_ROUNDING
   int l_shift = out_shift;
   int r_shift = out_shift;
+#if XCHAL_HAVE_HIFI1S
+  l_shift = 31 - l_shift;
+  l_shift = l_shift << 16 | l_shift;
+#endif  
   /* Single rounding doesn't need two shifts */
   (void)r_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
@@ -93,10 +97,17 @@ static void internal_elm_mul_broadcast_2D_sym16sxsym16s_sym16s(WORD16 * __restri
      AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
      AE_MUL16X4(raw_mul4_5, raw_mul6_7, a4_7, b4_7);
 
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+     MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+     MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+     MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+     MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else
      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#endif
 
      CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
      CLAMP_VAL(out_mul2_3, out_mul2_3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
@@ -135,12 +146,18 @@ static void internal_elm_mul_broadcast_2D_sym16sxsym16s_sym16s(WORD16 * __restri
           
           AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
           AE_MUL16X4(raw_mul4_5, raw_mul6_7, a4_7, b4_7);
-          
+
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+          MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+          MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+          MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+          MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else
           MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
           MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
           MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
           MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
-          
+#endif          
           CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
           CLAMP_VAL(out_mul2_3, out_mul2_3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
           CLAMP_VAL(out_mul4_5, out_mul4_5, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
@@ -159,12 +176,19 @@ static void internal_elm_mul_broadcast_2D_sym16sxsym16s_sym16s(WORD16 * __restri
           
           AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
           AE_MUL16X4(raw_mul4_5, raw_mul6_7, a4_7, b4_7);
-          
+
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+          MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+          MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+          MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+          MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else          
           MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
           MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
           MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
           MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
-          
+#endif
+
           CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
           CLAMP_VAL(out_mul2_3, out_mul2_3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
           CLAMP_VAL(out_mul4_5, out_mul4_5, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
@@ -191,7 +215,11 @@ static void internal_elm_mul_broadcast_2D_sym16sxsym16s_sym16s(WORD16 * __restri
         b0_3 = AE_MOVDA16(p_b[j]);
         a0_3 = AE_MOVDA16(p_a[j]);
         AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else         
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#endif        
         CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
         *(WORD16 *)p_c = (WORD16)AE_MOVAD32_H(out_mul0_1);
         p_c++;
@@ -214,6 +242,10 @@ static void internal_elm_mul_broadcast_sym16sxsym16s_sym16s(WORD16 * __restrict_
 #if TFLITE_SINGLE_ROUNDING
   int l_shift = out_shift;
   int r_shift = out_shift;
+#if XCHAL_HAVE_HIFI1S
+  l_shift = 31 - l_shift;
+  l_shift = l_shift << 16 | l_shift;
+#endif
   /* Single rounding doesn't need two shifts */
   (void)r_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
@@ -247,8 +279,13 @@ static void internal_elm_mul_broadcast_sym16sxsym16s_sym16s(WORD16 * __restrict_
 
     // LSH (and promote to 32-bit)
     AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0);
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else
     MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
     MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#endif    
     CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
     CLAMP_VAL(out_mul2_3, out_mul2_3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
     ae_int16x4 outval = AE_SEL16_6420(AE_MOVINT16X4_FROMINT32X2(out_mul0_1), AE_MOVINT16X4_FROMINT32X2(out_mul2_3));
@@ -260,7 +297,11 @@ static void internal_elm_mul_broadcast_sym16sxsym16s_sym16s(WORD16 * __restrict_
   {
     a0_3 = AE_MOVDA16(p_a[i]);
     AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0);
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else    
     MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#endif    
     CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
     *p_c = (WORD16)AE_MOVAD32_L(out_mul0_1);
     p_c++;
@@ -518,6 +559,10 @@ WORD32 xa_nn_elm_mul_sym16sxsym16s_asym8s(WORD8 * __restrict__ p_out,
 #if TFLITE_SINGLE_ROUNDING
   int l_shift = out_shift;
   int r_shift = out_shift;
+#if XCHAL_HAVE_HIFI1S
+  l_shift = 31 - l_shift;
+  l_shift = l_shift << 16 | l_shift;
+#endif  
   /* Single rounding doesn't need two shifts */
   (void)r_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
@@ -553,9 +598,13 @@ WORD32 xa_nn_elm_mul_sym16sxsym16s_asym8s(WORD8 * __restrict__ p_out,
     AE_LA16X4_IP(b0_3, va_b, p_b);
 
     AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
-
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out0, raw_mul0_1, out_multiplier, l_shift, r_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out1, raw_mul2_3, out_multiplier, l_shift, r_shift);  
+#else
     MPY_BY_QUANT_MULT_SLS_X2_OUT32(out0, raw_mul0_1, out_multiplier, l_shift, r_shift);
-    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out1, raw_mul2_3, out_multiplier, l_shift, r_shift);     
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out1, raw_mul2_3, out_multiplier, l_shift, r_shift);  
+#endif       
     out0 = AE_ADD32S(AE_MOVDA32(out_zero_bias), out0);
     out1 = AE_ADD32S(AE_MOVDA32(out_zero_bias), out1);  
     CLAMP_VAL(out0, out0, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
@@ -568,7 +617,11 @@ WORD32 xa_nn_elm_mul_sym16sxsym16s_asym8s(WORD8 * __restrict__ p_out,
     AE_L16_IP(a0_3, (ae_int16 *)p_a, sizeof(WORD16));
     AE_L16_IP(b0_3, (ae_int16 *)p_b, sizeof(WORD16));
     AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out0, raw_mul0_1, out_multiplier, l_shift, r_shift);
+#else    
     MPY_BY_QUANT_MULT_SLS_X2_OUT32(out0, raw_mul0_1, out_multiplier, l_shift, r_shift);
+#endif
     out0 = AE_ADD32S(AE_MOVDA32(out_zero_bias), out0);
     CLAMP_VAL(out0, out0, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
     *p_c++ = (WORD8)AE_MOVAD32_H(out0);

@@ -62,16 +62,26 @@ static WORD32 conv_x_left_pad(
         left_shift  = p_out_shift[k] < 0 ? 0 : p_out_shift[k];
         right_shift = p_out_shift[k] > 0 ? 0 : -p_out_shift[k];
 #endif /* #if TFLITE_SINGLE_ROUNDING */          
+        ae_int32x2 acc;
 #if XCHAL_HAVE_HIFI1
-        ae_int32x2 acc = AE_L32_I((ae_int32*)&p_bias[k], 0);
+        if(p_bias != NULL){
+          acc = AE_L32_I((ae_int32*)&p_bias[k], 0);
+        }
+        else{
+          acc = AE_MOVDA32(0);
+        }
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
         acc = AE_MAX32(acc, min_int8);
         acc = AE_MIN32(acc, max_int8);
         AE_S8_0_X_HIFI1( AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i * out_height_offset + j * out_width_offset + k * out_channels_offset));
 #else
-
-        ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
+        if(p_bias != NULL){
+          acc = AE_MOVDA32(p_bias[k]);
+        }
+        else{
+          acc = AE_MOVDA32(0);
+        }
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
 #if 0
@@ -127,15 +137,26 @@ static WORD32 conv_x_right_pad(
         left_shift  = p_out_shift[k] < 0 ? 0 : p_out_shift[k];
         right_shift = p_out_shift[k] > 0 ? 0 : -p_out_shift[k];
 #endif /* #if TFLITE_SINGLE_ROUNDING */          
+        ae_int32x2 acc;
 #if XCHAL_HAVE_HIFI1
-        ae_int32x2 acc = AE_L32_I((ae_int32*)&p_bias[k], 0);
+        if(p_bias != NULL){
+           acc = AE_L32_I((ae_int32*)&p_bias[k], 0);
+        }
+        else{
+          acc = AE_MOVDA32(0);
+        }
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
         acc = AE_MAX32(acc, min_int8);
         acc = AE_MIN32(acc, max_int8);
         AE_S8_0_X_HIFI1( AE_MOVINT16X4_FROMINT32X2(acc), (WORD8 *)p_out, (i * out_height_offset + j * out_width_offset + k * out_channels_offset));
 #else
-        ae_int32x2 acc = AE_MOVDA32(p_bias[k]);
+        if(p_bias != NULL){
+          acc = AE_MOVDA32(p_bias[k]);
+        }
+        else{
+          acc = AE_MOVDA32(0);
+        }
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(acc, acc, p_out_multiplier[k], left_shift, right_shift);
         acc = AE_ADD32S(acc, AE_MOVDA32(out_zero_bias));
 #if 0
@@ -620,7 +641,6 @@ WORD32 xa_nn_conv2d_per_chan_sym8sxasym8s(
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_kernel, -1);
   XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
-  XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
   /* Pointer alignment checks */
   //XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(UWORD8), -1);
@@ -692,7 +712,7 @@ WORD32 xa_nn_conv2d_per_chan_sym8sxasym8s(
     out_w = out_width;
   }
 
-if((groups==input_channels) && (out_channels>=input_channels) && (out_data_format==0))
+if((groups==input_channels) && (out_channels>=input_channels) && (out_data_format==0) && (p_bias != NULL))
 {
     WORD32 channel_multiplier=out_channels/input_channels;
     pWORD8 p_kernel_nhwc;
@@ -822,11 +842,15 @@ if((groups==input_channels) && (out_channels>=input_channels) && (out_data_forma
       idx_beg_inp_width_pad += x_str;
 
       // Convolution using matXvec with matrix as circular buffer
+      const WORD32 *p_bias_grp = NULL;
+      if(p_bias != NULL){
+        p_bias_grp = p_bias+grp_i*kernels_per_group;
+      }
       xa_nn_matXvec_sym8sxasym8s_asym8s_circ
         (tmp_out /* output */
         ,p_state->cir_buf.p_curr/* matrix: rows x cols */
         ,(p_state->p_kernel_padded+grp_i*kernels_per_group*kernel_channels_pad*ker_w*ker_h) /* vec: cols */
-        ,(p_bias+grp_i*kernels_per_group) /* bias */
+        ,p_bias_grp /* bias */
         ,out_h /* rows */
         ,kernel_channels_pad * ker_w * ker_h /* cols */
         ,kernel_channels_pad * ker_w * y_str/* row_offset */

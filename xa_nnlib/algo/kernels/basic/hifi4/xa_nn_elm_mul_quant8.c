@@ -414,19 +414,19 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
 
     /* c = ( a + za ) * ( b + zb ) */
     ae_int16x4 a0_3, a4_7, b0_3, b4_7;
-
     ae_int32x2 res0_1, res2_3, res4_5, res6_7;
-    
-    ae_int16x4 temp1, temp2;                        //intermediate results
 
-    ae_int16x4 za = AE_MOVDA16(inp1_zero_bias);     // replicate 16LSBs of input into 16x4 output
-    ae_int16x4 zb = AE_MOVDA16(inp2_zero_bias);     // zero_bias is already signed, no need for ZE
     ae_int32x2 zc = AE_MOVDA32( out_zero_bias);
 
 
 #if TFLITE_SINGLE_ROUNDING
     int l_shift = out_shift;
     int r_shift = out_shift;
+
+#if XCHAL_HAVE_HIFI1S
+    l_shift = 31 - l_shift;
+    l_shift = l_shift << 16 | l_shift;
+#endif    
     /* Single rounding doesn't need two shifts */
     (void)r_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
@@ -434,8 +434,6 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
     int r_shift = out_shift <  0 ?  -out_shift : 0;
 #endif /* #if TFLITE_SINGLE_ROUNDING */
 
-    ae_int32x2 activation_max = AE_MOVDA32(out_activation_max);
-    ae_int32x2 activation_min = AE_MOVDA32(out_activation_min);
 
     WORD8 *in1 = (WORD8 *)p_inp1;
     WORD8 *in2 = (WORD8 *)p_inp2;
@@ -448,6 +446,96 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
     va_in2 = AE_LA64_PP(in2);
     va_out = AE_ZALIGN64();
     
+#if XCHAL_HAVE_HIFI1S
+    ae_int8x8 za8 = AE_MOVDA8(-inp1_zero_bias);
+    ae_int8x8 zb8 = AE_MOVDA8(-inp2_zero_bias);
+    ae_int8x8 amin8 = AE_MOVDA8(out_activation_min);
+    ae_int8x8 amax8 = AE_MOVDA8(out_activation_max);
+
+    for(i=0; i<num_simd8_ops; i++)
+    {
+        ae_int8x8 a0_7, b0_7;
+
+        AE_LA8X8_IP(a0_7, va_in1, (ae_int8x8 *)in1);
+        AE_LA8X8_IP(b0_7, va_in2, (ae_int8x8 *)in2);
+
+        AE_SUBW8(a0_3, a4_7, a0_7, za8);
+        AE_SUBW8(b0_3, b4_7, b0_7, zb8);
+
+        AE_MUL16X4(res0_1, res2_3, a0_3, b0_3);                     // a & b are 9-bit vals in 16-bit containers.
+        AE_MUL16X4(res4_5, res6_7, a4_7, b4_7);                     // res, therefore is 18-bit val in 32-bit container.
+#if TFLITE_SINGLE_ROUNDING
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(res0_1, res0_1, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(res2_3, res2_3, out_multiplier, l_shift, r_shift);
+
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(res4_5, res4_5, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(res6_7, res6_7, out_multiplier, l_shift, r_shift);
+#else        
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res0_1, res0_1, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res2_3, res2_3, out_multiplier, l_shift, r_shift);
+
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res4_5, res4_5, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res6_7, res6_7, out_multiplier, l_shift, r_shift);
+#endif
+        /* add output zero bias */
+        res0_1 = AE_ADD32S(res0_1, zc);     res2_3 = AE_ADD32S(res2_3, zc);
+        res4_5 = AE_ADD32S(res4_5, zc);     res6_7 = AE_ADD32S(res6_7, zc);
+
+        ae_int8x8 res0_3 = AE_SAT8X4X32_H(res0_1, res2_3);
+        ae_int8x8 res4_7 = AE_SAT8X4X32_H(res4_5, res6_7);
+        ae_int8x8 res0_7 = AE_SEL8I(res0_3, res4_7, 1);
+        res0_7 = AE_MIN8(res0_7, amax8);
+        res0_7 = AE_MAX8(res0_7, amin8);
+        /* Clamp to activation max/min */
+
+        AE_SA8X8_IP(res0_7, va_out, (ae_int8x8 *)p_out);
+    }
+    if(num_scalar_ops)
+    {
+        ae_int8x8 a0_7, b0_7;
+
+        AE_LAV8X8_XP(a0_7, va_in1, (ae_int8x8 *)in1, num_scalar_ops);
+        AE_LAV8X8_XP(b0_7, va_in2, (ae_int8x8 *)in2, num_scalar_ops);
+
+        AE_SUBW8(a0_3, a4_7, a0_7, za8);
+        AE_SUBW8(b0_3, b4_7, b0_7, zb8);
+
+        AE_MUL16X4(res0_1, res2_3, a0_3, b0_3);                     // a & b are 9-bit vals in 16-bit containers.
+        AE_MUL16X4(res4_5, res6_7, a4_7, b4_7);                     // res, therefore is 18-bit val in 32-bit container.
+#if TFLITE_SINGLE_ROUNDING
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(res0_1, res0_1, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(res2_3, res2_3, out_multiplier, l_shift, r_shift);
+
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(res4_5, res4_5, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(res6_7, res6_7, out_multiplier, l_shift, r_shift);
+#else        
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res0_1, res0_1, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res2_3, res2_3, out_multiplier, l_shift, r_shift);
+
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res4_5, res4_5, out_multiplier, l_shift, r_shift);
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(res6_7, res6_7, out_multiplier, l_shift, r_shift);
+#endif
+        /* add output zero bias */
+        res0_1 = AE_ADD32S(res0_1, zc);     res2_3 = AE_ADD32S(res2_3, zc);
+        res4_5 = AE_ADD32S(res4_5, zc);     res6_7 = AE_ADD32S(res6_7, zc);
+
+        ae_int8x8 res0_3 = AE_SAT8X4X32_H(res0_1, res2_3);
+        ae_int8x8 res4_7 = AE_SAT8X4X32_H(res4_5, res6_7);
+        ae_int8x8 res0_7 = AE_SEL8I(res0_3, res4_7, 1);
+        res0_7 = AE_MIN8(res0_7, amax8);
+        res0_7 = AE_MAX8(res0_7, amin8);
+        /* Clamp to activation max/min */
+
+        AE_SAV8X8_XP(res0_7, va_out, (ae_int8x8 *)p_out, num_scalar_ops);
+    }
+    AE_SA64POS_FP(va_out, p_out);
+#else
+    ae_int16x4 za = AE_MOVDA16(inp1_zero_bias);     // replicate 16LSBs of input into 16x4 output
+    ae_int16x4 zb = AE_MOVDA16(inp2_zero_bias);     // zero_bias is already signed, no need for ZE
+    ae_int32x2 activation_max = AE_MOVDA32(out_activation_max);
+    ae_int32x2 activation_min = AE_MOVDA32(out_activation_min);
+    ae_int16x4 temp1, temp2;                        //intermediate results
+
     for(i=0; i<num_simd8_ops; i++)
     {
 
@@ -571,6 +659,7 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
         *p_out = (WORD8)AE_MOVAD32_L(res);
          p_out++;
     }
+#endif
 #endif
     return 0;
 }
@@ -744,6 +833,143 @@ WORD32 xa_nn_elm_mul_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
 
 #endif
 
+#if XCHAL_HAVE_HIFI1S
+static void internal_elm_mul_broadcast_2D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+                            WORD32  out_zero_bias,
+                            WORD32  out_shift,
+                            WORD32  out_multiplier,
+                            WORD32  out_activation_min,
+                            WORD32  out_activation_max,
+                    const    WORD8 * __restrict__ p_inp1,
+                            WORD32  inp1_zero_bias,
+                    const    WORD8 * __restrict__ p_inp2,
+                            WORD32  inp2_zero_bias,
+                            WORD32  out_lc,
+                            WORD32  in_lc)
+
+{
+  int i, j;
+  WORD8 * __restrict__ p_a; 
+  WORD8 * __restrict__ p_b; 
+  WORD8 *__restrict__ p_c;
+
+#if TFLITE_SINGLE_ROUNDING
+  int l_shift = out_shift;
+  int r_shift = out_shift;
+  l_shift = 31 - l_shift;
+  l_shift = l_shift << 16 | l_shift;
+  /* Single rounding doesn't need two shifts */
+  (void)r_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+  int l_shift = out_shift >= 0 ?   out_shift : 0;
+  int r_shift = out_shift <  0 ?  -out_shift : 0;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
+
+  const ae_int16x4 za = AE_MOVDA16(-inp1_zero_bias);
+  const ae_int16x4 zb = AE_MOVDA16(-inp2_zero_bias);
+
+  // intermediate results and scratch registers
+  ae_int16x4 a0_3, a4_7, b0_3, b4_7;
+
+  ae_int32x2 raw_mul0_1, raw_mul2_3, raw_mul4_5, raw_mul6_7;
+  ae_int32x2 out_mul0_1, out_mul2_3, out_mul4_5, out_mul6_7;
+
+  int num_simd8_ops;
+  int num_scalar_ops;
+
+  if(out_lc == 1)
+  {
+    num_simd8_ops = in_lc >> 3;
+    num_scalar_ops = in_lc & 7;
+  }
+  else
+  {
+    num_simd8_ops = (in_lc >> 4) << 1;
+    num_scalar_ops = in_lc & 15;
+  }
+
+  for(i = 0; i < out_lc; i++)
+  {
+    p_a = (WORD8 *)&p_inp1[i * in_lc];
+    p_b = (WORD8 *)p_inp2;
+    p_c = (WORD8 *)&p_out[i * in_lc];
+
+    ae_valign align_out = AE_ZALIGN64();
+
+    ae_valign va_a, va_b;
+    va_a = AE_LA64_PP(p_a);
+    va_b = AE_LA64_PP(p_b);
+    ae_int8x8 a0_7, b0_7;
+    ae_int8x8 za8 = AE_MOVDA8(-inp1_zero_bias);
+    ae_int8x8 zb8 = AE_MOVDA8(-inp2_zero_bias);
+    ae_int8x8 amin8 = AE_MOVDA8(out_activation_min);
+    ae_int8x8 amax8 = AE_MOVDA8(out_activation_max);
+    
+    for(j = 0; j < num_simd8_ops; j++)
+    {
+      AE_LA8X8_IP(a0_7, va_a, (ae_int8x8 *)p_a);
+      AE_LA8X8_IP(b0_7, va_b, (ae_int8x8 *)p_b);
+      AE_SUBW8(a0_3, a4_7, a0_7, za8);
+      AE_SUBW8(b0_3, b4_7, b0_7, zb8);
+
+      AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
+      AE_MUL16X4(raw_mul4_5, raw_mul6_7, a4_7, b4_7);
+
+#if TFLITE_SINGLE_ROUNDING
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+      MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#endif
+
+      out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+      out_mul2_3 = AE_ADD32S(out_mul2_3, AE_MOVDA32(out_zero_bias));
+      out_mul4_5 = AE_ADD32S(out_mul4_5, AE_MOVDA32(out_zero_bias));
+      out_mul6_7 = AE_ADD32S(out_mul6_7, AE_MOVDA32(out_zero_bias));
+
+      ae_int8x8 res0_3 = AE_SAT8X4X32_H(out_mul0_1, out_mul2_3);
+      ae_int8x8 res4_7 = AE_SAT8X4X32_H(out_mul4_5, out_mul6_7);
+      ae_int8x8 res0_7 = AE_SEL8I(res0_3, res4_7, 1);
+      res0_7 = AE_MIN8(res0_7, amax8);
+      res0_7 = AE_MAX8(res0_7, amin8);
+
+      AE_SA8X8_IP(res0_7, align_out, (ae_int8x8 *)p_c);
+    }
+    AE_SA64POS_FP(align_out, p_c);
+  }
+
+  if(num_scalar_ops!=0){
+    for(i = 0; i < out_lc; i++)
+    {
+      p_a = (WORD8 *)&p_inp1[i * in_lc + (num_simd8_ops << 3)];
+      p_c = (WORD8 *)&p_out[i * in_lc + (num_simd8_ops << 3)];
+      p_b = (WORD8 *)&p_inp2[num_simd8_ops << 3];
+      for(j = 0; j< num_scalar_ops; j++)
+      {
+        b0_3 = AE_MOVDA16(p_b[j]);
+        a0_3 = AE_MOVDA16(p_a[j]);
+        a0_3 = AE_SUB16S(a0_3, za);
+        b0_3 = AE_SUB16S(b0_3, zb);
+        AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0_3);
+#if TFLITE_SINGLE_ROUNDING
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else        
+        MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#endif        
+        out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+        CLAMP_VAL(out_mul0_1, out_mul0_1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+        *(WORD8 *)p_c = (WORD8)AE_MOVAD32_H(out_mul0_1);
+        p_c++;
+     }
+   }
+  }
+}
+#else /* XCHAL_HAVE_HIFI1S */
 static void internal_elm_mul_broadcast_2D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
                             WORD32  out_zero_bias,
                             WORD32  out_shift,
@@ -946,7 +1172,130 @@ static void internal_elm_mul_broadcast_2D_asym8sxasym8s_asym8s(WORD8 * __restric
    }
   }
 }
+#endif /* XCHAL_HAVE_HIFI1S */
 
+#if XCHAL_HAVE_HIFI1S
+static void internal_elm_mul_broadcast_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
+                            WORD32  out_zero_bias,
+                            WORD32  out_shift,
+                            WORD32  out_multiplier,
+                            WORD32  out_activation_min,
+                            WORD32  out_activation_max,
+                    const    WORD8 * __restrict__ p_inp1,
+                            WORD32  inp1_zero_bias,
+                    const    WORD8 * __restrict__ p_inp2,
+                            WORD32  inp2_zero_bias,
+                            WORD32  num_elm)
+{
+#if TFLITE_SINGLE_ROUNDING
+  int l_shift = out_shift;
+  int r_shift = out_shift;
+  l_shift = 31 - l_shift;
+  l_shift = l_shift << 16 | l_shift;  
+  /* Single rounding doesn't need two shifts */
+  (void)r_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+  int l_shift = out_shift >= 0 ?   out_shift : 0;
+  int r_shift = out_shift <  0 ?  -out_shift : 0;
+#endif /* #if TFLITE_SINGLE_ROUNDING */
+
+  int i;
+  WORD8 * __restrict__ p_a = (WORD8 *)p_inp1;
+  WORD8 * __restrict__ p_b = (WORD8 *)p_inp2;
+  WORD8 * __restrict__ p_c =          p_out;
+
+  ae_int16x4 b;
+  ae_int16x4  zb = AE_MOVDA16(-inp2_zero_bias);
+
+  ae_int16x4 a0_3, a4_7, b0;
+
+  ae_int32x2 raw_mul0_1, raw_mul2_3, raw_mul4_5, raw_mul6_7;
+  ae_int32x2 out_mul0_1, out_mul2_3, out_mul4_5, out_mul6_7;
+
+  const int num_simd8_ops = num_elm >> 3;
+  const int num_scalar_ops = num_elm & 7;
+  
+  b = AE_MOVDA16(p_b[0]);
+  b0 = AE_SUB16(b, zb);
+
+  ae_valign va_a;
+  va_a = AE_LA64_PP(p_a);
+  ae_valign align_out = AE_ZALIGN64();
+
+  ae_int8x8 a0_7;
+  ae_int8x8 za8 = AE_MOVDA8(-inp1_zero_bias);
+  ae_int8x8 amin8 = AE_MOVDA8(out_activation_min);
+  ae_int8x8 amax8 = AE_MOVDA8(out_activation_max);
+
+  for(i=0; i<num_simd8_ops; i++)
+  {
+    AE_LA8X8_IP(a0_7, va_a, (ae_int8x8 *)p_a);
+    AE_SUBW8(a0_3, a4_7, a0_7, za8);
+
+    // LSH (and promote to 32-bit)
+    AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0);
+    AE_MUL16X4(raw_mul4_5, raw_mul6_7, a4_7, b0);
+
+#if TFLITE_SINGLE_ROUNDING
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#endif
+    out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+    out_mul2_3 = AE_ADD32S(out_mul2_3, AE_MOVDA32(out_zero_bias));
+    out_mul4_5 = AE_ADD32S(out_mul4_5, AE_MOVDA32(out_zero_bias));
+    out_mul6_7 = AE_ADD32S(out_mul6_7, AE_MOVDA32(out_zero_bias));
+
+    ae_int8x8 res0_3 = AE_SAT8X4X32_H(out_mul0_1, out_mul2_3);
+    ae_int8x8 res4_7 = AE_SAT8X4X32_H(out_mul4_5, out_mul6_7);
+    ae_int8x8 res0_7 = AE_SEL8I(res0_3, res4_7, 1);
+    res0_7 = AE_MIN8(res0_7, amax8);
+    res0_7 = AE_MAX8(res0_7, amin8);
+    AE_SA8X8_IP(res0_7, align_out, (ae_int8x8 *)p_c);
+  }
+
+  if(num_scalar_ops)
+  {
+    AE_LAV8X8_XP(a0_7, va_a, (ae_int8x8 *)p_a, num_scalar_ops);
+    AE_SUBW8(a0_3, a4_7, a0_7, za8);
+
+    AE_MUL16X4(raw_mul0_1, raw_mul2_3, a0_3, b0);
+    AE_MUL16X4(raw_mul4_5, raw_mul6_7, a4_7, b0);
+
+#if TFLITE_SINGLE_ROUNDING
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#else
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul0_1, raw_mul0_1, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul2_3, raw_mul2_3, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul4_5, raw_mul4_5, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+    MPY_BY_QUANT_MULT_SLS_X2_OUT32(out_mul6_7, raw_mul6_7, AE_MOVDA32(out_multiplier), l_shift, r_shift);
+#endif
+
+    out_mul0_1 = AE_ADD32S(out_mul0_1, AE_MOVDA32(out_zero_bias));
+    out_mul2_3 = AE_ADD32S(out_mul2_3, AE_MOVDA32(out_zero_bias));
+    out_mul4_5 = AE_ADD32S(out_mul4_5, AE_MOVDA32(out_zero_bias));
+    out_mul6_7 = AE_ADD32S(out_mul6_7, AE_MOVDA32(out_zero_bias));
+
+    ae_int8x8 res0_3 = AE_SAT8X4X32_H(out_mul0_1, out_mul2_3);
+    ae_int8x8 res4_7 = AE_SAT8X4X32_H(out_mul4_5, out_mul6_7);
+    ae_int8x8 res0_7 = AE_SEL8I(res0_3, res4_7, 1);
+    res0_7 = AE_MIN8(res0_7, amax8);
+    res0_7 = AE_MAX8(res0_7, amin8);
+    AE_SAV8X8_XP(res0_7, align_out, (ae_int8x8 *)p_c, num_scalar_ops);
+  }
+  AE_SA64POS_FP(align_out, p_c);
+}
+
+#else
 static void internal_elm_mul_broadcast_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
                             WORD32  out_zero_bias,
                             WORD32  out_shift,
@@ -1072,6 +1421,7 @@ static void internal_elm_mul_broadcast_asym8sxasym8s_asym8s(WORD8 * __restrict__
     p_c++;
   }
 }
+#endif /* XCHAL_HAVE_HIFI1S */
 
 WORD32 xa_nn_elm_mul_broadcast_4D_asym8sxasym8s_asym8s(WORD8 * __restrict__ p_out,
                       const WORD32 *const p_out_shape,

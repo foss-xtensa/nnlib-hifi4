@@ -33,17 +33,6 @@
 
 #define BUS_WIDTH_8 7
 
-#define STORE_8X4_FROM_16X4(out_ptr, val){\
-    int o1, o2, o3, o4;\
-    o1 = AE_MOVAD16_3(val);\
-    o2 = AE_MOVAD16_2(val);\
-    o3 = AE_MOVAD16_1(val);\
-    o4 = AE_MOVAD16_0(val);\
-    *out_ptr++ = (WORD8)o1;\
-    *out_ptr++ = (WORD8)o2;\
-    *out_ptr++ = (WORD8)o3;\
-    *out_ptr++ = (WORD8)o4;\
-}
 
 WORD32 xa_nn_reduce_getsize_nhwc(WORD32 inp_precision
                                  ,const WORD32 *const p_inp_shape
@@ -94,6 +83,20 @@ WORD32 xa_nn_reduce_getsize_nhwc(WORD32 inp_precision
     }
 
     return 0;
+}
+
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
+
+#define STORE_8X4_FROM_16X4(out_ptr, val){\
+    int o1, o2, o3, o4;\
+    o1 = AE_MOVAD16_3(val);\
+    o2 = AE_MOVAD16_2(val);\
+    o3 = AE_MOVAD16_1(val);\
+    o4 = AE_MOVAD16_0(val);\
+    *out_ptr++ = (WORD8)o1;\
+    *out_ptr++ = (WORD8)o2;\
+    *out_ptr++ = (WORD8)o3;\
+    *out_ptr++ = (WORD8)o4;\
 }
 
 static void vecmax8_inpx3_aligned(const WORD8 *p_src1, const WORD8* p_src2, const WORD8* p_src3, WORD8 *p_dst, int N){
@@ -1992,3 +1995,4 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
 
   return 0;
 }
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */

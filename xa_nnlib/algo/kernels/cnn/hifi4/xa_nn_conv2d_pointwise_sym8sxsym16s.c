@@ -154,7 +154,7 @@ WORD32 xa_nn_conv2d_pointwise_per_chan_sym8sxsym16s(
   int i = 0;
   for(i=0; i<out_channels; i++)
   {
-    XA_NNLIB_ARG_CHK_COND((p_out_shift[i] < -31 || p_out_shift[i] > 31), -1);
+    XA_NNLIB_ARG_CHK_COND((p_out_shift[i] < -31 || p_out_shift[i] > 15), -1);
   }
   int ret = 0;
 

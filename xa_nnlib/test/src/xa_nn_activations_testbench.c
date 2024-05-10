@@ -431,6 +431,20 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define SOFTMAX_SYM16s_16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_vec_##KERNEL##_sym16s_16\
+                (\
+                    (WORD16 *) p_out->p,\
+                    (WORD16 *) p_inp->p,\
+                    cfg.input_left_shift,\
+                    cfg.input_multiplier,\
+                    cfg.num_elements \
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #if HIFI_VFPU
 #define ACTIVATION_MIN_MAX_FN_F32(IPREC,OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
@@ -566,6 +580,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else SOFTMAX_ASYM8(softmax, -3, -3) \
     else SOFTMAX_ASYM8s(softmax, -4, -4) \
     else SOFTMAX_ASYM8s_16(softmax, -4, 16) \
+    else SOFTMAX_SYM16s_16(softmax, -8, 16) \
     else SIGMOID_ASYM8(sigmoid, -3, -3) \
     else SIGMOID_ASYM8s(sigmoid, -4, -4) \
     else SIGMOID_SYM16s(sigmoid, -8, -8) \
@@ -669,6 +684,10 @@ int xa_nn_main_process(int argc, char *argv[])
   else if((cfg.inp_precision == -4) && (cfg.out_precision == 16))
   {
     sprintf(profiler_name, "%s_asym8sx16", cfg.activation);
+  }
+  else if((cfg.inp_precision == -8) && (cfg.out_precision == 16))
+  {
+    sprintf(profiler_name, "%s_sym16sx16", cfg.activation);
   }
   else
   {

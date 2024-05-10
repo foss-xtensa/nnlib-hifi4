@@ -182,6 +182,7 @@ xa_nn_elm_min_8D_Bcast_8x8_8
 xa_nn_elm_max_8D_Bcast_8x8_8
 xa_nn_broadcast_8_8
 xa_nn_dot_prod_16x16_asym8s
+xa_nn_elm_requantize_asym8u_asym8s
 xa_nn_elm_requantize_asym16s_asym8s
 xa_nn_elm_requantize_asym8s_asym8s
 xa_nn_elm_requantize_asym16s_asym16s
@@ -231,6 +232,7 @@ xa_nn_batch_norm_3D_8_8
 xa_nn_vec_softmax_asym8u_asym8u
 xa_nn_vec_softmax_asym8s_asym8s
 xa_nn_vec_softmax_asym8s_16
+xa_nn_vec_softmax_sym16s_16
 xa_nn_vec_sigmoid_asym8u_asym8u
 xa_nn_vec_sigmoid_asym8s_asym8s
 xa_nn_vec_sigmoid_sym16s_sym16s
@@ -275,8 +277,11 @@ xa_nn_strided_slice_int8
 xa_nn_pad_16_16
 xa_nn_pad_32_32
 xa_nn_transpose_8_8
+xa_nn_transpose_16_16
 xa_nn_resize_bilinear_8_8
 xa_nn_resize_nearest_neighbour_8_8
+xa_nn_concat_8_8
+xa_nn_split_v_8_8
 
 xa_nnlib_cnn_get_persistent_fast
 xa_nnlib_cnn_get_scratch_fast

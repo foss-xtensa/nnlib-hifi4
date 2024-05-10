@@ -24,8 +24,9 @@
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nn_maxpool_state.h"
 #include "xa_nnlib_err_chk.h"
+#include "xa_nnlib_common_macros.h"
 
-WORD32 xa_nn_maxpool_getsize_nchw(
+static WORD32 xa_nn_maxpool_getsize_nchw(
     WORD32 inp_precision,
     WORD32 input_width,
     WORD32 kernel_height,
@@ -76,7 +77,7 @@ WORD32 xa_nn_maxpool_getsize_nchw(
     state_size = ALIGNED_SIZE(sizeof(xa_nn_maxpool_state_t), ALIGNMENT);
     /* Output scratch buffer size */
     full_buf_width = kernel_width + (out_width - 1)*x_stride;
-    full_buf_width = XT_MAX(full_buf_width, x_padding + input_width);
+    full_buf_width = MAX(full_buf_width, x_padding + input_width);
     full_buf_width = ALIGNED_SIZE(full_buf_width, ALIGNMENT/2);
     /* maxpool: Need 2 rows of padded input width as acratch for temp output */
     full_out_width = ALIGNED_SIZE(full_buf_width + kernel_width, 4);
@@ -87,15 +88,15 @@ WORD32 xa_nn_maxpool_getsize_nchw(
     return total_size;
 }
 
-WORD32 xa_nn_maxpool_getsize_nhwc(WORD32  inp_precision,
-                                  WORD32  input_width,
-                                  WORD32  input_channels,
-                                  WORD32 kernel_height,
-                                  WORD32 kernel_width,
-                                  WORD32 x_stride,
-                                  WORD32 y_stride,
-                                  WORD32 x_padding,
-                                  WORD32 out_width)
+static WORD32 xa_nn_maxpool_getsize_nhwc(WORD32  inp_precision,
+                                         WORD32  input_width,
+                                         WORD32  input_channels,
+                                         WORD32 kernel_height,
+                                         WORD32 kernel_width,
+                                         WORD32 x_stride,
+                                         WORD32 y_stride,
+                                         WORD32 x_padding,
+                                         WORD32 out_width)
 {
     int scratch_bytewidth, scratch_size;
 
@@ -264,6 +265,7 @@ WORD32 xa_nn_maxpool_getsize(
 }
 #endif
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 WORD32 xa_nn_maxpool_init(
     WORD32 inp_precision,
     pVOID  p_scratch)
@@ -300,3 +302,4 @@ WORD32 xa_nn_maxpool_init(
     p_state->p_scratch = (pVOID)p_mem;
     return 0;
 }
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */

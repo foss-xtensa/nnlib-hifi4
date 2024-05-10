@@ -138,7 +138,9 @@ WORD32 xa_nn_elm_rsqrt_f32_f32(FLOAT32 * __restrict__ p_out,
   {
     xtfloat a1, a;
     XT_LSIP(a1, (xtfloat *)inp, 0);
-    a = XT_RSQRT_S(a1);
+    x1 = a1;
+    y1 = XT_RSQRT_SX2(x1);
+    a = y1;
     XT_SSI(a, (xtfloat *)out, 0);
   }
 

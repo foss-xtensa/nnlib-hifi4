@@ -52,7 +52,9 @@
 #ifdef ___UNKNOWN_COMPILER_YET
  #ifdef _MSC_VER
 
-#ifdef _ARM_
+#if __clang__
+  #define COMPILER_GNU /* GNU-compatible Clang GNU C/C++ */
+#elif defined (_ARM_)
   #define COMPILER_CEARM9E /* Microsoft Visual C++,ARM9E */
 #else
   #define COMPILER_MSVC /* Microsoft Visual C++ */

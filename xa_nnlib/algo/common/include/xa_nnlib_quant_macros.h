@@ -37,6 +37,35 @@
 #define MPY_BY_QUANT_MULT_SLS_X2_OUT32(out, inp, multiplier, l_shift, r_shift) \
   MPY_BY_QUANT_MULT_X2_OUT32(out, inp, multiplier, l_shift, r_shift)
 
+#if XCHAL_HAVE_HIFI1S
+#define MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out, inp, multiplier, l_shift, r_shift) {\
+  ae_int64 out64_0, out64_1; \
+  out64_0 = AE_MUL32_HH(inp, AE_MOVDA32(multiplier)); \
+  out64_1 = AE_MUL32_LL(inp, AE_MOVDA32(multiplier)); \
+  out = AE_ROUNDAV32X2F64SASYM(out64_0, out64_1, l_shift); \
+}
+
+#define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_REVERSE_OUTPUT_HIFI1S(out, inp, multiplier, l_shift) \
+{ \
+  ae_int64 out64_0, out64_1; \
+  out64_0 = AE_MUL32_HH(inp, multiplier); \
+  out64_1 = AE_MUL32_LL(inp, multiplier); \
+  out = AE_ROUNDAV32X2F64SASYM(out64_1, out64_0, l_shift); \
+}
+
+#define MPY_BY_QUANT_MULT_X2X2_OUT32_HIFI1S(out1, out2, inp1, inp2, multiplier, l_shift, r_shift) \
+{ \
+  ae_int64 out64_0, out64_1, out64_2, out64_3; \
+  out64_0 = AE_MUL32_HH(inp1, AE_MOVDA32(multiplier)); \
+  out64_1 = AE_MUL32_LL(inp1, AE_MOVDA32(multiplier)); \
+  out64_2 = AE_MUL32_HH(inp2, AE_MOVDA32(multiplier)); \
+  out64_3 = AE_MUL32_LL(inp2, AE_MOVDA32(multiplier)); \
+  out1 = AE_ROUNDAV32X2F64SASYM(out64_0, out64_1, l_shift); \
+  out2 = AE_ROUNDAV32X2F64SASYM(out64_2, out64_3, l_shift); \
+}
+
+#endif
+
 #define MPY_BY_QUANT_MULT_X2X2_OUT32(out1, out2, inp1, inp2, multiplier, l_shift, r_shift) \
 { \
   ae_int64 out64_0, out64_1, out64_2, out64_3; \
@@ -71,6 +100,14 @@
 #define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_HIFI1(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1) \
   MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1)
 
+#if XCHAL_HAVE_HIFI1S
+#define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_HIFI1S(out, inp, multiplier, l_shift_0, l_shift_1, r_shift_0, r_shift_1) {\
+  ae_int64 out64_0, out64_1; \
+  out64_0 = AE_MUL32_HH(inp, (multiplier)); \
+  out64_1 = AE_MUL32_LL(inp, (multiplier)); \
+  out = AE_ROUNDAV32X2F64SASYM(out64_0, out64_1, l_shift_0); \
+}
+#endif
 #define MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32_SHIFT MPY_BY_QUANT_MULT_PER_CHAN_X2_OUT32
 
 #define MPY_BY_QUANT_MULT_GT_ONE_X2_OUT32(y, x, multiplier, lsh) \

@@ -23,7 +23,9 @@
 #ifndef __XA_NNLIB_COMMON_MACROS_H__
 #define __XA_NNLIB_COMMON_MACROS_H__
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 #include <xtensa/config/core-isa.h>
+#endif
 #include <stddef.h>
 #include "xa_nnlib_quant_macros.h"
 #include "xa_nnlib_common_internal.h"
@@ -31,6 +33,8 @@
 #ifndef NULL
 #define NULL (void *)0
 #endif /* NULL */
+
+#define MAX(a, b)   (((a) > (b)) ? (a) : (b))
 
 #if XCHAL_HAVE_HIFI1
 

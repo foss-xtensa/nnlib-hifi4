@@ -392,18 +392,34 @@ static inline void tconv_pad(
   WORD32 i, j, k;
 
   /* When kernel has no valid input for convolution, output is just bias */
-  for(i = idx_height; i < out_height; i++)
-  {
-    for(j = idx_width; j < out_width; j++)
+  if(p_bias != NULL){
+    for(i = idx_height; i < out_height; i++)
     {
-      xtfloat *ptrout = (xtfloat*)&p_out[i * out_height_offset + j * out_width_offset];
-      xtfloat *pbias = (xtfloat*)p_bias;
-      xtfloat q1;
-
-      for(k = 0; k < out_channels; k++)
+      for(j = idx_width; j < out_width; j++)
       {
-        XT_LSIP(q1, pbias, 4);
-        XT_SSXP(q1, ptrout, out_channels_offset*sizeof(FLOAT32));
+        xtfloat *ptrout = (xtfloat*)&p_out[i * out_height_offset + j * out_width_offset];
+        xtfloat *pbias = (xtfloat*)p_bias;
+        xtfloat q1;
+
+        for(k = 0; k < out_channels; k++)
+        {
+          XT_LSIP(q1, pbias, 4);
+          XT_SSXP(q1, ptrout, out_channels_offset*sizeof(FLOAT32));
+        }
+      }
+    }
+  }
+  else{
+    for(i = idx_height; i < out_height; i++)
+    {
+      for(j = idx_width; j < out_width; j++)
+      {
+        xtfloat *ptrout = (xtfloat*)&p_out[i * out_height_offset + j * out_width_offset];
+        xtfloat q1 = 0.0f;
+        for(k = 0; k < out_channels; k++)
+        {
+          XT_SSXP(q1, ptrout, out_channels_offset*sizeof(FLOAT32));
+        }
       }
     }
   }
@@ -619,7 +635,7 @@ DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_transpose_conv_f32, (FLOAT32* outpu
             int filter_height, int filter_width,
             int output_height, int output_width,
             int num_elements,
-            FLOAT32* scratch_buffer))
+            void* scratch_buffer))
 #else
 WORD32 xa_nn_transpose_conv_f32(FLOAT32* output_data,
 		const FLOAT32* input_data,
@@ -632,7 +648,7 @@ WORD32 xa_nn_transpose_conv_f32(FLOAT32* output_data,
 		int filter_height, int filter_width,
 		int output_height, int output_width,
 		int num_elements,
-		FLOAT32* scratch_buffer)
+		void* scratch_buffer)
 {
 	/* NULL pointer checks */
 	XA_NNLIB_ARG_CHK_PTR(output_data, -1);

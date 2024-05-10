@@ -65,7 +65,10 @@ DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_matXvec_f32_circ,(
     SETUP_BIAS_BATCH_VEC_UNROLL(idx_row);
 
 #define SETUP_BIAS_BATCH_FOR_f32(idx_row,idx_vec) \
-    xtfloat _xtfloat_bias_ ##idx_row ##_ ##idx_vec = p_bias[(vec_itr + idx_vec)]; \
+    xtfloat _xtfloat_bias_ ##idx_row ##_ ##idx_vec = 0.0f ; \
+    if(p_bias != NULL){ \
+    _xtfloat_bias_ ##idx_row ##_ ##idx_vec = p_bias[(vec_itr + idx_vec)]; \
+    } \
 
 #define LOAD_VEC_BATCH_f32(idx_vec) \
     XT_LASX2IP(_xtfloatx2_vec_batch_ ##idx_vec, _xtfloatx2_vec_batch_aligned_ ##idx_vec, _xtfloatx2_p_vec_batch_ ##idx_vec);

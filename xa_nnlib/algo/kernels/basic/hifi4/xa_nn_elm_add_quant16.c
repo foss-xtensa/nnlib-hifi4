@@ -118,6 +118,15 @@ static void internal_elm_add_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
     int inp1_right_shift = (0XFFFFFFFF << (31 + inp1_left_shift));
     int inp2_right_shift = (0XFFFFFFFF << (31 + inp2_left_shift));
     int out_right_shift  = (0XFFFFFFFF << (31 + out_left_shift)); 
+    
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    int inp1_left_shift_hifi1s = 31 - inp1_left_shift; 
+    int inp2_left_shift_hifi1s = 31 - inp2_left_shift; 
+    int out_left_shift_hifi1s = 31 - out_left_shift; 
+    inp1_left_shift_hifi1s = inp1_left_shift_hifi1s << 16 | inp1_left_shift_hifi1s; 
+    inp2_left_shift_hifi1s = inp2_left_shift_hifi1s << 16 | inp2_left_shift_hifi1s; 
+    out_left_shift_hifi1s = out_left_shift_hifi1s << 16 | out_left_shift_hifi1s; 
+#endif
 
     WORD32 const1 = 1 << left_shift;
     ae_int32x2 const1_32x2 =  AE_MOVDA32X2(const1,const1);
@@ -196,6 +205,17 @@ static void internal_elm_add_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
 #else
        (void)inp1_right_shift; (void)inp2_right_shift; (void)out_right_shift;
        (void)multiplier1; (void)multiplier2; (void)op_multiplier;
+#if XCHAL_HAVE_HIFI1S
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v1, d_0, inp1_multiplier, inp1_left_shift_hifi1s, inp1_right_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v2, d_1, inp1_multiplier, inp1_left_shift_hifi1s, inp1_right_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v3, d_2, inp1_multiplier, inp1_left_shift_hifi1s, inp1_right_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v4, d_3, inp1_multiplier, inp1_left_shift_hifi1s, inp1_right_shift);
+
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v5, d_4, inp2_multiplier, inp2_left_shift_hifi1s, inp2_right_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v6, d_5, inp2_multiplier, inp2_left_shift_hifi1s, inp2_right_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v7, d_6, inp2_multiplier, inp2_left_shift_hifi1s, inp2_right_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v8, d_7, inp2_multiplier, inp2_left_shift_hifi1s, inp2_right_shift);
+#else
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v1, d_0, inp1_multiplier, inp1_left_shift);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v2, d_1, inp1_multiplier, inp1_left_shift);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v3, d_2, inp1_multiplier, inp1_left_shift);
@@ -205,16 +225,24 @@ static void internal_elm_add_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v6, d_5, inp2_multiplier, inp2_left_shift);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v7, d_6, inp2_multiplier, inp2_left_shift);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v8, d_7, inp2_multiplier, inp2_left_shift);
+#endif        
         // Raw Sum
         raw_sum12   = AE_ADD32S(scaled_v1, scaled_v5);
         raw_sum34   = AE_ADD32S(scaled_v2, scaled_v6);
         raw_sum56   = AE_ADD32S(scaled_v3, scaled_v7);
         raw_sum78   = AE_ADD32S(scaled_v4, scaled_v8);
         // Raw Output
+#if XCHAL_HAVE_HIFI1S        
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(raw_out12, raw_sum12, out_multiplier, out_left_shift_hifi1s, out_right_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(raw_out34, raw_sum34, out_multiplier, out_left_shift_hifi1s, out_right_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(raw_out56, raw_sum56, out_multiplier, out_left_shift_hifi1s, out_right_shift);
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(raw_out78, raw_sum78, out_multiplier, out_left_shift_hifi1s, out_right_shift);
+#else
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out12, raw_sum12, out_multiplier, out_left_shift);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out34, raw_sum34, out_multiplier, out_left_shift);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out56, raw_sum56, out_multiplier, out_left_shift);
         MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out78, raw_sum78, out_multiplier, out_left_shift);
+#endif        
 #endif
 
         raw_out12 = AE_ADD32S(raw_out12, op_zero_bias);
@@ -392,6 +420,15 @@ static void internal_elm_add_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
     int inp2_right_shift = (0XFFFFFFFF << (31 + inp2_left_shift));
     int out_right_shift  = (0XFFFFFFFF << (31 + out_left_shift));
 
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    int inp1_left_shift_hifi1s = 31 - inp1_left_shift; 
+    int inp2_left_shift_hifi1s = 31 - inp2_left_shift; 
+    int out_left_shift_hifi1s = 31 - out_left_shift; 
+    inp1_left_shift_hifi1s = inp1_left_shift_hifi1s << 16 | inp1_left_shift_hifi1s; 
+    inp2_left_shift_hifi1s = inp2_left_shift_hifi1s << 16 | inp2_left_shift_hifi1s; 
+    out_left_shift_hifi1s = out_left_shift_hifi1s << 16 | out_left_shift_hifi1s; 
+#endif
+
     WORD32 const1 = 1 << left_shift;
     ae_int32x2 const1_32x2 =  AE_MOVDA32X2(const1,const1);
             
@@ -416,7 +453,12 @@ static void internal_elm_add_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
 #if !TFLITE_SINGLE_ROUNDING
     MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v3, d_2, multiplier2, inp2_right_shift)
 #else
+#if XCHAL_HAVE_HIFI1S
+    (void)inp2_right_shift;
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v3, d_2, inp2_multiplier, inp2_left_shift_hifi1s, inp2_right_shift);
+#else
     MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v3, d_2, inp2_multiplier, inp2_left_shift);
+#endif    
 #endif
      
     ae_valign va_a;
@@ -444,14 +486,24 @@ static void internal_elm_add_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
       (void)inp1_right_shift; (void)inp2_right_shift; (void)out_right_shift;
       (void)multiplier1; (void)multiplier2; (void)op_multiplier;
 
+#if XCHAL_HAVE_HIFI1S
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v1, d_0, inp1_multiplier, inp1_left_shift_hifi1s, inp1_left_shift_hifi1s);
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_v2, d_1, inp1_multiplier, inp1_left_shift_hifi1s, inp1_left_shift_hifi1s);
+#else
       MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v1, d_0, inp1_multiplier, inp1_left_shift);
       MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_v2, d_1, inp1_multiplier, inp1_left_shift);
+#endif      
       // Raw Sum
       raw_sum12 = AE_ADD32S(scaled_v1, scaled_v3);
       raw_sum34 = AE_ADD32S(scaled_v2, scaled_v3);
       // Raw Output
+#if XCHAL_HAVE_HIFI1S
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(raw_out12, raw_sum12, out_multiplier, out_left_shift_hifi1s, out_left_shift_hifi1s);
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(raw_out34, raw_sum34, out_multiplier, out_left_shift_hifi1s, out_left_shift_hifi1s);
+#else      
       MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out12, raw_sum12, out_multiplier, out_left_shift);
       MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(raw_out34, raw_sum34, out_multiplier, out_left_shift);
+#endif      
 #endif     
       raw_out12 = AE_ADD32S(raw_out12, op_zero_bias);
       raw_out34 = AE_ADD32S(raw_out34, op_zero_bias);
@@ -480,8 +532,13 @@ static void internal_elm_add_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
     shifted_b0 = AE_SLAA32S(shifted_b0, left_shift);
     shifted_b1 = AE_SLAA32S(shifted_b1, left_shift);
 
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    int inp2_left_shift_hifi1s = 31 - inp2_left_shift; 
+    inp2_left_shift_hifi1s = inp2_left_shift_hifi1s << 16 | inp2_left_shift_hifi1s; 
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_b0, shifted_b0, inp2_multiplier, inp2_left_shift_hifi1s, inp2_right_shift);
+#else
     MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b0, shifted_b0, inp2_multiplier, inp2_left_shift);
-    
+#endif
     for(i=0; i<num_simd4_ops; i++)
     {
       ae_int32x2 out0_32, out1_32;
@@ -513,8 +570,13 @@ static void internal_elm_add_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
   shifted_b0 = AE_SLAA32S(shifted_b0, left_shift);
   shifted_b1 = AE_SLAA32S(shifted_b1, left_shift);
 
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+  int inp2_left_shift_hifi1s = 31 - inp2_left_shift; 
+  inp2_left_shift_hifi1s = inp2_left_shift_hifi1s << 16 | inp2_left_shift_hifi1s; 
+  MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(scaled_b0, shifted_b0, inp2_multiplier, inp2_left_shift_hifi1s, inp2_right_shift);
+#else
   MPY_BY_QUANT_MULT_ST_ONE_EXP_X2_OUT32(scaled_b0, shifted_b0, inp2_multiplier, inp2_left_shift);
-
+#endif
   for(i=0; i<num_scalar_ops; i++)
   {
     ae_int32x2 out0_32;

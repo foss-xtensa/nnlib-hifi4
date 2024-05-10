@@ -65,7 +65,11 @@ WORD32 xa_nn_transpose_conv_getsize
             break;
         case -4: /* For asym8s */
             input_size = sizeof(WORD8);
+#if XCHAL_HAVE_HIFI1S
+            scratch_bytewidth = 4; /* 32b scratch for HiFi1s*/
+#else            
             scratch_bytewidth = 8; /* 64b scratch */
+#endif            
             align_size = ALIGNMENT >> 1;
             break;            
         case -1: /* For float32 */
@@ -117,6 +121,7 @@ WORD32 xa_nn_transpose_conv_getsize
     return total_size;
 }
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 VOID xa_nn_transpose_conv_init_state(
     VOID *p_scratch,
     VOID *p_kernel,
@@ -182,3 +187,5 @@ VOID xa_nn_transpose_conv_init_state(
   AE_SETCBEGIN0(p_state->cir_buf.p_begin);
   AE_SETCEND0(p_state->cir_buf.p_end);
 }
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
+

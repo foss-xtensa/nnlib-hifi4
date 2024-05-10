@@ -24,6 +24,359 @@
 #include "xa_nn_transpose_conv_state.h"
 #include <string.h>
 
+#if XCHAL_HAVE_HIFI1S
+static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
+    const WORD8* input_data,
+    const WORD8* filter_data,
+    const WORD32* bias_data,
+    int stride_width, int stride_height,
+    int pad_width, int pad_height,
+    int input_depth, int output_depth,
+    int input_height, int input_width,
+    int filter_height, int filter_width,
+    int output_height, int output_width,
+    int num_elements,
+    int input_offset, int output_offset,
+    int *output_shift, int *output_multiplier,
+    int *scratch_buffer)
+{
+  ae_int32x2 *pscratch1 = (ae_int32x2*)scratch_buffer;
+  ae_int32x2 dzero = AE_ZERO32();
+  for(int i=0; i<(num_elements>>1); i++){
+    AE_S32X2_IP(dzero, pscratch1, 8);
+  }
+  if(num_elements&0x1)
+	AE_S32_L_IP(dzero, (ae_int32*)pscratch1, 4);
+
+  ae_int32 *pscratch = (ae_int32*)scratch_buffer;
+
+  int stride1 = filter_height*filter_width*input_depth;
+  WORD8 *pinp;
+  ae_int8x8 d_izb = AE_MOVDA8(input_offset);
+
+  /*
+   * Special case for input_depth multiple of 16
+   */
+  if(input_data && filter_data && scratch_buffer
+     && (((unsigned int)input_data&0x7)==0) && (((unsigned int)filter_data&0x7)==0) && 
+     (((unsigned int)scratch_buffer&0x7) == 0) && ((input_depth&0xF)==0) && ((filter_height*filter_width&0x3)==0))
+  {
+	  {
+      for (int in_y = 0; in_y < input_height; ++in_y)
+      {
+        for (int in_x = 0; in_x < input_width; ++in_x)
+        {
+          const int out_x_orig = in_x*stride_width - pad_width;
+          const int out_y_orig = in_y*stride_height - pad_height;
+          int filt_x_min = -out_x_orig; 
+          int filt_x_max = output_width - out_x_orig; 
+          int filt_y_min = -out_y_orig; 
+          int filt_y_max = output_height - out_y_orig; 
+          filt_x_min = (filt_x_min < filter_width) ? filt_x_min : filter_width;
+          filt_x_min = (filt_x_min < 0) ? 0 : filt_x_min;
+          filt_x_max = (filt_x_max < filter_width) ? filt_x_max : filter_width;
+          filt_x_max = (filt_x_max < 0) ? 0 : filt_x_max;
+          filt_y_min = (filt_y_min < filter_height) ? filt_y_min : filter_height;
+          filt_y_min = (filt_y_min < 0) ? 0 : filt_y_min;
+          filt_y_max = (filt_y_max < filter_height) ? filt_y_max : filter_height;
+          filt_y_max = (filt_y_max < 0) ? 0 : filt_y_max;
+          pinp =  (WORD8*)&input_data[in_y*input_width*input_depth+in_x*input_depth];
+          for (int in_channel = 0; in_channel < input_depth; in_channel+=16)
+          {
+            ae_int8x8 d_fil, d_fil1;
+            ae_int8x8 d_inp, d_inp1;
+            ae_int16x4 dtmp1, dtmp2, dtmp3, dtmp4;
+            AE_L8X8_IP(d_inp, (ae_int8x8*)pinp, 8);
+            AE_L8X8_IP(d_inp1, (ae_int8x8*)pinp, 8);
+            AE_ADDW8(dtmp1, dtmp2, d_inp, d_izb);
+            AE_ADDW8(dtmp3, dtmp4, d_inp1, d_izb);
+
+            for (int filter_y = filt_y_min; filter_y < filt_y_max; ++filter_y)
+            {
+              for (int filter_x = filt_x_min; filter_x < filt_x_max; ++filter_x)
+              {
+                // Compute output element location.
+                int out_x = out_x_orig + filter_x;//out_x_origin + filter_x;
+                int out_y = out_y_orig + filter_y;//out_y_origin + filter_y;
+                ae_int32 *pscratch_src = (ae_int32*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth];
+                ae_int32x2 d_scr;
+                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
+                AE_L8X8_IP(d_fil, (ae_int8x8*)pfilt, 8);
+                AE_L8X8_XP(d_fil1, (ae_int8x8*)pfilt, stride1-8);
+
+                for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                {
+                  d_scr =  AE_SEL32_LL(AE_ZERO32(), AE_L32_I(pscratch_src, 0));
+                  AE_MULAAAA16Q8(d_scr, dtmp1, dtmp2, d_fil);
+                  AE_MULAAAA16Q8(d_scr, dtmp3, dtmp4, d_fil1);
+                  d_scr = AE_ADD32_HL_LH(d_scr, d_scr);
+                  AE_L8X8_IP(d_fil, (ae_int8x8*)pfilt, 8);
+                  AE_L8X8_XP(d_fil1, (ae_int8x8*)pfilt, stride1-8);
+                  AE_S32_L_IP(d_scr, pscratch_src, sizeof(WORD32));
+                }
+              }
+            }
+          }
+        }
+      }
+    }    
+  }
+  else if(input_data && filter_data && scratch_buffer && ((input_depth&0xF)==0) && ((filter_height*filter_width&0x3)==0))
+  {    
+    {
+      for (int in_y = 0; in_y < input_height; ++in_y)
+      {
+        for (int in_x = 0; in_x < input_width; ++in_x)
+        {
+          const int out_x_orig = in_x*stride_width - pad_width;
+          const int out_y_orig = in_y*stride_height - pad_height;
+          int filt_x_min = -out_x_orig; 
+          int filt_x_max = output_width - out_x_orig; 
+          int filt_y_min = -out_y_orig; 
+          int filt_y_max = output_height - out_y_orig; 
+          filt_x_min = (filt_x_min < filter_width) ? filt_x_min : filter_width;
+          filt_x_min = (filt_x_min < 0) ? 0 : filt_x_min;
+          filt_x_max = (filt_x_max < filter_width) ? filt_x_max : filter_width;
+          filt_x_max = (filt_x_max < 0) ? 0 : filt_x_max;
+          filt_y_min = (filt_y_min < filter_height) ? filt_y_min : filter_height;
+          filt_y_min = (filt_y_min < 0) ? 0 : filt_y_min;
+          filt_y_max = (filt_y_max < filter_height) ? filt_y_max : filter_height;
+          filt_y_max = (filt_y_max < 0) ? 0 : filt_y_max;
+          pinp =  (WORD8*)&input_data[in_y*input_width*input_depth+in_x*input_depth];
+          ae_valign align0 = AE_LA64_PP(pinp);
+          for (int in_channel = 0; in_channel < input_depth; in_channel+=16)
+          {
+            ae_int8x8 d_fil, d_fil1;
+            ae_int8x8 d_inp, d_inp1;
+            ae_int16x4 dtmp1, dtmp2, dtmp3, dtmp4;
+            AE_LA8X8_IP(d_inp, align0, (ae_int8x8*)pinp);
+            AE_LA8X8_IP(d_inp1, align0, (ae_int8x8*)pinp);
+            AE_ADDW8(dtmp1, dtmp2, d_inp, d_izb);
+            AE_ADDW8(dtmp3, dtmp4, d_inp1, d_izb);
+
+            for (int filter_y = filt_y_min; filter_y < filt_y_max; ++filter_y)
+            {
+              for (int filter_x = filt_x_min; filter_x < filt_x_max; ++filter_x)
+              {
+                int out_x = out_x_orig + filter_x;
+                int out_y = out_y_orig + filter_y;
+                ae_int32 *pscratch_src = (ae_int32*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth];
+                ae_int32x2 d_scr;
+                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
+                ae_valign align1 = AE_LA64_PP(pfilt);
+                AE_LA8X8_IP(d_fil, align1, (ae_int8x8*)pfilt);
+                AE_LA8X8_IP(d_fil1, align1, (ae_int8x8*)pfilt);
+                pfilt += (stride1-16);
+
+                for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                {
+                  d_scr =  AE_SEL32_LL(AE_ZERO32(), AE_L32_I(pscratch_src, 0));
+                  AE_MULAAAA16Q8(d_scr, dtmp1, dtmp2, d_fil);
+                  AE_MULAAAA16Q8(d_scr, dtmp3, dtmp4, d_fil1);
+                  d_scr = AE_ADD32_HL_LH(d_scr, d_scr);
+                  ae_valign align1 = AE_LA64_PP(pfilt);
+                  AE_LA8X8_IP(d_fil, align1, (ae_int8x8*)pfilt);
+                  AE_LA8X8_IP(d_fil1, align1, (ae_int8x8*)pfilt);
+                  pfilt += (stride1-16);
+                  AE_S32_L_IP(d_scr, pscratch_src, sizeof(WORD32));
+                }
+              }
+            }
+          }
+        }
+      }
+    }    
+  }    
+  else if(input_data && filter_data && scratch_buffer &&
+      (((unsigned int)input_data&0x3)==0) && (((unsigned int)filter_data&0x3)==0) &&
+      (((unsigned int)scratch_buffer&0x7) == 0) && ((input_depth&0x3)==0))
+  {
+    {
+      //tbd : batch = 1, need to handle other values and in_x_min/max= 0 .. need toc heck for other values
+      for (int in_y = 0; in_y < input_height; ++in_y)
+      {
+        for (int in_x = 0; in_x < input_width; ++in_x)
+        {
+          const int out_x_orig = in_x*stride_width - pad_width;
+          const int out_y_orig = in_y*stride_height - pad_height;
+          int filt_x_min = -out_x_orig; 
+          int filt_x_max = output_width - out_x_orig; 
+          int filt_y_min = -out_y_orig; 
+          int filt_y_max = output_height - out_y_orig; 
+          filt_x_min = (filt_x_min < filter_width) ? filt_x_min : filter_width;
+          filt_x_min = (filt_x_min < 0) ? 0 : filt_x_min;
+          filt_x_max = (filt_x_max < filter_width) ? filt_x_max : filter_width;
+          filt_x_max = (filt_x_max < 0) ? 0 : filt_x_max;
+          filt_y_min = (filt_y_min < filter_height) ? filt_y_min : filter_height;
+          filt_y_min = (filt_y_min < 0) ? 0 : filt_y_min;
+          filt_y_max = (filt_y_max < filter_height) ? filt_y_max : filter_height;
+          filt_y_max = (filt_y_max < 0) ? 0 : filt_y_max;
+          pinp =  (WORD8*)&input_data[in_y*input_width*input_depth+in_x*input_depth];
+          for (int in_channel = 0; in_channel < input_depth; in_channel+=4)
+          {
+            ae_int16x4 d_inp;
+            AE_L8X4S_IP(d_inp, pinp, sizeof(WORD32));
+            d_inp = AE_ADD16(d_inp, AE_MOVDA16(input_offset));
+            for (int filter_y = filt_y_min; filter_y < filt_y_max; ++filter_y)
+            {
+              for (int filter_x = filt_x_min; filter_x < filt_x_max; ++filter_x)
+              {
+                // Compute output element location.
+                int out_x = out_x_orig + filter_x;//out_x_origin + filter_x;
+                int out_y = out_y_orig + filter_y;//out_y_origin + filter_y;
+                ae_int32 *pscratch_src = (ae_int32*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth];
+                ae_int64 d_scr;
+                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
+                ae_int16x4 d_fil;
+                AE_L8X4S_XP(d_fil, pfilt, stride1);
+                for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                {
+		              d_scr = AE_SRAI64(AE_CVT64F32_H(AE_L32_I(pscratch_src, 0)), 32);
+                  AE_MULAAAAQ16(d_scr, d_inp, d_fil);
+                  AE_L8X4S_XP(d_fil, pfilt, stride1);
+                  AE_S32_L_IP(AE_MOVINT32X2_FROMINT64(d_scr), pscratch_src, sizeof(WORD32));
+                }
+              }
+            }
+          }
+        }
+      }
+    }    
+  }
+  else
+  {     
+    {
+      for (int in_y = 0; in_y < input_height; ++in_y)
+      {
+        for (int in_x = 0; in_x < input_width; ++in_x)
+        {
+          for (int in_channel = 0; in_channel < input_depth; ++in_channel)
+          {
+            const int out_x_origin = (in_x * stride_width) - pad_width;
+            const int out_y_origin = (in_y * stride_height) - pad_height;
+            for (int filter_y = 0; filter_y < filter_height; ++filter_y)
+            {
+              for (int filter_x = 0; filter_x < filter_width; ++filter_x)
+              {
+                const int out_x = out_x_origin + filter_x;
+                const int out_y = out_y_origin + filter_y;
+                if ((out_x >= 0) && (out_x < output_width) && (out_y >= 0) && (out_y < output_height))
+                {
+                  for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                  {
+                    const int32_t input_value = input_data[((in_y)*input_width+in_x)*input_depth+in_channel] + input_offset;
+                    const int32_t filter_value = filter_data[(((out_channel*filter_height)+filter_y)*filter_width+filter_x)*input_depth+in_channel];
+                    scratch_buffer[((out_y)*output_width+out_x)*output_depth+out_channel] += (int32_t)(input_value * filter_value);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if(bias_data)
+  {
+    ae_int32x2 acc0, acc1;
+    ae_int32x2 dbias;
+    ae_int32 *pbias = (ae_int32*)bias_data;
+
+    for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+    {
+#if TFLITE_SINGLE_ROUNDING
+      int left_shift = output_shift[out_channel];
+      int right_shift = output_shift[out_channel];
+      left_shift = 31 - left_shift;
+      left_shift = left_shift << 16 | left_shift;      
+      (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+      int left_shift = output_shift[out_channel] < 0 ? 0 : output_shift[out_channel];
+      int right_shift = output_shift[out_channel] > 0 ? 0 : -output_shift[out_channel];
+#endif /* #if TFLITE_SINGLE_ROUNDING */
+
+      pscratch = (ae_int32*)&scratch_buffer[out_channel];
+      WORD8 *pout = (WORD8*)&output_data[out_channel];
+      ae_int32 *pscratch1 = (ae_int32*)&scratch_buffer[((output_height*output_width)>>1)*output_depth+out_channel];
+      WORD8 *pout1 = (WORD8*)&output_data[((output_height*output_width)>>1)*output_depth+out_channel];
+      AE_L32_IP(dbias, pbias, sizeof(WORD32));
+      AE_L32_XP(acc0, pscratch, output_depth*sizeof(WORD32));
+      AE_L32_XP(acc1, pscratch1, output_depth*sizeof(WORD32));
+      ae_int32 out_mult = output_multiplier[out_channel];
+      for (int i = 0; i < ((output_height*output_width)>>1); i++)
+      {
+        ae_int32x2 out32;
+        ae_int32x2 acc;
+        acc = AE_SEL32_LL(acc0, acc1);
+        acc = AE_ADD32(acc, dbias);
+#if TFLITE_SINGLE_ROUNDING
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out32, acc, out_mult, left_shift, right_shift);
+#else        
+        MPY_BY_QUANT_MULT_X2_OUT32(out32, acc, out_mult, left_shift, right_shift);
+#endif        
+        out32 = AE_ADD32(out32, AE_MOVDA32(output_offset));
+        out32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out32, AE_MOVDA32(-128)));
+        AE_L32_XP(acc0, pscratch, output_depth*sizeof(WORD32));
+        AE_L32_XP(acc1, pscratch1, output_depth*sizeof(WORD32));
+        *pout = (WORD8)AE_MOVAD32_H(out32);
+        pout+=output_depth;
+        *pout1 = (WORD8)AE_MOVAD32_L(out32);
+        pout1+=output_depth;
+      }
+      if((output_height*output_width) & 1)
+      {
+        ae_int16x4 out16;
+        ae_int32x2 out1_32;
+        acc1 = AE_ADD32(acc1, dbias);
+#if TFLITE_SINGLE_ROUNDING
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out1_32, acc1, out_mult, left_shift, right_shift);
+#else          
+        MPY_BY_QUANT_MULT_X2_OUT32(out1_32, acc1, out_mult, left_shift, right_shift);
+#endif        
+        out1_32 = AE_ADD32(out1_32, AE_MOVDA32(output_offset));
+        out1_32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out1_32, AE_MOVDA32(-128)));
+        out16 = AE_SAT16X4(out1_32, out1_32);
+        *pout1 = (WORD8)AE_MOVAD16_0(out16);
+      }
+    }
+  }
+  else
+  {
+    ae_int32 *pscratch_test = (ae_int32*)scratch_buffer;
+    WORD8 *pout = (WORD8*)output_data;
+    for (int i = 0; i < output_height*output_width; i++)
+    {   
+      for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+      {
+#if TFLITE_SINGLE_ROUNDING
+        int left_shift = output_shift[out_channel];
+        int right_shift = output_shift[out_channel];
+        left_shift = 31 - left_shift;
+        left_shift = left_shift << 16 | left_shift;        
+        (void)right_shift;
+#else /* #if TFLITE_SINGLE_ROUNDING */
+        int left_shift = output_shift[out_channel] < 0 ? 0 : output_shift[out_channel];
+        int right_shift = output_shift[out_channel] > 0 ? 0 : -output_shift[out_channel];
+#endif /* #if TFLITE_SINGLE_ROUNDING */        
+        ae_int32x2 acc;
+        ae_int32x2 out0_32;
+        ae_int16x4 out16;
+        AE_L32_IP(acc, pscratch_test, sizeof(WORD32));
+#if TFLITE_SINGLE_ROUNDING        
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out0_32, acc, output_multiplier[out_channel], left_shift, right_shift);
+#else
+        MPY_BY_QUANT_MULT_X2_OUT32(out0_32, acc, output_multiplier[out_channel], left_shift, right_shift);
+#endif        
+        out0_32 = AE_ADD32(out0_32, AE_MOVDA32(output_offset));
+        out0_32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out0_32, AE_MOVDA32(-128))); 
+        out16 = AE_SAT16X4(out0_32, out0_32);  
+        *pout++ = (WORD8)AE_MOVAD16_0(out16);
+      }
+    }   
+  }
+}
+#else // XCHAL_HAVE_HIFI1S
 static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
     const WORD8* input_data,
     const WORD8* filter_data,
@@ -273,7 +626,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         ae_int16x4 out16;
         ae_int32x2 out1_32;
         acc1 = AE_SRAI64(acc1, 8);
-        acc1 = AE_ADD64(acc1, AE_MOVINT64_FROMF32(dbias));
+        acc1 = AE_ADD64(acc1, AE_MOVINT64_FROMF32(dbias));   
         MPY_BY_QUANT_MULT_X2_OUT32(out1_32, AE_MOVDA32X2(AE_MOVINT32_FROMINT64(acc1), AE_MOVINT32_FROMINT64(acc1)), out_mult, left_shift, right_shift);
         out1_32 = AE_ADD32(out1_32, AE_MOVDA32(output_offset));
         out1_32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out1_32, AE_MOVDA32(-128)));
@@ -302,8 +655,8 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         ae_int32x2 out0_32;
         ae_int16x4 out16;
         AE_L64_IP(acc, pscratch, sizeof(WORD64));
-        acc = AE_SRAI64(acc, 8);
-        MPY_BY_QUANT_MULT_X2_OUT32(out0_32, AE_MOVDA32X2(AE_MOVINT32_FROMINT64(acc), AE_MOVINT32_FROMINT64(acc)), output_multiplier[out_channel], left_shift, right_shift);
+        acc = AE_SRAI64(acc, 8);   
+        MPY_BY_QUANT_MULT_X2_OUT32(out0_32, AE_MOVDA32X2(AE_MOVINT32_FROMINT64(acc), AE_MOVINT32_FROMINT64(acc)), output_multiplier[out_channel], left_shift, right_shift);      
         out0_32 = AE_ADD32(out0_32, AE_MOVDA32(output_offset));
         out0_32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out0_32, AE_MOVDA32(-128))); 
         out16 = AE_SAT16X4(out0_32, out0_32);  
@@ -312,6 +665,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
     }   
   }
 }
+#endif
 
 static inline void tconv2d_std_reorder_kernel_sym8s
     (pVOID p_scratch
@@ -399,17 +753,30 @@ static inline void tconv_pad(
       ae_int32x2 q1;
       for(k = 0; k < out_channels; k++)
       {
-        AE_L32_IP(q1, pbias, 4);
+        if(p_bias != NULL){
+          AE_L32_IP(q1, pbias, 4);
+        }
+        else{
+          q1 = AE_MOVDA32(0);
+        }
         ae_int32x2 acc;
         int left_shift, right_shift;
 #if TFLITE_SINGLE_ROUNDING
         left_shift = right_shift = p_out_shift[k];
+#if XCHAL_HAVE_HIFI1S
+      left_shift = 31 - left_shift;
+      left_shift = left_shift << 16 | left_shift;
+#endif
         (void)right_shift;
 #else /* #if TFLITE_SINGLE_ROUNDING */
         left_shift = p_out_shift[k] < 0 ? 0 : p_out_shift[k];
         right_shift = p_out_shift[k] > 0 ? 0 : -p_out_shift[k];
 #endif
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(acc, q1, p_out_multiplier[k], left_shift, right_shift);
+#else
         MPY_BY_QUANT_MULT_X2_OUT32(acc, q1, p_out_multiplier[k], left_shift, right_shift);
+#endif        
         acc = AE_ADD32S(acc, AE_MOVDA32(out_offset));
         acc = AE_MIN32(AE_MOVDA32(127), AE_MAX32(acc, AE_MOVDA32(-128)));        
         *ptrout = (WORD8)AE_MOVAD32_H(acc);
@@ -641,7 +1008,7 @@ int xa_nn_transpose_conv_sym8sxasym8s(WORD8* output_data,
     int num_elements,
     int input_offset, int output_offset,
     int *output_shift, int *output_multiplier,
-    int32_t* scratch_buffer)
+    void* scratch_buffer)
 {
   /* NULL pointer checks */
   XA_NNLIB_ARG_CHK_PTR(output_data, -1);
@@ -678,10 +1045,17 @@ int xa_nn_transpose_conv_sym8sxasym8s(WORD8* output_data,
   }
   else
   {
+#if XCHAL_HAVE_HIFI1S
+    tconv2d_sym8sxasym8s(output_data, input_data, filter_data, bias_data,
+      stride_width, stride_height, pad_width, pad_height, input_depth, output_depth,
+      input_height, input_width, filter_height, filter_width, output_height, output_width,
+      num_elements, input_offset, output_offset, output_shift, output_multiplier, (int32_t *)scratch_buffer);
+#else    
     tconv2d_sym8sxasym8s(output_data, input_data, filter_data, bias_data,
       stride_width, stride_height, pad_width, pad_height, input_depth, output_depth,
       input_height, input_width, filter_height, filter_width, output_height, output_width,
       num_elements, input_offset, output_offset, output_shift, output_multiplier, (int64_t *)scratch_buffer);
+#endif      
   }
   return 0;
 }

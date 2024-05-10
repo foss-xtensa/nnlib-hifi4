@@ -40,8 +40,12 @@
 #define XA_MAX_CMD_LINE_LENGTH 200
 #define XA_MAX_ARGS 100
 #define SHAPE_ARGS_LENGTH 80
+#define MAX_NUM_INPS_CONCAT 10
+#define MAX_NUM_OUTS_SPLIT_V 10
 #define MAX_DIMS 8
 #define MAX_DIMS_FOR_STRIDED_SLICE 5
+#define MAX_DIMS_FOR_CONCAT 6
+#define MAX_DIMS_FOR_SPLIT_V 6 //doubtful
 #define PARAMFILE "paramfilesimple_reorg.txt"
 
 #define VALIDATE_PTR(ptr) if(NULL == ptr) { printf("%s: allocation failed\n", #ptr); return -1;}
@@ -63,11 +67,15 @@ typedef struct _test_config_t
   int num_out_dims;
   int pad_value;
   int input_shape_extended[MAX_DIMS_FOR_STRIDED_SLICE];
-  int input_shape[MAX_DIMS];  
+  int input_shape[MAX_DIMS];
+  int concat_inputs_shape[MAX_NUM_INPS_CONCAT * MAX_DIMS_FOR_CONCAT];
+  int split_v_outputs_shape[MAX_NUM_OUTS_SPLIT_V * MAX_DIMS_FOR_SPLIT_V];
   int output_shape[MAX_DIMS];  
   int pad_shape[MAX_DIMS];
   int pad_values[MAX_DIMS];
   int permute_vec[MAX_DIMS];  
+  char read_concat_inps_shape_str[MAX_NUM_INPS_CONCAT * SHAPE_ARGS_LENGTH];
+  char read_split_v_outs_shape_str[MAX_NUM_OUTS_SPLIT_V * SHAPE_ARGS_LENGTH];
   char read_inp_shape_str[SHAPE_ARGS_LENGTH];
   char read_pad_shape_str[SHAPE_ARGS_LENGTH];
   char read_out_shape_str[SHAPE_ARGS_LENGTH];
@@ -77,6 +85,8 @@ typedef struct _test_config_t
   int crop_or_pad_sizes[2*(MAX_DIMS)-2];
   char read_block_sizes_str[SHAPE_ARGS_LENGTH];
   char read_crop_or_pad_sizes_str[SHAPE_ARGS_LENGTH];
+  int num_inputs;
+  int num_outputs;
   int input_batch;
   int input_height;
   int input_width;
@@ -96,6 +106,7 @@ typedef struct _test_config_t
   int start_3,stop_3;
   int start_4,stop_4;
   int stride_0,stride_1,stride_2,stride_3,stride_4;
+  int axis;
   char kernel_name[MAX_KERNEL_NAME_LENGTH];
   int frames;
   int write_file;
@@ -112,6 +123,8 @@ int default_config(test_config_t *p_cfg)
   {
     p_cfg->help     = 0;
     p_cfg->inp_data_format = 0;
+    p_cfg->num_inputs = 1;
+    p_cfg->num_outputs = 1;
     p_cfg->num_inp_dims  = 4;
     p_cfg->num_pad_dims  = 2;
     p_cfg->num_out_dims  = 4;
@@ -144,6 +157,7 @@ int default_config(test_config_t *p_cfg)
     p_cfg->stride_2 = 1;
     p_cfg->stride_3 = 1;
     p_cfg->stride_4 = 1;
+    p_cfg->axis = 0;
     strcpy(p_cfg->kernel_name, "depth_to_space");
     p_cfg->frames   = 2;
     p_cfg->write_file = 0;
@@ -152,12 +166,22 @@ int default_config(test_config_t *p_cfg)
     p_cfg->write_inp_file_name[0]='\0';
     p_cfg->write_out_file_name[0] = '\0';
     p_cfg->verify = 1;
+    p_cfg->read_concat_inps_shape_str[0] = '\0';
+    p_cfg->read_split_v_outs_shape_str[0] = '\0';
     p_cfg->read_inp_shape_str[0] = '\0';
     p_cfg->read_pad_shape_str[0] = '\0';
     p_cfg->read_out_shape_str[0] = '\0';
     p_cfg->read_pad_values_str[0] = '\0';
     p_cfg->read_permute_vec_str[0] = '\0';
     int itr;
+    for(itr = 0; itr < MAX_NUM_INPS_CONCAT * MAX_DIMS_FOR_CONCAT; itr++)
+    {
+      p_cfg->concat_inputs_shape[itr] = 1;
+    }
+    for(itr = 0; itr < MAX_NUM_OUTS_SPLIT_V * MAX_DIMS_FOR_SPLIT_V; itr++)
+    {
+      p_cfg->split_v_outputs_shape[itr] = 1;
+    }
     for(itr = 0; itr < MAX_DIMS; itr++)
     {
       p_cfg->input_shape[itr] = 1;
@@ -193,6 +217,8 @@ void show_usage(void)
 {
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-inp_data_format: data format of input and output, 0 for nhwc; Default=0\n");
+    printf("\t-num_inputs: number of inputs for concat kernels; Default=1\n");
+    printf("\t-num_ouputs: number of outputs for split_v kernels; Default=1\n");
     printf("\t-num_inp_dims: number of input dimensions; Default=4\n");
     printf("\t-num_pad_dims: number of pad dimensions; Default=2\n");
     printf("\t-num_out_dims: number of output dimensions; Default=4\n");
@@ -223,6 +249,7 @@ void show_usage(void)
     printf("\t-stride_2: stride for dimention 2; Default=1\n");
     printf("\t-stride_3: stride for dimention 3; Default=1\n");
     printf("\t-stride_4: stride for dimention 4; Default=1\n");
+    printf("\t-axis: axis dimension for concat or split_v kernel (-num_inp_dims to num_inp_dims-1); Default=0\n");
     printf("\t-inp_precision: 8, 16; Default=8\n");
     printf("\t-out_precision: 8, 16; Default=8\n");
     printf("\t-frames: Positive number; Default=2\n");
@@ -233,6 +260,8 @@ void show_usage(void)
     printf("\t-write_inp_file_name: Full filename for writing inputs (order - inp) \n");
     printf("\t-write_out_file_name: Full filename for writing output \n");
     printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
+    printf("\t-concat_inps_shape: Takes the input shape dimensions for all inputs (num_inputs * num_inp_dims values space ' ' separated) \n");
+    printf("\t-split_v_outs_shape: Takes the output shape dimensions for all outputs (num_outputs * num_out_dims values space ' ' separated) \n");
     printf("\t-inp_shape: Takes the input shape dimensions (num_inp_dims values space ' ' separated) \n");
     printf("\t-pad_shape: Takes the pad shape dimensions (num_pad_dims values space ' ' separated) \n");
     printf("\t-out_shape: Takes the output shape dimensions (num_out_dims values space ' ' separated) \n");
@@ -258,6 +287,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_INDICATE("-help", p_cfg->help);
     ARGTYPE_INDICATE("-h", p_cfg->help);
     ARGTYPE_ONETIME_CONFIG("-inp_data_format",p_cfg->inp_data_format);
+    ARGTYPE_ONETIME_CONFIG("-num_inputs", p_cfg->num_inputs);
+    ARGTYPE_ONETIME_CONFIG("-num_outputs", p_cfg->num_outputs);
     ARGTYPE_ONETIME_CONFIG("-num_inp_dims", p_cfg->num_inp_dims);                  
     ARGTYPE_ONETIME_CONFIG("-num_pad_dims", p_cfg->num_pad_dims);                     
     ARGTYPE_ONETIME_CONFIG("-num_out_dims", p_cfg->num_out_dims);                   
@@ -288,6 +319,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-stride_2",p_cfg->stride_2);
     ARGTYPE_ONETIME_CONFIG("-stride_3",p_cfg->stride_3);
     ARGTYPE_ONETIME_CONFIG("-stride_4",p_cfg->stride_4);
+    ARGTYPE_ONETIME_CONFIG("-axis",p_cfg->axis);
     ARGTYPE_ONETIME_CONFIG("-inp_precision",p_cfg->inp_precision);
     ARGTYPE_ONETIME_CONFIG("-out_precision",p_cfg->out_precision);
     ARGTYPE_STRING("-kernel_name",p_cfg->kernel_name, MAX_KERNEL_NAME_LENGTH);
@@ -299,6 +331,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_STRING("-write_out_file_name",p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
 
+    ARGTYPE_ONETIME_CONFIG_ARRAY("-concat_inps_shape", p_cfg->concat_inputs_shape, p_cfg->num_inputs * p_cfg->num_inp_dims, p_cfg->read_concat_inps_shape_str);
+    ARGTYPE_ONETIME_CONFIG_ARRAY("-split_v_outs_shape", p_cfg->split_v_outputs_shape, p_cfg->num_outputs * p_cfg->num_out_dims, p_cfg->read_split_v_outs_shape_str);
     ARGTYPE_ONETIME_CONFIG_ARRAY("-inp_shape", p_cfg->input_shape, p_cfg->num_inp_dims, p_cfg->read_inp_shape_str);
     ARGTYPE_ONETIME_CONFIG_ARRAY("-pad_shape", p_cfg->pad_shape, p_cfg->num_pad_dims, p_cfg->read_pad_shape_str);
     ARGTYPE_ONETIME_CONFIG_ARRAY("-out_shape", p_cfg->output_shape, p_cfg->num_out_dims, p_cfg->read_out_shape_str);
@@ -391,6 +425,74 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define CONCAT_KERNEL_FN(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) {\
+    int itr_i = 0, accum_inp_size = 0; \
+    for(itr_i = 0; itr_i < cfg.num_inputs && itr_i < MAX_NUM_INPS_CONCAT; itr_i++) \
+    { \
+      p_inp_shape_ar[itr_i] = &(cfg.concat_inputs_shape[itr_i * cfg.num_inp_dims]); \
+      int itr_d = 0, cur_inp_size = 1; \
+      for(itr_d = 0; itr_d < cfg.num_inp_dims && itr_i < MAX_DIMS_FOR_CONCAT; itr_d++) \
+      { \
+        if(p_inp_shape_ar[itr_i][itr_d] > 0) \
+        { \
+          cur_inp_size *= p_inp_shape_ar[itr_i][itr_d]; \
+        } \
+        else \
+        { \
+          cur_inp_size = 0; \
+        } \
+      } \
+      p_inp_ar[itr_i] = (void *)(((WORD##IPREC *)p_inp->p) + accum_inp_size); \
+      accum_inp_size += cur_inp_size; \
+    } \
+    XTPWR_PROFILER_START(0); \
+    err = xa_nn_##KERNEL##_##IPREC##_##OPREC ( \
+        (WORD##OPREC *)p_out->p, \
+        (WORD32 *) (cfg.output_shape), \
+        (const WORD##IPREC **) p_inp_ar, \
+        (const WORD32 *const *) p_inp_shape_ar, \
+        cfg.num_out_dims, \
+        cfg.num_inputs, \
+        cfg.num_inp_dims, \
+        cfg.axis); \
+    XTPWR_PROFILER_STOP(0); \
+  }
+  
+#define SPLIT_V_KERNEL_FN(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) {\
+    int itr_i = 0, accum_out_size = 0; \
+    for(itr_i = 0; itr_i < cfg.num_outputs && itr_i < MAX_NUM_OUTS_SPLIT_V; itr_i++) \
+    { \
+      p_out_shape_ar[itr_i] = &(cfg.split_v_outputs_shape[itr_i * cfg.num_out_dims]); \
+      int itr_d = 0, cur_out_size = 1; \
+      for(itr_d = 0; itr_d < cfg.num_out_dims && itr_i < MAX_DIMS_FOR_SPLIT_V; itr_d++) \
+      { \
+        if(p_out_shape_ar[itr_i][itr_d] > 0) \
+        { \
+          cur_out_size *= p_out_shape_ar[itr_i][itr_d]; \
+        } \
+        else \
+        { \
+          cur_out_size = 0; \
+        } \
+      } \
+      p_out_ar[itr_i] = (void *)(((WORD##IPREC *)p_out->p) + accum_out_size); \
+      accum_out_size += cur_out_size; \
+    } \
+    XTPWR_PROFILER_START(0); \
+    err = xa_nn_##KERNEL##_##IPREC##_##OPREC ( \
+        (WORD##OPREC **)p_out_ar, \
+        (const WORD32 * const*) p_out_shape_ar, \
+        (const WORD##IPREC *) p_inp->p, \
+        (const WORD32 *) cfg.input_shape, \
+        cfg.num_outputs, \
+        cfg.num_out_dims, \
+        cfg.num_inp_dims, \
+        cfg.axis); \
+    XTPWR_PROFILER_STOP(0); \
+  }
+
 #define RESIZE_BILINEAR_FN(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) { \
     WORD32 height_scale_10, width_scale_10, height_bias, width_bias; \
@@ -466,6 +568,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else STRIDED_SLICE_FN(strided_slice, 32, 32) \
     else STRIDED_SLICE_FN(strided_slice, 8, 8) \
     else TRANSPOSE_KERNEL_FN(transpose, 8, 8) \
+    else TRANSPOSE_KERNEL_FN(transpose, 16, 16) \
+    else CONCAT_KERNEL_FN(concat, 8, 8) \
+    else SPLIT_V_KERNEL_FN(split_v, 8, 8) \
     else RESIZE_BILINEAR_FN(resize_bilinear, 8, 8) \
     else RESIZE_NEAREST_NEIGHBOUR_FN(resize_nearest_neighbour, 8, 8) \
     else {  printf("unsupported reorg operation\n"); return -1;}
@@ -482,6 +587,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else STRIDED_SLICE_FN(strided_slice, 32, 32) \
     else STRIDED_SLICE_FN(strided_slice, 8, 8) \
     else TRANSPOSE_KERNEL_FN(transpose, 8, 8) \
+    else TRANSPOSE_KERNEL_FN(transpose, 16, 16) \
+    else CONCAT_KERNEL_FN(concat, 8, 8) \
+    else SPLIT_V_KERNEL_FN(split_v, 8, 8) \
     else RESIZE_BILINEAR_FN(resize_bilinear, 8, 8) \
     else {  printf("unsupported reorg operation\n"); return -1;}
 #endif
@@ -496,6 +604,10 @@ int xa_nn_main_process(int argc, char *argv[])
   char profiler_params[MAX_PROFILER_PARAMS_LENGTH];
   int inp_size, out_size/*, pad_values_size*/;
   int num_pts=0;
+  void *p_inp_ar[MAX_NUM_INPS_CONCAT];
+  int *p_inp_shape_ar[MAX_NUM_INPS_CONCAT];
+  void *p_out_ar[MAX_NUM_OUTS_SPLIT_V];
+  int *p_out_shape_ar[MAX_NUM_OUTS_SPLIT_V];
 
   test_config_t cfg;
 
@@ -558,7 +670,7 @@ int xa_nn_main_process(int argc, char *argv[])
      rev_itr = cfg.num_inp_dims;
      if(cfg.num_inp_dims > 4)
      {
-	printf("\nIncorrect Arguments. Number of Input Dimentions must be less than or equal to 4. Exiting\n");
+        printf("\nIncorrect Arguments. Number of Input Dimentions must be less than or equal to 4. Exiting\n");
         exit(1);
      }
      for(i = 4 ; i > 4 - cfg.num_inp_dims; i--)
@@ -613,6 +725,50 @@ int xa_nn_main_process(int argc, char *argv[])
     for(itr = 0; itr < cfg.num_out_dims; itr++)
     {
       out_size *= cfg.output_shape[itr]; 
+    }
+  }
+  else if(strcmp(cfg.kernel_name, "concat") == 0)
+  {
+    inp_size = 0; 
+    out_size = 1;
+    int itr;
+    for(itr = 0; itr < cfg.num_inputs; itr++)
+    {
+      int itr_d, cur_inp_size = 1;
+      for(itr_d = 0; itr_d < cfg.num_inp_dims; itr_d++)
+      {
+        if(cfg.concat_inputs_shape[itr*cfg.num_inp_dims + itr_d] > 0)
+          cur_inp_size *= cfg.concat_inputs_shape[itr*cfg.num_inp_dims + itr_d];
+        else
+          cur_inp_size = 0;
+      }
+      inp_size += cur_inp_size;
+    }
+    for(itr = 0; itr < cfg.num_out_dims; itr++)
+    {
+      out_size *= cfg.output_shape[itr]; 
+    }
+  }
+  else if(strcmp(cfg.kernel_name, "split_v") == 0)
+  {
+    inp_size = 1; 
+    out_size = 0;
+    int itr;
+    for(itr = 0; itr < cfg.num_outputs; itr++)
+    {
+      int itr_d, cur_out_size = 1;
+      for(itr_d = 0; itr_d < cfg.num_out_dims; itr_d++)
+      {
+        if(cfg.split_v_outputs_shape[itr*cfg.num_out_dims + itr_d] > 0)
+          cur_out_size *= cfg.split_v_outputs_shape[itr*cfg.num_out_dims + itr_d];
+        else
+          cur_out_size = 0;
+      }
+      out_size += cur_out_size;
+    }
+    for(itr = 0; itr < cfg.num_inp_dims; itr++)
+    {
+      inp_size *= cfg.input_shape[itr]; 
     }
   }
   else if(strcmp(cfg.kernel_name, "resize_bilinear") == 0 || strcmp(cfg.kernel_name, "resize_nearest_neighbour") == 0)
@@ -681,6 +837,14 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_params, "input_shape= %s output_shape= %s permute_vec= %s\n", cfg.read_inp_shape_str, cfg.read_out_shape_str, cfg.read_permute_vec_str);
   }
+  else if(strcmp(cfg.kernel_name, "concat") == 0)
+  {
+    sprintf(profiler_params, "inputs_shape= %s output_shape= %s axis = %d\n", cfg.read_concat_inps_shape_str, cfg.read_out_shape_str, cfg.axis);
+  }
+  else if(strcmp(cfg.kernel_name, "split_v") == 0)
+  {
+    sprintf(profiler_params, "inputs_shape= %s output_shape= %s axis = %d\n", cfg.read_inp_shape_str, cfg.read_split_v_outs_shape_str, cfg.axis);
+  }
   else if(strcmp(cfg.kernel_name, "resize_bilinear") == 0 || strcmp(cfg.kernel_name, "resize_nearest_neighbour") == 0)
   {
     sprintf(profiler_params, "input_batch=%d, input_height=%d, input_width=%d, input_channels=%d, out_batch=%d, out_height=%d, out_width=%d, out_channels=%d",
@@ -745,7 +909,9 @@ int xa_nn_main_process(int argc, char *argv[])
      || !strcmp(cfg.kernel_name,"space_to_batch_nd")
      || !strcmp(cfg.kernel_name,"strided_slice")
      || !strcmp(cfg.kernel_name,"resize_bilinear")
-     || !strcmp(cfg.kernel_name,"resize_nearest_neighbour"))
+     || !strcmp(cfg.kernel_name,"resize_nearest_neighbour")
+     || !strcmp(cfg.kernel_name,"concat")
+     || !strcmp(cfg.kernel_name,"split_v"))
   {
     num_pts = out_size;
   }

@@ -738,9 +738,9 @@ const WORD8* __restrict__ p_inp,
                     {
                         ae_int32x2 i1, i2, i3, out;
 
-                        i1 = AE_MOVDA32(((WORD32 *)p_src1_temp_w)[i]);
-                        i2 = AE_MOVDA32(((WORD32 *)p_src2_temp_w)[i]);
-                        i3 = AE_MOVDA32(((WORD32 *)p_src3_temp_w)[i]);
+                        i1 = AE_MOVDA32(((WORD32 *)p_src1_temp_w)[0]);
+                        i2 = AE_MOVDA32(((WORD32 *)p_src2_temp_w)[0]);
+                        i3 = AE_MOVDA32(((WORD32 *)p_src3_temp_w)[0]);
 
                         out = AE_ADD32S(i1, i2);
                         out = AE_ADD32S(out, i3);

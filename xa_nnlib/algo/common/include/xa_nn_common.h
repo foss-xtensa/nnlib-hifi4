@@ -64,8 +64,10 @@
 #define STRINGIZE(A) STRINGIZE_NX(A)    /*  Turn A into a string literal after macro-expanding it. */
 //#include STRINGIZE(PPCAT(cstub,XTENSA_CORE).h)
 //#include STRINGIZE(PPCAT(PPCAT(cstub,XTENSA_CORE),c.h))
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 #include "xtensa/tie/xt_hifi3.h"
 #include "xtensa/config/core-isa.h"
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 #endif
 
 //-----------------------------------------------------
@@ -89,6 +91,7 @@
 #define INV_TBL_BITS 7
 extern const int32_t tab_invQ30[128];
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY 
 #if XCHAL_HAVE_NSA
   #define NSA(n) XT_NSA(n)
 #else
@@ -100,6 +103,7 @@ extern const int32_t tab_invQ30[128];
     return AE_NSAQ56S(t)-8;
   }
 #endif
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 
 #ifdef COMPILER_XTENSA
   #define ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
@@ -123,11 +127,13 @@ extern const int32_t tab_invQ30[128];
 #define return_int64(x) {  union {ae_int64  ai;int64_t   i; } r; r.ai = x;  return r.i; }
 #endif
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 #if  defined (__cplusplus) || defined(COMPILER_XTENSA)
 
 #else
 #error sorry, C compiler is not supported excluding the XCC
 #endif
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 
 
 #ifdef COMPILER_MSVC

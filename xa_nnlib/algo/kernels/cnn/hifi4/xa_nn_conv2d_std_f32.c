@@ -65,15 +65,29 @@ static WORD32 conv_x_left_pad(
   out_width_over_x_pad = out_width_over_x_pad > out_width ? out_width : out_width_over_x_pad;
 
   /* When kernel convolves over x-left pad region only, output is just bias */
-  for(i=0;i<out_height;i++)
-  {
-    for(j=0;j<out_width_over_x_pad;j++)
+  if(p_bias != NULL){
+    for(i=0;i<out_height;i++)
     {
-      for(k=0;k<out_channels;k++)
+      for(j=0;j<out_width_over_x_pad;j++)
       {
-        p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = p_bias[k];
+        for(k=0;k<out_channels;k++)
+        {
+          p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = p_bias[k];
+        }
       }
     }
+  }
+  else{
+    for(i=0;i<out_height;i++)
+    {
+      for(j=0;j<out_width_over_x_pad;j++)
+      {
+        for(k=0;k<out_channels;k++)
+        {
+          p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = 0.0f;
+        }
+      }
+    }    
   }
   return out_width_over_x_pad;
 }
@@ -96,13 +110,27 @@ static WORD32 conv_x_right_pad(
   WORD32 out_width_over_x_r_pad = out_width - idx_out_width_over_x_r_pad;
 
   /* When kernel convolves over x-right pad region only, output is just bias */
-  for(i=0;i<out_height;i++)
-  {
-    for(j=idx_out_width_over_x_r_pad;j<out_width;j++)
+  if(p_bias != NULL){
+    for(i=0;i<out_height;i++)
     {
-      for(k=0;k<out_channels;k++)
+      for(j=idx_out_width_over_x_r_pad;j<out_width;j++)
       {
-        p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = p_bias[k];
+        for(k=0;k<out_channels;k++)
+        {
+          p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = p_bias[k];
+        }
+      }
+    }
+  }
+  else{
+    for(i=0;i<out_height;i++)
+    {
+      for(j=idx_out_width_over_x_r_pad;j<out_width;j++)
+      {
+        for(k=0;k<out_channels;k++)
+        {
+          p_out[i*out_height_offset+j*out_width_offset+k*out_channels_offset] = 0.0f;
+        }
       }
     }
   }
@@ -133,7 +161,6 @@ WORD32 xa_nn_conv2d_std_f32(
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_kernel, -1);
   XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
-  XA_NNLIB_ARG_CHK_PTR(p_bias, -1);
   XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
   /* Pointer alignment checks */
   XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(FLOAT32), -1);

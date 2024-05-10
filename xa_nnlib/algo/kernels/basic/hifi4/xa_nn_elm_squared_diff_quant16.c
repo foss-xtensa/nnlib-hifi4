@@ -83,6 +83,10 @@ static void internal_elm_squared_diff_broadcast_2D_sym16sxsym16s_sym16s(WORD16 *
   WORD32 out_ls, out_rs;
   out_ls = out_left_shift;
   out_rs = out_left_shift;
+#if XCHAL_HAVE_HIFI1S
+  out_ls = 31 - out_ls;
+  out_ls = out_ls << 16 | out_ls;
+#endif   
   (void)out_rs;
 #else
   WORD32 out_ls, out_rs;
@@ -194,10 +198,17 @@ static void internal_elm_squared_diff_broadcast_2D_sym16sxsym16s_sym16s(WORD16 *
 
       // Raw Output
       out0_32 = out1_32 = out2_32 = out3_32 = 0;
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out0_32, raw_diff0_1, out_multiplier, out_ls, out_rs);
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out1_32, raw_diff2_3, out_multiplier, out_ls, out_rs);
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out2_32, raw_diff4_5, out_multiplier, out_ls, out_rs);
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out3_32, raw_diff6_7, out_multiplier, out_ls, out_rs);
+#else      
       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out0_32, raw_diff0_1, out_multiplier, out_ls, out_rs);
       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out1_32, raw_diff2_3, out_multiplier, out_ls, out_rs);
       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out2_32, raw_diff4_5, out_multiplier, out_ls, out_rs);
       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out3_32, raw_diff6_7, out_multiplier, out_ls, out_rs);
+#endif
 
       CLAMP_VAL(out0_32, out0_32, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
       CLAMP_VAL(out1_32, out1_32, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
@@ -234,7 +245,11 @@ static void internal_elm_squared_diff_broadcast_2D_sym16sxsym16s_sym16s(WORD16 *
         MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2_OUT32(raw_diff0_1, shifted_b0_1, inp2_multiplier, inp2_left_shift);
         raw_diff0_1 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32)));
         out0_32 = 0;
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+        MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out0_32, raw_diff0_1, out_multiplier, out_ls, out_rs);
+#else
         MPY_BY_QUANT_MULT_SLS_X2_OUT32(out0_32, raw_diff0_1, out_multiplier, out_ls, out_rs);
+#endif
         CLAMP_VAL(out0_32, out0_32, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
         ae_int16x4 outval = AE_SEL16_6420(AE_MOVINT16X4_FROMINT32X2(out0_32), AE_MOVINT16X4_FROMINT32X2(out0_32));
         *p_c++ = (WORD16)(AE_MOVAD16_0(outval));
@@ -263,6 +278,10 @@ static void internal_elm_squared_diff_broadcast_sym16sxsym16s_sym16s(WORD16 * __
   WORD32 out_ls, out_rs;
   out_ls = out_left_shift;
   out_rs = out_left_shift;
+#if XCHAL_HAVE_HIFI1S
+  out_ls = 31 - out_ls;
+  out_ls = out_ls << 16 | out_ls;
+#endif
   (void)out_rs;
 #else
   WORD32 out_ls, out_rs;
@@ -316,8 +335,13 @@ static void internal_elm_squared_diff_broadcast_sym16sxsym16s_sym16s(WORD16 * __
       raw_diff2_3 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff2_3, raw_diff2_3), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff2_3, raw_diff2_3), 32)));
 
       out0_32 = out1_32 = 0;
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out0_32, raw_diff0_1, out_multiplier, out_ls, out_rs);
+      MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out1_32, raw_diff2_3, out_multiplier, out_ls, out_rs);
+#else
       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out0_32, raw_diff0_1, out_multiplier, out_ls, out_rs);
       MPY_BY_QUANT_MULT_SLS_X2_OUT32(out1_32, raw_diff2_3, out_multiplier, out_ls, out_rs);
+#endif      
       CLAMP_VAL(out0_32, out0_32, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
       CLAMP_VAL(out1_32, out1_32, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
       ae_int16x4 outval = AE_SEL16_6420(AE_MOVINT16X4_FROMINT32X2(out0_32), AE_MOVINT16X4_FROMINT32X2(out1_32));
@@ -347,7 +371,11 @@ static void internal_elm_squared_diff_broadcast_sym16sxsym16s_sym16s(WORD16 * __
     MPY_BY_QUANT_MSUB_ST_ONE_EXP_X2_OUT32(raw_diff0_1, shifted_a0_1, inp1_multiplier, inp1_left_shift);
     raw_diff0_1 = AE_SEL32_HH(AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_HH(raw_diff0_1, raw_diff0_1), 32)),AE_MOVINT32X2_FROMINT64(AE_SLAI64S(AE_MUL32_LL(raw_diff0_1, raw_diff0_1), 32)));
     out0_32 = 0;
+#if (XCHAL_HAVE_HIFI1S && TFLITE_SINGLE_ROUNDING)
+    MPY_BY_QUANT_MULT_X2_OUT32_HIFI1S(out0_32, raw_diff0_1, out_multiplier, out_ls, out_rs);
+#else
     MPY_BY_QUANT_MULT_SLS_X2_OUT32(out0_32, raw_diff0_1, out_multiplier, out_ls, out_rs);
+#endif    
     CLAMP_VAL(out0_32, out0_32, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
     ae_int16x4 outval = AE_SEL16_6420(AE_MOVINT16X4_FROMINT32X2(out0_32), AE_MOVINT16X4_FROMINT32X2(out0_32));
     *p_c = (WORD16)(AE_MOVAD16_3(outval));

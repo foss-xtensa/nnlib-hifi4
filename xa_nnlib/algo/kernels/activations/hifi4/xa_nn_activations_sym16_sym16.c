@@ -54,7 +54,7 @@ static const uint16_t sigmoid_table_uint16[256] = {
 
 #endif
 
-static void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
+void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
                                                    const WORD16 *p_vec,
                                                    WORD32 vec_length)
 {
@@ -298,21 +298,19 @@ WORD32 xa_nn_vec_sigmoid_sym16s_sym16s(WORD16 *p_out,
     uh_0 = AE_SRAI32(abs_inp_x_inp_mul0, 9);
     uh_1 = AE_SRAI32(abs_inp_x_inp_mul1, 9);
 
-    /*
-     *  Following is the alternate code
+#if XCHAL_HAVE_HIFI4 || XCHAL_HAVE_HIFI1
     ua0 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_0)], sigmoid_table_uint16[AE_MOVAD32_L(uh_0)]); 
     ua1 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_1)], sigmoid_table_uint16[AE_MOVAD32_L(uh_1)]); 
     ub0 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_0) + 1], sigmoid_table_uint16[AE_MOVAD32_L(uh_0) + 1]); 
     ub1 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_1) + 1], sigmoid_table_uint16[AE_MOVAD32_L(uh_1) + 1]); 
-    */
-    /*From here*/
+#else
     int id0,id1,id2,id3;
     id0 = AE_MOVAD32_H(AE_SLAI32(uh_0, 1));
     id1 = AE_MOVAD32_L(AE_SLAI32(uh_0, 1));
     id2 = AE_MOVAD32_H(AE_SLAI32(uh_1, 1));
     id3 = AE_MOVAD32_L(AE_SLAI32(uh_1, 1));
 
-    ae_int16 *psigmoid_table_uint16 = (ae_int16 *)sigmoid_table_uint16;
+    ae_int16 * __restrict__ psigmoid_table_uint16 = (ae_int16 *)sigmoid_table_uint16;
 
     ae_int16x4 zero_16x4 = AE_ZERO16();
 
@@ -329,8 +327,7 @@ WORD32 xa_nn_vec_sigmoid_sym16s_sym16s(WORD16 *p_out,
 
     sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id3), zero_16x4);
     ub1 = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id2)));
-    /*Till here */
-
+#endif
     ua_lsh0 = AE_SLAI32S(ua0, 9);
     ua_lsh1 = AE_SLAI32S(ua1, 9);
 
@@ -500,21 +497,19 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
     uh_0 = AE_SRAI32(abs_inp_x_inp_mul0, 8);
     uh_1 = AE_SRAI32(abs_inp_x_inp_mul1, 8);
     
-    /*
-     *  Following is the alternate code
+#if XCHAL_HAVE_HIFI4 || XCHAL_HAVE_HIFI1
     ua0 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_0)], sigmoid_table_uint16[AE_MOVAD32_L(uh_0)]); 
     ua1 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_1)], sigmoid_table_uint16[AE_MOVAD32_L(uh_1)]); 
     ub0 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_0) + 1], sigmoid_table_uint16[AE_MOVAD32_L(uh_0) + 1]); 
     ub1 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_1) + 1], sigmoid_table_uint16[AE_MOVAD32_L(uh_1) + 1]); 
-    */
-    /*From here*/
+#else
     int id0,id1,id2,id3;
     id0 = AE_MOVAD32_H(AE_SLAI32(uh_0, 1));
     id1 = AE_MOVAD32_L(AE_SLAI32(uh_0, 1));
     id2 = AE_MOVAD32_H(AE_SLAI32(uh_1, 1));
     id3 = AE_MOVAD32_L(AE_SLAI32(uh_1, 1));
 
-    ae_int16 *psigmoid_table_uint16 = (ae_int16 *)sigmoid_table_uint16;
+    ae_int16 * __restrict__ psigmoid_table_uint16 = (ae_int16 *)sigmoid_table_uint16;
 
     ae_int16x4 zero_16x4 = AE_ZERO16();
 
@@ -531,7 +526,7 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
 
     sel0 = AE_SEL16_7610(AE_L16_X((ae_int16 *)psigmoid_table_uint16, id3), zero_16x4);
     ub1 = AE_MOVINT32X2_FROMINT16X4(AE_SEL16_5146(sel0, AE_L16_X((ae_int16 *)psigmoid_table_uint16, id2)));
-    /*Till here */
+#endif
 
     ua_lsh0 = AE_SLAI32S(ua0, 8);
     ua_lsh1 = AE_SLAI32S(ua1, 8);

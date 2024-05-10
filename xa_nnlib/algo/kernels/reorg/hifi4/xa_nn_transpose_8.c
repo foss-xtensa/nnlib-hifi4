@@ -74,6 +74,45 @@ WORD32 xa_nn_transpose_8_8(WORD8 * __restrict__ p_out
   XA_NNLIB_ARG_CHK_ALIGN(p_out_shape, sizeof(WORD32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_inp_shape, sizeof(WORD32), -1);
 
+  /* Shift all dim with 1 in the outer part */
+  int eff_output_shape[5];
+  int eff_permute_vec[5];
+
+  for(int i = 0; i < num_out_dims; i++)
+  {
+    eff_output_shape[i] = p_out_shape[i];
+    eff_permute_vec[i] = p_permute_vec[i];
+  }
+  
+  int one_i=num_out_dims-1, non_one_i=num_out_dims-1;
+  while(one_i > 0 && non_one_i >=0){
+    while(one_i > 0 && eff_output_shape[one_i]!=1){
+      one_i--;
+    }
+    non_one_i = one_i;
+    while(non_one_i >= 0 && eff_output_shape[non_one_i]==1)
+    {
+      non_one_i--;
+    }
+    if(one_i > 0 && non_one_i >=0){
+      int temp;
+      /*swap output_shape*/
+      {
+        temp = eff_output_shape[one_i];
+        eff_output_shape[one_i] = eff_output_shape[non_one_i];
+        eff_output_shape[non_one_i] = temp;
+      }
+      /*swap permute_vec*/
+      {
+        temp = eff_permute_vec[one_i];
+        eff_permute_vec[one_i] = eff_permute_vec[non_one_i];
+        eff_permute_vec[non_one_i] = temp;
+      }
+      
+    }
+  }
+
+
   /* Promoting lesser dim tensors to 5D tensors. 
    * Also updating the permute_vec and shapes as needed for optimization */
   int p_5D_inp_shape[5] = {1, 1, 1, 1, 1};
@@ -85,8 +124,8 @@ WORD32 xa_nn_transpose_8_8(WORD8 * __restrict__ p_out
   itr = num_inp_dims - 1;
   while(itr >= 0)
   {
-    last_n_same_dim = (last_dim_same && (p_permute_vec[itr] == itr)) ? (last_n_same_dim + 1) : last_n_same_dim;
-    last_dim_same = (p_permute_vec[itr] == itr) ? last_dim_same & 1 : last_dim_same & 0;
+    last_n_same_dim = (last_dim_same && (eff_permute_vec[itr] == itr)) ? (last_n_same_dim + 1) : last_n_same_dim;
+    last_dim_same = (eff_permute_vec[itr] == itr) ? last_dim_same & 1 : last_dim_same & 0;
     itr--;
   }
   
@@ -97,7 +136,7 @@ WORD32 xa_nn_transpose_8_8(WORD8 * __restrict__ p_out
   while(itr >= 0)
   {
     p_5D_inp_shape[count] = (same_count > 0) ? p_5D_inp_shape[count]*p_inp_shape[itr] : p_inp_shape[itr];
-    p_5D_out_shape[count] = (same_count > 0) ? p_5D_out_shape[count]*p_out_shape[itr] : p_out_shape[itr];
+    p_5D_out_shape[count] = (same_count > 0) ? p_5D_out_shape[count]*eff_output_shape[itr] : eff_output_shape[itr];
     same_count--;
     itr--;
     count = (same_count > 0) ? count : count - 1;
@@ -108,7 +147,7 @@ WORD32 xa_nn_transpose_8_8(WORD8 * __restrict__ p_out
   count = 4;
   while(itr >= 0)
   {
-    p_5D_permute_vec[count] = (same_count > 0) ? p_permute_vec[itr-(last_n_same_dim - 1)] + dims_added + last_n_same_dim - 1 : p_permute_vec[itr] + dims_added;
+    p_5D_permute_vec[count] = (same_count > 0) ? eff_permute_vec[itr-(last_n_same_dim - 1)] + dims_added + last_n_same_dim - 1 : eff_permute_vec[itr] + dims_added;
     same_count--;
     itr--;
     count--;

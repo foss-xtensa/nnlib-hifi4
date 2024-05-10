@@ -21,8 +21,10 @@
 ******************************************************************************/
 #ifndef __XA_NNLIB_LEGACY_COMPAT_H__
 #define __XA_NNLIB_LEGACY_COMPAT_H__
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 #include <xtensa/config/core-isa.h>
 #include "xtensa/tie/xt_hifi2.h"
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 #include "xa_nnlib_api.h"
 #include "xa_nnlib_standards.h"
 #include "xa_nnlib_err_chk.h"

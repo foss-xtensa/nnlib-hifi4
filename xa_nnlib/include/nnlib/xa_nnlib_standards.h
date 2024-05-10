@@ -22,7 +22,9 @@
 #ifndef __STANDARDS_H__
 #define __STANDARDS_H__
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 #include <xtensa/config/core-isa.h>
+#endif
 
 #if defined(__cplusplus)
 extern "C"
@@ -151,7 +153,7 @@ typedef struct _xa_nnlib_shape_t{
 
 enum xa_error_severity {
   xa_severity_nonfatal = 0,
-  xa_severity_fatal    = (int)0xffffffff
+  xa_severity_fatal    = (unsigned int)0xffffffff
 };
 
 enum xa_error_class {

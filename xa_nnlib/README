@@ -28,6 +28,36 @@ Revision History
 ======================================================================
 
 
+Version 4.1.0 API 1.9: May 10, 2024
+
++ Intermediate Release of HiFi4 NN Library
++ Tested using the RJ-2024.3 tools and xt-clang/xt-clang++ compiler
++ Adds support for build on HiFi1S core with core-specific optimizations for various performance critical kernels.
++ Adds the following kernels:
+  xa_nn_concat_8_8
+  xa_nn_split_v_8_8
+  xa_nn_transpose_16_16
+  xa_nn_elm_requantize_asym8u_asym8s
+  xa_nn_softmax_sym16s_16
++ Adds Null Bias support for CONV2D and TRANSPOSED_CONV for quant8 and quant16 datatypes.
++ Improves code-size for conv2d_std quant16 kernel.
++ Improves performance of xa_nn_transpose_8_8 kernel for specific use-cases
++ Fixes known issues to improve stability.
+
+Note:
+> Processor Configuration must be built with the SP-VFP option to compile floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for the C++11 standard. 
+  This is supported only with the Xtensa C library. 
+
+Known issues
+> Compiler optimizations are not available for the ANN C++ source files.
+> 3 failures were seen in the ANN testcases because of differences in reference code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
+
 Version 4.0.0 API 1.8: January 12, 2024
 
 + GA Release of HiFi4 NN Library
