@@ -581,7 +581,7 @@ static inline void _xa_nn_dot_product_1_rows_1_vecs_unaligned
   *out_0_0 = d_out;
 }
 
-WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
+WORD32 xa_nn_matmul_v2_per_chan_sym8sxsym16s_sym16s(
     WORD16 * __restrict__ p_out,
     const WORD8 * __restrict__ p_mat1,
     const WORD16 * __restrict__ p_vec1,
@@ -596,7 +596,10 @@ WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
     WORD32 vec1_zero_bias,
     const WORD32* __restrict__ p_out_multiplier,
     const WORD32* __restrict__ p_out_shift,
-    WORD32 out_zero_bias)
+    WORD32 out_zero_bias,
+    WORD32 out_activation_min,
+    WORD32 out_activation_max,
+    xa_dma_cfg_t *p_dma_cfg)
 {
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_mat1, -1);
@@ -616,12 +619,18 @@ WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
   XA_NNLIB_ARG_CHK_COND((out_stride == 0), -1);
   XA_NNLIB_ARG_CHK_COND((vec1_zero_bias < -127 || vec1_zero_bias > 128), -1);
   XA_NNLIB_ARG_CHK_COND((out_zero_bias < -128 || out_zero_bias > 127), -1);
+  /* MinMax activation check */
+  XA_NNLIB_ARG_CHK_COND((out_activation_min < -32768) || (out_activation_min > 32767), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < -32768) || (out_activation_max > 32767), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < out_activation_min), -1);
 
   int itr = 0;
   for(itr=0; itr<rows; itr++)
   {
     XA_NNLIB_ARG_CHK_COND((p_out_shift[itr] < -31 || p_out_shift[itr] > 15), -1);
   }
+  ae_int32x2 out_min32 = AE_MOVDA32(out_activation_min);
+  ae_int32x2 out_max32 = AE_MOVDA32(out_activation_max);
 
 #if XCHAL_HAVE_HIFI1S
   if(((rows&0x3) == 0) && ((cols1&0x7) == 0) && ((row_stride1&0x7) == 0) && (((unsigned int)p_vec1 & 0x7) == 0) 
@@ -682,6 +691,10 @@ WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
         ae_int32x2 result2 = MultiplyByQuantizedMultiplier_x2_opt(acc3, acc4, p_out_multiplier[m_itr+1], out_shift2);
         ae_int32x2 result3 = MultiplyByQuantizedMultiplier_x2_opt(acc5, acc6, p_out_multiplier[m_itr+2], out_shift3);
         ae_int32x2 result4 = MultiplyByQuantizedMultiplier_x2_opt(acc7, acc8, p_out_multiplier[m_itr+3], out_shift4);
+        AE_MINMAX32(result1, out_min32, out_max32);
+        AE_MINMAX32(result2, out_min32, out_max32);
+        AE_MINMAX32(result3, out_min32, out_max32);
+        AE_MINMAX32(result4, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result1, result2);
         ae_int16x4 d2 = AE_SAT16X4(result3, result4);
         AE_S16_0_XP(AE_SEL16_6543(d1, d1), p_dst0, out_offset*sizeof(WORD16));
@@ -761,6 +774,10 @@ WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
         ae_int32x2 result2 = MultiplyByQuantizedMultiplier_x2_opt(acc3, acc4, p_out_multiplier[m_itr+1], out_shift2);
         ae_int32x2 result3 = MultiplyByQuantizedMultiplier_x2_opt(acc5, acc6, p_out_multiplier[m_itr+2], out_shift3);
         ae_int32x2 result4 = MultiplyByQuantizedMultiplier_x2_opt(acc7, acc8, p_out_multiplier[m_itr+3], out_shift4);
+        AE_MINMAX32(result1, out_min32, out_max32);
+        AE_MINMAX32(result2, out_min32, out_max32);
+        AE_MINMAX32(result3, out_min32, out_max32);
+        AE_MINMAX32(result4, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result1, result2);
         ae_int16x4 d2 = AE_SAT16X4(result3, result4);
         AE_S16_0_XP(AE_SEL16_6543(d1, d1), p_dst0, out_offset*sizeof(WORD16));
@@ -796,6 +813,10 @@ WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
         ae_int32x2 result2 = MultiplyByQuantizedMultiplier_ref(acc2, p_out_multiplier[m_itr+1], out_shift2);
         ae_int32x2 result3 = MultiplyByQuantizedMultiplier_ref(acc3, p_out_multiplier[m_itr+2], out_shift3);
         ae_int32x2 result4 = MultiplyByQuantizedMultiplier_ref(acc4, p_out_multiplier[m_itr+3], out_shift4);
+        AE_MINMAX32(result1, out_min32, out_max32);
+        AE_MINMAX32(result2, out_min32, out_max32);
+        AE_MINMAX32(result3, out_min32, out_max32);
+        AE_MINMAX32(result4, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result1, result2);
         ae_int16x4 d2 = AE_SAT16X4(result3, result4);
         AE_S16_0_XP(AE_SEL16_6543(d1, d1), p_dst0, out_offset*sizeof(WORD16));
@@ -840,18 +861,22 @@ WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
                        p_mat1_0, p_mat1_1, p_vec_0, p_vec_1, cols1);
 
         ae_int32x2 result = MultiplyByQuantizedMultiplier_ref(acc1, p_out_multiplier[m_itr], out_shift1);
+        AE_MINMAX32(result, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst0, out_offset*sizeof(WORD16));
 
         result = MultiplyByQuantizedMultiplier_ref(acc2, p_out_multiplier[m_itr+1], out_shift2);
+        AE_MINMAX32(result, out_min32, out_max32);
         d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst1, out_offset*sizeof(WORD16));
 
         result = MultiplyByQuantizedMultiplier_ref(acc3, p_out_multiplier[m_itr], out_shift1);
+        AE_MINMAX32(result, out_min32, out_max32);
         d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst0, out_offset*sizeof(WORD16));
 
         result = MultiplyByQuantizedMultiplier_ref(acc4, p_out_multiplier[m_itr+1], out_shift2);
+        AE_MINMAX32(result, out_min32, out_max32);
         d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst1, out_offset*sizeof(WORD16));
       }
@@ -865,10 +890,12 @@ WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
         _xa_nn_dot_product_2_rows_1_vecs_unaligned(&acc1, &acc2, p_mat1_0, p_mat1_1, p_vec_0, cols1);
 
         ae_int32x2 result = MultiplyByQuantizedMultiplier_ref(acc1, p_out_multiplier[m_itr], out_shift1);
+        AE_MINMAX32(result, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst0, out_offset*sizeof(WORD16));
 
         result = MultiplyByQuantizedMultiplier_ref(acc2, p_out_multiplier[m_itr+1], out_shift2);
+        AE_MINMAX32(result, out_min32, out_max32);
         d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst1, out_offset*sizeof(WORD16));
       }
@@ -898,6 +925,7 @@ WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
            ,cols1
           );
         ae_int32x2 result = MultiplyByQuantizedMultiplier_ref(acc1, p_out_multiplier[m_itr], out_shift1);
+        AE_MINMAX32(result, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst0, out_offset*sizeof(WORD16));
       }
@@ -910,7 +938,45 @@ WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
   return 0;
 }
 
-WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
+WORD32 xa_nn_matmul_per_chan_sym8sxsym16s_sym16s(
+    WORD16 * __restrict__ p_out,
+    const WORD8 * __restrict__ p_mat1,
+    const WORD16 * __restrict__ p_vec1,
+    const WORD64 * __restrict__ p_bias,
+    WORD32 rows,
+    WORD32 cols1,
+    WORD32 row_stride1,
+    WORD32 vec_count,
+    WORD32 vec_offset,
+    WORD32 out_offset,
+    WORD32 out_stride,                      
+    WORD32 vec1_zero_bias,
+    const WORD32* __restrict__ p_out_multiplier,
+    const WORD32* __restrict__ p_out_shift,
+    WORD32 out_zero_bias)
+{
+  return xa_nn_matmul_v2_per_chan_sym8sxsym16s_sym16s(
+            p_out,
+            p_mat1,
+            p_vec1,
+            p_bias,
+            rows,
+            cols1,
+            row_stride1,
+            vec_count,
+            vec_offset,
+            out_offset,
+            out_stride,
+            vec1_zero_bias,
+            p_out_multiplier,
+            p_out_shift,
+            out_zero_bias,
+            -32768,
+            32767,
+            NULL);
+}
+
+WORD32 xa_nn_matmul_v2_sym8sxsym16s_sym16s(
     WORD16 * __restrict__ p_out,
     const WORD8 * __restrict__ p_mat1,
     const WORD16 * __restrict__ p_vec1,
@@ -925,7 +991,10 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
     WORD32 vec1_zero_bias,
     WORD32 out_multiplier,
     WORD32 out_shift,
-    WORD32 out_zero_bias)
+    WORD32 out_zero_bias,
+    WORD32 out_activation_min,
+    WORD32 out_activation_max,
+    xa_dma_cfg_t *p_dma_cfg)
 {
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_mat1, -1);
@@ -942,12 +1011,19 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
   XA_NNLIB_ARG_CHK_COND((vec1_zero_bias < -127 || vec1_zero_bias > 128), -1);
   XA_NNLIB_ARG_CHK_COND((out_zero_bias < -128 || out_zero_bias > 127), -1);
   XA_NNLIB_ARG_CHK_COND((out_shift < -31 || out_shift > 31), -1);
+  /* MinMax activation check */
+  XA_NNLIB_ARG_CHK_COND((out_activation_min < -32768) || (out_activation_min > 32767), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < -32768) || (out_activation_max > 32767), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < out_activation_min), -1);
 
 #if XCHAL_HAVE_HIFI1S  
   out_shift = 15 - out_shift;
   out_shift = (out_shift << 16) | (out_shift); 
 #endif
 
+  ae_int32x2 out_min32 = AE_MOVDA32(out_activation_min);
+  ae_int32x2 out_max32 = AE_MOVDA32(out_activation_max);
+  
   if(((rows&0x3) == 0) && ((cols1&0x3) == 0) && ((row_stride1&0x3) == 0) && (((unsigned int)p_vec1 & 0x7) == 0) 
       && (((unsigned int)p_mat1 & 0x3) == 0) && ((vec_offset & 0x3) ==0))
   {
@@ -990,6 +1066,10 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
         ae_int32x2 result2 = MultiplyByQuantizedMultiplier_x2_opt(acc3, acc4, out_multiplier, out_shift);
         ae_int32x2 result3 = MultiplyByQuantizedMultiplier_x2_opt(acc5, acc6, out_multiplier, out_shift);
         ae_int32x2 result4 = MultiplyByQuantizedMultiplier_x2_opt(acc7, acc8, out_multiplier, out_shift);
+        AE_MINMAX32(result1, out_min32, out_max32);
+        AE_MINMAX32(result2, out_min32, out_max32);
+        AE_MINMAX32(result3, out_min32, out_max32);
+        AE_MINMAX32(result4, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result1, result2);
         ae_int16x4 d2 = AE_SAT16X4(result3, result4);
         AE_S16_0_XP(AE_SEL16_6543(d1, d1), p_dst0, out_offset*sizeof(WORD16));
@@ -1024,6 +1104,10 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
         ae_int32x2 result2 = MultiplyByQuantizedMultiplier_ref(acc2, out_multiplier, out_shift);
         ae_int32x2 result3 = MultiplyByQuantizedMultiplier_ref(acc3, out_multiplier, out_shift);
         ae_int32x2 result4 = MultiplyByQuantizedMultiplier_ref(acc4, out_multiplier, out_shift);
+        AE_MINMAX32(result1, out_min32, out_max32);
+        AE_MINMAX32(result2, out_min32, out_max32);
+        AE_MINMAX32(result3, out_min32, out_max32);
+        AE_MINMAX32(result4, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result1, result2);
         ae_int16x4 d2 = AE_SAT16X4(result3, result4);
         AE_S16_0_XP(AE_SEL16_6543(d1, d1), p_dst0, out_offset*sizeof(WORD16));
@@ -1071,18 +1155,22 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
                  &acc1, &acc2, &acc3, &acc4, p_mat1_0, p_mat1_1, p_vec_0, p_vec_1, cols1);
 
         ae_int32x2 result = MultiplyByQuantizedMultiplier_ref(acc1, out_multiplier, out_shift);
+        AE_MINMAX32(result, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst0, out_offset*sizeof(WORD16));
 
         result = MultiplyByQuantizedMultiplier_ref(acc2, out_multiplier, out_shift);
+        AE_MINMAX32(result, out_min32, out_max32);
         d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst1, out_offset*sizeof(WORD16));
 
         result = MultiplyByQuantizedMultiplier_ref(acc3, out_multiplier, out_shift);
+        AE_MINMAX32(result, out_min32, out_max32);
         d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst0, out_offset*sizeof(WORD16));
 
         result = MultiplyByQuantizedMultiplier_ref(acc4, out_multiplier, out_shift);
+        AE_MINMAX32(result, out_min32, out_max32);
         d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst1, out_offset*sizeof(WORD16));
       }
@@ -1100,10 +1188,12 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
         _xa_nn_dot_product_2_rows_1_vecs_unaligned(&acc1, &acc2, p_mat1_0, p_mat1_1, p_vec_0, cols1);
 
         ae_int32x2 result = MultiplyByQuantizedMultiplier_ref(acc1, out_multiplier, out_shift);
+        AE_MINMAX32(result, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst0, out_offset*sizeof(WORD16));
 
         result = MultiplyByQuantizedMultiplier_ref(acc2, out_multiplier, out_shift);
+        AE_MINMAX32(result, out_min32, out_max32);
         d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst1, out_offset*sizeof(WORD16));
       }
@@ -1130,6 +1220,7 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
            ,cols1
           );
         ae_int32x2 result = MultiplyByQuantizedMultiplier_ref(acc1, out_multiplier, out_shift);
+        AE_MINMAX32(result, out_min32, out_max32);
         ae_int16x4 d1 = AE_SAT16X4(result, result);
         AE_S16_0_XP(d1, p_dst0, out_offset*sizeof(WORD16));
       }
@@ -1142,5 +1233,43 @@ WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
     return -1;
 
   return 0;
+}
+
+WORD32 xa_nn_matmul_sym8sxsym16s_sym16s(
+    WORD16 * __restrict__ p_out,
+    const WORD8 * __restrict__ p_mat1,
+    const WORD16 * __restrict__ p_vec1,
+    const WORD64 * __restrict__ p_bias,
+    WORD32 rows,
+    WORD32 cols1,
+    WORD32 row_stride1,
+    WORD32 vec_count,
+    WORD32 vec_offset,
+    WORD32 out_offset,
+    WORD32 out_stride,                      
+    WORD32 vec1_zero_bias,
+    WORD32 out_multiplier,
+    WORD32 out_shift,
+    WORD32 out_zero_bias)
+{
+  return xa_nn_matmul_v2_sym8sxsym16s_sym16s(
+        p_out,
+        p_mat1,
+        p_vec1,
+        p_bias,
+        rows,
+        cols1,
+        row_stride1,
+        vec_count,
+        vec_offset,
+        out_offset,
+        out_stride,                      
+        vec1_zero_bias,
+        out_multiplier,
+        out_shift,
+        out_zero_bias,
+        -32768,
+        32767,
+        NULL);
 }
 

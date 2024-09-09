@@ -28,6 +28,51 @@ Revision History
 ======================================================================
 
 
+Version 4.2.0 API 1.10: September 9, 2024
+
++ Intermediate Release of HiFi4 NN Library
++ Tested using the RJ-2024.3 tools and xt-clang/xt-clang++ compiler
++ Adds the following kernels:
+  xa_nn_dilated_conv2d_std_per_chan_sym8sxsym16s
+  xa_nn_batch_matmul_asym8sxasym8s_asym8s
+  xa_nn_batch_matmul_sym16sxsym16s_sym16s
+  xa_nn_elm_requantize_asym8s_asym8u
+  xa_nn_elm_requantize_asym8s_asym16s
+  xa_nn_elm_requantize_asym8s_asym16u
+  xa_nn_renorm_asym8s_asym8s
+  xa_nn_shuffle_3D_8_8
++ Adds _v2 versions of the following kernels of sym8sxasym8s and sym8sxsym16s precisions.
+  These kernels add fused min-max activation operation to the existing funcationality to improve performance.
+  fully_connected
+  conv2d_std
+  conv2d
+  dilated_conv2d_std
+  conv2d_pointwise
+  transpose_conv
++ Adds _v2 versions of conv2d_depth (sym8sxasym8s, sym8sxsym16s) and dilated_conv2d_depth (sym8sxasym8s)
+  These kernels add fused min-max activation operation to existing functionality to improve performance.
+  Only NHWC data-format is supported to improve code size.
++ Adds _v2 versions of matXvec kernels for precisions asym8sxasym8s and sym8sxsym16s.
+  These kernels remove mat2/vec2 parameters, assume additional alignment requirements, and add fused min-max
+  activation support to the existing functionality.
++ Improves performance of matmul asym8sxasym8s kernel.
++ Fixes known issues to improve stability.
+
+Note:
+> New _v2 APIs are in beta stage and may change in next release.
+> Processor Configuration must be built with the SP-VFP option to compile floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for the C++11 standard. 
+  This is supported only with the Xtensa C library. 
+
+Known issues
+> Compiler optimizations are not available for the ANN C++ source files.
+> 3 failures were seen in the ANN testcases because of differences in reference code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
+
 Version 4.1.0 API 1.9: May 10, 2024
 
 + Intermediate Release of HiFi4 NN Library

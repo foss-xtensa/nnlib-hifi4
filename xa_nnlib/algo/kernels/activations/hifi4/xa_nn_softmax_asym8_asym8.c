@@ -236,8 +236,8 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
     xtbool4 b0;
 #endif
     xtbool2 f32, f10;
-    UWORD8 *p_in = (UWORD8 *)p_vec;
-    WORD32 *p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
+    UWORD8 *__restrict__ p_in = (UWORD8 *)p_vec;
+    WORD32 *__restrict__ p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
     ae_int32x2 y32, y10, diff_min;
     ae_int32x2 dequantized_y32, dequantized_y10, a_min, a_max;
     ae_int32x2 exp_y32, exp_y10, sum_exp, recip_sum_exp, unsat_out32, unsat_out10, ONE;
@@ -293,7 +293,7 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
             temp16X4 = AE_MOVDA16(i1);
             MAX_16X4(m0, temp16X4)
         }
-        WORD8 *p_in_t = (WORD8 *)p_in;
+        WORD8 *__restrict__ p_in_t = (WORD8 *)p_in;
         for(i=0; i < main_loop_count; i++)
         {
 #if XCHAL_HAVE_HIFI1
@@ -351,11 +351,15 @@ WORD32 xa_nn_vec_softmax_asym8_asym8( UWORD8 * __restrict__ p_out,
     sum_exp = AE_SEL32_HH(sum_exp, z);
     align_dst = AE_ZALIGN64(); // zero alignment reg
 
-    WORD8 *p_in_t = (WORD8 *)p_in;
+    WORD8 *__restrict__ p_in_t = (WORD8 *)p_in;
     for(i=0; i < main_loop_count; i++)
     {
+#if XCHAL_HAVE_HIFI1
+        AE_L8X4U_IP(x, p_in_t, 4*sizeof(WORD8));
+#else        
         AE_L8X4F_IP(x, p_in_t, 4*sizeof(WORD8));
         x = AE_MOVINT16X4_FROMINT64(AE_SRLI64(AE_MOVINT64_FROMINT16X4(x), 8));
+#endif        
         x = AE_SUB16S(x, max);
 
         y32 = AE_SEXT32X2D16_32(x);
@@ -498,8 +502,8 @@ WORD32 xa_nn_vec_softmax_asym8s_asym8s( WORD8 * __restrict__ p_out,
     xtbool4 b0;
 #endif
     xtbool2 f32, f10;
-    WORD8 *p_in = (WORD8 *)p_vec;
-    WORD32 *p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
+    WORD8 * __restrict__ p_in = (WORD8 *)p_vec;
+    WORD32 *__restrict__ p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
     ae_int32x2 y32, y10, diff_min;
     ae_int32x2 dequantized_y32, dequantized_y10, a_min, a_max;
     ae_int32x2 exp_y32, exp_y10, sum_exp, recip_sum_exp, unsat_out32, unsat_out10, out32, out10, ONE;

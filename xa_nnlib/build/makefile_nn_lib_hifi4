@@ -73,7 +73,9 @@ MATXVECO2OBJS = \
     xa_nn_matXvec_asym8xasym8.o \
     xa_nn_matXvec_sym8sxasym8s.o \
     xa_nn_matXvec_sym8sxsym16s.o \
+    xa_nn_matXvec_v2_sym8sxsym16s.o \
     xa_nn_matXvec_asym8sxasym8s.o \
+    xa_nn_matXvec_v2_asym8sxasym8s.o \
     xa_nn_matXvec_asym4sxasym8s.o \
     xa_nn_matXvec_asym8xasym8_batch.o \
     xa_nn_matXvec_8x8_batch.o \
@@ -89,7 +91,10 @@ MATXVECO2OBJS = \
     xa_nn_matmul_sym8sxasym8s.o \
     xa_nn_matmul_asym4sxasym8s.o \
     xa_nn_matmul_sym8sxsym16s.o \
-    xa_nn_matmul_asym8sxasym8s.o
+    xa_nn_matmul_asym8sxasym8s.o \
+    xa_nn_batch_matmul_asym8sxasym8s.o \
+    xa_nn_batch_matmul_sym16sxsym16s.o \
+    xa_nn_matmul_sym16sxsym16s.o 
 
 ACTIVATIONSO2OBJS = \
   xa_nn_activations_f32_f32.o \
@@ -178,7 +183,8 @@ CONVO2OBJS = \
     xa_nn_transpose_conv_f32.o
 
 FCO2OBJS = \
-  xa_nn_fully_connected.o
+  xa_nn_fully_connected.o \
+  xa_nn_fully_connected_v2.o
 
 POOLO2OBJS = \
     xa_nn_inv_256_tbl.o \
@@ -257,7 +263,8 @@ BASICOBJS = \
 NORMO2OBJS = \
   xa_nn_l2_norm_f32.o \
   xa_nn_l2_norm_asym8s.o \
-  xa_nn_batch_norm_8.o
+  xa_nn_batch_norm_8.o \
+  xa_nn_renorm_8.o
 
 REORGO2OBJS = \
   xa_nn_depth_to_space_8.o \
@@ -275,7 +282,8 @@ REORGO2OBJS = \
   xa_nn_resize_bilinear_8.o \
   xa_nn_resize_nearest_neighbour_8.o \
   xa_nn_concat_8.o \
-  xa_nn_split_v_8.o
+  xa_nn_split_v_8.o \
+  xa_nn_shuffle_8.o
 
 
 ifeq ($(BUILD_SCRATCH_SIZE_LIB), 1)

@@ -1132,6 +1132,43 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define REQUANTIZE_ASYM8S_ASYM8U(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_elm_requantize_asym8s_asym8u ( \
+                (UWORD8 *)p_out->p, (WORD8 *)p_inp1->p, \
+                cfg.input1_zero_bias, cfg.output_zero_bias, \
+                cfg.output_left_shift, cfg.output_multiplier,\
+                cfg.io_length);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
+#define REQUANTIZE_ASYM8S_ASYM16S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_elm_requantize_asym8s_asym16s ( \
+                (WORD16 *)p_out->p, (WORD8 *)p_inp1->p, \
+                cfg.input1_zero_bias, cfg.output_zero_bias, \
+                cfg.output_left_shift, cfg.output_multiplier,\
+                cfg.io_length);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
+#define REQUANTIZE_ASYM8S_ASYM16U(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_elm_requantize_asym8s_asym16u( \
+                (UWORD16 *)p_out->p, (WORD8 *)p_inp1->p, \
+                cfg.input1_zero_bias, cfg.output_zero_bias, \
+                cfg.output_left_shift, cfg.output_multiplier,\
+                cfg.io_length);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
+
 #define REQUANTIZE_ASYM8S_ASYM8S(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
@@ -1275,6 +1312,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else REQUANTIZE_ASYM16S_ASYM16S(elm_requantize, -7, -7) \
     else REQUANTIZE_ASYM16S_ASYM8S(elm_requantize, -7, -4) \
     else REQUANTIZE_ASYM8S_ASYM8S(elm_requantize, -4, -4) \
+    else REQUANTIZE_ASYM8S_ASYM8U(elm_requantize, -4, -3) \
+    else REQUANTIZE_ASYM8S_ASYM16S(elm_requantize, -4, -7) \
+    else REQUANTIZE_ASYM8S_ASYM16U(elm_requantize, -4, -6) \
     else DEQUANTIZE_ASYM8S_F32(elm_dequantize, -4, -1) \
     else DEQUANTIZE_ASYM16S_F32(elm_dequantize, -7, -1) \
     else QUANTIZE_F32_ASYM8S(elm_quantize, -1, -4) \
@@ -1325,6 +1365,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else REQUANTIZE_ASYM16S_ASYM16S(elm_requantize, -7, -7) \
     else REQUANTIZE_ASYM16S_ASYM8S(elm_requantize, -7, -4) \
     else REQUANTIZE_ASYM8S_ASYM8S(elm_requantize, -4, -4) \
+    else REQUANTIZE_ASYM8S_ASYM8U(elm_requantize, -4, -3) \
+    else REQUANTIZE_ASYM8S_ASYM16S(elm_requantize, -4, -7) \
+    else REQUANTIZE_ASYM8S_ASYM16U(elm_requantize, -4, -6) \
     else MEMMOVE_8_8(memmove, -4, -4) \
     else {  printf("unsupported basic operation\n"); return -1;}
 #endif
@@ -1463,6 +1506,18 @@ int xa_nn_main_process(int argc, char *argv[])
   else if(cfg.inp_precision == -7 && cfg.out_precision == -1)
   {
     sprintf(profiler_name, "%s_asym16s_f32", cfg.kernel_name);
+  }
+  else if(cfg.inp_precision == -4 && cfg.out_precision == -3)
+  {
+    sprintf(profiler_name, "%s_asym8s_asym8u", cfg.kernel_name);
+  }
+  else if(cfg.inp_precision == -4 && cfg.out_precision == -7)
+  {
+    sprintf(profiler_name, "%s_asym8s_asym16s", cfg.kernel_name);
+  }
+  else if(cfg.inp_precision == -4 && cfg.out_precision == -6)
+  {
+    sprintf(profiler_name, "%s_asym8s_asym16u", cfg.kernel_name);
   }
   else
   {

@@ -159,6 +159,27 @@ int load_matXvec_input_data(int write_file, FILE *fptr_inp, buf2D_t *p_mat1, buf
   return 0;
 }
 
+int load_batch_matmul_input_data(int write_file, FILE *fptr_inp, buf2D_t *p_mat1, buf1D_t *p_vec1)
+{
+  if(write_file)
+  {
+    /* Set random input data */
+    set_rand_inp_buf2D(p_mat1);
+    set_rand_inp_buf1D(p_vec1);
+
+    /* Write input data into file */
+    write_buf2D_to_file(fptr_inp, p_mat1);
+    write_buf1D_to_file(fptr_inp, p_vec1);
+  }
+  else
+  {
+    /* Read input data from file */                           
+    read_buf2D_from_file(fptr_inp, p_mat1, 0);
+    read_buf1D_from_file(fptr_inp, p_vec1);
+  }
+  return 0;
+}
+
 int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_inp_alpha, char *kernel_name) 
 {  
   if(write_file)                                                                     

@@ -101,7 +101,9 @@ static WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s_no_circ_buf(
     WORD32 * p_out_multiplier,
     WORD32 * p_out_shift,
     WORD32 out_zero_bias,
-    WORD32 out_data_format
+    WORD32 out_data_format,
+    WORD32 out_activation_min,
+    WORD32 out_activation_max
     )
 {
       
@@ -328,6 +330,10 @@ static WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s_no_circ_buf(
           ae_int32x2 acc_vec3 = MultiplyByQuantizedMultiplier_x2_opt(
               out0_3, out1_3, p_out_multiplier[out_ch + 3],
               out_shift_3);
+          AE_MINMAX32(acc_vec0, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+          AE_MINMAX32(acc_vec1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+          AE_MINMAX32(acc_vec2, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+          AE_MINMAX32(acc_vec3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
           ae_int16x4 d1 = AE_SAT16X4(acc_vec0, acc_vec1);
           ae_int16x4 d2 = AE_SAT16X4(acc_vec2, acc_vec3);
           AE_S16_0_XP(AE_SEL16_6543(d1, d1), (ae_int16 *)p_dst0_0, 8);
@@ -405,7 +411,9 @@ static WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s_no_circ_buf_vec_unaligned(
     WORD32 * p_out_multiplier,
     WORD32 * p_out_shift,
     WORD32 out_zero_bias,
-    WORD32 out_data_format
+    WORD32 out_data_format,
+    WORD32 out_activation_min,
+    WORD32 out_activation_max
     )
 {
     const WORD16 *p_dst0_0 = p_out + 0;
@@ -529,6 +537,10 @@ static WORD32 xa_nn_conv2d_std_per_chan_sym8sxsym16s_no_circ_buf_vec_unaligned(
           ae_int32x2 acc_vec3 = MultiplyByQuantizedMultiplier_x2_opt(
               out0_3, out1_3, p_out_multiplier[out_ch + 3],
               out_shift_3);
+          AE_MINMAX32(acc_vec0, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+          AE_MINMAX32(acc_vec1, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+          AE_MINMAX32(acc_vec2, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
+          AE_MINMAX32(acc_vec3, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
           ae_int16x4 d1 = AE_SAT16X4(acc_vec0, acc_vec1);
           ae_int16x4 d2 = AE_SAT16X4(acc_vec2, acc_vec3);
           AE_S16_0_XP(AE_SEL16_6543(d1, d1), (ae_int16 *)p_dst0_0, 8);
@@ -566,7 +578,9 @@ static WORD32 conv_x_left_pad(
     const WORD64* __restrict__ p_bias,
     WORD16 *p_out,
     WORD32 * p_out_multiplier,
-    WORD32 * p_out_shift)
+    WORD32 * p_out_shift,
+    WORD32 out_activation_min,
+    WORD32 out_activation_max)
 {
   WORD32 i,j,k;
   WORD32 out_width_over_x_pad = (x_padding - kernel_width)/x_stride + 1;
@@ -590,6 +604,7 @@ static WORD32 conv_x_left_pad(
           q1 = 0;
         }
 	ae_int32x2 acc = MultiplyByQuantizedMultiplier_ref(q1, p_out_multiplier[k], p_out_shift[k]);
+        AE_MINMAX32(acc, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
 	d1 = AE_SAT16X4(acc, acc);
 	AE_S16_0_XP(d1, ptrout, out_channels_offset*sizeof(WORD16));
       }
@@ -611,7 +626,9 @@ static WORD32 conv_x_right_pad(
     const WORD64* __restrict__ p_bias,
     WORD16 *p_out,
     WORD32 * p_out_multiplier,
-    WORD32 * p_out_shift)
+    WORD32 * p_out_shift,
+    WORD32 out_activation_min,
+    WORD32 out_activation_max)
 {
   WORD32 i,j,k;
   WORD32 idx_out_width_over_x_r_pad = (x_padding + input_width + x_stride - 1)/x_stride + 1;
@@ -635,6 +652,7 @@ static WORD32 conv_x_right_pad(
           q1 = 0;
         }
 	ae_int32x2 acc = MultiplyByQuantizedMultiplier_ref(q1, p_out_multiplier[k], p_out_shift[k]);
+        AE_MINMAX32(acc, AE_MOVDA32(out_activation_min), AE_MOVDA32(out_activation_max));
 	d1 = AE_SAT16X4(acc, acc);
 	AE_S16_0_XP(d1, ptrout, out_channels_offset*sizeof(WORD16));
       }
@@ -643,7 +661,7 @@ static WORD32 conv_x_right_pad(
   return out_width_over_x_r_pad;
 }
 
-WORD32 xa_nn_conv2d_per_chan_sym8sxsym16s(
+WORD32 xa_nn_conv2d_v2_per_chan_sym8sxsym16s(
     WORD16* __restrict__ p_out,
     const WORD16* __restrict__ p_inp,
     const WORD8* __restrict__ p_kernel,
@@ -668,7 +686,10 @@ WORD32 xa_nn_conv2d_per_chan_sym8sxsym16s(
     WORD32 * p_out_shift,
     WORD32 out_zero_bias,
     WORD32 out_data_format,
-    VOID *p_scratch)
+    VOID *p_scratch,
+    WORD32 out_activation_min,
+    WORD32 out_activation_max,
+    xa_dma_cfg_t *p_dma_cfg)
 {
    /* NULL pointer checks */
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
@@ -686,13 +707,15 @@ WORD32 xa_nn_conv2d_per_chan_sym8sxsym16s(
   XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
   XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
-  //XA_NNLIB_ARG_CHK_COND((input_zero_bias < -127 || input_zero_bias > 128), -1);
-  //XA_NNLIB_ARG_CHK_COND((out_zero_bias < -128 || out_zero_bias > 127), -1);
   XA_NNLIB_ARG_CHK_COND((input_zero_bias != 0), -1);
   XA_NNLIB_ARG_CHK_COND((out_zero_bias != 0), -1);
   XA_NNLIB_ARG_CHK_COND((out_data_format != 0 && out_data_format != 1), -1);
   XA_NNLIB_ARG_CHK_COND((dilation_height != 1), -1);
   XA_NNLIB_ARG_CHK_COND((dilation_width != 1), -1);
+  /* MinMax activation range check */
+  XA_NNLIB_ARG_CHK_COND((out_activation_min < -32768) || (out_activation_min > 32767), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < -32768) || (out_activation_max > 32767), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < out_activation_min), -1);
 
   int itr;
   for(itr=0;itr<out_channels;itr++){
@@ -728,7 +751,9 @@ WORD32 xa_nn_conv2d_per_chan_sym8sxsym16s(
                                                               p_out_multiplier,
                                                               p_out_shift,
                                                               out_zero_bias,
-                                                              out_data_format
+                                                              out_data_format,
+                                                              out_activation_min,
+                                                              out_activation_max
                                                             );
 
     return ret_val;
@@ -758,7 +783,9 @@ WORD32 xa_nn_conv2d_per_chan_sym8sxsym16s(
                                                               p_out_multiplier,
                                                               p_out_shift,
                                                               out_zero_bias,
-                                                              out_data_format
+                                                              out_data_format,
+                                                              out_activation_min,
+                                                              out_activation_max
                                                             );
 
     return ret_val;
@@ -830,7 +857,7 @@ WORD32 inp_h, inp_w, ker_h, ker_w, x_str, y_str, x_pad, y_pad, out_h, out_w;
   WORD32 out_width_over_x_pad = 0;
   if(x_padding_var >= ker_w)
   {
-    out_width_over_x_pad = conv_x_left_pad(x_pad, ker_w, x_str, out_w, out_h, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift);
+    out_width_over_x_pad = conv_x_left_pad(x_pad, ker_w, x_str, out_w, out_h, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift, out_activation_min, out_activation_max);
     x_padding_var -= out_width_over_x_pad * x_str;
   }
 
@@ -841,7 +868,7 @@ WORD32 inp_h, inp_w, ker_h, ker_w, x_str, y_str, x_pad, y_pad, out_h, out_w;
   x_r_pad = x_r_pad < 0 ? 0 : x_r_pad;
   if(x_r_pad >= ker_w)
   {
-    out_width_over_x_r_pad = conv_x_right_pad(x_pad, inp_w, x_str, out_w, out_h, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift);
+    out_width_over_x_r_pad = conv_x_right_pad(x_pad, inp_w, x_str, out_w, out_h, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift, out_activation_min, out_activation_max);
   }
 
   /* When kernel convolves over input region */
@@ -902,6 +929,9 @@ WORD32 inp_h, inp_w, ker_h, ker_w, x_str, y_str, x_pad, y_pad, out_h, out_w;
         ,out_height_offset /* out_row_offset */
         ,(p_out_multiplier+grp_i*kernels_per_group)
         ,(p_out_shift+grp_i*kernels_per_group)
+        ,out_activation_min
+        ,out_activation_max
+        ,p_dma_cfg
         );
       tmp_out += out_width_offset;
     }
@@ -909,4 +939,40 @@ WORD32 inp_h, inp_w, ker_h, ker_w, x_str, y_str, x_pad, y_pad, out_h, out_w;
   }
 
   return 0;
+}
+
+WORD32 xa_nn_conv2d_per_chan_sym8sxsym16s(
+    WORD16* __restrict__ p_out,
+    const WORD16* __restrict__ p_inp,
+    const WORD8* __restrict__ p_kernel,
+    const WORD64* __restrict__ p_bias,
+    WORD32 input_height,
+    WORD32 input_width,
+    WORD32 input_channels,
+    WORD32 kernel_height,
+    WORD32 kernel_width,
+    WORD32 kernel_channels,
+    WORD32 dilation_height,
+    WORD32 dilation_width,
+    WORD32 out_channels,
+    WORD32 x_stride,
+    WORD32 y_stride,
+    WORD32 x_padding,
+    WORD32 y_padding,
+    WORD32 out_height,
+    WORD32 out_width,
+    WORD32 input_zero_bias,
+    WORD32 * p_out_multiplier,
+    WORD32 * p_out_shift,
+    WORD32 out_zero_bias,
+    WORD32 out_data_format,
+    VOID *p_scratch)
+{
+    int ret;
+    ret = xa_nn_conv2d_v2_per_chan_sym8sxsym16s(p_out, p_inp, p_kernel, p_bias,
+                  input_height, input_width, input_channels, kernel_height, kernel_width, kernel_channels,
+                  dilation_height, dilation_width, out_channels, x_stride, y_stride, x_padding, y_padding,
+                  out_height, out_width, input_zero_bias, p_out_multiplier, p_out_shift, out_zero_bias, out_data_format,
+                  p_scratch, -32768, 32767, NULL);
+    return ret;
 }

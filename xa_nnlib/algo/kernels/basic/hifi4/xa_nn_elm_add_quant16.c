@@ -56,7 +56,7 @@
 #define MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(out, inp1, multiplier, right_shift) \
 {\
   inp1 = AE_MULFP32X2RAS(inp1, ((multiplier))); \
-  out = AE_MULFP32X2RS(inp1, right_shift); \
+  AE_MULSFP32X2RS(out, inp1, right_shift); \
 }
 
 static void internal_elm_add_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __restrict__ p_out,
@@ -137,9 +137,9 @@ static void internal_elm_add_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
     ae_int32x2 const2_32x2_LO_1 =  AE_MOVDA32X2(const2_inp1,const2_inp1);
     ae_int32x2 const2_32x2_LO_2 =  AE_MOVDA32X2(const2_inp2,const2_inp2);
 
-    multiplier1 = AE_NEG32S(AE_MOVDA32(inp1_multiplier));
-    multiplier2 = AE_NEG32S(AE_MOVDA32(inp2_multiplier));
-    op_multiplier = AE_NEG32S(AE_MOVDA32(out_multiplier));
+    multiplier1 = AE_MOVDA32(inp1_multiplier);
+    multiplier2 = AE_MOVDA32(inp2_multiplier);
+    op_multiplier = AE_MOVDA32(out_multiplier);
     op_zero_bias = AE_MOVDA32(out_zero_bias);
 
     activation_min = AE_MOVDA32(out_activation_min);
@@ -157,11 +157,15 @@ static void internal_elm_add_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
     
       for(j = 0; j < num_simd8_ops; j++)
       {
-        ae_f32x2 scaled_v1,scaled_v2,scaled_v3,scaled_v4;      
-        ae_f32x2 scaled_v5,scaled_v6,scaled_v7,scaled_v8;      
         ae_f32x2 raw_sum12, raw_sum34, raw_sum56, raw_sum78;
         ae_f32x2 raw_out12, raw_out34, raw_out56, raw_out78;
-
+#if TFLITE_SINGLE_ROUNDING
+        ae_f32x2 scaled_v1,scaled_v2,scaled_v3,scaled_v4;      
+        ae_f32x2 scaled_v5,scaled_v6,scaled_v7,scaled_v8;  
+#else
+        raw_sum12 = raw_sum34 = raw_sum56 = raw_sum78 = AE_ZERO32();
+        raw_out12 = raw_out34 = raw_out56 = raw_out78 = AE_ZERO32();
+#endif
         ae_f32x2 d_0,d_1,d_2,d_3,d_4,d_5,d_6,d_7;
 
         AE_LA16X4_IP(a0_3, va_a, (ae_int16x4 *)p_a);
@@ -183,20 +187,16 @@ static void internal_elm_add_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
         AE_MULAP32X16X2_L(d_7,const1_32x2,(b4_7));
 
 #if !TFLITE_SINGLE_ROUNDING
-        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v1, d_0, multiplier1, inp1_right_shift)
-        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v2, d_1, multiplier1, inp1_right_shift)
-        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v3, d_2, multiplier1, inp1_right_shift)
-        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v4, d_3, multiplier1, inp1_right_shift)
+        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_sum12, d_0, multiplier1, inp1_right_shift)
+        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_sum34, d_1, multiplier1, inp1_right_shift)
+        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_sum56, d_2, multiplier1, inp1_right_shift)
+        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_sum78, d_3, multiplier1, inp1_right_shift)
 
-        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v5, d_4, multiplier2, inp2_right_shift)
-        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v6, d_5, multiplier2, inp2_right_shift)
-        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v7, d_6, multiplier2, inp2_right_shift)
-        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v8, d_7, multiplier2, inp2_right_shift)
-        // Raw Sum
-        raw_sum12   = AE_ADD32S(scaled_v1, scaled_v5);
-        raw_sum34   = AE_ADD32S(scaled_v2, scaled_v6);
-        raw_sum56   = AE_ADD32S(scaled_v3, scaled_v7);
-        raw_sum78   = AE_ADD32S(scaled_v4, scaled_v8);
+        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_sum12, d_4, multiplier2, inp2_right_shift)
+        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_sum34, d_5, multiplier2, inp2_right_shift)
+        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_sum56, d_6, multiplier2, inp2_right_shift)
+        MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_sum78, d_7, multiplier2, inp2_right_shift)
+
         // Raw Output
         MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_out12, raw_sum12, op_multiplier, out_right_shift)
         MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(raw_out34, raw_sum34, op_multiplier, out_right_shift)
@@ -438,9 +438,9 @@ static void internal_elm_add_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
     ae_int32x2 const2_32x2_LO_1 =  AE_MOVDA32X2(const2_inp1,const2_inp1);
     ae_int32x2 const2_32x2_LO_2 =  AE_MOVDA32X2(const2_inp2,const2_inp2);
 
-    multiplier1   = AE_NEG32S(AE_MOVDA32(inp1_multiplier));
-    multiplier2   = AE_NEG32S(AE_MOVDA32(inp2_multiplier));
-    op_multiplier = AE_NEG32S(AE_MOVDA32(out_multiplier));
+    multiplier1   = AE_MOVDA32(inp1_multiplier);
+    multiplier2   = AE_MOVDA32(inp2_multiplier);
+    op_multiplier = AE_MOVDA32(out_multiplier);
  
     activation_min = AE_MOVDA32(out_activation_min);
     activation_max = AE_MOVDA32(out_activation_max);
@@ -451,6 +451,7 @@ static void internal_elm_add_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
     d_2 = const2_32x2_LO_2;
     AE_MULAP32X16X2_H(d_2,const1_32x2,b);
 #if !TFLITE_SINGLE_ROUNDING
+    raw_out12 = raw_out34 = scaled_v1 = scaled_v2 = scaled_v3 = AE_ZERO32();
     MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v3, d_2, multiplier2, inp2_right_shift)
 #else
 #if XCHAL_HAVE_HIFI1S
@@ -472,6 +473,8 @@ static void internal_elm_add_broadcast_asym16sxasym16s_asym16s(WORD16 * __restri
       d_0 = d_1 = const2_32x2_LO_1;
       AE_MULAP32X16X2_H(d_0, const1_32x2, a0_3);
       AE_MULAP32X16X2_L(d_1, const1_32x2, a0_3);
+
+      raw_out12 = raw_out34 = scaled_v1 = scaled_v2 = AE_ZERO32();
 
 #if !TFLITE_SINGLE_ROUNDING
       MULTIPLYBYQUANTIZEDMULTIPLIER_RIGHT(scaled_v1, d_0, multiplier1, inp1_right_shift)

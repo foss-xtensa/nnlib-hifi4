@@ -63,6 +63,10 @@ typedef struct _test_config_t
   int out_data_format;
   int inp_precision;
   int out_precision;
+  int renorm_scale;
+  int renorm_shift;
+  int input_zero_bias;
+  int output_zero_bias;
   char kernel_name[MAX_KERNEL_NAME_LENGTH];
   int frames;
   int write_file;
@@ -92,6 +96,10 @@ int default_config(test_config_t *p_cfg)
     p_cfg->out_data_format = 0;
     p_cfg->inp_precision = 16;
     p_cfg->out_precision = 16;
+    p_cfg->renorm_scale = 1;
+    p_cfg->renorm_shift = 0;
+    p_cfg->input_zero_bias = 0;
+    p_cfg->output_zero_bias = 0;
     strcpy(p_cfg->kernel_name, "l2_norm");
     p_cfg->frames   = 2;
     p_cfg->write_file = 0;
@@ -123,6 +131,10 @@ void show_usage(void)
     printf("\t-out_data_format: Output data format, 0 : NHWC; Default=0\n");
     printf("\t-inp_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
     printf("\t-out_precision: 8, 16, -1(single prec float), -4(asym8s); Default=16\n");
+    printf("\t-renorm_scale: Scale for renormalization; Default=1\n");
+    printf("\t-renorm_shift: Right shift for renormalization; Default=0\n");
+    printf("\t-input_zero_bias: zero bias of input ; Default=0\n");
+    printf("\t-output_zero_bias: zero bias of output ; Default=0\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-kernel_name: l2_norm; Default=""l2_norm""\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
@@ -160,6 +172,10 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-out_data_format",p_cfg->out_data_format);
     ARGTYPE_ONETIME_CONFIG("-inp_precision",p_cfg->inp_precision);
     ARGTYPE_ONETIME_CONFIG("-out_precision",p_cfg->out_precision);
+    ARGTYPE_ONETIME_CONFIG("-renorm_scale",p_cfg->renorm_scale);
+    ARGTYPE_ONETIME_CONFIG("-renorm_shift",p_cfg->renorm_shift);
+    ARGTYPE_ONETIME_CONFIG("-input_zero_bias",p_cfg->input_zero_bias);
+    ARGTYPE_ONETIME_CONFIG("-output_zero_bias",p_cfg->output_zero_bias);
     ARGTYPE_STRING("-kernel_name",p_cfg->kernel_name, MAX_KERNEL_NAME_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-frames",p_cfg->frames);
     ARGTYPE_ONETIME_CONFIG("-write_file",p_cfg->write_file);
@@ -216,10 +232,21 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0); \
   }
 
+#define RENORM_ASYM8S_ASYM8S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) { \
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_asym8s_asym8s ( \
+        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, \
+        cfg.num_elms, cfg.renorm_scale, cfg.renorm_shift, \
+        cfg.input_zero_bias, cfg.output_zero_bias); \
+    XTPWR_PROFILER_STOP(0); \
+  }
+
 #define PROCESS_NORM \
     L2_NORM_KERNEL_F_FN(l2_norm, -1, -1) \
     else L2_NORM_KERNEL_ASYM8S_FN(l2_norm, -4, -4) \
     else BATCH_NORM_3D_KERNEL_8_FN(batch_norm_3D, 8, 8) \
+    else RENORM_ASYM8S_ASYM8S(renorm, -4, -4) \
     else {  printf("unsupported normalization operation\n"); return -1;}
 
 int xa_nn_main_process(int argc, char *argv[])
@@ -362,7 +389,7 @@ int xa_nn_main_process(int argc, char *argv[])
 
   if(!strcmp(cfg.kernel_name,"l2_norm"))
     num_ops = 2*cfg.num_elms;   // First calculated square root of energy and then divide input by it
-  else if(!strcmp(cfg.kernel_name,"batch_norm_3D"))
+  else if(!strcmp(cfg.kernel_name,"batch_norm_3D") || !strcmp(cfg.kernel_name,"renorm"))
     num_ops = inp_size;
 
   XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, num_ops, "OPs/cyc", 1);

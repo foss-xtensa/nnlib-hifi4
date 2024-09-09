@@ -115,6 +115,7 @@ typedef struct _test_config_t
   char write_inp_file_name[XA_MAX_CMD_LINE_LENGTH];
   char write_out_file_name[XA_MAX_CMD_LINE_LENGTH];
   int verify;
+  int interleave_group;
 }test_config_t;
 
 int default_config(test_config_t *p_cfg)
@@ -158,6 +159,7 @@ int default_config(test_config_t *p_cfg)
     p_cfg->stride_3 = 1;
     p_cfg->stride_4 = 1;
     p_cfg->axis = 0;
+    p_cfg->interleave_group = 1;
     strcpy(p_cfg->kernel_name, "depth_to_space");
     p_cfg->frames   = 2;
     p_cfg->write_file = 0;
@@ -269,6 +271,7 @@ void show_usage(void)
     printf("\t-permute_vec: Takes the permutation values of dimentions for transpose; space ' ' separated) \n");
     printf("\t-block_sizes: Takes the block sizes((num_inp_dims-2) values space ' ' separated) for batch_to_space_nd and space_to_batch_nd kernels \n");
     printf("\t-crop_or_pad_sizes: Takes the crop sizes for batch_to_space_nd or pad sizes for space_to_batch_nd (2*(num_inp_dims-2) values space ' ' separated) \n");
+    printf("\t-interleave_group: Number of groups to interleave in shuffle; Default=1\n");
 }
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
@@ -330,6 +333,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_STRING("-write_inp_file_name",p_cfg->write_inp_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_out_file_name",p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-verify",p_cfg->verify);
+    ARGTYPE_ONETIME_CONFIG("-interleave_group",p_cfg->interleave_group);
 
     ARGTYPE_ONETIME_CONFIG_ARRAY("-concat_inps_shape", p_cfg->concat_inputs_shape, p_cfg->num_inputs * p_cfg->num_inp_dims, p_cfg->read_concat_inps_shape_str);
     ARGTYPE_ONETIME_CONFIG_ARRAY("-split_v_outs_shape", p_cfg->split_v_outputs_shape, p_cfg->num_outputs * p_cfg->num_out_dims, p_cfg->read_split_v_outs_shape_str);
@@ -555,6 +559,22 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define SHUFFLE_KERNEL_FN(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision) && (OPREC == p_out->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_##IPREC##_##OPREC ( \
+        (WORD##OPREC *)p_out->p, \
+        (WORD##IPREC *) p_inp->p, \
+        cfg.input_height,\
+        cfg.input_width,\
+        cfg.input_channels,\
+        cfg.out_height,\
+        cfg.out_width,\
+        cfg.out_channels,\
+        cfg.interleave_group);\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #if HIFI_VFPU
 #define PROCESS_REORG \
     DEPTH_SPACE_KERNEL_FN(depth_to_space, 8, 8) \
@@ -573,6 +593,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else SPLIT_V_KERNEL_FN(split_v, 8, 8) \
     else RESIZE_BILINEAR_FN(resize_bilinear, 8, 8) \
     else RESIZE_NEAREST_NEIGHBOUR_FN(resize_nearest_neighbour, 8, 8) \
+    else SHUFFLE_KERNEL_FN(shuffle_3D, 8, 8) \
     else {  printf("unsupported reorg operation\n"); return -1;}
 #else
 #define PROCESS_REORG \
@@ -591,6 +612,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else CONCAT_KERNEL_FN(concat, 8, 8) \
     else SPLIT_V_KERNEL_FN(split_v, 8, 8) \
     else RESIZE_BILINEAR_FN(resize_bilinear, 8, 8) \
+    else SHUFFLE_KERNEL_FN(shuffle_3D, 8, 8) \
     else {  printf("unsupported reorg operation\n"); return -1;}
 #endif
 
@@ -911,7 +933,8 @@ int xa_nn_main_process(int argc, char *argv[])
      || !strcmp(cfg.kernel_name,"resize_bilinear")
      || !strcmp(cfg.kernel_name,"resize_nearest_neighbour")
      || !strcmp(cfg.kernel_name,"concat")
-     || !strcmp(cfg.kernel_name,"split_v"))
+     || !strcmp(cfg.kernel_name,"split_v")
+     || !strcmp(cfg.kernel_name,"shuffle_3D"))
   {
     num_pts = out_size;
   }

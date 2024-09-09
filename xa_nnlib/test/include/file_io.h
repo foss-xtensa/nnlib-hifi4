@@ -28,6 +28,7 @@ int write_buf1D_to_file(FILE *fptr_write_data, buf1D_t *ptr_buf1D);
 int write_buf2D_to_file(FILE *fptr_write_data, buf2D_t *ptr_buf2D); 
 int load_matXvec_input_data(int write_file, FILE *fptr_inp, buf2D_t *p_mat1, buf1D_t *p_vec1, 
     buf2D_t *p_mat2, buf1D_t *p_vec2, buf1D_t *p_bias); 
+int load_batch_matmul_input_data(int write_file, FILE *fptr_inp, buf2D_t *p_mat1, buf1D_t *p_vec1); 
 int load_conv2d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel,
     buf1D_t *p_bias, int input_channels, int input_channels_pad, int kernel_pad_val);
 int load_conv1d_std_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf2D_t *p_kernel, 

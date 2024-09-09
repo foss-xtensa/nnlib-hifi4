@@ -101,6 +101,12 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
     XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((activation_max < activation_min), -1);
 
+    if((activation_max >= (int)MAX_WORD8) && (activation_min <= (int)MIN_WORD8) && (p_out == p_vec) )
+    {
+        /* No action required */
+        return 0;
+    }
+
     WORD8 *p_o = p_out;
     WORD8 *p_v = (WORD8 *)p_vec;
 
@@ -224,6 +230,12 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
     XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((activation_max < activation_min), -1);
 
+    if((activation_max >= (int)MAX_WORD8) && (activation_min <= (int)MIN_WORD8) && (p_out == p_vec) )
+    {
+        /* No action required */
+        return 0;
+    }
+
     WORD8 *p_o = p_out;
     WORD8 *p_v = (WORD8 *)p_vec;
 
@@ -333,6 +345,12 @@ WORD32 xa_nn_vec_activation_min_max_8_8(WORD8 * __restrict__ p_out,
     /* Basic Parameter checks */
     XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((activation_max < activation_min), -1);
+
+    if((activation_max >= (int)MAX_WORD8) && (activation_min <= (int)MIN_WORD8) && (p_out == p_vec) )
+    {
+        /* No action required */
+        return 0;
+    }
 
     WORD8 *p_o = p_out;
     WORD8 *p_v = (WORD8 *)p_vec;

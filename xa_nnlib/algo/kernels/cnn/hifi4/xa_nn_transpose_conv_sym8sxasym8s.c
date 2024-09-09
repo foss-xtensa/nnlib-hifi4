@@ -38,7 +38,10 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
     int num_elements,
     int input_offset, int output_offset,
     int *output_shift, int *output_multiplier,
-    int *scratch_buffer)
+    int *scratch_buffer,
+    int out_activation_min,
+    int out_activation_max,
+    xa_dma_cfg_t *p_dma_cfg)
 {
   ae_int32x2 *pscratch1 = (ae_int32x2*)scratch_buffer;
   ae_int32x2 dzero = AE_ZERO32();
@@ -316,7 +319,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         MPY_BY_QUANT_MULT_X2_OUT32(out32, acc, out_mult, left_shift, right_shift);
 #endif        
         out32 = AE_ADD32(out32, AE_MOVDA32(output_offset));
-        out32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out32, AE_MOVDA32(-128)));
+        out32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out32, AE_MOVDA32(out_activation_min)));
         AE_L32_XP(acc0, pscratch, output_depth*sizeof(WORD32));
         AE_L32_XP(acc1, pscratch1, output_depth*sizeof(WORD32));
         *pout = (WORD8)AE_MOVAD32_H(out32);
@@ -335,7 +338,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         MPY_BY_QUANT_MULT_X2_OUT32(out1_32, acc1, out_mult, left_shift, right_shift);
 #endif        
         out1_32 = AE_ADD32(out1_32, AE_MOVDA32(output_offset));
-        out1_32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out1_32, AE_MOVDA32(-128)));
+        out1_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out1_32, AE_MOVDA32(out_activation_min)));
         out16 = AE_SAT16X4(out1_32, out1_32);
         *pout1 = (WORD8)AE_MOVAD16_0(out16);
       }
@@ -369,7 +372,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         MPY_BY_QUANT_MULT_X2_OUT32(out0_32, acc, output_multiplier[out_channel], left_shift, right_shift);
 #endif        
         out0_32 = AE_ADD32(out0_32, AE_MOVDA32(output_offset));
-        out0_32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out0_32, AE_MOVDA32(-128))); 
+        out0_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out0_32, AE_MOVDA32(out_activation_min))); 
         out16 = AE_SAT16X4(out0_32, out0_32);  
         *pout++ = (WORD8)AE_MOVAD16_0(out16);
       }
@@ -390,7 +393,9 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
     int num_elements,
     int input_offset, int output_offset,
     int *output_shift, int *output_multiplier,
-    int64_t* scratch_buffer)
+    int64_t* scratch_buffer,
+    int out_activation_min, int out_activation_max,
+    xa_dma_cfg_t *p_dma_cfg)
 {
   ae_int64 *pscratch = (ae_int64*)scratch_buffer;
 	ae_int64 dzero = AE_ZERO64();
@@ -613,9 +618,10 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         acc = AE_MOVDA32X2(AE_MOVINT32_FROMINT64(acc0), AE_MOVINT32_FROMINT64(acc1));
         MPY_BY_QUANT_MULT_X2_OUT32(out32, acc, out_mult, left_shift, right_shift);
         out32 = AE_ADD32(out32, AE_MOVDA32(output_offset));
-        out32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out32, AE_MOVDA32(-128)));
+        out32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out32, AE_MOVDA32(out_activation_min)));
         AE_L64_XP(acc0, pscratch, output_depth*sizeof(WORD64));
         AE_L64_XP(acc1, pscratch1, output_depth*sizeof(WORD64));
+
         *pout = (WORD8)AE_MOVAD32_H(out32);
         pout+=output_depth;
         *pout1 = (WORD8)AE_MOVAD32_L(out32);
@@ -629,7 +635,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         acc1 = AE_ADD64(acc1, AE_MOVINT64_FROMF32(dbias));   
         MPY_BY_QUANT_MULT_X2_OUT32(out1_32, AE_MOVDA32X2(AE_MOVINT32_FROMINT64(acc1), AE_MOVINT32_FROMINT64(acc1)), out_mult, left_shift, right_shift);
         out1_32 = AE_ADD32(out1_32, AE_MOVDA32(output_offset));
-        out1_32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out1_32, AE_MOVDA32(-128)));
+        out1_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out1_32, AE_MOVDA32(out_activation_min)));
         out16 = AE_SAT16X4(out1_32, out1_32);
         *pout1 = (WORD8)AE_MOVAD16_0(out16);
       }
@@ -658,7 +664,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         acc = AE_SRAI64(acc, 8);   
         MPY_BY_QUANT_MULT_X2_OUT32(out0_32, AE_MOVDA32X2(AE_MOVINT32_FROMINT64(acc), AE_MOVINT32_FROMINT64(acc)), output_multiplier[out_channel], left_shift, right_shift);      
         out0_32 = AE_ADD32(out0_32, AE_MOVDA32(output_offset));
-        out0_32 = AE_MIN32(AE_MOVDA32(127), AE_MAX32(out0_32, AE_MOVDA32(-128))); 
+        out0_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out0_32, AE_MOVDA32(out_activation_min))); 
         out16 = AE_SAT16X4(out0_32, out0_32);  
         *pout++ = (WORD8)AE_MOVAD16_0(out16);
       }
@@ -740,7 +746,9 @@ static inline void tconv_pad(
     WORD32 * p_out_shift,
     WORD32 out_offset,
     WORD32 idx_width,
-    WORD32 idx_height)
+    WORD32 idx_height,
+    WORD32 out_activation_min,
+    WORD32 out_activation_max)
 {
   WORD32 i, j, k;
   /* When kernel has no valid input for convolution, output is just bias */
@@ -778,7 +786,7 @@ static inline void tconv_pad(
         MPY_BY_QUANT_MULT_X2_OUT32(acc, q1, p_out_multiplier[k], left_shift, right_shift);
 #endif        
         acc = AE_ADD32S(acc, AE_MOVDA32(out_offset));
-        acc = AE_MIN32(AE_MOVDA32(127), AE_MAX32(acc, AE_MOVDA32(-128)));        
+        acc = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(acc, AE_MOVDA32(out_activation_min)));        
         *ptrout = (WORD8)AE_MOVAD32_H(acc);
         ptrout+=out_channels_offset;
       }
@@ -799,7 +807,9 @@ static inline void transpose_conv2d_std_sym8sxasym8s(WORD8* output_data,
     int num_elements,
     int input_offset, int output_offset,
     int *output_shift, int *output_multiplier,
-    pVOID scratch_buffer)
+    pVOID scratch_buffer,
+    int out_activation_min, int out_activation_max,
+    xa_dma_cfg_t *p_dma_cfg)
 {
   /* Transpose and Reorder the kernel into sub-kernels */
   WORD32 subkerX_max = (filter_width + stride_width - 1) / stride_width;
@@ -840,15 +850,15 @@ static inline void transpose_conv2d_std_sym8sxasym8s(WORD8* output_data,
   /* Handle cases that have less valid output dimension than the output dimension given by the user */
   if(((orig_valid_out_h) < output_height))
   { 
-    tconv_pad(output_width, output_height, output_depth, final_out_channels_offset, final_out_width_offset, final_out_height_offset, bias_data, output_data, output_multiplier, output_shift, output_offset, 0, XT_MAX(0,orig_valid_out_h));
+    tconv_pad(output_width, output_height, output_depth, final_out_channels_offset, final_out_width_offset, final_out_height_offset, bias_data, output_data, output_multiplier, output_shift, output_offset, 0, XT_MAX(0,orig_valid_out_h), out_activation_min, out_activation_max);
   }
   if((orig_valid_out_w) < output_width)
   {
-    tconv_pad(output_width, output_height, output_depth, final_out_channels_offset, final_out_width_offset, final_out_height_offset, bias_data, output_data, output_multiplier, output_shift, output_offset, XT_MAX(0,orig_valid_out_w), 0);
+    tconv_pad(output_width, output_height, output_depth, final_out_channels_offset, final_out_width_offset, final_out_height_offset, bias_data, output_data, output_multiplier, output_shift, output_offset, XT_MAX(0,orig_valid_out_w), 0, out_activation_min, out_activation_max);
   }
   if((out_h_per_subker < 0))
   {
-    tconv_pad(output_width, output_height, output_depth, final_out_channels_offset, final_out_width_offset, final_out_height_offset, bias_data, output_data, output_multiplier, output_shift, output_offset, 0, 0);
+    tconv_pad(output_width, output_height, output_depth, final_out_channels_offset, final_out_width_offset, final_out_height_offset, bias_data, output_data, output_multiplier, output_shift, output_offset, 0, 0, out_activation_min, out_activation_max);
     return;
   }
 
@@ -931,6 +941,9 @@ static inline void transpose_conv2d_std_sym8sxasym8s(WORD8* output_data,
            ,output_multiplier
            ,output_shift
            ,output_offset
+           ,out_activation_min
+           ,out_activation_max
+           ,p_dma_cfg
           );        
           po_tmp += final_out_height_offset;
         }
@@ -986,6 +999,9 @@ static inline void transpose_conv2d_std_sym8sxasym8s(WORD8* output_data,
            ,output_multiplier
            ,output_shift
            ,output_offset
+           ,out_activation_min
+           ,out_activation_max
+           ,p_dma_cfg
           );       
           po_tmp += final_out_height_offset;
         }
@@ -995,7 +1011,7 @@ static inline void transpose_conv2d_std_sym8sxasym8s(WORD8* output_data,
   }  
 }
 
-int xa_nn_transpose_conv_sym8sxasym8s(WORD8* output_data,
+int xa_nn_transpose_conv_v2_sym8sxasym8s(WORD8* output_data,
     const WORD8* input_data,
     const WORD8* filter_data,
     const WORD32* bias_data,
@@ -1008,7 +1024,9 @@ int xa_nn_transpose_conv_sym8sxasym8s(WORD8* output_data,
     int num_elements,
     int input_offset, int output_offset,
     int *output_shift, int *output_multiplier,
-    void* scratch_buffer)
+    void* scratch_buffer,
+    int out_activation_min, int out_activation_max,
+    xa_dma_cfg_t *p_dma_cfg )
 {
   /* NULL pointer checks */
   XA_NNLIB_ARG_CHK_PTR(output_data, -1);
@@ -1032,6 +1050,10 @@ int xa_nn_transpose_conv_sym8sxasym8s(WORD8* output_data,
   XA_NNLIB_ARG_CHK_COND((num_elements <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_offset < -127 || input_offset > 128), -1);
   XA_NNLIB_ARG_CHK_COND((output_offset < -128 || output_offset > 127), -1);
+  /* MinMax activation range check */
+  XA_NNLIB_ARG_CHK_COND((out_activation_min < -128 || out_activation_min > 127), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < -128 || out_activation_max > 127), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < out_activation_min), -1);
 
   int ker_grt_inp = (filter_width > input_width || filter_height > input_height);
   int str_leq_ker = (stride_width <= filter_width && stride_height <= filter_height);
@@ -1041,7 +1063,8 @@ int xa_nn_transpose_conv_sym8sxasym8s(WORD8* output_data,
     transpose_conv2d_std_sym8sxasym8s(output_data, input_data, filter_data, bias_data,
       stride_width, stride_height, pad_width, pad_height, input_depth, output_depth,
       input_height, input_width, filter_height, filter_width, output_height, output_width,
-      num_elements, input_offset, output_offset, output_shift, output_multiplier, scratch_buffer);
+      num_elements, input_offset, output_offset, output_shift, output_multiplier, scratch_buffer,
+      out_activation_min, out_activation_max, p_dma_cfg);
   }
   else
   {
@@ -1049,13 +1072,40 @@ int xa_nn_transpose_conv_sym8sxasym8s(WORD8* output_data,
     tconv2d_sym8sxasym8s(output_data, input_data, filter_data, bias_data,
       stride_width, stride_height, pad_width, pad_height, input_depth, output_depth,
       input_height, input_width, filter_height, filter_width, output_height, output_width,
-      num_elements, input_offset, output_offset, output_shift, output_multiplier, (int32_t *)scratch_buffer);
+      num_elements, input_offset, output_offset, output_shift, output_multiplier, (int32_t *)scratch_buffer,
+      out_activation_min, out_activation_max, p_dma_cfg);
 #else    
     tconv2d_sym8sxasym8s(output_data, input_data, filter_data, bias_data,
       stride_width, stride_height, pad_width, pad_height, input_depth, output_depth,
       input_height, input_width, filter_height, filter_width, output_height, output_width,
-      num_elements, input_offset, output_offset, output_shift, output_multiplier, (int64_t *)scratch_buffer);
+      num_elements, input_offset, output_offset, output_shift, output_multiplier, (int64_t *)scratch_buffer,
+      out_activation_min, out_activation_max, p_dma_cfg);
 #endif      
   }
   return 0;
+}
+
+/* Transpose Convolution without fused min-max */
+int xa_nn_transpose_conv_sym8sxasym8s(WORD8* output_data,
+    const WORD8* input_data,
+    const WORD8* filter_data,
+    const WORD32* bias_data,
+    int stride_width, int stride_height,
+    int pad_width, int pad_height,
+    int input_depth, int output_depth,
+    int input_height, int input_width,
+    int filter_height, int filter_width,
+    int output_height, int output_width,
+    int num_elements,
+    int input_offset, int output_offset,
+    int *output_shift, int *output_multiplier,
+    void* scratch_buffer)
+{
+  int ret;
+  ret = xa_nn_transpose_conv_v2_sym8sxasym8s(output_data, input_data, filter_data, bias_data,
+          stride_width, stride_height, pad_width, pad_height, input_depth, output_depth,
+          input_height, input_width, filter_height, filter_width, output_height, output_width,
+          num_elements, input_offset, output_offset, output_shift, output_multiplier, scratch_buffer,
+          -128, 127, NULL);
+  return ret;
 }

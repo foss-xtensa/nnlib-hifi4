@@ -96,6 +96,9 @@ typedef struct _test_config_t
   int dilation_width;
   int pointwise_profile_only;
   int groups;
+  int v2;
+  int out_activation_min;
+  int out_activation_max;
 }test_config_t;
 
 int default_config(test_config_t *p_cfg)
@@ -145,6 +148,9 @@ int default_config(test_config_t *p_cfg)
     p_cfg->dilation_width = 1;
     p_cfg->pointwise_profile_only = 0;
     p_cfg->groups = 1;
+    p_cfg->v2 = 0;
+    p_cfg->out_activation_min = -128;
+    p_cfg->out_activation_max = 127;
     return 0;
   }
   else
@@ -189,6 +195,9 @@ void show_usage(void)
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-kernel_name: conv2d_std, dilated_conv2d_std, conv2d_depth, dilated_conv2d_depth, conv2d_point, conv1d_std, transpose_conv , conv2d; Default="" : conv2d_std\n");
     printf("\t-pointwise_profile_only: Applicable only when kernel_name is conv2d_depth, 0 (print conv2d depthwise and pointwise profile info), 1(print only conv2d pointwise profile info); Default=0\n");
+    printf("\t-v2: Flag for v2 kernels; 0: Disable, 1: Enable; Default=0\n");
+    printf("\t-out_activation_min: Lower range of min/max activation; Default=-128\n");
+    printf("\t-out_activation_max: Higher range of min/max activation; Default=127\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp_file_name: Full filename for reading inputs (order - input, kernel, bias, (pointwise kernel, pointwise bias for depth separable)) \n");
     printf("\t-read_ref_file_name: Full filename for reading reference output \n");
@@ -251,7 +260,10 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-dilation_height",p_cfg->dilation_height);
     ARGTYPE_ONETIME_CONFIG("-dilation_width",p_cfg->dilation_width);
     ARGTYPE_ONETIME_CONFIG("-pointwise_profile_only",p_cfg->pointwise_profile_only);
-
+    ARGTYPE_ONETIME_CONFIG("-v2",p_cfg->v2);
+    ARGTYPE_ONETIME_CONFIG("-out_activation_min",p_cfg->out_activation_min);
+    ARGTYPE_ONETIME_CONFIG("-out_activation_max",p_cfg->out_activation_max);
+    
     // If arg doesnt match with any of the above supported options, report option as invalid
     printf("Invalid argument: %s\n",argv[argidx]);
     show_usage();
@@ -286,14 +298,26 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 
 #define CONV_KERNEL_SYM8S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
-        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
-        cfg.out_data_format, p_scratch);\
-    XTPWR_PROFILER_STOP(0);\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_v2_per_chan_sym8sxasym8s ( \
+          (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+          cfg.out_data_format, p_scratch, cfg.out_activation_min, cfg.out_activation_max, NULL);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
+    else{\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
+          (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+          cfg.out_data_format, p_scratch);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
   }
 
 #define CONV_KERNEL_SYM4S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
@@ -310,62 +334,122 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 
 #define CONV_UN_KERNEL_SYM8S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
-        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width,cfg.kernel_channels,cfg.dilation_height,cfg.dilation_width,cfg.out_channels, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        cfg.input_zero_bias,cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
-        cfg.out_data_format, p_scratch);\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_v2_per_chan_sym8sxasym8s ( \
+          (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width,cfg.kernel_channels,cfg.dilation_height,cfg.dilation_width,cfg.out_channels, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.input_zero_bias,cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+          cfg.out_data_format, p_scratch, cfg.out_activation_min, cfg.out_activation_max, NULL);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
+    else{\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
+          (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width,cfg.kernel_channels,cfg.dilation_height,cfg.dilation_width,cfg.out_channels, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.input_zero_bias,cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+          cfg.out_data_format, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
+    }\
   }
 
 #define CONV_UN_KERNEL_SYM8SXSYM16S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_##KERNEL##_per_chan_sym8sxsym16s ( \
-        (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width,cfg.kernel_channels,cfg.dilation_height,cfg.dilation_width,cfg.out_channels, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
-        cfg.out_data_format,p_scratch);\
-    XTPWR_PROFILER_STOP(0);\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_v2_per_chan_sym8sxsym16s ( \
+          (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width,cfg.kernel_channels,cfg.dilation_height,cfg.dilation_width,cfg.out_channels, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+          cfg.out_data_format,p_scratch, cfg.out_activation_min, cfg.out_activation_max, NULL);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
+    else{\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_per_chan_sym8sxsym16s ( \
+          (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width,cfg.kernel_channels,cfg.dilation_height,cfg.dilation_width,cfg.out_channels, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+          cfg.out_data_format,p_scratch);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
   }
 
 #define CONV_KERNEL_SYM8SXSYM16S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_##KERNEL##_per_chan_sym8sxsym16s ( \
-        (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
-        cfg.out_data_format, p_scratch);\
-    XTPWR_PROFILER_STOP(0);\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_v2_per_chan_sym8sxsym16s ( \
+          (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+          cfg.out_data_format, p_scratch, cfg.out_activation_min, cfg.out_activation_max, NULL);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
+    else{\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_per_chan_sym8sxsym16s ( \
+          (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+          cfg.out_data_format, p_scratch);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
   }
 
 #define TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_##KERNEL##_sym8sxasym8s ( \
-        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.input_channels, \
-        cfg.out_channels, cfg.input_height, cfg.input_width, cfg.kernel_height, cfg.kernel_width, \
-        cfg.out_height, cfg.out_width, num_elements, cfg.input_zero_bias, cfg.out_zero_bias, cfg.p_out_shift, cfg.p_out_multiplier, \
-        p_scratch);\
-    XTPWR_PROFILER_STOP(0);\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_v2_sym8sxasym8s ( \
+          (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.input_channels, \
+          cfg.out_channels, cfg.input_height, cfg.input_width, cfg.kernel_height, cfg.kernel_width, \
+          cfg.out_height, cfg.out_width, num_elements, cfg.input_zero_bias, cfg.out_zero_bias, cfg.p_out_shift, cfg.p_out_multiplier, \
+          p_scratch, cfg.out_activation_min, cfg.out_activation_max, NULL);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
+    else{\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_sym8sxasym8s ( \
+          (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.input_channels, \
+          cfg.out_channels, cfg.input_height, cfg.input_width, cfg.kernel_height, cfg.kernel_width, \
+          cfg.out_height, cfg.out_width, num_elements, cfg.input_zero_bias, cfg.out_zero_bias, cfg.p_out_shift, cfg.p_out_multiplier, \
+          p_scratch);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
   }
 
 #define TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_##KERNEL##_sym8sxsym16s ( \
-        (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.input_channels, \
-        cfg.out_channels, cfg.input_height, cfg.input_width, cfg.kernel_height, cfg.kernel_width, \
-        cfg.out_height, cfg.out_width, num_elements, cfg.p_out_shift, cfg.p_out_multiplier, \
-        p_scratch);\
-    XTPWR_PROFILER_STOP(0);\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_v2_sym8sxsym16s ( \
+          (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.input_channels, \
+          cfg.out_channels, cfg.input_height, cfg.input_width, cfg.kernel_height, cfg.kernel_width, \
+          cfg.out_height, cfg.out_width, num_elements, cfg.p_out_shift, cfg.p_out_multiplier, \
+          p_scratch, cfg.out_activation_min, cfg.out_activation_max, NULL);\
+      XTPWR_PROFILER_STOP(0);\
+    } \
+    else{\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_##KERNEL##_sym8sxsym16s ( \
+          (WORD16 *)p_out->p, (WORD16 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD64 *)p_bias->p, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.input_channels, \
+          cfg.out_channels, cfg.input_height, cfg.input_width, cfg.kernel_height, cfg.kernel_width, \
+          cfg.out_height, cfg.out_width, num_elements, cfg.p_out_shift, cfg.p_out_multiplier, \
+          p_scratch);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
   }
 
 #define TRANSPOSE_CONV_KERNEL_F32XF32_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
@@ -382,14 +466,27 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 
 #define CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
-        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
-        cfg.out_data_format, p_scratch, cfg.dilation_height, cfg.dilation_width);\
-    XTPWR_PROFILER_STOP(0);\
+      if(cfg.v2){\
+        XTPWR_PROFILER_START(0); \
+        err = xa_nn_##KERNEL##_v2_per_chan_sym8sxasym8s ( \
+            (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+            cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
+            cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+            cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+            cfg.out_data_format, p_scratch, cfg.dilation_height, cfg.dilation_width, \
+            cfg.out_activation_min, cfg.out_activation_max,NULL);\
+        XTPWR_PROFILER_STOP(0);\
+      }\
+      else{\
+        XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_per_chan_sym8sxasym8s ( \
+            (WORD8 *)p_out->p, (WORD8 *) p_inp->p, (WORD8 *) p_kernel->p, (WORD32 *)p_bias->p, \
+            cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
+            cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+            cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+            cfg.out_data_format, p_scratch, cfg.dilation_height, cfg.dilation_width);\
+        XTPWR_PROFILER_STOP(0);\
+      }\
   }
 
 #define CONV1D_KERNEL_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
@@ -554,19 +651,45 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 
 #define CONV_DS_KERNEL_SYM8_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_conv2d_depthwise_per_chan_sym8sxasym8s ( \
-        (WORD8 *) p_dw_out->p, (const WORD8 *) p_kernel->p, (const WORD8 *) p_inp->p, (const WORD32 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
-        cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
-    XTPWR_PROFILER_STOP(0);\
+    printf("here\n");\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_conv2d_depthwise_v2_per_chan_sym8sxasym8s ( \
+          (WORD8 *) p_dw_out->p, (const WORD8 *) p_kernel->p, (const WORD8 *) p_inp->p, (const WORD32 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+          0/* inp_data_format always DWH for v2 kernels*/, 0 /* out_data_format always DWH*/, p_scratch, \
+          cfg.out_activation_min, cfg.out_activation_max, NULL);\
+      XTPWR_PROFILER_STOP(0);\
+      printf("err = %d",err);\
+    } \
+    else {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_conv2d_depthwise_per_chan_sym8sxasym8s ( \
+          (WORD8 *) p_dw_out->p, (const WORD8 *) p_kernel->p, (const WORD8 *) p_inp->p, (const WORD32 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+          cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
+      XTPWR_PROFILER_STOP(0);\
+    } \
     if(!cfg.pointwise_profile_only) { \
         XTPWR_PROFILER_UPDATE(0); \
         XTPWR_PROFILER_PRINT(0); \
     } \
     if(!err) { \
+      if(cfg.v2){\
+        XTPWR_PROFILER_START(1);\
+        err = xa_nn_conv2d_pointwise_v2_per_chan_sym8sxasym8s ( \
+            (WORD8 *) p_out->p, (WORD8 *) p_kernel_point->p, (WORD8 *) p_dw_out->p, (WORD32 *)p_bias_point->p, \
+            cfg.out_height, cfg.out_width, cfg.input_channels*cfg.channels_multiplier, cfg.out_channels, \
+            cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+            cfg.out_data_format, cfg.out_activation_min, cfg.out_activation_max, NULL); \
+        XTPWR_PROFILER_STOP(1);\
+        printf("err = %d",err);\
+      }\
+      else{\
         XTPWR_PROFILER_START(1);\
         err = xa_nn_conv2d_pointwise_per_chan_sym8sxasym8s ( \
             (WORD8 *) p_out->p, (WORD8 *) p_kernel_point->p, (WORD8 *) p_dw_out->p, (WORD32 *)p_bias_point->p, \
@@ -574,6 +697,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
             cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
             cfg.out_data_format); \
         XTPWR_PROFILER_STOP(1);\
+      }\
         XTPWR_PROFILER_UPDATE(1); \
         XTPWR_PROFILER_PRINT(1); \
     } \
@@ -581,19 +705,42 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 
 #define CONV_DS_KERNEL_SYM8SXSYM16S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0); \
-    err = xa_nn_conv2d_depthwise_per_chan_sym8sxsym16s ( \
-        (WORD16 *) p_dw_out->p, (const WORD8 *) p_kernel->p, (const WORD16 *) p_inp->p, (const WORD64 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, 0, \
-        cfg.p_out_multiplier, cfg.p_out_shift, 0, \
-        cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch); \
-    XTPWR_PROFILER_STOP(0);\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0); \
+      err = xa_nn_conv2d_depthwise_v2_per_chan_sym8sxsym16s ( \
+          (WORD16 *) p_dw_out->p, (const WORD8 *) p_kernel->p, (const WORD16 *) p_inp->p, (const WORD64 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, 0, \
+          cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+          0/* inp_data_format always DWH for v2 kernels*/, 0 /* out_data_format always DWH*/, p_scratch, \
+          cfg.out_activation_min, cfg.out_activation_max, NULL); \
+      XTPWR_PROFILER_STOP(0);\
+    }\
+    else{\
+      XTPWR_PROFILER_START(0); \
+      err = xa_nn_conv2d_depthwise_per_chan_sym8sxsym16s ( \
+          (WORD16 *) p_dw_out->p, (const WORD8 *) p_kernel->p, (const WORD16 *) p_inp->p, (const WORD64 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, 0, \
+          cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+          cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch); \
+      XTPWR_PROFILER_STOP(0);\
+    }\
     if(!cfg.pointwise_profile_only) { \
         XTPWR_PROFILER_UPDATE(0); \
         XTPWR_PROFILER_PRINT(0); \
     } \
     if(!err) { \
+      if(cfg.v2){\
+        XTPWR_PROFILER_START(1);\
+        err = xa_nn_conv2d_pointwise_v2_per_chan_sym8sxsym16s ( \
+            (WORD16 *) p_out->p, (WORD8 *) p_kernel_point->p, (WORD16 *) p_dw_out->p, (WORD64 *)p_bias_point->p, \
+            cfg.out_height, cfg.out_width, cfg.input_channels*cfg.channels_multiplier, cfg.out_channels, 0, \
+            cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+            cfg.out_data_format, cfg.out_activation_min, cfg.out_activation_max, NULL); \
+        XTPWR_PROFILER_STOP(1);\
+      }\
+      else{\
         XTPWR_PROFILER_START(1);\
         err = xa_nn_conv2d_pointwise_per_chan_sym8sxsym16s ( \
             (WORD16 *) p_out->p, (WORD8 *) p_kernel_point->p, (WORD16 *) p_dw_out->p, (WORD64 *)p_bias_point->p, \
@@ -601,6 +748,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
             cfg.p_out_multiplier, cfg.p_out_shift, 0, \
             cfg.out_data_format); \
         XTPWR_PROFILER_STOP(1);\
+      }\
         XTPWR_PROFILER_UPDATE(1); \
         XTPWR_PROFILER_PRINT(1); \
     } \
@@ -618,26 +766,50 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
   }
 
 #define CONV_PT_KERNEL_SYM8SXSYM16S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
-  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel_point->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias_point->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_conv2d_pointwise_per_chan_sym8sxsym16s ( \
-        (WORD16 *) p_out->p, (WORD8 *) p_kernel_point->p, (WORD16 *) p_inp->p, (WORD64 *)p_bias_point->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.out_channels, \
-        0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
-        cfg.out_data_format); \
-    XTPWR_PROFILER_STOP(0);\
+    (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel_point->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias_point->precision)) {\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_conv2d_pointwise_v2_per_chan_sym8sxsym16s ( \
+          (WORD16 *) p_out->p, (WORD8 *) p_kernel_point->p, (WORD16 *) p_inp->p, (WORD64 *)p_bias_point->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.out_channels, \
+          0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+          cfg.out_data_format, cfg.out_activation_min, cfg.out_activation_max, NULL); \
+      XTPWR_PROFILER_STOP(0);\
+    }\
+    else{\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_conv2d_pointwise_per_chan_sym8sxsym16s ( \
+          (WORD16 *) p_out->p, (WORD8 *) p_kernel_point->p, (WORD16 *) p_inp->p, (WORD64 *)p_bias_point->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.out_channels, \
+          0, cfg.p_out_multiplier, cfg.p_out_shift, 0, \
+          cfg.out_data_format); \
+      XTPWR_PROFILER_STOP(0);\
+    }\
   }
 
 #define DILATED_CONV_DS_KERNEL_SYM8_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_dilated_conv2d_depthwise_per_chan_sym8sxasym8s ( \
-        (WORD8 *) p_out->p, (const WORD8 *) p_kernel->p, (const WORD8 *) p_inp->p, (const WORD32 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, cfg.dilation_height, cfg.dilation_width, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
-        cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
-    XTPWR_PROFILER_STOP(0);\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_dilated_conv2d_depthwise_v2_per_chan_sym8sxasym8s ( \
+          (WORD8 *) p_out->p, (const WORD8 *) p_kernel->p, (const WORD8 *) p_inp->p, (const WORD32 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, cfg.dilation_height, cfg.dilation_width, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+          cfg.inp_data_format, 0 /* out_data_format always DWH*/,\
+          p_scratch, cfg.out_activation_min, cfg.out_activation_max, NULL);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
+    else{\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_dilated_conv2d_depthwise_per_chan_sym8sxasym8s ( \
+          (WORD8 *) p_out->p, (const WORD8 *) p_kernel->p, (const WORD8 *) p_inp->p, (const WORD32 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, cfg.dilation_height, cfg.dilation_width, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.input_zero_bias, cfg.p_out_multiplier, cfg.p_out_shift, cfg.out_zero_bias, \
+          cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
     } \
 
 #if HIFI_VFPU
@@ -1007,6 +1179,14 @@ int xa_nn_main_process(int argc, char *argv[])
     if(!strcmp(cfg.kernel_name,"conv2d_depth"))
     {
       strcpy(profiler_name_1,"conv2d_point");
+    }
+    if(cfg.v2==1)
+    {
+      strcat(profiler_name_0, "_v2");
+      if(!strcmp(cfg.kernel_name,"conv2d_depth"))
+      {
+        strcat(profiler_name_1, "_v2");        
+      }
     }
   }
   if((cfg.kernel_precision == -1) || (cfg.inp_precision == -1))
