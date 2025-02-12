@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -66,7 +66,7 @@ static inline ae_int32x2 MultiplyByQuantizedMultiplier_opt(ae_int64 d_x,
   ae_int64 qL = AE_MUL32U_LL(d_red_mul32, AE_MOVINT32X2_FROMINT64(d_x));
   ae_int64 qH = AE_SLAI64(AE_MUL32_LH(d_red_mul32, AE_MOVINT32X2_FROMINT64(d_x)), 32);
   ae_int64 q = AE_ADD64(qL, qH);
-  q = AE_SRAA64(q, (-shift-17));
+  q = AE_SLAA64S(q, (shift+17));
   ae_int32x2 result = AE_ROUND32F64SASYM(q);
   return result;
 }
@@ -83,8 +83,8 @@ static inline ae_int32x2 MultiplyByQuantizedMultiplier_x2_opt(ae_int64 d_x1, ae_
   ae_int64 qH2 = AE_SLAI64(AE_MUL32_LH(d_red_mul32, AE_MOVINT32X2_FROMINT64(d_x2)), 32);
   ae_int64 q1 = AE_ADD64(qL1, qH1);
   ae_int64 q2 = AE_ADD64(qL2, qH2);
-  q1 = AE_SRAA64(q1, (-shift-17));
-  q2 = AE_SRAA64(q2, (-shift-17));
+  q1 = AE_SLAA64S(q1, (shift+17));
+  q2 = AE_SLAA64S(q2, (shift+17));
   ae_int32x2 result = AE_ROUND32X2F64SASYM(q1, q2);
   return result;
 }

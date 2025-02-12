@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -27,6 +27,55 @@ Cadence HiFi 4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
+
+Version 5.0.0 API 2.0: February 7, 2025
+
++ GA Release of HiFi4 NN Library
++ Tested using the RJ-2024.3 tools and xt-clang/xt-clang++ compiler
++ Adds the following kernels for ExecuTorch support:
+  xa_nn_elm_add_broadcast_4D_f32xf32_f32
+  xa_nn_elm_mul_broadcast_4D_f32xf32_f32
+  xa_nn_elm_div_broadcast_4D_f32xf32_f32
+  xa_nn_elm_select_32x32_32
+  xa_nn_elm_select_broadcast_4D_32x32_32
+  xa_nn_transpose_32_32
+  xa_nn_elm_dequantize_asym8u_f32
+  xa_nn_elm_quantize_f32_asym8u
+  xa_nn_broadcast_32_32
+  xa_nn_concat_32_32
+  xa_nn_elm_max_4D_Bcast_f32xf32_f32
+  xa_nn_elm_max_f32xf32_f32
+  xa_nn_elm_min_4D_Bcast_f32xf32_f32
+  xa_nn_elm_min_f32xf32_f32
+  xa_nn_elm_clamp_f32xf32xf32_f32
+  xa_nn_elm_compare_f32xf32_f32
+  xa_nn_elm_compare_broadcast_4D_f32xf32_f32
++ Adds the following kernels to support LSTM and LayerNorm functionality in XNNC
+  xa_nn_lstm_sym8sxasym8s_16
+  xa_nn_norm_calc_3D_8_nhwc
+  xa_nn_norm_calc_3D_16_nhwc
+  xa_nn_norm_apply_3D_8_nhwc
+  xa_nn_norm_apply_3D_16_nhwc
++ Adds xa_nn_dilated_conv2d_depthwise_v2_per_chan_sym8sxsym16s kernel
++ Adds support for groups>1 to transpose_conv sym8sxasym8s API
++ Fixes known issues to improve stability.
+ 
+Note:
+> The _v2 APIs are in beta stage and may change in next release.
+> Processor Configuration must be built with the SP-VFP option to compile floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for the C++11 standard. 
+  This is supported only with the Xtensa C library. 
+> The library makefile uses '-mno-mul16 -mno-mul32 -mno-div32' compile options. 
+  User may remove these from makefile for improved performance if their core config supports these HW options.
+
+Known issues
+> Compiler optimizations are not available for the ANN C++ source files.
+> 3 failures were seen in the ANN testcases because of differences in reference code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
 
 Version 4.2.0 API 1.10: September 9, 2024
 

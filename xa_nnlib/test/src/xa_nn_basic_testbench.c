@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -71,6 +71,7 @@ typedef struct _test_config_t
   int  left_shift;
   float input1_scale;
   float output_scale;
+  compare_ops_t kernel_type;
 #endif
   int  io_length;
   int  vec_count;
@@ -84,19 +85,23 @@ typedef struct _test_config_t
   int  input_shape[MAX_DIMS];
   int  input1_shape[MAX_DIMS];
   int  input2_shape[MAX_DIMS];
+  int  input3_shape[MAX_DIMS];
   int  output_shape[MAX_DIMS];  
   int  axis_data[MAX_DIMS];  
   char kernel_name[MAX_KERNEL_NAME_LENGTH];
   char read_inp1_file_name[XA_MAX_CMD_LINE_LENGTH];
   char read_inp2_file_name[XA_MAX_CMD_LINE_LENGTH];
+  char read_inp3_file_name[XA_MAX_CMD_LINE_LENGTH];
   char read_ref_file_name[XA_MAX_CMD_LINE_LENGTH];
   char read_inp_shape_str[SHAPE_ARGS_LENGTH];
   char read_inp1_shape_str[SHAPE_ARGS_LENGTH];
   char read_inp2_shape_str[SHAPE_ARGS_LENGTH];
+  char read_inp3_shape_str[SHAPE_ARGS_LENGTH];
   char read_out_shape_str[SHAPE_ARGS_LENGTH];
   char read_axis_data_str[SHAPE_ARGS_LENGTH];
   char write_inp1_file_name[XA_MAX_CMD_LINE_LENGTH];
   char write_inp2_file_name[XA_MAX_CMD_LINE_LENGTH];
+  char write_inp3_file_name[XA_MAX_CMD_LINE_LENGTH];
   char write_out_file_name[XA_MAX_CMD_LINE_LENGTH];
   int  verify;
   // extra parameters for braodcast support
@@ -143,22 +148,26 @@ int default_config(test_config_t *p_cfg)
     p_cfg->write_file = 0;  
     p_cfg->read_inp1_file_name[0] = '\0';
     p_cfg->read_inp2_file_name[0] = '\0';
+    p_cfg->read_inp3_file_name[0] = '\0';
     p_cfg->input1_numElements = 0;
     p_cfg->input2_numElements = 0;
     p_cfg->read_ref_file_name[0] = '\0';
     p_cfg->read_inp_shape_str[0] = '\0';
     p_cfg->read_inp1_shape_str[0] = '\0';
     p_cfg->read_inp2_shape_str[0] = '\0';
+    p_cfg->read_inp3_shape_str[0] = '\0';
     p_cfg->read_out_shape_str[0] = '\0';
     p_cfg->read_axis_data_str[0] = '\0';
     p_cfg->write_inp1_file_name[0]='\0';
     p_cfg->write_inp2_file_name[0]='\0';
+    p_cfg->write_inp3_file_name[0]='\0';
     p_cfg->write_out_file_name[0] = '\0';
     p_cfg->verify = 1;
     p_cfg->numBytesForMemmove = 0;
     p_cfg->srcMemmoveOffset = 0;
     p_cfg->dstMemmoveOffset = 0;
     p_cfg->value = 0.0;
+    p_cfg->kernel_type = 0;
 
     int itr;
     for(itr = 0; itr < MAX_DIMS; itr++)
@@ -166,6 +175,7 @@ int default_config(test_config_t *p_cfg)
       p_cfg->input_shape[itr] = 1;
       p_cfg->input1_shape[itr] = 1;
       p_cfg->input2_shape[itr] = 1;
+      p_cfg->input3_shape[itr] = 1;
       p_cfg->output_shape[itr] = 1;
       p_cfg->axis_data[itr] = 1;
       
@@ -188,26 +198,29 @@ void show_usage(void)
     printf("\t-num_inp_dims: number of input dimensions; Default=4\n");
     printf("\t-num_axis_dims: number of axis dimensions; Default=4\n");
     printf("\t-num_out_dims: number of output dimensions; Default=4\n");
-    printf("\t-inp_precision: 8, 16, -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s), 1(bool), -8 (sym16s); Default=-1\n");
-    printf("\t-out_precision: 8, 16, -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s), 1(bool), -8 (sym16s); Default=-1\n");
+    printf("\t-inp_precision: 8, 16, 32, -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s), 1(bool), -8 (sym16s); Default=-1\n");
+    printf("\t-out_precision: 8, 16, 32, -4 (asym8s) -3 (asym8u),  -1 (single prec float), -7 (asym16s), 1(bool), -8 (sym16s); Default=-1\n");
     printf("\t-vec_count: number of input vectors; Default=1\n");
     printf("\t-frames: Positive number; Default=2\n");
 #if HIFI_VFPU
-    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, elm_min, elm_max, dot_prod, elm_equal, elm_notequal, elm_greater, elm_greaterequal, elm_less, elm_lessequal, reduce_max_4D, reduce_mean_4D, elm_sine, elm_cosine, elm_logn, elm_abs, elm_ceil, elm_round, elm_neg, elm_square, elm_rsqrt, elm_sqrt, broadcast, elm_requantize, elm_dequantize, elm_quantize, memmove, memset, elm_add_broadcast_4D, elm_sub_broadcast_4D, elm_mul_broadcast_4D, elm_squared_diff_broadcast_4D; Default=""elm_add""\n");
+    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, elm_min, elm_max, dot_prod, elm_equal, elm_notequal, elm_greater, elm_greaterequal, elm_less, elm_lessequal, reduce_max_4D, reduce_mean_4D, elm_sine, elm_cosine, elm_logn, elm_abs, elm_ceil, elm_round, elm_neg, elm_square, elm_rsqrt, elm_sqrt, broadcast, elm_requantize, elm_dequantize, elm_quantize, memmove, memset, elm_add_broadcast_4D, elm_sub_broadcast_4D, elm_mul_broadcast_4D, elm_div_broadcast_4D, elm_max_4D_Bcast, elm_min_4D_Bcast, elm_squared_diff_broadcast_4D, elm_sel, elm_clamp, elm_sel_broadcast_4D, elm_compare, elm_compare_broadcast_4D; Default=""elm_add""\n");
 #else
-    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, elm_min, elm_max, dot_prod, elm_equal, elm_notequal, elm_greater, elm_greaterequal, elm_less, elm_lessequal, reduce_max_4D, reduce_mean_4D, elm_sine, elm_cosine, elm_logn, elm_abs, elm_ceil, elm_round, elm_neg, elm_square, elm_rsqrt, elm_sqrt, broadcast, elm_requantize, memmove, memset, elm_add_broadcast_4D, elm_sub_broadcast_4D, elm_mul_broadcast_4D, elm_squared_diff_broadcast_4D; Default=""elm_add""\n");
+    printf("\t-kernel_name: elm_add, elm_sub, elm_mul, elm_mul_acc, elm_div, elm_floor, elm_min, elm_max, dot_prod, elm_equal, elm_notequal, elm_greater, elm_greaterequal, elm_less, elm_lessequal, reduce_max_4D, reduce_mean_4D, elm_sine, elm_cosine, elm_logn, elm_abs, elm_ceil, elm_round, elm_neg, elm_square, elm_rsqrt, elm_sqrt, broadcast, elm_requantize, memmove, memset, elm_add_broadcast_4D, elm_sub_broadcast_4D, elm_mul_broadcast_4D, elm_div_broadcast_4D, elm_max_4D_Bcast, elm_min_4D_Bcast, elm_squared_diff_broadcast_4D, elm_sel, elm_clamp, elm_sel_broadcast_4D; Default=""elm_add""\n");
 #endif
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp1_file_name: Full filename for reading inputs (order - inp) \n");
     printf("\t-read_inp2_file_name: Full filename for reading inputs (order - inp) \n");
+    printf("\t-read_inp3_file_name: Full filename for reading inputs (order - inp) \n");
     printf("\t-read_ref_file_name: Full filename for reading reference output \n");
     printf("\t-write_inp1_file_name: Full filename for writing inputs (order - inp) \n");
     printf("\t-write_inp2_file_name: Full filename for writing inputs (order - inp) \n");
+    printf("\t-write_inp3_file_name: Full filename for writing inputs (order - inp) \n");
     printf("\t-write_out_file_name: Full filename for writing output \n");
     printf("\t-verify: Verify output against provided reference; 0: Disable, 1: Bitexact match; Default=1\n");
     printf("\t-read_inp_shape_str: Takes the input  shape dimensions(space ' ' separated) as a string \n");
     printf("\t-read_inp1_shape_str: Takes the input1  shape dimensions(space ' ' separated) as a string \n");
     printf("\t-read_inp2_shape_str: Takes the input2  shape dimensions(space ' ' separated) as a string \n");
+    printf("\t-read_inp3_shape_str: Takes the input3  shape dimensions(space ' ' separated) as a string \n");
     printf("\t-read_out_shape_str: Takes the output shape dimensions(space ' ' separated) as a string \n");
     printf("\t-read_axis_data_str: Takes the axis data(space ' ' separated) as a string \n");
     printf("\t =========================================\n ");
@@ -235,6 +248,7 @@ void show_usage(void)
     printf ("\t-input1_scale: input_scale(Float value. Only needed in dequantize operation); Default=0.5\n");
     printf ("\t-output_scale: output_scale(Float value. Only needed in quantize operation); Default=0.5\n");
     printf ("\t-val_memset: input_memset(Float value. Needed in memset operation); Default=0.0\n");
+    printf ("\t-kernel_type: kernel type; Default=0\n");
 }
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
@@ -274,15 +288,18 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-out_precision", p_cfg->out_precision);                        
     ARGTYPE_ONETIME_CONFIG("-vec_count", p_cfg->vec_count);                           
     ARGTYPE_ONETIME_CONFIG("-frames", p_cfg->frames);
+    ARGTYPE_ONETIME_CONFIG("-kernel_type", p_cfg->kernel_type);
     ARGTYPE_STRING("-kernel_name", p_cfg->kernel_name, MAX_KERNEL_NAME_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-write_file", p_cfg->write_file);
     ARGTYPE_STRING("-read_inp1_file_name", p_cfg->read_inp1_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-read_inp2_file_name", p_cfg->read_inp2_file_name, XA_MAX_CMD_LINE_LENGTH);
+    ARGTYPE_STRING("-read_inp3_file_name", p_cfg->read_inp3_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-read_ref_file_name", p_cfg->read_ref_file_name, XA_MAX_CMD_LINE_LENGTH);
 
     ARGTYPE_ONETIME_CONFIG_ARRAY("-read_inp_shape_str", p_cfg->input_shape, p_cfg->num_inp_dims, p_cfg->read_inp_shape_str);
     ARGTYPE_ONETIME_CONFIG_ARRAY("-read_inp1_shape_str", p_cfg->input1_shape, p_cfg->num_inp_dims, p_cfg->read_inp1_shape_str);
     ARGTYPE_ONETIME_CONFIG_ARRAY("-read_inp2_shape_str", p_cfg->input2_shape, p_cfg->num_inp_dims, p_cfg->read_inp2_shape_str);
+    ARGTYPE_ONETIME_CONFIG_ARRAY("-read_inp3_shape_str", p_cfg->input3_shape, p_cfg->num_inp_dims, p_cfg->read_inp3_shape_str);
 
     ARGTYPE_ONETIME_CONFIG("-num_bytes_memmove", p_cfg->numBytesForMemmove);
     ARGTYPE_ONETIME_CONFIG("-src_memmove_offset", p_cfg->srcMemmoveOffset);
@@ -302,6 +319,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     
     ARGTYPE_STRING("-write_inp1_file_name", p_cfg->write_inp1_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_inp2_file_name", p_cfg->write_inp2_file_name, XA_MAX_CMD_LINE_LENGTH);
+    ARGTYPE_STRING("-write_inp3_file_name", p_cfg->write_inp3_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_STRING("-write_out_file_name", p_cfg->write_out_file_name, XA_MAX_CMD_LINE_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-verify", p_cfg->verify);
     
@@ -620,7 +638,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
-#define SUB_BROADCAST_4D_F32(KERNEL, IPREC, OPREC) \
+#define BROADCAST_4D_F32(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -744,6 +762,35 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);                                             \
   }
 
+#define MINMAX_F32(KERNEL, IPREC, OPREC)                                \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision)  \
+     && (OPREC == cfg.out_precision)) {                                 \
+    XTPWR_PROFILER_START(0);                                            \
+        err = xa_nn_##KERNEL##_f32xf32_f32                              \
+                (                                                       \
+                    (FLOAT32 *) p_out->p,                               \
+                    (FLOAT32 *) p_inp1->p,                              \
+                    (FLOAT32 *) p_inp2->p,                              \
+                    cfg.io_length                                       \
+                );                                                      \
+    XTPWR_PROFILER_STOP(0);                                             \
+  }
+
+#define CLAMP_F32(KERNEL, IPREC, OPREC)                                 \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision)  \
+     && (OPREC == cfg.out_precision)) {                                 \
+    XTPWR_PROFILER_START(0);                                            \
+        err = xa_nn_elm_clamp_f32xf32xf32_f32                           \
+                (                                                       \
+                    (FLOAT32 *) p_out->p,                               \
+                    (FLOAT32 *) p_inp1->p,                              \
+                    (FLOAT32 *) p_inp2->p,                              \
+                    (FLOAT32 *) p_inp3->p,                              \
+                    cfg.io_length                                       \
+                );                                                      \
+    XTPWR_PROFILER_STOP(0);                                             \
+  }
+
 #define MINMAX_BCAST_8(KERNEL, IPREC, OPREC)                            \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision)  \
      && (OPREC == cfg.out_precision)) {                                 \
@@ -769,6 +816,21 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                     (WORD8 *) p_out->p,                                 \
                     (int *) cfg.output_shape,                           \
                     (WORD8 *) p_inp1->p,                                \
+                    (int *) cfg.input_shape,                            \
+                    cfg.num_inp_dims                                    \
+                );                                                      \
+    XTPWR_PROFILER_STOP(0);                                             \
+  }
+
+#define BROADCAST_32(KERNEL, IPREC, OPREC)                              \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision)  \
+     && (OPREC == cfg.out_precision)) {                                 \
+    XTPWR_PROFILER_START(0);                                            \
+        err = xa_nn_broadcast_32_32                                     \
+                (                                                       \
+                    (WORD32 *) p_out->p,                                \
+                    (int *) cfg.output_shape,                           \
+                    (WORD32 *) p_inp1->p,                               \
                     (int *) cfg.input_shape,                            \
                     cfg.num_inp_dims                                    \
                 );                                                      \
@@ -1192,6 +1254,17 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define DEQUANTIZE_ASYM8U_F32(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_elm_dequantize_asym8u_f32 ( \
+                (FLOAT32 *)p_out->p, (UWORD8 *)p_inp1->p, \
+                cfg.input1_zero_bias, cfg.input1_scale,\
+                cfg.io_length);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define DEQUANTIZE_ASYM16S_F32(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
@@ -1214,6 +1287,17 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define QUANTIZE_F32_ASYM8U(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_elm_quantize_f32_asym8u ( \
+                (UWORD8 *)p_out->p, (FLOAT32 *)p_inp1->p, \
+                cfg.output_scale, cfg.output_zero_bias,\
+                cfg.io_length);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define QUANTIZE_F32_ASYM16S(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
@@ -1225,6 +1309,71 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#define SELECT_32(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_elm_select_32x32_32\
+                (\
+                    (WORD32 *) (p_out->p),\
+                    (WORD32 *) (p_inp1->p),\
+                    (WORD32 *) (p_inp2->p),\
+                    (unsigned char *) (p_inp3->p),\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define COMPARE_F32(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_elm_compare_f32xf32_f32\
+                (\
+                    (WORD8 *) (p_out->p),\
+                    (FLOAT32 *) (p_inp1->p),\
+                    (FLOAT32 *) (p_inp2->p),\
+                    cfg.io_length, \
+                    cfg.kernel_type \
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define SELECT_BCAST_32(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_elm_select_broadcast_4D_32x32_32\
+                (\
+                    (WORD32 *) (p_out->p),\
+                    (WORD32 *) cfg.output_shape, \
+                    (WORD32 *) (p_inp1->p),\
+                    (WORD32 *) cfg.input1_shape, \
+                    (WORD32 *) (p_inp2->p),\
+                    (WORD32 *) cfg.input2_shape, \
+                    (unsigned char *) (p_inp3->p),\
+                    (WORD32 *) cfg.input3_shape \
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define COMPARE_BCAST_F32(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_elm_compare_broadcast_4D_f32xf32_f32\
+                (\
+                    (WORD8 *) (p_out->p),\
+                    (WORD32 *) cfg.output_shape, \
+                    (FLOAT32 *) (p_inp1->p),\
+                    (WORD32 *) cfg.input1_shape, \
+                    (FLOAT32 *) (p_inp2->p),\
+                    (WORD32 *) cfg.input2_shape, \
+                    cfg.kernel_type \
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define MEMMOVE_8_8(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
@@ -1234,6 +1383,19 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                     (void *) (p_inp1->p + cfg.dstMemmoveOffset),\
                     (const void *) (p_inp1->p + cfg.srcMemmoveOffset),\
                     cfg.numBytesForMemmove\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+  
+#define MEMMOVE_16_16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_16\
+                (\
+                    (void *) (p_inp1->p + cfg.dstMemmoveOffset),\
+                    (const void *) (p_inp1->p + cfg.srcMemmoveOffset),\
+                    (cfg.numBytesForMemmove>>1)\
                 );\
     XTPWR_PROFILER_STOP(0);\
   }
@@ -1272,17 +1434,30 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else SUB_ASYM8S(elm_sub, -4, -4) \
     else MATH_BROADCAST_4D_ASYM8S(elm_sub_broadcast_4D, -4, -4) \
     else MATH_BROADCAST_4D_ASYM16S(elm_sub_broadcast_4D, -7, -7) \
-    else SUB_BROADCAST_4D_F32(elm_sub_broadcast_4D, -1, -1) \
+    else BROADCAST_4D_F32(elm_sub_broadcast_4D, -1, -1) \
+    else BROADCAST_4D_F32(elm_mul_broadcast_4D, -1, -1) \
+    else BROADCAST_4D_F32(elm_add_broadcast_4D, -1, -1) \
+    else BROADCAST_4D_F32(elm_div_broadcast_4D, -1, -1) \
+    else BROADCAST_4D_F32(elm_min_4D_Bcast, -1, -1) \
+    else BROADCAST_4D_F32(elm_max_4D_Bcast, -1, -1) \
     else MATH_BROADCAST_4D_ASYM8S(elm_squared_diff_broadcast_4D, -4, -4) \
     else SQUARED_DIFF_BROADCAST_4D_SYM16S(elm_squared_diff_broadcast_4D, -8, -8) \
     else MINMAX_8(elm_min, -4, -4)\
     else MINMAX_8(elm_max, -4, -4)\
+    else MINMAX_F32(elm_min, -1, -1)\
+    else MINMAX_F32(elm_max, -1, -1)\
+    else CLAMP_F32(elm_clamp, -1, -1)\
     else MINMAX_BCAST_8(elm_min_4D_Bcast, -4, -4)\
     else MINMAX_BCAST_8(elm_max_4D_Bcast, -4, -4)\
     else MINMAX_BCAST_8(elm_min_8D_Bcast, -4, -4)\
     else MINMAX_BCAST_8(elm_max_8D_Bcast, -4, -4)\
     else BROADCAST_8(broadcast, 8, 8)\
+    else BROADCAST_32(broadcast, 32, 32)\
     else DOT_PROD_OUT_ASYM8S(dot_prod, 16, -4) \
+    else SELECT_32(elm_sel, 32, 32) \
+    else COMPARE_F32(elm_compare, -1, 8) \
+    else COMPARE_BCAST_F32(elm_compare_broadcast_4D, -1, 8) \
+    else SELECT_BCAST_32(elm_sel_broadcast_4D, 32, 32) \
     else EQUAL_ASYM8S(elm_equal, -4, -4) \
     else NOTEQUAL_ASYM8S(elm_notequal, -4, -4) \
     else GREATER_ASYM8S(elm_greater, -4, -4) \
@@ -1316,10 +1491,13 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else REQUANTIZE_ASYM8S_ASYM16S(elm_requantize, -4, -7) \
     else REQUANTIZE_ASYM8S_ASYM16U(elm_requantize, -4, -6) \
     else DEQUANTIZE_ASYM8S_F32(elm_dequantize, -4, -1) \
+    else DEQUANTIZE_ASYM8U_F32(elm_dequantize, -3, -1) \
     else DEQUANTIZE_ASYM16S_F32(elm_dequantize, -7, -1) \
     else QUANTIZE_F32_ASYM8S(elm_quantize, -1, -4) \
+    else QUANTIZE_F32_ASYM8U(elm_quantize, -1, -3) \
     else QUANTIZE_F32_ASYM16S(elm_quantize, -1, -7) \
     else MEMMOVE_8_8(memmove, -4, -4) \
+    else MEMMOVE_16_16(memmove, -8, -8) \
     else MEMSET_F32(memset, -1, -1) \
     else {  printf("unsupported basic operation\n"); return -1;}
 #else
@@ -1345,7 +1523,10 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MINMAX_BCAST_8(elm_min_8D_Bcast, -4, -4)\
     else MINMAX_BCAST_8(elm_max_8D_Bcast, -4, -4)\
     else BROADCAST_8(broadcast, 8, 8)\
+    else BROADCAST_32(broadcast, 32, 32)\
     else DOT_PROD_OUT_ASYM8S(dot_prod, 16, -4) \
+    else SELECT_32(elm_sel, 32, 32) \
+    else SELECT_BCAST_32(elm_sel_broadcast_4D, 32, 32) \
     else EQUAL_ASYM8S(elm_equal, -4, -4) \
     else NOTEQUAL_ASYM8S(elm_notequal, -4, -4) \
     else GREATER_ASYM8S(elm_greater, -4, -4) \
@@ -1369,6 +1550,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else REQUANTIZE_ASYM8S_ASYM16S(elm_requantize, -4, -7) \
     else REQUANTIZE_ASYM8S_ASYM16U(elm_requantize, -4, -6) \
     else MEMMOVE_8_8(memmove, -4, -4) \
+    else MEMMOVE_16_16(memmove, -8, -8) \
     else {  printf("unsupported basic operation\n"); return -1;}
 #endif
 
@@ -1385,11 +1567,13 @@ int xa_nn_main_process(int argc, char *argv[])
 
   buf1D_t *p_inp1 = NULL;
   buf1D_t *p_inp2 = NULL;
+  buf1D_t *p_inp3 = NULL;
   buf1D_t *p_out;
   buf1D_t *ptr_ref = NULL;
 
   FILE *fptr_inp1 = NULL;
   FILE *fptr_inp2 = NULL;
+  FILE *fptr_inp3 = NULL;
   FILE *fptr_out;
   FILE *fptr_ref = NULL;
 
@@ -1420,13 +1604,14 @@ int xa_nn_main_process(int argc, char *argv[])
 
   /* Calculating input and output lengths from respective shapes for Reduce/Broadcast ops */
   int inp_length = 1, out_length = 1;
-  int inp1_length = 1, inp2_length = 1;
+  int inp1_length = 1, inp2_length = 1, inp3_length = 1;
   int itr;
   for(itr = 0; itr < cfg.num_inp_dims; itr++)
   {
     inp_length *= cfg.input_shape[itr]; 
     inp1_length *= cfg.input1_shape[itr];
     inp2_length *= cfg.input2_shape[itr];
+    inp3_length *= cfg.input3_shape[itr];
   }
   for(itr = 0; itr < cfg.num_out_dims; itr++)
   {
@@ -1478,6 +1663,10 @@ int xa_nn_main_process(int argc, char *argv[])
   else if(cfg.inp_precision == 8 && cfg.out_precision == 8)
   {
     sprintf(profiler_name, "%s_8_8", cfg.kernel_name);
+  }
+  else if(cfg.inp_precision == 32 && cfg.out_precision == 32)
+  {
+    sprintf(profiler_name, "%s_32_32", cfg.kernel_name);
   }
   else if(cfg.inp_precision == 16 && cfg.out_precision == -4)
   {
@@ -1541,16 +1730,22 @@ int xa_nn_main_process(int argc, char *argv[])
   else if( !strcmp(cfg.kernel_name, "elm_add_broadcast_4D") ||
            !strcmp(cfg.kernel_name, "elm_sub_broadcast_4D") ||
            !strcmp(cfg.kernel_name, "elm_mul_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_div_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_compare_broadcast_4D") ||
            !strcmp(cfg.kernel_name, "elm_squared_diff_broadcast_4D"))
   {
     sprintf(profiler_params, "output_shape= %s input1_shape= %s input2_shape= %s\n", cfg.read_out_shape_str, cfg.read_inp1_shape_str, cfg.read_inp2_shape_str);
+  }
+  else if(!strcmp(cfg.kernel_name, "elm_sel_broadcast_4D"))
+  {
+    sprintf(profiler_params, "output_shape= %s input1_shape= %s input2_shape= %s input3_shape= %s\n", cfg.read_out_shape_str, cfg.read_inp1_shape_str, cfg.read_inp2_shape_str, cfg.read_inp3_shape_str);
   }
   else
   {
     sprintf(profiler_params, "N=%d\n", cfg.io_length);
   }
 
-  bool single_input_kernel = 0;
+  int no_of_inputs = 0;
   if( !strcmp(cfg.kernel_name, "elm_floor")       ||
       !strcmp(cfg.kernel_name, "elm_sine")        ||
       !strcmp(cfg.kernel_name, "elm_cosine")      ||
@@ -1570,7 +1765,15 @@ int xa_nn_main_process(int argc, char *argv[])
       !strcmp(cfg.kernel_name, "reduce_max_4D")   ||
       !strcmp(cfg.kernel_name, "reduce_mean_4D"))
   {
-    single_input_kernel = 1;
+    no_of_inputs = 1;
+  }
+  else if(!strcmp(cfg.kernel_name, "elm_sel") || !strcmp(cfg.kernel_name, "elm_sel_broadcast_4D") || !strcmp(cfg.kernel_name, "elm_clamp"))
+  {
+    no_of_inputs = 3;
+  }
+  else
+  {
+    no_of_inputs = 2;
   }
 
   if(strcmp(cfg.kernel_name, "memset")) /* memset does not require array of input */
@@ -1582,8 +1785,14 @@ int xa_nn_main_process(int argc, char *argv[])
         used; the input data and output data generated would be written into files. 
       */
 	    fptr_inp1 = file_open(pb_input_file_path, cfg.write_inp1_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
-      if(!single_input_kernel)
+      if(no_of_inputs == 2)
         fptr_inp2 = file_open(pb_input_file_path, cfg.write_inp2_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
+      else if(no_of_inputs == 3)
+      {
+        fptr_inp2 = file_open(pb_input_file_path, cfg.write_inp2_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
+        fptr_inp3 = file_open(pb_input_file_path, cfg.write_inp3_file_name, "wb", XA_MAX_CMD_LINE_LENGTH);
+      }
+
     }
     else
     {
@@ -1591,8 +1800,13 @@ int xa_nn_main_process(int argc, char *argv[])
         input data would be read from the default file set in default_config().
       */
 	    fptr_inp1 = file_open(pb_input_file_path, cfg.read_inp1_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
-      if(!single_input_kernel)
+      if(no_of_inputs == 2)
 	      fptr_inp2 = file_open(pb_input_file_path, cfg.read_inp2_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
+      else if(no_of_inputs == 3)
+      {
+	      fptr_inp2 = file_open(pb_input_file_path, cfg.read_inp2_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
+        fptr_inp3 = file_open(pb_input_file_path, cfg.read_inp3_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
+      }
     }
   }
 
@@ -1616,13 +1830,16 @@ int xa_nn_main_process(int argc, char *argv[])
              !strcmp(cfg.kernel_name, "elm_add_broadcast_4D") ||
              !strcmp(cfg.kernel_name, "elm_sub_broadcast_4D") ||
              !strcmp(cfg.kernel_name, "elm_mul_broadcast_4D") ||
+             !strcmp(cfg.kernel_name, "elm_div_broadcast_4D") ||
+             !strcmp(cfg.kernel_name, "elm_sel_broadcast_4D") ||
+             !strcmp(cfg.kernel_name, "elm_compare_broadcast_4D") ||
              !strcmp(cfg.kernel_name, "elm_squared_diff_broadcast_4D"))
     {
       ptr_ref =  create_buf1D(out_length, cfg.out_precision); 
     }
     else if(  !strcmp(cfg.kernel_name, "memmove") )
     {
-    	ptr_ref =  create_buf1D(cfg.numBytesForMemmove, cfg.out_precision);
+    	ptr_ref =  create_buf1D(cfg.io_length, cfg.out_precision);
     }
     else
     {
@@ -1677,10 +1894,17 @@ int xa_nn_main_process(int argc, char *argv[])
   else if( !strcmp(cfg.kernel_name, "elm_add_broadcast_4D") || 
            !strcmp(cfg.kernel_name, "elm_sub_broadcast_4D") || 
            !strcmp(cfg.kernel_name, "elm_mul_broadcast_4D") || 
+           !strcmp(cfg.kernel_name, "elm_div_broadcast_4D") || 
+           !strcmp(cfg.kernel_name, "elm_sel_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_compare_broadcast_4D")    ||
            !strcmp(cfg.kernel_name, "elm_squared_diff_broadcast_4D") )
   {
     p_inp1 = create_buf1D(inp1_length, cfg.inp_precision); VALIDATE_PTR(p_inp1);
     p_inp2 = create_buf1D(inp2_length, cfg.inp_precision); VALIDATE_PTR(p_inp2);
+    if(!strcmp(cfg.kernel_name, "elm_sel_broadcast_4D"))
+    {
+      p_inp3 = create_buf1D(inp3_length, cfg.inp_precision); VALIDATE_PTR(p_inp3);
+    }
   }
   else
   {
@@ -1688,6 +1912,8 @@ int xa_nn_main_process(int argc, char *argv[])
 		  { p_inp1 = create_buf1D(cfg.io_length * cfg.vec_count, cfg.inp_precision); VALIDATE_PTR(p_inp1); }
 	  if(fptr_inp2)
 		  { p_inp2 = create_buf1D(cfg.io_length * cfg.vec_count, cfg.inp_precision); VALIDATE_PTR(p_inp2); }
+	  if(fptr_inp3)
+		  { p_inp3 = create_buf1D(cfg.io_length * cfg.vec_count, cfg.inp_precision); VALIDATE_PTR(p_inp3); }
   }
   // Allocate memory for output buffers
   if(strcmp(cfg.kernel_name, "dot_prod") == 0)
@@ -1704,13 +1930,16 @@ int xa_nn_main_process(int argc, char *argv[])
            !strcmp(cfg.kernel_name, "elm_add_broadcast_4D") ||
            !strcmp(cfg.kernel_name, "elm_sub_broadcast_4D") ||
            !strcmp(cfg.kernel_name, "elm_mul_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_div_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_sel_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_compare_broadcast_4D")    ||
            !strcmp(cfg.kernel_name, "elm_squared_diff_broadcast_4D") )
   {
     p_out = create_buf1D(out_length, cfg.out_precision); VALIDATE_PTR(p_out);
   }
   else if ( !strcmp(cfg.kernel_name, "memmove")  )
 	{
-	  p_out = create_buf1D(cfg.numBytesForMemmove, cfg.out_precision); VALIDATE_PTR(p_out);
+	  p_out = create_buf1D(cfg.io_length, cfg.out_precision); VALIDATE_PTR(p_out);
 	}
   else if ( !strcmp(cfg.kernel_name, "elm_mul_acc")  )
 	{
@@ -1776,13 +2005,16 @@ int xa_nn_main_process(int argc, char *argv[])
            !strcmp(cfg.kernel_name, "elm_add_broadcast_4D") ||
            !strcmp(cfg.kernel_name, "elm_sub_broadcast_4D") ||
            !strcmp(cfg.kernel_name, "elm_mul_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_div_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_sel_broadcast_4D") ||
+           !strcmp(cfg.kernel_name, "elm_compare_broadcast_4D") ||
            !strcmp(cfg.kernel_name, "elm_squared_diff_broadcast_4D") )
   {
     XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, out_length, "cyc/point", 0);
   }
   else if ( !strcmp(cfg.kernel_name, "memmove")  )
   {   
-       XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, cfg.numBytesForMemmove * cfg.vec_count, "cyc/point", 0);
+       XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, cfg.io_length, "cyc/point", 0);
   }
   else
   {
@@ -1794,7 +2026,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     // If write_file enabled, generate random data for input, else read from file
     // load_activation_input_data(cfg.write_file, fptr_inp, p_inp);
-    err = load_basic_func_data(cfg.write_file, fptr_inp1, fptr_inp2, p_inp1, p_inp2);
+    err = load_basic_func_data(cfg.write_file, fptr_inp1, fptr_inp2, fptr_inp3, p_inp1, p_inp2, p_inp3);
 
     // Call the activation specified on command line
     PROCESS_BASIC_FUNC
@@ -1811,7 +2043,10 @@ int xa_nn_main_process(int argc, char *argv[])
 
     if(!strcmp(cfg.kernel_name,"memmove"))
     {
-    	memcpy(p_out->p,(p_inp1->p + cfg.srcMemmoveOffset), cfg.numBytesForMemmove);
+      if(cfg.inp_precision == -8 && cfg.out_precision == -8)
+        memcpy(p_out->p, p_inp1->p, (cfg.io_length<<1));
+      else
+        memcpy(p_out->p, p_inp1->p, cfg.io_length);
     }
 
     // Write output into file
@@ -1821,7 +2056,9 @@ int xa_nn_main_process(int argc, char *argv[])
     if(cfg.verify)
     {
       if(-1 != read_buf1D_from_file(fptr_ref, ptr_ref))
+      {
         pass_count += compare_buf1D(ptr_ref, p_out, cfg.verify, cfg.out_precision, 1);
+      }
     }
     else
     {
@@ -1830,11 +2067,12 @@ int xa_nn_main_process(int argc, char *argv[])
   }
 
   XTPWR_PROFILER_CLOSE(0, (pass_count == cfg.frames), cfg.verify);
-
   if(fptr_inp1)
   	  fclose(fptr_inp1);
   if(fptr_inp2)
  	fclose(fptr_inp2);
+  if(fptr_inp3)
+ 	fclose(fptr_inp3);
   if(fptr_out)
 	fclose(fptr_out);
 
@@ -1843,6 +2081,8 @@ int xa_nn_main_process(int argc, char *argv[])
   	  free_buf1D(p_inp1);
   if(p_inp2)
     free_buf1D(p_inp2);
+  if(p_inp3)
+    free_buf1D(p_inp3);
   if(p_out)
 	free_buf1D(p_out);
 

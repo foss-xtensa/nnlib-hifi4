@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -122,6 +122,8 @@
   * - Total:                     2
   */
 
+#include "xa_nnlib_standards.h"
+
 typedef struct _xa_dma_cfg_t
 {
   WORD32 placeholder;
@@ -137,12 +139,14 @@ typedef struct _xa_dma_cfg_t
 #if defined(hifi5)
 #define get_softmax_scratch_size                get_softmax_scratch_size_hifi5
 #define xa_nn_avgpool_getsize                   xa_nn_avgpool_getsize_hifi5
+#define xa_nn_batch_matmul_getsize              xa_nn_batch_matmul_getsize_hifi5
 #define xa_nn_conv2d_depthwise_getsize          xa_nn_conv2d_depthwise_getsize_hifi5
 #define xa_nn_conv2d_getsize                    xa_nn_conv2d_getsize_hifi5
 #define xa_nn_conv2d_std_getsize                xa_nn_conv2d_std_getsize_hifi5
 #define xa_nn_conv2d_std_getsize_sym4s          xa_nn_conv2d_std_getsize_sym4s_hifi5
 #define xa_nn_dilated_conv2d_depthwise_getsize  xa_nn_dilated_conv2d_depthwise_getsize_hifi5
 #define xa_nn_dilated_conv2d_std_getsize        xa_nn_dilated_conv2d_std_getsize_hifi5
+#define xa_nn_lstm_getsize                      xa_nn_lstm_getsize_hifi5
 #define xa_nn_maxpool_getsize                   xa_nn_maxpool_getsize_hifi5
 #define xa_nn_reduce_getsize_nhwc               xa_nn_reduce_getsize_nhwc_hifi5
 #define xa_nn_transpose_conv_getsize            xa_nn_transpose_conv_getsize_hifi5
@@ -150,12 +154,14 @@ typedef struct _xa_dma_cfg_t
 #elif defined(hifi4)
 #define get_softmax_scratch_size                get_softmax_scratch_size_hifi4
 #define xa_nn_avgpool_getsize                   xa_nn_avgpool_getsize_hifi4
+#define xa_nn_batch_matmul_getsize              xa_nn_batch_matmul_getsize_hifi4
 #define xa_nn_conv2d_depthwise_getsize          xa_nn_conv2d_depthwise_getsize_hifi4
 #define xa_nn_conv2d_getsize                    xa_nn_conv2d_getsize_hifi4
 #define xa_nn_conv2d_std_getsize                xa_nn_conv2d_std_getsize_hifi4
 #define xa_nn_conv2d_std_getsize_sym4s          xa_nn_conv2d_std_getsize_sym4s_hifi4
 #define xa_nn_dilated_conv2d_depthwise_getsize  xa_nn_dilated_conv2d_depthwise_getsize_hifi4
 #define xa_nn_dilated_conv2d_std_getsize        xa_nn_dilated_conv2d_std_getsize_hifi4
+#define xa_nn_lstm_getsize                      xa_nn_lstm_getsize_hifi4
 #define xa_nn_maxpool_getsize                   xa_nn_maxpool_getsize_hifi4
 #define xa_nn_reduce_getsize_nhwc               xa_nn_reduce_getsize_nhwc_hifi4
 #define xa_nn_transpose_conv_getsize            xa_nn_transpose_conv_getsize_hifi4
@@ -870,6 +876,7 @@ typedef struct _xa_dma_cfg_t
       WORD32 output_height,
       WORD32 output_width,
       WORD32 output_channels,
+      WORD32 num_groups,
       WORD32 kernel_precision,
       WORD32 output_precision);
 
@@ -884,7 +891,7 @@ typedef struct _xa_dma_cfg_t
       int input_height, int input_width,
       int filter_height, int filter_width,
       int output_height, int output_width,
-      int num_elements,
+      int num_elements, int num_groups,
       int input_offset, int output_offset,
       int *output_shift, int *output_multiplier,
       void* scratch_buffer);
@@ -900,7 +907,7 @@ typedef struct _xa_dma_cfg_t
       int input_height, int input_width,
       int filter_height, int filter_width,
       int output_height, int output_width,
-      int num_elements,
+      int num_elements, int num_groups,
       int input_offset, int output_offset,
       int *output_shift, int *output_multiplier,
       void* scratch_buffer,
@@ -918,7 +925,7 @@ typedef struct _xa_dma_cfg_t
       int input_height, int input_width,
       int filter_height, int filter_width,
       int output_height, int output_width,
-      int num_elements,
+      int num_elements, int num_groups,
       int *output_shift, int *output_multiplier,
       void* scratch_buffer);
 
@@ -933,7 +940,7 @@ typedef struct _xa_dma_cfg_t
       int input_height, int input_width,
       int filter_height, int filter_width,
       int output_height, int output_width,
-      int num_elements,
+      int num_elements, int num_groups,
       int *output_shift, int *output_multiplier,
       void* scratch_buffer,
       int out_activation_min, int out_activation_max,
@@ -950,7 +957,7 @@ typedef struct _xa_dma_cfg_t
       int input_height, int input_width,
       int filter_height, int filter_width,
       int output_height, int output_width,
-      int num_elements,
+      int num_elements, int num_groups,
       void* scratch_buffer);
 
   WORD32 xa_nn_conv1d_std_getsize(
@@ -2773,6 +2780,37 @@ typedef struct _xa_dma_cfg_t
        ,WORD32  out_activation_max
        ,xa_dma_cfg_t *p_dma_cfg
       );
+  
+  WORD32 xa_nn_dilated_conv2d_depthwise_v2_per_chan_sym8sxsym16s
+    (pWORD16 __restrict__ p_out
+    ,const WORD8 *__restrict__ p_kernel
+    ,const WORD16 *__restrict__ p_inp
+    ,const WORD64 *__restrict__ p_bias
+    ,WORD32  input_height
+    ,WORD32  input_width
+    ,WORD32  input_channels
+    ,WORD32  kernel_height
+    ,WORD32  kernel_width
+    ,WORD32  channels_multiplier
+    ,WORD32  dilation_height
+    ,WORD32  dilation_width
+    ,WORD32  x_stride
+    ,WORD32  y_stride
+    ,WORD32  x_padding
+    ,WORD32  y_padding
+    ,WORD32  out_height
+    ,WORD32  out_width
+    ,WORD32  input_zero_bias
+    ,const WORD32 *p_out_multiplier
+    ,const WORD32 *p_out_shift
+    ,WORD32  out_zero_bias
+    ,WORD32  inp_data_format
+    ,WORD32  out_data_format
+    ,pVOID p_scratch
+    ,WORD32  out_activation_min
+    ,WORD32  out_activation_max
+    ,xa_dma_cfg_t *p_dma_cfg
+    );
 
   WORD32 xa_nn_conv2d_pointwise_per_chan_sym8sxasym8s(
       WORD8* __restrict__ p_out,
@@ -2967,6 +3005,13 @@ typedef struct _xa_dma_cfg_t
       WORD32  inp2_multiplier,
       WORD32  left_shift);
 
+  WORD32 xa_nn_elm_add_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+      const WORD32 *const p_out_shape,
+      const FLOAT32 * __restrict__ p_inp1,
+      const WORD32 *const p_inp1_shape,
+      const FLOAT32 * __restrict__ p_inp2,
+      const WORD32 *const p_inp2_shape);
+
   WORD32 xa_nn_elm_add_16x16_16(WORD16 * __restrict__ p_out,
       const WORD16 * __restrict__ p_inp1,
       const WORD16 * __restrict__ p_inp2,
@@ -3101,6 +3146,13 @@ typedef struct _xa_dma_cfg_t
       const WORD32 *const p_inp2_shape
       );
 
+  WORD32 xa_nn_elm_mul_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+      const WORD32 *const p_out_shape,
+      const FLOAT32 * __restrict__ p_inp1,
+      const WORD32 *const p_inp1_shape,
+      const FLOAT32 * __restrict__ p_inp2,
+      const WORD32 *const p_inp2_shape);
+
   WORD32 xa_nn_elm_mul_sym16sxsym16s_asym8s(WORD8 * __restrict__ p_out,
       WORD32  out_zero_bias,
       WORD32  out_shift,
@@ -3233,6 +3285,12 @@ typedef struct _xa_dma_cfg_t
       FLOAT32  inp_scale,
       WORD32   num_elm);
 
+  WORD32 xa_nn_elm_dequantize_asym8u_f32(FLOAT32 * __restrict__ p_out,
+      const UWORD8 * __restrict__ p_inp,
+      WORD32   inp_zero_bias,
+      FLOAT32  inp_scale,
+      WORD32   num_elm);
+
   WORD32 xa_nn_elm_dequantize_asym16s_f32(FLOAT32 * __restrict__ p_out,
       const WORD16 * __restrict__ p_inp,
       WORD32   inp_zero_bias,
@@ -3240,6 +3298,12 @@ typedef struct _xa_dma_cfg_t
       WORD32   num_elm);
 
   WORD32 xa_nn_elm_quantize_f32_asym8s(WORD8 * __restrict__ p_out,
+      const FLOAT32 * __restrict__ p_inp,
+      FLOAT32  out_scale,
+      WORD32   out_zero_bias,
+      WORD32   num_elm);
+
+  WORD32 xa_nn_elm_quantize_f32_asym8u(UWORD8 * __restrict__ p_out,
       const FLOAT32 * __restrict__ p_inp,
       FLOAT32  out_scale,
       WORD32   out_zero_bias,
@@ -3255,6 +3319,16 @@ typedef struct _xa_dma_cfg_t
       const WORD8* __restrict__ p_in1,
       const WORD8* __restrict__ p_in2,
       WORD32              num_element);
+
+  WORD32 xa_nn_elm_max_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+      const FLOAT32 * __restrict__ p_inp1,
+      const FLOAT32 * __restrict__ p_inp2,
+      WORD32 num_elm);
+
+  WORD32 xa_nn_elm_min_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+      const FLOAT32 * __restrict__ p_inp1,
+      const FLOAT32 * __restrict__ p_inp2,
+      WORD32 num_elm);
 
   WORD32 xa_nn_elm_min_8x8_8(  WORD8* __restrict__ p_out,
       const WORD8* __restrict__ p_in1,
@@ -3306,6 +3380,32 @@ typedef struct _xa_dma_cfg_t
       const  WORD8* __restrict__ p_in,        /* pointer to unextended input data */
       const int * const in_shape,             /* input shape */
       int num_dims);                    /* number of dimensions in [in,out]_shape */
+  
+  WORD32 xa_nn_broadcast_32_32( WORD32* __restrict__ p_out,      /* pointer to write broadcasted output data to */
+      const int *const out_shape,         /* output shape resulting after broadcast */
+      const WORD32* __restrict__ p_in,    /* pointer to unextended input data */
+      const int * const in_shape,         /* input shape */
+      int num_dims);
+
+  WORD32 xa_nn_elm_min_4D_Bcast_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+      const WORD32 *const p_out_shape,
+      const FLOAT32 * __restrict__ p_inp1,
+      const WORD32 *const p_inp1_shape,
+      const FLOAT32 * __restrict__ p_inp2,
+      const WORD32 *const p_inp2_shape);
+
+  WORD32 xa_nn_elm_max_4D_Bcast_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+      const WORD32 *const p_out_shape,
+      const FLOAT32 * __restrict__ p_inp1,
+      const WORD32 *const p_inp1_shape,
+      const FLOAT32 * __restrict__ p_inp2,
+      const WORD32 *const p_inp2_shape);
+  
+  WORD32 xa_nn_elm_clamp_f32xf32xf32_f32(FLOAT32 * __restrict__ p_out,
+      const FLOAT32 * __restrict__ p_inp,
+      const FLOAT32 * __restrict__ p_min,
+      const FLOAT32 * __restrict__ p_max,
+      WORD32 num_elm);
 
   WORD32 xa_nn_elm_equal_asym8sxasym8s(WORD8 * __restrict__ p_out,
       const WORD8 * __restrict__ p_inp1,
@@ -3354,6 +3454,20 @@ typedef struct _xa_dma_cfg_t
       WORD32  inp2_multiplier,
       WORD32  left_shift,
       WORD32  num_elm);
+
+  WORD32 xa_nn_elm_compare_f32xf32_f32(WORD8 * __restrict__ p_out,
+      const FLOAT32 * __restrict__ p_inp1,
+      const FLOAT32 * __restrict__ p_inp2,
+      WORD32 num_elm,
+      compare_ops_t kernel_type);
+      
+  WORD32 xa_nn_elm_compare_broadcast_4D_f32xf32_f32(WORD8 * __restrict__ p_out,
+      const WORD32 *const p_out_shape,
+      const FLOAT32 * __restrict__ p_inp1,
+      const WORD32 *const p_inp1_shape,
+      const FLOAT32 * __restrict__ p_inp2,
+      const WORD32 *const p_inp2_shape,
+      compare_ops_t kernel_type);
 
   WORD32 xa_nn_elm_less_asym8sxasym8s(WORD8 * __restrict__ p_out,
       const WORD8 * __restrict__ p_inp1,
@@ -3663,6 +3777,14 @@ typedef struct _xa_dma_cfg_t
       ,WORD32 num_out_dims
       ,WORD32 num_inp_dims);
 
+  WORD32 xa_nn_transpose_32_32(WORD32 * __restrict__ p_out
+                    ,const WORD32 *const p_out_shape
+                    ,const WORD32 * __restrict__ p_inp
+                    ,const WORD32 *const p_inp_shape
+                    ,const WORD32 * __restrict__ p_permute_vec
+                    ,WORD32 num_out_dims
+                    ,WORD32 num_inp_dims);
+
   WORD32 xa_nn_batch_norm_3D_8_8(WORD8 * __restrict__ p_out
       ,const WORD8 * __restrict__ p_inp
       ,const WORD16 * __restrict__ p_alpha
@@ -3675,6 +3797,45 @@ typedef struct _xa_dma_cfg_t
       ,WORD32 out_activation_max
       ,WORD32 inp_data_format
       ,WORD32 out_data_format);
+
+ WORD32 xa_nn_norm_calc_3D_8_nhwc(WORD16 * p_out
+      ,const WORD8 * p_inp
+      ,int input_height, int input_width, int input_channels
+      ,int accross_depth_flag
+      ,int out_shift
+      ,const UWORD16 *prsqrt, int rsqrt_shift, int rsqrt_table_len
+      ,const UWORD16 *precip, int recip_shift);
+
+ WORD32 xa_nn_norm_calc_3D_16_nhwc(UWORD16 * p_outnorm
+     ,WORD8 * p_outnsa
+     ,const WORD16 * p_inp
+     ,int input_height, int input_width, int input_channels
+     ,int accros_depth_flag
+     ,int out_shift
+     ,const UWORD16 *prsqrt, int rsqrt_table_len);
+
+ WORD32 xa_nn_norm_apply_3D_8_nhwc(
+      WORD8 * p_out,
+      const WORD8 * p_inp,
+      WORD16 *p_inp_normdata,
+      int input_height, int input_width, int input_channels,
+      int accross_depth_flag,
+      int per_chan_flag,
+      WORD16 * p_out_multiplier,
+      WORD32 out_shift,
+      WORD32 rsqrt_shift);
+
+  WORD32 xa_nn_norm_apply_3D_16_nhwc(
+      WORD16 * p_out,
+      const WORD16 * p_inp, 
+      const UWORD16 *p_inp_normdata,
+      const WORD8 *p_inp_nsadata,
+      int input_height, int input_width, int input_channels,
+      int accross_depth_flag,
+      int per_chan_flag,
+      WORD16 * p_out_multiplier,
+      WORD32 out_shift,
+      WORD32 rsqrt_shift);
 
   WORD32 xa_nn_renorm_asym8s_asym8s(WORD8 * __restrict__ p_out,
       const WORD8 * __restrict__ p_inp,
@@ -3724,6 +3885,15 @@ typedef struct _xa_dma_cfg_t
       ,WORD32 num_inp_dims
       ,WORD32 axis);
 
+  WORD32 xa_nn_concat_32_32(WORD32 * __restrict__ p_out
+                        ,const WORD32 *const p_out_shape
+                        ,const WORD32 **pp_inps
+                        ,const WORD32 *const *pp_inps_shape
+                        ,WORD32 num_out_dims
+                        ,WORD32 num_inp
+                        ,WORD32 num_inp_dims
+                        ,WORD32 axis);
+
   WORD32 xa_nn_split_v_8_8(WORD8 ** __restrict__ pp_outs
       ,const WORD32 *const *pp_outs_shape
       ,const WORD8 *p_inp
@@ -3742,6 +3912,105 @@ typedef struct _xa_dma_cfg_t
       ,WORD32 output_width
       ,WORD32 output_channel
       ,WORD32 interleave_groups);
+
+  WORD32 xa_nn_elm_div_broadcast_4D_f32xf32_f32(FLOAT32 * __restrict__ p_out,
+      const WORD32 *const p_out_shape,
+      const FLOAT32 * __restrict__ p_inp1,
+      const WORD32 *const p_inp1_shape,
+      const FLOAT32 * __restrict__ p_inp2,
+      const WORD32 *const p_inp2_shape);
+
+  WORD32 xa_nn_elm_select_32x32_32(WORD32 * __restrict__ p_out,
+      const WORD32 * __restrict__ p_inp1,
+      const WORD32 * __restrict__ p_inp2,
+      const unsigned char *__restrict__ p_condition,
+      WORD32 num_elm);
+
+  WORD32 xa_nn_elm_select_broadcast_4D_32x32_32(WORD32 * __restrict__ p_out,
+      const WORD32 *const p_out_shape,
+      const WORD32 * __restrict__ p_inp1,
+      const WORD32 *const p_inp1_shape,
+      const WORD32 * __restrict__ p_inp2,
+      const WORD32 *const p_inp2_shape,
+      const unsigned char *__restrict__ p_condition,
+      const WORD32 *const p_condition_shape
+                      );
+
+typedef struct _lstm_weights_ptrs
+{
+  VOID *p_ig_W;
+  VOID *p_fg_W;
+  VOID *p_cg_W;
+  VOID *p_og_W;
+  VOID *p_ig_U;
+  VOID *p_fg_U;
+  VOID *p_cg_U;
+  VOID *p_og_U;
+} lstm_weights_ptrs;
+
+typedef struct _lstm_bias_ptrs
+{
+  VOID *p_ig_W_bias;
+  VOID *p_fg_W_bias;
+  VOID *p_cg_W_bias;
+  VOID *p_og_W_bias;
+} lstm_bias_ptrs;
+
+typedef struct _lstm_quant_params
+{
+  WORD32 ig_W_out_multiplier;
+  WORD32 fg_W_out_multiplier;
+  WORD32 cg_W_out_multiplier;
+  WORD32 og_W_out_multiplier;
+  WORD32 ig_U_out_multiplier;
+  WORD32 fg_U_out_multiplier;
+  WORD32 cg_U_out_multiplier;
+  WORD32 og_U_out_multiplier;
+  WORD32 ig_W_out_shift;
+  WORD32 fg_W_out_shift;
+  WORD32 cg_W_out_shift;
+  WORD32 og_W_out_shift;
+  WORD32 ig_U_out_shift;
+  WORD32 fg_U_out_shift;
+  WORD32 cg_U_out_shift;
+  WORD32 og_U_out_shift;
+  WORD16 quantized_cell_clip;
+  WORD32 cell_state_scale;
+  WORD32 hidden_multiplier;
+  WORD32 hidden_shift;
+  WORD32 input_zero_bias;
+  WORD32 hidden_zero_bias;
+} lstm_quant_params;
+
+typedef struct _lstm_flags
+{
+  WORD32 time_major;
+  WORD32 use_cifg;
+} lstm_flags;
+
+WORD32 xa_nn_lstm_getsize(
+    WORD32 n_batch,
+    WORD32 n_itr,
+    WORD32 n_cell,
+    WORD32 cell_state_precision);
+
+WORD32 xa_nn_lstm_sym8sxasym8s_16(
+    WORD8*  p_out,                      /* out */
+    WORD8*  p_hidden_state,             /* inout */
+    WORD16* p_cell_state,               /* inout */
+    lstm_weights_ptrs *p_lstm_weights,  /* input */
+    lstm_bias_ptrs    *p_lstm_biases,   /* input */
+    WORD8*  p_inp,                      /* input */
+    WORD32 inp_size,
+    WORD32 hidden_size,
+    WORD32 out_size,
+    WORD32 n_batch,
+    WORD32 n_itr,
+    WORD32 n_cell,
+    lstm_quant_params *p_lstm_qp,
+    lstm_flags *p_lstm_flags,
+    void*  p_scratch);
+
 
   /* Mapping the functions names from previous naming convension for backward compatibility */
 #define xa_nn_matXvec_asym8xasym8_asym8 xa_nn_matXvec_asym8uxasym8u_asym8u

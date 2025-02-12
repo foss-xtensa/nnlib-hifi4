@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -59,6 +59,10 @@ else
   LDFLAGS += -mlongcalls -lm
   CXX_LDFLAGS += -std=c++11
 
+endif
+
+ifneq ($(DISABLE_ACT_TIE), 1)
+CFLAGS += -DUSE_HIFI_ACT_TIE
 endif
 
 CFLAGS += -Dhifi4
@@ -126,6 +130,7 @@ CNNBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_cnn_test
 BASICBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_basic_test
 NORMBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_norm_test
 REORGBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_reorg_test
+RNNBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_rnn_test
 ANNBIN = $(CPU_PREFIX)$(DETECTED_CORE)_nn_ann_test
 
 ifeq ($(DETECTED_CORE),)
@@ -154,6 +159,8 @@ NORMOBJS = \
     xa_nn_norm_testbench.o
 REORGOBJS = \
     xa_nn_reorg_testbench.o
+RNNOBJS = \
+    xa_nn_rnn_testbench.o
 
 UTILOBJS = \
     xt_manage_buffers.o \
@@ -187,12 +194,13 @@ OBJS_CNNOBJS  = $(addprefix $(OBJDIR)/,$(CNNOBJS))
 OBJS_BASICOBJS  = $(addprefix $(OBJDIR)/,$(BASICOBJS))
 OBJS_NORMOBJS  = $(addprefix $(OBJDIR)/,$(NORMOBJS))
 OBJS_REORGOBJS  = $(addprefix $(OBJDIR)/,$(REORGOBJS))
+OBJS_RNNOBJS  = $(addprefix $(OBJDIR)/,$(RNNOBJS))
 OBJS_ANNOBJS  = $(addprefix $(OBJDIR)/,$(ANNOBJS))
 
 ifeq ($(hifi1), 1)
-all: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN)
+all: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(RNNBIN)
 
-run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN)
+run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(RNNBIN)
 	xt-run --mem_model --nosummary xa_nn_matXvec_test
 	xt-run --mem_model --nosummary xa_nn_activation_test
 	xt-run --mem_model --nosummary xa_nn_conv_test
@@ -203,13 +211,14 @@ run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN)
 	xt-run --mem_model --nosummary xa_nn_basic_test
 	xt-run --mem_model --nosummary xa_nn_norm_test
 	xt-run --mem_model --nosummary xa_nn_reorg_test
+	xt-run --mem_model --nosummary xa_nn_rnn_test
 clean:
-	-$(RM) $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN)
+	-$(RM) $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(RNNBIN)
 	-$(RM) $(OBJDIR)$(S)*.o
 else
-all: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(ANNBIN)
+all: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(RNNBIN) $(ANNBIN)
 
-run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(ANNBIN)
+run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(RNNBIN) $(ANNBIN)
 	xt-run --mem_model --nosummary xa_nn_matXvec_test
 	xt-run --mem_model --nosummary xa_nn_activation_test
 	xt-run --mem_model --nosummary xa_nn_conv_test
@@ -220,9 +229,10 @@ run: $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN)
 	xt-run --mem_model --nosummary xa_nn_basic_test
 	xt-run --mem_model --nosummary xa_nn_norm_test
 	xt-run --mem_model --nosummary xa_nn_reorg_test
+	xt-run --mem_model --nosummary xa_nn_rnn_test
 	xt-run --mem_model --nosummary xa_nn_ann_test
 clean:
-	-$(RM) $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(ANNBIN)
+	-$(RM) $(MATMULBIN) $(CONVBIN) $(POOLBIN) $(ACTBIN) $(GRUBIN) $(LSTMBIN) $(CNNBIN) $(BASICBIN) $(NORMBIN) $(REORGBIN) $(RNNBIN) $(ANNBIN)
 	-$(RM) $(OBJDIR)$(S)*.o
 endif
 
@@ -237,6 +247,7 @@ nn_pool: $(POOLBIN)
 nn_basic: $(BASICBIN) 
 nn_norm: $(NORMBIN) 
 nn_reorg: $(REORGBIN) 
+nn_rnn: $(RNNBIN) 
 nn_ann: $(ANNBIN) 
 
 $(MATMULBIN): $(OBJDIR) $(OBJS_MATMULOBJS) $(OBJS_UTILOBJS) $(NNLIB)
@@ -269,6 +280,9 @@ $(NORMBIN): $(OBJDIR) $(OBJS_NORMOBJS) $(OBJS_UTILOBJS) $(NNLIB)
 $(REORGBIN): $(OBJDIR) $(OBJS_REORGOBJS) $(OBJS_UTILOBJS) $(NNLIB)
 	$(CC) -o $@ $(OBJS_REORGOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
 
+$(RNNBIN): $(OBJDIR) $(OBJS_RNNOBJS) $(OBJS_UTILOBJS) $(NNLIB)
+	$(CC) -o $@ $(OBJS_RNNOBJS) $(OBJS_UTILOBJS) $(NNLIB) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_LDFLAGS)
+
 ifneq ($(hifi1), 1)
 ifeq ($(xclib), 1)
 $(ANNBIN): $(OBJDIR) $(OBJS_ANNOBJS) $(ANNLIB) $(NNLIB)
@@ -284,7 +298,7 @@ endif
 $(OBJDIR):
 	-$(MKPATH) $(OBJDIR)
 
-$(OBJS_MATMULOBJS) $(OBJS_CONVOBJS) $(OBJS_POOLOBJS) $(OBJS_UTILOBJS) $(OBJS_ACTOBJS) $(OBJS_GRUOBJS) $(OBJS_LSTMOBJS) $(OBJS_CNNOBJS) $(OBJS_BASICOBJS) $(OBJS_NORMOBJS) $(OBJS_REORGOBJS): $(OBJDIR)/%.o: %.c
+$(OBJS_MATMULOBJS) $(OBJS_CONVOBJS) $(OBJS_POOLOBJS) $(OBJS_UTILOBJS) $(OBJS_ACTOBJS) $(OBJS_GRUOBJS) $(OBJS_LSTMOBJS) $(OBJS_CNNOBJS) $(OBJS_BASICOBJS) $(OBJS_NORMOBJS) $(OBJS_REORGOBJS) $(OBJS_RNNOBJS): $(OBJDIR)/%.o: %.c
 	@echo "Compiling $<"
 	$(QUIET) $(CC) $(OPT_O2) $(CFLAGS) $(INCLUDES) -o $@ -c $<
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -24,7 +24,7 @@
 #include "xa_nnlib_common.h"
 #include "xa_nnlib_common_macros.h"
 
-WORD16 exp_lut[513] = {
+const WORD16 exp_lut[513] = {
       2,     2,     2,     2,     2,     2,     2,     2,
       2,     2,     2,     2,     2,     2,     2,     2,
       2,     2,     2,     2,     2,     2,     2,     2,
@@ -91,7 +91,7 @@ WORD16 exp_lut[513] = {
   28027, 28580, 29143, 29718, 30304, 30902, 31512, 32133,
   32767};
 
-WORD16 one_over_one_plus_x_lut[513] = {
+const WORD16 one_over_one_plus_x_lut[513] = {
   32767, 32704, 32640, 32578, 32514, 32451, 32388, 32326,
   32264, 32202, 32141, 32079, 32018, 31957, 31896, 31835,
   31775, 31715, 31655, 31596, 31537, 31476, 31418, 31359,
@@ -158,7 +158,7 @@ WORD16 one_over_one_plus_x_lut[513] = {
   16513, 16497, 16480, 16464, 16448, 16432, 16416, 16400,
   16384};
 
-static inline ae_int16x4 LUTLookUpX4(ae_int16x4 value, WORD16* lut)
+static inline ae_int16x4 LUTLookUpX4(ae_int16x4 value, const WORD16* lut)
 {
   ae_int16x4 shifted_value = AE_SRAI16(value, 7);
   ae_int16x4 index = AE_ADD16S(AE_MOVDA16(256), shifted_value);
@@ -189,7 +189,7 @@ static inline ae_int16x4 LUTLookUpX4(ae_int16x4 value, WORD16* lut)
   return result0123;
 }
 
-static inline ae_int16x4 LUTLookUp(ae_int16x4 value, WORD16* lut)
+static inline ae_int16x4 LUTLookUp(ae_int16x4 value, const WORD16* lut)
 {
   ae_int16x4 shifted_value = AE_SRAI16(value, 7);
   ae_int16x4 index = AE_ADD16S(AE_MOVDA16(256), shifted_value);

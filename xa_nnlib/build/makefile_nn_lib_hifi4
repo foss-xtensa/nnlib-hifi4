@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -63,6 +63,7 @@ vpath %.c $(ROOTDIR)/algo/layers/cnn/src
 vpath %.c $(ROOTDIR)/algo/common/src
 vpath %.c $(ROOTDIR)/algo/kernels/norm/hifi4
 vpath %.c $(ROOTDIR)/algo/kernels/reorg/hifi4
+vpath %.c $(ROOTDIR)/algo/kernels/rnn/hifi4
 vpath %.cpp $(ROOTDIR)/algo/common/src
 
 MATXVECO2OBJS = \
@@ -229,14 +230,17 @@ BASICOBJS = \
     xa_nn_elm_mul_quant16.o\
     xa_nn_elm_sub_quant8.o\
     xa_nn_elm_minmax_8.o\
+    xa_nn_elm_minmax_f32.o\
     xa_nn_elm_quantize.o\
     xa_nn_elm_add_f32.o \
     xa_nn_elm_sub_f32.o \
     xa_nn_elm_div_f32.o \
+    xa_nn_elm_select_32.o \
     xa_nn_elm_mul_acc_f32.o \
     xa_nn_floor_f32.o \
     xa_nn_dot_prod_16x16.o \
     xa_nn_elm_compare_quant8.o \
+    xa_nn_elm_compare_f32.o \
     xa_nn_memmove_16.o \
     xa_nn_reduce_asym8s_asym8s.o \
     xa_nn_reduce_asym16s_asym16s.o \
@@ -253,6 +257,7 @@ BASICOBJS = \
     xa_nn_elm_sqrt_f32.o \
     xa_nn_memmove.o \
     xa_nn_broadcast_8_8.o \
+    xa_nn_broadcast_32_32.o \
     xa_nn_memset_f32.o \
     xa_nn_elm_sub_quant16.o \
     xa_nn_elm_add_quant16.o \
@@ -264,6 +269,8 @@ NORMO2OBJS = \
   xa_nn_l2_norm_f32.o \
   xa_nn_l2_norm_asym8s.o \
   xa_nn_batch_norm_8.o \
+  xa_nn_norm3D_8.o \
+  xa_nn_norm3D_16.o \
   xa_nn_renorm_8.o
 
 REORGO2OBJS = \
@@ -279,12 +286,16 @@ REORGO2OBJS = \
   xa_nn_stride_slice_int8.o \
   xa_nn_transpose_8.o \
   xa_nn_transpose_16.o \
+  xa_nn_transpose_32.o \
   xa_nn_resize_bilinear_8.o \
   xa_nn_resize_nearest_neighbour_8.o \
   xa_nn_concat_8.o \
+  xa_nn_concat_32.o \
   xa_nn_split_v_8.o \
   xa_nn_shuffle_8.o
 
+RNNO2OBJS = \
+  xa_nn_lstm_8.o
 
 ifeq ($(BUILD_SCRATCH_SIZE_LIB), 1)
 CFLAGS += -DENABLE_SCRATCH_SIZE_API_ONLY 
@@ -298,7 +309,7 @@ LIBO2OBJS = \
   xa_nn_softmax_asym8_asym8.o \
   xa_nn_reduce_asym8s_asym8s.o
 else
-LIBO2OBJS = $(MATXVECO2OBJS) $(ACTIVATIONSO2OBJS) $(NDSPO2OBJS) $(CONVO2OBJS) $(FCO2OBJS) $(POOLO2OBJS) $(GRUO2OBJS) $(LSTMO2OBJS) $(CNNO2OBJS) $(BASICOBJS) $(NORMO2OBJS) $(REORGO2OBJS)
+LIBO2OBJS = $(MATXVECO2OBJS) $(ACTIVATIONSO2OBJS) $(NDSPO2OBJS) $(CONVO2OBJS) $(FCO2OBJS) $(POOLO2OBJS) $(GRUO2OBJS) $(LSTMO2OBJS) $(CNNO2OBJS) $(BASICOBJS) $(NORMO2OBJS) $(REORGO2OBJS) $(RNNO2OBJS)
 LIBOSOBJS = $(COMMONOSOBJS)
 endif
 

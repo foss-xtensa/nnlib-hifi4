@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -44,7 +44,11 @@ int load_activation_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, b
 int load_pool_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);
 int load_norm_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);
 int load_batch_norm_3D_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_alpha, buf1D_t *p_beta);
-int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, buf1D_t *p_inp1, buf1D_t *p_inp2);
+int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, FILE *fptr_inp3, buf1D_t *p_inp1, buf1D_t *p_inp2, buf1D_t *p_inp3);
 int load_reorg_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp);
+int load_rnn_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_hidden,
+    buf1D_t *p_cell, buf1D_t *p_ig_W, buf1D_t *p_fg_W, buf1D_t *p_cg_W, buf1D_t *p_og_W,
+    buf1D_t *p_ig_U, buf1D_t *p_fg_U, buf1D_t *p_cg_U, buf1D_t *p_og_U, buf1D_t *p_ig_W_bias,
+    buf1D_t *p_fg_W_bias, buf1D_t *p_cg_W_bias, buf1D_t *p_og_W_bias);
 int write_output_data(FILE *fptr_out, buf1D_t *p_out); 
 FILE* file_open(char *file_path, char *file_name, char *mode, int max_file_name_length);

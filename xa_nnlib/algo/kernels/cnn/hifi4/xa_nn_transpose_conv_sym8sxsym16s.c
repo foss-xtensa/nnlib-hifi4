@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -33,7 +33,7 @@
   ae_int64 q0_l; \
   q0_l = AE_MUL32_HH(d_red_mult, AE_SEL32_LL(AE_MOVINT32X2_FROMINT64(inp0), AE_MOVINT32X2_FROMINT64(inp0))); \
   AE_MULAF32S_HH(q0_l, d_red_mult_l16, AE_SLAI32(d_inp0_h, 15)); \
-  q0_l = AE_SLAA64(q0_l, (l_shift + 17)); \
+  q0_l = AE_SLAA64S(q0_l, (l_shift + 17)); \
   out0 = AE_ROUND32F64SASYM(q0_l); \
 }
 
@@ -79,7 +79,7 @@ static inline ae_int32x2 MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
   ae_int64 qL = AE_MUL32U_LL(d_red_mul32, AE_MOVINT32X2_FROMINT64(d_x));
   ae_int64 qH = AE_SLAI64(AE_MUL32_LH(d_red_mul32, AE_MOVINT32X2_FROMINT64(d_x)), 32);
   ae_int64 q = AE_ADD64(qL, qH);
-  q = AE_SRAA64(q, (-shift-17));
+  q = AE_SLAA64S(q, (shift+17));
   ae_int32x2 result = AE_ROUND32F64SASYM(q);
   return result;
 }
@@ -93,8 +93,8 @@ static inline ae_int32x2 MultiplyByQuantizedMultiplier_x2_opt(ae_int64 d_x1, ae_
   ae_int64 qH2 = AE_SLAI64(AE_MUL32_LH(d_red_mul32, AE_MOVINT32X2_FROMINT64(d_x2)), 32);
   ae_int64 q1 = AE_ADD64(qL1, qH1);
   ae_int64 q2 = AE_ADD64(qL2, qH2);
-  q1 = AE_SRAA64(q1, (-shift-17));
-  q2 = AE_SRAA64(q2, (-shift-17));
+  q1 = AE_SLAA64S(q1, (shift+17));
+  q2 = AE_SLAA64S(q2, (shift+17));
   ae_int32x2 result = AE_ROUND32X2F64SASYM(q1, q2);
   return result;
 }
@@ -861,7 +861,7 @@ int xa_nn_transpose_conv_v2_sym8sxsym16s(WORD16* output_data,
     int input_height, int input_width,
     int filter_height, int filter_width,
     int output_height, int output_width,
-    int num_elements,
+    int num_elements, int num_groups,
     int *output_shift, int *output_multiplier,
     void* scratch_buffer,
     WORD32 out_activation_min,
@@ -893,6 +893,9 @@ int xa_nn_transpose_conv_v2_sym8sxsym16s(WORD16* output_data,
   XA_NNLIB_ARG_CHK_COND((out_activation_max < -32768) || (out_activation_max > 32767), -1);
   XA_NNLIB_ARG_CHK_COND((out_activation_max < out_activation_min), -1);
 
+  /* Temporary change till we add suppport for group > 1 */
+  (void)num_groups;
+  
   int ker_grt_inp = (filter_width > input_width || filter_height > input_height);
   int str_leq_ker = (stride_width <= filter_width && stride_height <= filter_height);
 
@@ -924,7 +927,7 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
     int input_height, int input_width,
     int filter_height, int filter_width,
     int output_height, int output_width,
-    int num_elements,
+    int num_elements, int num_groups,
     int *output_shift, int *output_multiplier,
     void* scratch_buffer)
 {
@@ -933,7 +936,7 @@ int xa_nn_transpose_conv_sym8sxsym16s(WORD16* output_data,
                 stride_width, stride_height, pad_width, pad_height, 
                 input_depth, output_depth, input_height, input_width, 
                 filter_height, filter_width, output_height, output_width,
-                num_elements, output_shift, output_multiplier, scratch_buffer,
+                num_elements, num_groups, output_shift, output_multiplier, scratch_buffer,
                 -32768, 32767, NULL);
   return ret;
 }

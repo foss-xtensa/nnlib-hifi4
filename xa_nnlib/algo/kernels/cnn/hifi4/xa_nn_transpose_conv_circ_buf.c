@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -35,6 +35,7 @@ WORD32 xa_nn_transpose_conv_getsize
  ,WORD32 output_height
  ,WORD32 output_width
  ,WORD32 output_channels
+ ,WORD32 num_groups
  ,WORD32 kernel_precision
  ,WORD32 output_precision
  )
@@ -97,7 +98,7 @@ WORD32 xa_nn_transpose_conv_getsize
 
     int ker_grt_inp = (kernel_width > input_width || kernel_height > input_height);
     int str_leq_ker = (x_stride <= kernel_width && y_stride <= kernel_height);
-    if(!ker_grt_inp && str_leq_ker)
+    if(!ker_grt_inp && str_leq_ker && (num_groups == 1))
     {
       total_size += ALIGNED_SIZE(sizeof(xa_nn_conv_state_t), 8);
       int subkerX_max = (kernel_width + x_stride - 1) / x_stride;

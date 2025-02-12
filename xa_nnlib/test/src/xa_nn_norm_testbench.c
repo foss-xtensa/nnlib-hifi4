@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -76,6 +76,11 @@ typedef struct _test_config_t
   char write_out_file_name[XA_MAX_CMD_LINE_LENGTH];
   int verify;
   // quant8 specific parameters
+  int across_depth_flag;
+  int rsqrt_shift;
+  int rsqrt_table_len;
+  int recip_shift;
+  int per_chan_flag;
   int zero_point;
 }test_config_t;
 
@@ -108,6 +113,11 @@ int default_config(test_config_t *p_cfg)
     p_cfg->write_inp_file_name[0]='\0';
     p_cfg->write_out_file_name[0] = '\0';
     p_cfg->verify = 1;
+    p_cfg->across_depth_flag=1;
+    p_cfg->rsqrt_shift=2;
+    p_cfg->rsqrt_table_len=4096;
+    p_cfg->recip_shift=12;
+    p_cfg->per_chan_flag=1;
     p_cfg->zero_point = 0;
     return 0;
   }
@@ -122,6 +132,11 @@ void show_usage(void)
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-num_elms: Number of elements; Default=256\n");
     printf("\t-io_height: Height for 3D input/output; Default=40\n");
+    printf("\t-across_depth_flag: Across depth flag for 3D input; Default=1\n");
+    printf("\t-rsqrt_shift: applies to index in calc-norm API, and to table value in apply-norm API; Default=2\n");
+    printf("\t-rsqrt_table_len: Reciprocal sqrt table length; Default=4096\n");
+    printf("\t-recip_shift: Reciprocal shift value; Default=12\n");
+    printf("\t-per_chan_flag: Per channel flag; Default=1\n");
     printf("\t-io_width: Width for 3D input/output; Default=32\n");
     printf("\t-io_channels: Number of channels for 3D input/output; Default=32\n");
     printf("\t-out_shift: Output shift; Default=-16\n");
@@ -163,6 +178,11 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_INDICATE("-h", p_cfg->help);
     ARGTYPE_ONETIME_CONFIG("-num_elms",p_cfg->num_elms);
     ARGTYPE_ONETIME_CONFIG("-io_height",p_cfg->io_height);
+    ARGTYPE_ONETIME_CONFIG("-across_depth_flag",p_cfg->across_depth_flag);
+    ARGTYPE_ONETIME_CONFIG("-rsqrt_shift",p_cfg->rsqrt_shift);
+    ARGTYPE_ONETIME_CONFIG("-rsqrt_table_len",p_cfg->rsqrt_table_len);
+    ARGTYPE_ONETIME_CONFIG("-recip_shift",p_cfg->recip_shift);
+    ARGTYPE_ONETIME_CONFIG("-per_chan_flag",p_cfg->per_chan_flag);
     ARGTYPE_ONETIME_CONFIG("-io_width",p_cfg->io_width);
     ARGTYPE_ONETIME_CONFIG("-io_channels",p_cfg->io_channels);
     ARGTYPE_ONETIME_CONFIG("-out_shift",p_cfg->out_shift);
@@ -220,6 +240,54 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define NORM_CALC_3D_8_NHWC(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_norm_calc_3D_8_nhwc ( \
+        (WORD16 *)p_out->p, (WORD8 *) p_inp->p, \
+        cfg.io_height, cfg.io_width, cfg.io_channels,\
+        cfg.across_depth_flag, cfg.out_shift, \
+        (UWORD16 *)p_rsqrt->p, cfg.rsqrt_shift, cfg.rsqrt_table_len,\
+        (UWORD16 *)p_recip->p, cfg.recip_shift); \
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define NORM_CALC_3D_16_NHWC(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_norm_calc_3D_16_nhwc ( \
+        (UWORD16 *)p_out->p, (WORD8 *) p_outnsa->p, \
+        (WORD16 *)p_inp->p, \
+        cfg.io_height, cfg.io_width, cfg.io_channels,\
+        cfg.across_depth_flag, cfg.out_shift, \
+        (UWORD16 *)p_rsqrt->p, cfg.rsqrt_table_len); \
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define NORM_APPLY_3D_8_NHWC(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_norm_apply_3D_8_nhwc ( \
+        (WORD8 *)p_out->p, (WORD8 *) p_inp->p, \
+        (WORD16 *)p_inp_normdata->p, \
+        cfg.io_height, cfg.io_width, cfg.io_channels,\
+        cfg.across_depth_flag, cfg.per_chan_flag, \
+        (WORD16 *)p_out_multiplier->p, cfg.out_shift, cfg.rsqrt_shift); \
+    XTPWR_PROFILER_STOP(0);\
+  }
+  
+#define NORM_APPLY_3D_16_NHWC(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_norm_apply_3D_16_nhwc ( \
+        (WORD16 *)p_out->p, (WORD16 *) p_inp->p, \
+        (UWORD16 *)p_inp_normdata->p, (WORD8 *)p_inp_nsadata->p, \
+        cfg.io_height, cfg.io_width, cfg.io_channels,\
+        cfg.across_depth_flag, cfg.per_chan_flag, \
+        (WORD16 *)p_out_multiplier->p, cfg.out_shift, cfg.rsqrt_shift); \
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define BATCH_NORM_3D_KERNEL_8_FN(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) { \
     XTPWR_PROFILER_START(0);\
@@ -245,6 +313,10 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #define PROCESS_NORM \
     L2_NORM_KERNEL_F_FN(l2_norm, -1, -1) \
     else L2_NORM_KERNEL_ASYM8S_FN(l2_norm, -4, -4) \
+    else NORM_CALC_3D_8_NHWC(norm_calc_3D, 8, 16) \
+    else NORM_CALC_3D_16_NHWC(norm_calc_3D, 16, 16) \
+    else NORM_APPLY_3D_8_NHWC(norm_apply_3D, 8, 8) \
+    else NORM_APPLY_3D_16_NHWC(norm_apply_3D, 16, 16) \
     else BATCH_NORM_3D_KERNEL_8_FN(batch_norm_3D, 8, 8) \
     else RENORM_ASYM8S_ASYM8S(renorm, -4, -4) \
     else {  printf("unsupported normalization operation\n"); return -1;}
@@ -267,6 +339,12 @@ int xa_nn_main_process(int argc, char *argv[])
   buf1D_t *p_alpha;
   buf1D_t *p_beta;
   buf1D_t *p_ref = NULL;
+  buf1D_t *p_rsqrt = NULL;
+  buf1D_t *p_outnsa = NULL;
+  buf1D_t *p_recip = NULL;
+  buf1D_t *p_inp_normdata = NULL;
+  buf1D_t *p_inp_nsadata = NULL;
+  buf1D_t *p_out_multiplier = NULL;
 
   FILE *fptr_inp;
   FILE *fptr_out;
@@ -300,6 +378,26 @@ int xa_nn_main_process(int argc, char *argv[])
     else
       inp_size = 0;
     out_size = inp_size;
+  }
+  else if(!strcmp(cfg.kernel_name, "norm_calc_3D"))
+  {
+    if(cfg.io_height >= 0 && cfg.io_width >= 0 && cfg.io_channels >= 0)
+    {
+      inp_size = cfg.io_height * cfg.io_width * cfg.io_channels;
+      out_size = cfg.io_height * cfg.io_width;
+    }
+    else
+      inp_size = out_size = 0;
+  }
+  else if(!strcmp(cfg.kernel_name, "norm_apply_3D"))
+  {
+    if(cfg.io_height >= 0 && cfg.io_width >= 0 && cfg.io_channels >= 0)
+    {
+      inp_size = cfg.io_height * cfg.io_width * cfg.io_channels;
+      out_size = cfg.io_height * cfg.io_width * cfg.io_channels;
+    }
+    else
+      inp_size = out_size = 0;
   }
   else
   {
@@ -341,6 +439,21 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_params, "io_height=%d, io_width = %d, io_channels = %d, inp_data_format = %d, out_data_format %d",
             cfg.io_height, cfg.io_width, cfg.io_channels, cfg.inp_data_format, cfg.out_data_format);
+  }
+  else if(!strcmp(cfg.kernel_name,"norm_apply_3D"))
+  {
+    sprintf(profiler_params, "io_height=%d, io_width = %d, io_channels = %d, across_depth_flag = %d, out_shift %d, rsqrt_shift %d, per_chan_flag %d",
+            cfg.io_height, cfg.io_width, cfg.io_channels, cfg.across_depth_flag, cfg.out_shift, cfg.rsqrt_shift, cfg.per_chan_flag);
+  }
+  else if(!strcmp(cfg.kernel_name,"norm_calc_3D") && (cfg.inp_precision == 8) && (cfg.out_precision == 16))
+  {
+    sprintf(profiler_params, "io_height=%d, io_width = %d, io_channels = %d, across_depth_flag = %d, out_shift %d, rsqrt_shift %d, rsqrt_table_len %d, recip_shift %d",
+            cfg.io_height, cfg.io_width, cfg.io_channels, cfg.across_depth_flag, cfg.out_shift, cfg.rsqrt_shift, cfg.rsqrt_table_len, cfg.recip_shift);
+  }
+  else if(!strcmp(cfg.kernel_name,"norm_calc_3D") && (cfg.inp_precision == 16) && (cfg.out_precision == 16))
+  {
+    sprintf(profiler_params, "io_height=%d, io_width = %d, io_channels = %d, across_depth_flag = %d, out_shift %d, rsqrt_table_len %d",
+            cfg.io_height, cfg.io_width, cfg.io_channels, cfg.across_depth_flag, cfg.out_shift, cfg.rsqrt_table_len);
   }
   else
   {
@@ -387,9 +500,47 @@ int xa_nn_main_process(int argc, char *argv[])
     memset(p_beta->p,  -20, cfg.io_channels* 4);
   }
 
+  if(!strcmp(cfg.kernel_name,"norm_calc_3D") && (cfg.inp_precision == 8) && (cfg.out_precision == 16))
+  {
+    p_rsqrt = create_buf1D(cfg.rsqrt_table_len, 16);                              VALIDATE_PTR(p_rsqrt);
+    p_recip = create_buf1D(256, 16);                                              VALIDATE_PTR(p_recip);
+    /*p_alpha & p_beta arrays are not read through bin files, hence initialized here*/
+    memset(p_rsqrt->p, -20, cfg.rsqrt_table_len* 2);
+    memset(p_recip->p,  -20, 256 * 2);
+  }
+
+  if(!strcmp(cfg.kernel_name,"norm_calc_3D") && (cfg.inp_precision == 16) && (cfg.out_precision == 16))
+  {
+    p_rsqrt = create_buf1D(cfg.rsqrt_table_len, 16);                              VALIDATE_PTR(p_rsqrt);
+    p_outnsa = create_buf1D(cfg.io_height * cfg.io_width, 8);                     VALIDATE_PTR(p_outnsa);
+    /*p_alpha & p_beta arrays are not read through bin files, hence initialized here*/
+    memset(p_rsqrt->p, -20, cfg.rsqrt_table_len* 2);
+    memset(p_outnsa->p, -20, cfg.io_height * cfg.io_width);
+  }
+
+  if(!strcmp(cfg.kernel_name,"norm_apply_3D") && (cfg.inp_precision == 8) && (cfg.inp_precision == 8))
+  {
+    p_inp_normdata = create_buf1D(cfg.io_height * cfg.io_width, 16);              VALIDATE_PTR(p_inp_normdata);
+    p_out_multiplier = create_buf1D(cfg.io_channels, 16);                         VALIDATE_PTR(p_out_multiplier);
+    /*p_alpha & p_beta arrays are not read through bin files, hence initialized here*/
+    memset(p_inp_normdata->p, -20, cfg.io_height * cfg.io_width * 2);
+    memset(p_out_multiplier->p,  -20, cfg.io_channels * 2);
+  }
+
+  if(!strcmp(cfg.kernel_name,"norm_apply_3D") && (cfg.inp_precision == 16) && (cfg.inp_precision == 16))
+  {
+    p_inp_normdata = create_buf1D(cfg.io_height * cfg.io_width, 16);              VALIDATE_PTR(p_inp_normdata);
+    p_inp_nsadata  = create_buf1D(cfg.io_height * cfg.io_width, 8);               VALIDATE_PTR(p_inp_nsadata);
+    p_out_multiplier = create_buf1D(cfg.io_channels, 16);                         VALIDATE_PTR(p_out_multiplier);
+    /*p_alpha & p_beta arrays are not read through bin files, hence initialized here*/
+    memset(p_inp_normdata->p, -20, cfg.io_height * cfg.io_width * 2);
+    memset(p_inp_nsadata->p, -20, cfg.io_height * cfg.io_width);
+    memset(p_out_multiplier->p,  -20, cfg.io_channels * 2);
+  }
+
   if(!strcmp(cfg.kernel_name,"l2_norm"))
     num_ops = 2*cfg.num_elms;   // First calculated square root of energy and then divide input by it
-  else if(!strcmp(cfg.kernel_name,"batch_norm_3D") || !strcmp(cfg.kernel_name,"renorm"))
+  else if(!strcmp(cfg.kernel_name,"batch_norm_3D") || !strcmp(cfg.kernel_name,"renorm") || !strcmp(cfg.kernel_name,"norm_calc_3D") || !strcmp(cfg.kernel_name,"norm_apply_3D"))
     num_ops = inp_size;
 
   XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, num_ops, "OPs/cyc", 1);
@@ -400,6 +551,14 @@ int xa_nn_main_process(int argc, char *argv[])
     // If write_file enabled, generate random data for input, else read from file
     if(!strcmp(cfg.kernel_name,"batch_norm_3D"))
       load_batch_norm_3D_input_data(cfg.write_file, fptr_inp, p_inp, p_alpha, p_beta);
+    else if(!strcmp(cfg.kernel_name,"norm_calc_3D") && (cfg.inp_precision == 8) && (cfg.out_precision == 16))
+      load_batch_norm_3D_input_data(cfg.write_file, fptr_inp, p_inp, p_rsqrt, p_recip);
+    else if(!strcmp(cfg.kernel_name,"norm_calc_3D") && (cfg.inp_precision == 16) && (cfg.out_precision == 16))
+      load_batch_norm_3D_input_data(cfg.write_file, fptr_inp, p_inp, p_outnsa, p_outnsa);
+    else if(!strcmp(cfg.kernel_name,"norm_apply_3D") && (cfg.inp_precision == 8) && (cfg.out_precision == 8))
+      load_batch_norm_3D_input_data(cfg.write_file, fptr_inp, p_inp, p_inp_normdata, p_out_multiplier);
+    else if(!strcmp(cfg.kernel_name,"norm_apply_3D") && (cfg.inp_precision == 16) && (cfg.out_precision == 16))
+      load_batch_norm_3D_input_data(cfg.write_file, fptr_inp, p_inp, p_inp_normdata, p_inp_nsadata);
     else
       load_norm_input_data(cfg.write_file, fptr_inp, p_inp);
 

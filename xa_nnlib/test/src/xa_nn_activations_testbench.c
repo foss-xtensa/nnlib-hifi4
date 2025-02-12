@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -722,8 +722,19 @@ int xa_nn_main_process(int argc, char *argv[])
   if(cfg.verify)
   {
     ptr_ref =  create_buf1D(cfg.num_elements, cfg.out_precision); 
-    
+#if defined(USE_HIFI_ACT_TIE) && (defined(AE_SIGMOID16X4X2) || defined(AE_SIGMOID16X4) || defined(AE_TANH16X4X2) || defined(AE_TANH16X4))
+  if((!strcmp(cfg.activation,"sigmoid") || !strcmp(cfg.activation,"tanh")) && 
+      (((cfg.inp_precision == -4) && (cfg.out_precision == -4))
+        || ((cfg.inp_precision == -8) && (cfg.out_precision == -8))
+        || ((cfg.inp_precision == 16) && (cfg.out_precision == 16)))){
+    char *ext=".bin";
+    char *dot_add = strstr(cfg.read_ref_file_name, ext);
+    char* new_ext="_act_tie.bin";
+    strcpy(dot_add, new_ext);
+  }   
+#endif    
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
+
   }
 
   // Allocate Memory

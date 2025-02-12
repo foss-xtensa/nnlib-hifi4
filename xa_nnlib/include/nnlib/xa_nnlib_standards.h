@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -82,6 +82,17 @@ typedef enum _reduce_ops_t{
   REDUCE_MAX = 0,
   REDUCE_MEAN = 1
 }reduce_ops_t;
+
+//For compare ops
+typedef enum _compare_ops_t{
+  COMPARE_GREATEREQUAL,
+  COMPARE_GREATER,
+  COMPARE_LESSEREQUAL,
+  COMPARE_LESSER,
+  COMPARE_EQUAL,
+  COMPARE_NOTEQUAL,
+  COMPARE_ERROR=-1
+}compare_ops_t;
 
 typedef enum _xa_nnlib_prec_t
 {

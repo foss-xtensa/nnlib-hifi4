@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -252,8 +252,8 @@ void show_usage(void)
     printf("\t-stride_3: stride for dimention 3; Default=1\n");
     printf("\t-stride_4: stride for dimention 4; Default=1\n");
     printf("\t-axis: axis dimension for concat or split_v kernel (-num_inp_dims to num_inp_dims-1); Default=0\n");
-    printf("\t-inp_precision: 8, 16; Default=8\n");
-    printf("\t-out_precision: 8, 16; Default=8\n");
+    printf("\t-inp_precision: 8, 16, 32; Default=8\n");
+    printf("\t-out_precision: 8, 16, 32; Default=8\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-kernel_name: depth_to_space, space_to_depth, pad, batch_to_space_nd, space_to_batch_nd, strided_slice, resize_bilinear, resize_nearest_neighbour; Default=""depth_to_space""\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
@@ -589,7 +589,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else STRIDED_SLICE_FN(strided_slice, 8, 8) \
     else TRANSPOSE_KERNEL_FN(transpose, 8, 8) \
     else TRANSPOSE_KERNEL_FN(transpose, 16, 16) \
+    else TRANSPOSE_KERNEL_FN(transpose, 32, 32) \
     else CONCAT_KERNEL_FN(concat, 8, 8) \
+    else CONCAT_KERNEL_FN(concat, 32, 32) \
     else SPLIT_V_KERNEL_FN(split_v, 8, 8) \
     else RESIZE_BILINEAR_FN(resize_bilinear, 8, 8) \
     else RESIZE_NEAREST_NEIGHBOUR_FN(resize_nearest_neighbour, 8, 8) \
@@ -609,7 +611,9 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else STRIDED_SLICE_FN(strided_slice, 8, 8) \
     else TRANSPOSE_KERNEL_FN(transpose, 8, 8) \
     else TRANSPOSE_KERNEL_FN(transpose, 16, 16) \
+    else TRANSPOSE_KERNEL_FN(transpose, 32, 32) \
     else CONCAT_KERNEL_FN(concat, 8, 8) \
+    else CONCAT_KERNEL_FN(concat, 32, 32) \
     else SPLIT_V_KERNEL_FN(split_v, 8, 8) \
     else RESIZE_BILINEAR_FN(resize_bilinear, 8, 8) \
     else SHUFFLE_KERNEL_FN(shuffle_3D, 8, 8) \

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -388,6 +388,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#if hifi5
 #define MAT_VEC_MUL_FC_FN_ASYM4S(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
       XTPWR_PROFILER_START(0);\
@@ -398,6 +399,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
           cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias, p_scratch->p);\
       XTPWR_PROFILER_STOP(0);\
     }
+#else 
+#define MAT_VEC_MUL_FC_FN_ASYM4S(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      printf("unsupported matXvec operation, Cycles data is invalid!\n"); cfg.verify=0; \
+    }
+#endif 
 
 #define MAT_VEC_MUL_FC_FN_SYM8SXASYM8S(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
@@ -567,6 +574,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       XTPWR_PROFILER_STOP(0);\
     }
 
+#if hifi5
 #define MATMUL_FN_SYM4S_ASYM8S(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
       XTPWR_PROFILER_START(0);\
@@ -578,6 +586,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
           cfg.out_multiplier, cfg.out_shift, cfg.out_zero_bias, p_scratch->p);\
       XTPWR_PROFILER_STOP(0);\
     }
+#else
+#define MATMUL_FN_SYM4S_ASYM8S(MPREC, VPREC, OPREC) \
+    if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\
+      printf("unsupported matXvec operation, Cycles data is invalid!\n"); cfg.verify=0; \
+    }
+#endif
 
 #define MATMUL_FN_SYM8S_SYM16S(MPREC, VPREC, OPREC) \
     if((MPREC == p_mat1->precision) && (VPREC == p_vec1->precision) && (OPREC == p_out->precision)) {\

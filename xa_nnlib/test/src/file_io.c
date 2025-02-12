@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -32,6 +32,7 @@
     case SYM8S_TYPE: size = sizeof(char);         break;  \
     case SYM16S_TYPE: size = sizeof(short int);   break;  \
     case ASYM16S_TYPE: size = sizeof(short int);  break;  \
+    case ASYM16U_TYPE: size = sizeof(short int);  break;  \
     case ASYM32S_TYPE: size = sizeof(int);        break;  \
     case 1: size = sizeof(char);                  break;  \
     case -12:                                             \
@@ -440,6 +441,69 @@ int load_reorg_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp)
   return 0;
 }
 
+int load_rnn_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t *p_hidden,
+    buf1D_t *p_cell, buf1D_t *p_ig_W, buf1D_t *p_fg_W, buf1D_t *p_cg_W, buf1D_t *p_og_W,
+    buf1D_t *p_ig_U, buf1D_t *p_fg_U, buf1D_t *p_cg_U, buf1D_t *p_og_U, buf1D_t *p_ig_W_bias,
+    buf1D_t *p_fg_W_bias, buf1D_t *p_cg_W_bias, buf1D_t *p_og_W_bias)
+{
+  if(write_file)
+  {
+    /* Set random input data */
+    set_rand_inp_buf1D(p_inp);
+    set_rand_inp_buf1D(p_hidden);
+    set_rand_inp_buf1D(p_cell);
+    set_rand_inp_buf1D(p_ig_W);
+    set_rand_inp_buf1D(p_fg_W);
+    set_rand_inp_buf1D(p_cg_W);
+    set_rand_inp_buf1D(p_og_W);
+    set_rand_inp_buf1D(p_ig_U);
+    set_rand_inp_buf1D(p_fg_U);
+    set_rand_inp_buf1D(p_cg_U);
+    set_rand_inp_buf1D(p_og_U);
+    set_rand_inp_buf1D(p_ig_W_bias);
+    set_rand_inp_buf1D(p_fg_W_bias);
+    set_rand_inp_buf1D(p_cg_W_bias);
+    set_rand_inp_buf1D(p_og_W_bias);
+
+    /* Write input data into file */      
+    write_buf1D_to_file(fptr_inp, p_inp);
+    write_buf1D_to_file(fptr_inp, p_hidden);
+    write_buf1D_to_file(fptr_inp, p_cell);
+    write_buf1D_to_file(fptr_inp, p_ig_W);
+    write_buf1D_to_file(fptr_inp, p_fg_W);
+    write_buf1D_to_file(fptr_inp, p_cg_W);
+    write_buf1D_to_file(fptr_inp, p_og_W);
+    write_buf1D_to_file(fptr_inp, p_ig_U);
+    write_buf1D_to_file(fptr_inp, p_fg_U);
+    write_buf1D_to_file(fptr_inp, p_cg_U);
+    write_buf1D_to_file(fptr_inp, p_og_U);
+    write_buf1D_to_file(fptr_inp, p_ig_W_bias);
+    write_buf1D_to_file(fptr_inp, p_fg_W_bias);
+    write_buf1D_to_file(fptr_inp, p_cg_W_bias);
+    write_buf1D_to_file(fptr_inp, p_og_W_bias);
+  }
+  else
+  {
+    /* Read input data from file */
+    read_buf1D_from_file(fptr_inp, p_inp);
+    read_buf1D_from_file(fptr_inp, p_hidden);
+    read_buf1D_from_file(fptr_inp, p_cell);
+    read_buf1D_from_file(fptr_inp, p_ig_W);
+    read_buf1D_from_file(fptr_inp, p_fg_W);
+    read_buf1D_from_file(fptr_inp, p_cg_W);
+    read_buf1D_from_file(fptr_inp, p_og_W);
+    read_buf1D_from_file(fptr_inp, p_ig_U);
+    read_buf1D_from_file(fptr_inp, p_fg_U);
+    read_buf1D_from_file(fptr_inp, p_cg_U);
+    read_buf1D_from_file(fptr_inp, p_og_U);
+    read_buf1D_from_file(fptr_inp, p_ig_W_bias);
+    read_buf1D_from_file(fptr_inp, p_fg_W_bias);
+    read_buf1D_from_file(fptr_inp, p_cg_W_bias);
+    read_buf1D_from_file(fptr_inp, p_og_W_bias);
+  }
+  return 0;
+}
+
 int write_output_data(FILE *fptr_out, buf1D_t *p_out) 
 {  
   write_buf1D_to_file(fptr_out, p_out);                  
@@ -471,7 +535,7 @@ FILE* file_open(char *file_path, char *file_name, char *mode, int max_file_name_
 }
 
 
-int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, buf1D_t *p_inp1, buf1D_t *p_inp2) 
+int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, FILE *fptr_inp3, buf1D_t *p_inp1, buf1D_t *p_inp2, buf1D_t *p_inp3) 
 {
   if(write_file)
   {
@@ -480,12 +544,16 @@ int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, buf1D
 		set_rand_inp_buf1D(p_inp1);
 	if(p_inp2)
 		set_rand_inp_buf1D(p_inp2);
+	if(p_inp3)
+		set_rand_inp_buf1D(p_inp3);
 
     /* Write input data into file */
 	if(p_inp1 && fptr_inp1)
 		write_buf1D_to_file(fptr_inp1, p_inp1);
 	if(p_inp2 && fptr_inp2)
-      		write_buf1D_to_file(fptr_inp2, p_inp2);
+		write_buf1D_to_file(fptr_inp2, p_inp2);
+	if(p_inp3 && fptr_inp3)
+		write_buf1D_to_file(fptr_inp3, p_inp3);
   }
   else
   {
@@ -494,6 +562,8 @@ int load_basic_func_data(int write_file, FILE *fptr_inp1, FILE *fptr_inp2, buf1D
 		 read_buf1D_from_file(fptr_inp1, p_inp1);
 	if(p_inp2 && fptr_inp2)
   		 read_buf1D_from_file(fptr_inp2, p_inp2);
+	if(p_inp3 && fptr_inp3)
+  		 read_buf1D_from_file(fptr_inp3, p_inp3);
   }
   return 0;
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -26,7 +26,7 @@
 #include "xa_nnlib_common_macros.h"
 
 #if !(defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4))
-static const uint16_t sigmoid_table_uint16[256] = {
+static const uint16_t sigmoid_table_uint16[257] = {
     32768, 33451, 34133, 34813, 35493, 36169, 36843, 37513, 38180, 38841, 39498,
     40149, 40794, 41432, 42064, 42688, 43304, 43912, 44511, 45102, 45683, 46255,
     46817, 47369, 47911, 48443, 48964, 49475, 49975, 50464, 50942, 51409, 51865,
@@ -50,7 +50,7 @@ static const uint16_t sigmoid_table_uint16[256] = {
     65529, 65529, 65530, 65530, 65530, 65530, 65531, 65531, 65531, 65531, 65531,
     65532, 65532, 65532, 65532, 65532, 65532, 65533, 65533, 65533, 65533, 65533,
     65533, 65533, 65533, 65534, 65534, 65534, 65534, 65534, 65534, 65534, 65534,
-    65534, 65534, 65535};
+    65534, 65534, 65535, 65535};
 
 #endif
 
@@ -497,6 +497,8 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
     uh_0 = AE_SRAI32(abs_inp_x_inp_mul0, 8);
     uh_1 = AE_SRAI32(abs_inp_x_inp_mul1, 8);
     
+    uh_0 = AE_MIN32(uh_0, AE_MOVDA32(255));
+    uh_1 = AE_MIN32(uh_1, AE_MOVDA32(255));
 #if XCHAL_HAVE_HIFI4 || XCHAL_HAVE_HIFI1
     ua0 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_0)], sigmoid_table_uint16[AE_MOVAD32_L(uh_0)]); 
     ua1 = AE_MOVDA32X2(sigmoid_table_uint16[AE_MOVAD32_H(uh_1)], sigmoid_table_uint16[AE_MOVAD32_L(uh_1)]); 

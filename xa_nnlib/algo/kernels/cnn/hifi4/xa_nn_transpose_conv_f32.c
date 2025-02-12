@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -634,7 +634,7 @@ DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_transpose_conv_f32, (FLOAT32* outpu
             int input_height, int input_width,
             int filter_height, int filter_width,
             int output_height, int output_width,
-            int num_elements,
+            int num_elements, int num_groups,
             void* scratch_buffer))
 #else
 WORD32 xa_nn_transpose_conv_f32(FLOAT32* output_data,
@@ -647,7 +647,7 @@ WORD32 xa_nn_transpose_conv_f32(FLOAT32* output_data,
 		int input_height, int input_width,
 		int filter_height, int filter_width,
 		int output_height, int output_width,
-		int num_elements,
+		int num_elements, int num_groups,
 		void* scratch_buffer)
 {
 	/* NULL pointer checks */
@@ -671,6 +671,9 @@ WORD32 xa_nn_transpose_conv_f32(FLOAT32* output_data,
 	XA_NNLIB_ARG_CHK_COND((output_height <= 0 || output_width <= 0), -1);
 	XA_NNLIB_ARG_CHK_COND((num_elements <= 0), -1);
 
+  /* Temporary change till we add suppport for group > 1 */
+  (void)num_groups;
+  
   int ker_grt_inp = (filter_width > input_width || filter_height > input_height);
   int str_leq_ker = (stride_width <= filter_width && stride_height <= filter_height);
 

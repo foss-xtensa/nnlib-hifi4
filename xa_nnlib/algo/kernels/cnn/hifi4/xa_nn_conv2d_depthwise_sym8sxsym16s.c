@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2024 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -48,7 +48,7 @@ static inline ae_int32x2 MultiplyByQuantizedMultiplier_ref(ae_int64 d_x,
   ae_int64 qL = AE_MUL32U_LL(d_red_mul32, AE_MOVINT32X2_FROMINT64(d_x));
   ae_int64 qH = AE_SLAI64(AE_MUL32_LH(d_red_mul32, AE_MOVINT32X2_FROMINT64(d_x)), 32);
   ae_int64 q = AE_ADD64(qL, qH);
-  q = AE_SRAA64(q, (-shift-17));
+  q = AE_SLAA64S(q, (shift+17));
   ae_int32x2 result = AE_ROUND32F64SASYM(q);
   return result;
 }
@@ -859,4 +859,223 @@ WORD32 xa_nn_conv2d_depthwise_per_chan_sym8sxsym16s
     }
 
     return 0;
+}
+
+/* Dilated 2D Convolution implementation */
+static WORD32 gcd(WORD32 a, WORD32 b)
+{
+  while (a != b)
+  {
+    if (a > b)
+    {
+      return gcd(a - b, b);
+    }
+    else
+    {
+      return gcd(a, b - a);
+    }
+  }
+  return a;
+}
+
+WORD32 xa_nn_dilated_conv2d_depthwise_v2_per_chan_sym8sxsym16s
+  (pWORD16 __restrict__ p_out
+  ,const WORD8 *__restrict__ p_kernel
+  ,const WORD16 *__restrict__ p_inp
+  ,const WORD64 *__restrict__ p_bias
+  ,WORD32  input_height
+  ,WORD32  input_width
+  ,WORD32  input_channels
+  ,WORD32  kernel_height
+  ,WORD32  kernel_width
+  ,WORD32  channels_multiplier
+  ,WORD32  dilation_height
+  ,WORD32  dilation_width
+  ,WORD32  x_stride
+  ,WORD32  y_stride
+  ,WORD32  x_padding
+  ,WORD32  y_padding
+  ,WORD32  out_height
+  ,WORD32  out_width
+  ,WORD32  input_zero_bias
+  ,const WORD32 *p_out_multiplier
+  ,const WORD32 *p_out_shift
+  ,WORD32  out_zero_bias
+  ,WORD32  inp_data_format
+  ,WORD32  out_data_format
+  ,pVOID p_scratch
+  ,WORD32  out_activation_min
+  ,WORD32  out_activation_max
+  ,xa_dma_cfg_t *p_dma_cfg
+  )
+{
+  int i;
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_kernel, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_bias, -1); 
+  XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD16), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD64), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_scratch, ALIGNMENT, -1);
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND((kernel_height <= 0 || kernel_width <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND((channels_multiplier <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
+  XA_NNLIB_ARG_CHK_COND((dilation_height < 1 || dilation_width < 1), -1);
+  XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND(input_zero_bias != 0, -1);
+  for(i = 0; i < input_channels*channels_multiplier; i++)
+    XA_NNLIB_ARG_CHK_COND((p_out_shift[i] < -31 || p_out_shift[i] > 15), -1);
+  XA_NNLIB_ARG_CHK_COND((out_zero_bias != 0 ), -1);
+  XA_NNLIB_ARG_CHK_COND((inp_data_format != 0), -1);
+  XA_NNLIB_ARG_CHK_COND((out_data_format != 0), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_min < -32768 || out_activation_min > 32767), -1);
+  XA_NNLIB_ARG_CHK_COND((out_activation_max < -32768 || out_activation_max > 32767), -1);
+  
+  int temp_pad_val = 0;
+  xa_nn_dilated_conv2d_depthwise_init
+      (p_scratch
+       ,input_height
+       ,input_width
+       ,input_channels
+       ,kernel_height
+       ,kernel_width
+       ,channels_multiplier
+       ,dilation_height
+       ,dilation_width
+       ,x_stride
+       ,y_stride
+       ,x_padding
+       ,y_padding
+       ,out_height
+       ,out_width
+       ,16
+       ,0
+       ,(pVOID)(&temp_pad_val)
+      );
+
+  xa_nn_conv2d_dw_state_t *p_state = (xa_nn_conv2d_dw_state_t *)p_scratch;
+  xa_nn_circ_buf_t *p_circ_buf = &(p_state->circ_buf);
+  
+  AE_SETCBEGIN0(p_circ_buf->p_begin);
+  AE_SETCEND0(p_circ_buf->p_end);
+  
+  int itr_ow;
+  int itr_dh, itr_dw;
+  int cols_to_add, left_pad, right_pad, cols_added;
+  int input_col;
+  const WORD16 *pt_inp;
+  pWORD16 p_inp_circ;
+
+  pt_inp = (const WORD16 *)p_inp;
+  
+  WORD32 dh_count, dw_count;
+  WORD32 y_padding_dh, x_padding_dw;
+  WORD32 x_stride_dw;
+  WORD32 out_height_dh, out_width_dw;
+  WORD32 rem_dh, rem_dw;
+  WORD32 gcd_h, gcd_w;
+  WORD32 y_stride_circ_buf;
+  
+  gcd_h = gcd(dilation_height, y_stride);
+  gcd_w = gcd(dilation_width, x_stride);
+  dh_count = dilation_height/gcd_h;
+  dw_count = dilation_width/gcd_w;
+  y_padding_dh = y_padding;
+  out_height_dh = out_height / dh_count;
+  out_width_dw = out_width / dw_count;
+  rem_dh = out_height - out_height_dh * dh_count;
+  y_stride_circ_buf = y_stride / gcd_h;
+
+  for(itr_dh = 0; itr_dh < dh_count; itr_dh++,rem_dh--)
+  {
+    x_padding_dw = x_padding;
+    x_stride_dw = x_stride * dw_count;
+    rem_dw = out_width - out_width_dw * dw_count;
+    
+    WORD32 out_height_dh_cur = out_height_dh + (rem_dh > 0 ? 1 : 0);
+    if(out_height_dh_cur < 1)
+      break;
+    
+    for(itr_dw = 0; itr_dw < dw_count; itr_dw++, rem_dw--)
+    {
+      WORD32 out_width_dw_cur = out_width_dw + (rem_dw > 0 ? 1 : 0);
+      DILATED_CIRC_BUF_ADD_COLS_INIT(
+          cols_added,
+          cols_to_add,
+          left_pad,
+          right_pad,
+          input_col,
+          input_height,
+          input_width,
+          input_channels,
+          kernel_height,
+          kernel_width,
+          channels_multiplier,
+          dilation_height,
+          dilation_width,
+          x_stride_dw,
+          y_stride_circ_buf,
+          x_padding_dw,
+          y_padding_dh,
+          out_height_dh_cur,
+          p_circ_buf,
+          pt_inp);
+      for(itr_ow = 0; itr_ow < out_width_dw_cur; itr_ow++)
+      {
+        WORD16 *pt_out = (WORD16 *)&p_out[(itr_dh * out_width + itr_dw + itr_ow * dw_count)*input_channels * channels_multiplier];
+        DILATED_CIRC_BUF_ADD_COLS(
+            cols_added,
+            cols_to_add,
+            left_pad,
+            right_pad,
+            input_col,
+            input_height,
+            input_width,
+            input_channels,
+            kernel_height,
+            kernel_width,
+            channels_multiplier,
+            dilation_height,
+            dilation_width,
+            x_stride_dw,
+            y_stride_circ_buf,
+            x_padding_dw,
+            y_padding_dh,
+            out_height_dh_cur,
+            p_circ_buf,
+            pt_inp);
+
+        p_inp_circ = (WORD16 *)p_circ_buf->p_curr;
+        
+        conv2d_v2_per_chan_nhwc_sym8sxsym16s
+            (pt_out
+             ,p_kernel
+             ,p_inp_circ
+             ,p_bias
+             ,kernel_height
+             ,kernel_width
+             ,out_height_dh_cur
+             ,out_width * dh_count
+             ,(input_channels * channels_multiplier)
+             ,y_stride_circ_buf
+             ,p_out_multiplier
+             ,p_out_shift
+             ,p_state->p_scratch
+             ,out_activation_min
+             ,out_activation_max
+            );
+      }
+      x_padding_dw -= x_stride;
+    }
+    y_padding_dh -= y_stride;
+  }
+
+  return 0;
 }
