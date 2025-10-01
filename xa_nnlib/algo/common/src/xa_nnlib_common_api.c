@@ -21,6 +21,7 @@
 ******************************************************************************/
 
 #include "xa_nnlib_definitions.h"
+#include "xa_nnlib_standards.h"
 
 const char lib_name[] = LIBNAME;
 const char lib_ver[] = LIBVERSION;

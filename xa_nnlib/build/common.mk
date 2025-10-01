@@ -34,7 +34,7 @@ ifeq ($(CPU), x86)
     CXX = g++
     CFLAGS += -fno-exceptions -DCSTUB=1
     CFLAGS += -ffloat-store 
-    CFLAGS += -DHIFI3_CSTUB
+    CFLAGS += -std=c99
     RM = rm -f
     RM_R = rm -rf
     MKPATH = mkdir -p
@@ -160,7 +160,8 @@ ifeq ($(NOSTRIP), 1)
 $(LIBOBJ): $(OBJ_LIBO2OBJS) $(OBJ_LIBOSOBJS) $(OBJ_LIBO2CPPOBJS) $(OBJ_LIBO2CCOBJS) $(OBJ_LIBOSCPPOBJS) 
 	@echo "Linking Objects"
 	$(QUIET) $(CC) -o $@ $^ \
-	-Wl,-r,-Map,$(MAPFILE) --no-standard-libraries
+	-Wl,-r,-Map,$(MAPFILE) --no-standard-libraries $(LIBLDFLAGS) \
+	-Wl,--script,$(LDSCRIPT)
 else
 $(LIBOBJ): $(OBJ_LIBO2OBJS) $(OBJ_LIBOSOBJS) $(OBJ_LIBO2CPPOBJS) $(OBJ_LIBO2CCOBJS) $(OBJ_LIBOSCPPOBJS)
 	@echo "Linking Objects"

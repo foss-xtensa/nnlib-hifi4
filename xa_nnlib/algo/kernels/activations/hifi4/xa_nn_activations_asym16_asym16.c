@@ -63,7 +63,6 @@ WORD32 xa_nn_vec_leaky_relu_asym16s_asym16s( WORD16 * __restrict__ p_out,
   XA_NNLIB_ARG_CHK_COND(((inp_zero_bias < -32768) || (inp_zero_bias > 32767)), -1);
   XA_NNLIB_ARG_CHK_COND(((out_shift < -31) || (out_shift > 31)), -1);
   XA_NNLIB_ARG_CHK_COND(((alpha_shift < -31) || (alpha_shift > 31)), -1);
-  XA_NNLIB_ARG_CHK_COND((alpha_multiplier < 0), -1);
   XA_NNLIB_ARG_CHK_COND((out_multiplier < 0), -1);
   XA_NNLIB_ARG_CHK_COND(((out_zero_bias < -32768) || (out_zero_bias > 32767)), -1);
 

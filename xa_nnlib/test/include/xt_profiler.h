@@ -30,6 +30,10 @@
 
 #endif
 
+#define MAX_PROFILER_NAME_LENGTH 100
+#define MAX_PROFILER_PARAMS_LENGTH 200
+#define MAX_PROFILER_METRIC_UNITS_LENGTH 20
+
 
 #ifdef PROFILE
 #include <stdio.h>
@@ -37,10 +41,6 @@
 #include <sys/times.h>
 #include <xtensa/sim.h>
 #include <inttypes.h>
-
-#define MAX_PROFILER_NAME_LENGTH 100
-#define MAX_PROFILER_PARAMS_LENGTH 200
-#define MAX_PROFILER_METRIC_UNITS_LENGTH 20
 
 #define CCOUNT_AVAILABLE
 

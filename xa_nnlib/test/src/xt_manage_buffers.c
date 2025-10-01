@@ -86,7 +86,12 @@ buf1D_t *create_buf1D(int len, int precision)
     DBG_PRINT("[Error] Cannot malloc negative value %d in %s\n", size_in_bytes, __func__);
     return NULL;
   }
+#if CSTUB==1
+  pbuf->p_start = malloc(size_in_bytes + XCHAL_DATA_WIDTH - 1);
+  pbuf->p = (void *)(((UWORD32)(pbuf->p_start) + XCHAL_DATA_WIDTH - 1) & ~(XCHAL_DATA_WIDTH -1));
+#else
   pbuf->p = malloc(size_in_bytes);
+#endif
   if(NULL == pbuf->p)
   {
     DBG_PRINT("[Error] Unable to allocate buffer for pbuf in %s of size %d\n", __func__, size_in_bytes);
@@ -154,7 +159,12 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
 
   size_in_bytes = (pbuf->bytes_per_element * pbuf->row_offset * pbuf->rows);
   DBG_PRINT("allocating %d bytes\n", size_in_bytes);
+#if CSTUB==1
+  pbuf->p_start = malloc(size_in_bytes + XCHAL_DATA_WIDTH - 1);
+  pbuf->p = (void *)(((UWORD32)(pbuf->p_start) + XCHAL_DATA_WIDTH - 1) & ~(XCHAL_DATA_WIDTH -1));
+#else
   pbuf->p = malloc(size_in_bytes);
+#endif
   if(NULL == pbuf->p)
   {
     DBG_PRINT("[Error] Unable to allocate buffer for pbuf in %s of size %d\n", __func__, size_in_bytes);
@@ -166,12 +176,20 @@ buf2D_t *create_buf2D(int rows, int cols, int row_offset, int precision, int pad
 
 void free_buf1D(buf1D_t *ptr)
 {
+#if CSTUB==1
+  free(ptr->p_start);
+#else
   free(ptr->p);
+#endif
   free(ptr);
 }
 void free_buf2D(buf2D_t *ptr)
 {
+#if CSTUB==1
+  free(ptr->p_start);
+#else
   free(ptr->p);
+#endif
   free(ptr);
 }
 int interleave_buf1D(buf1D_t *pbuf, buf1D_t *pbuf_interleaved, int length)

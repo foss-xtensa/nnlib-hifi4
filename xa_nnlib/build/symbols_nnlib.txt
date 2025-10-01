@@ -216,6 +216,8 @@ xa_nn_elm_compare_broadcast_4D_f32xf32_f32
 xa_nn_broadcast_8_8
 xa_nn_broadcast_32_32
 xa_nn_dot_prod_16x16_asym8s
+xa_nn_elm_requantize_asym32s_asym16s
+xa_nn_elm_requantize_asym32s_asym8s
 xa_nn_elm_requantize_asym8s_asym8u
 xa_nn_elm_requantize_asym8s_asym16s
 xa_nn_elm_requantize_asym8s_asym16u
@@ -263,6 +265,7 @@ xa_nn_memset_f32_f32
 xa_nn_elm_mul_sym16sxsym16s_asym8s
 xa_nn_elm_add_16x16_16
 xa_nn_lstm_cell_state_update_16
+xa_nn_gru_hidden_state_update_8
 xa_nn_elm_add_broadcast_4D_f32xf32_f32
 xa_nn_elm_mul_broadcast_4D_f32xf32_f32
 xa_nn_elm_div_broadcast_4D_f32xf32_f32
@@ -339,6 +342,9 @@ xa_nn_concat_32_32
 
 xa_nn_lstm_getsize
 xa_nn_lstm_sym8sxasym8s_16
+
+xa_nn_gru_getsize
+xa_nn_gru_sym8sxasym8s
 
 xa_nnlib_cnn_get_persistent_fast
 xa_nnlib_cnn_get_scratch_fast

@@ -277,7 +277,6 @@ const WORD8 *__restrict__ p_inp,
 
         WORD32 *ptr_out1 = (WORD32 *)((WORD32 *)p_scratch + total_out_width);
         ae_int32x2 d_tmp32, d_out1;
-        ae_int64 d_tmp;
         if(kernel_height * kernel_width <= 1024)
         {
             WORD32 den_hw;
@@ -305,31 +304,15 @@ const WORD8 *__restrict__ p_inp,
         }
         else
         {
-            ae_int32x2 den_h, den_w;
-            den_h = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh]]);
+            WORD32 den, den_h, den_w, out;
+            den_h = p_den_height[itr_oh];
             for(itr_ow = 0; itr_ow < out_width; itr_ow++)
             {
-                den_w = AE_MOVDA32(inv_256_tbl[p_den_width[itr_ow]]);
-                d_out1 = *(ae_int32 *)(&ptr_out1[itr_ow*x_stride]);
-                d_tmp = AE_MUL32U_LL(den_h, den_w);
-                /* Max value of den_h or den_w is 0x80000000
-                so 1 left shift is possible without overflow */
-                d_tmp32 = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
-#if XCHAL_HAVE_HIFI1
-                d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
-#if ( XCHAL_HW_VERSION >= RI9_HWVERSION )
-                ae_int8x8 d_tmp8 = AE_SAT8X4X32_L(d_tmp32, d_tmp32);
-                AE_S8_0_I(d_tmp8, (ae_int8 *)(p_out+(itr_oh*out_width)+itr_ow), 0);
-#else
-                ae_int16x4 d_tmp16 = AE_SAT16X4(d_tmp32, d_tmp32);
-                d_tmp16 = AE_SAT8S(d_tmp16);
-                AE_S8_0_I_HIFI1(d_tmp16, p_out+(itr_oh*out_width)+itr_ow, 0);
-#endif
-#else
-                d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
-                d_tmp32 = AE_SLAI32S(d_tmp32, 24);
-                p_out[itr_oh*out_width+itr_ow] = (WORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 24));
-#endif
+                den_w = p_den_width[itr_ow];
+                den = den_h * den_w;
+                out = ptr_out1[itr_ow*x_stride];
+                out = den != 0 ? (out > 0 ? (WORD32)((out + den/2) / den) : (WORD32)((out - den/2) / den) ) : 0;
+                p_out[itr_oh*out_width+itr_ow] = (WORD8)out;
             }
         }
     }

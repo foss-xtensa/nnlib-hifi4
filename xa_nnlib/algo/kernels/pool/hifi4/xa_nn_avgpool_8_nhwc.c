@@ -418,37 +418,39 @@ const WORD8* __restrict__ p_inp,
                 }
 
                 // Saving Output
-                ae_int32x2 den_h, den_w, d_tmp32, d_out1, d_tmp32hw;
-                ae_int64 d_tmp;
+                ae_int32x2 d_tmp32, d_out1, d_tmp32hw;
                 WORD32 *p_out1;
 
                 p_out1 = (WORD32 *)p_dst;
 
-                if(kernel_height * kernel_width <= 1024)
+                WORD32 den, den_h, den_w;
+                den_h = p_den_height[itr_oh];
+                den_w = p_den_width[itr_ow];
+                den = den_h * den_w;
+                if(den <= 1024)
                 {
-                    d_tmp32hw = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh] * p_den_width[itr_ow]]);
+                    d_tmp32hw = AE_MOVDA32(inv_256_tbl[den]);
+                    for(i=0; i<input_channels; i++)
+                    {
+                        d_out1 = AE_MOVDA32(p_out1[i]);
+#if XCHAL_HAVE_HIFI1
+                        d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32hw);
+                        AE_S8_0_IP_HIFI1(AE_MOVINT16X4_FROMINT32X2(d_tmp32), (WORD8*)p_out_temp, 1);
+#else
+                        d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
+                        p_out_temp[i] = (WORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
+#endif
+                    }
                 }
                 else
                 {
-                    den_h = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh]]);
-                    den_w = AE_MOVDA32(inv_256_tbl[p_den_width[itr_ow]]);
-                    d_tmp = AE_MUL32U_LL(den_h, den_w);
-
-                    /* Max value of den_h or den_w is 0x80000000
-                       so 1 left shift is possible without overflow */
-                    d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
-                }
-
-                for(i=0; i<input_channels; i++)
-                {
-                    d_out1 = AE_MOVDA32(p_out1[i]);
-#if XCHAL_HAVE_HIFI1
-                    d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32hw);
-                    AE_S8_0_IP_HIFI1(AE_MOVINT16X4_FROMINT32X2(d_tmp32), (WORD8*)p_out_temp, 1);
-#else
-                    d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
-                    p_out_temp[i] = (WORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
-#endif
+                    WORD32 out;
+                    for(i=0; i<input_channels; i++)
+                    {
+                        out = p_out1[i];
+                        out = den != 0 ? (out > 0 ? (WORD32)((out + den/2) / den) : (WORD32)((out - den/2) / den) ) : 0;
+                        p_out_temp[i] = out;
+                    }
                 }
             }
             else
@@ -763,32 +765,34 @@ const WORD8* __restrict__ p_inp,
                 }while(1);
 
                 // Saving Output
-                ae_int32x2 den_h, den_w, d_tmp32, d_out1, d_tmp32hw;
-                ae_int64 d_tmp;
+                ae_int32x2 d_tmp32, d_out1, d_tmp32hw;
                 WORD32 *p_out1;
 
                 p_out1 = (WORD32 *)p_dst;
 
-                if(kernel_height * kernel_width <= 1024)
+                WORD32 den, den_h, den_w;
+                den_h = p_den_height[itr_oh];
+                den_w = p_den_width[itr_ow];
+                den = den_h * den_w;
+                if(den <= 1024)
                 {
-                    d_tmp32hw = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh] * p_den_width[itr_ow]]);
+                    d_tmp32hw = AE_MOVDA32(inv_256_tbl[den]);
+                    for(i=0; i<input_channels; i++)
+                    {
+                        d_out1 = AE_MOVDA32(p_out1[i]);
+                        d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
+                        p_out_temp[i] = (WORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
+                    }
                 }
                 else
                 {
-                    den_h = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh]]);
-                    den_w = AE_MOVDA32(inv_256_tbl[p_den_width[itr_ow]]);
-                    d_tmp = AE_MUL32U_LL(den_h, den_w);
-
-                    /* Max value of den_h or den_w is 0x80000000
-                       so 1 left shift is possible without overflow */
-                    d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
-                }
-
-                for(i=0; i<input_channels; i++)
-                {
-                    d_out1 = AE_MOVDA32(p_out1[i]);
-                    d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
-                    p_out_temp[i] = (WORD8)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
+                    WORD32 out;
+                    for(i=0; i<input_channels; i++)
+                    {
+                        out = p_out1[i];
+                        out = den != 0 ? (out > 0 ? (WORD32)((out + den/2) / den) : (WORD32)((out - den/2) / den) ) : 0;
+                        p_out_temp[i] = out;
+                    }
                 }
             }
             else

@@ -36,6 +36,9 @@
 #define ASYM32S_TYPE -10
 
 typedef struct _buf1D_t{
+#if CSTUB==1
+  void *p_start;
+#endif
   void *p;
   int length;
   int precision;
@@ -43,6 +46,9 @@ typedef struct _buf1D_t{
 }buf1D_t;
 
 typedef struct _buf2D_t{
+#if CSTUB==1
+  void *p_start;
+#endif
   void *p;
   int cols;
   int rows;

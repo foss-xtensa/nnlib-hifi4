@@ -26,6 +26,265 @@
 #include <string.h>
 
 #if HAVE_VFPU
+#if NO_AGGR_FLOAT_OPT
+
+static inline void tconv2d_f32xf32(FLOAT32* output_data,
+    const FLOAT32* input_data,
+    const FLOAT32* filter_data,
+    const FLOAT32* bias_data,
+    int stride_width, int stride_height,
+    int pad_width, int pad_height,
+    int input_depth, int output_depth,
+    int input_height, int input_width,
+    int filter_height, int filter_width,
+    int output_height, int output_width,
+    int num_elements,
+    FLOAT32* scratch_buffer)
+{
+  /* scratch memory is as big as output buffer, and stores 1 element per output */
+  memset(scratch_buffer, 0, num_elements*sizeof(FLOAT32));
+  ae_int32 *pscratch32 = (ae_int32 *)scratch_buffer;
+
+  int stride1 = filter_height*filter_width*input_depth*sizeof(FLOAT32);
+  if(input_data && filter_data && output_data && scratch_buffer &&
+    (((unsigned int)input_data&0x7)==0) && (((unsigned int)filter_data&0x7)==0) && (((unsigned int)output_data&0x7) == 0) &&
+    (((unsigned int)scratch_buffer&0x7) == 0) && ((input_depth&0x1)==0) && ((output_depth&0x1)==0) && ((filter_height*filter_width&0x1)==0))
+  {
+    for (int in_y = 0; in_y < input_height; ++in_y)
+    {
+      for (int in_x = 0; in_x < input_width; ++in_x)
+      {
+        const int out_x_orig = in_x*stride_width - pad_width;
+        const int out_y_orig = in_y*stride_height - pad_height;
+        int filt_x_min = -out_x_orig;
+        int filt_x_max = output_width - out_x_orig;
+        int filt_y_min = -out_y_orig;
+        int filt_y_max = output_height - out_y_orig;
+        filt_x_min = (filt_x_min < filter_width) ? filt_x_min : filter_width;
+        filt_x_min = (filt_x_min < 0) ? 0 : filt_x_min;
+        filt_x_max = (filt_x_max < filter_width) ? filt_x_max : filter_width;
+        filt_x_max = (filt_x_max < 0) ? 0 : filt_x_max;
+        filt_y_min = (filt_y_min < filter_height) ? filt_y_min : filter_height;
+        filt_y_min = (filt_y_min < 0) ? 0 : filt_y_min;
+        filt_y_max = (filt_y_max < filter_height) ? filt_y_max : filter_height;
+        filt_y_max = (filt_y_max < 0) ? 0 : filt_y_max;
+        xtfloatx2 * __restrict__ pinp = (xtfloatx2 *)((FLOAT32*)&input_data[in_y*input_width*input_depth+in_x*input_depth]);
+      
+        int in_channel;
+
+        xtfloatx2 _xtfloatx2_temp_00 = ZERO_SX2();
+        xtfloatx2 _xtfloatx2_temp_01 = ZERO_SX2();
+        xtfloatx2 _xtfloatx2_temp_02 = ZERO_SX2();
+        xtfloatx2 _xtfloatx2_temp_03 = ZERO_SX2();
+        for (in_channel=0 ; in_channel < (input_depth & ~0x1); in_channel+=2)
+        {
+          xtfloatx2 d_inp;
+          AE_LSX2IP(d_inp, pinp, 2*sizeof(FLOAT32));
+          for (int filter_y = filt_y_min; filter_y < filt_y_max; ++filter_y)
+          {
+            for (int filter_x = filt_x_min; filter_x < filt_x_max; ++filter_x)
+            {
+              // Compute output element location.
+              int out_x = out_x_orig + filter_x;
+              int out_y = out_y_orig + filter_y;
+              xtfloatx2* __restrict__ pscratch_src = (xtfloatx2 *)((FLOAT32*)&pscratch32[out_y*output_width*output_depth+out_x*output_depth]);
+              xtfloatx2* __restrict__ pfilt = (xtfloatx2 *)((FLOAT32*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel]);
+
+              int out_channel = 0;
+
+              for (; out_channel < (output_depth&~0x7); out_channel+=8)
+              {
+                xtfloatx2 d_fil0;
+                xtfloatx2 d_fil1;
+                xtfloatx2 d_fil2;
+                xtfloatx2 d_fil3;
+                xtfloatx2 d_fil4;
+                xtfloatx2 d_fil5;
+                xtfloatx2 d_fil6;
+                xtfloatx2 d_fil7;
+                xtfloatx2 d_scr0;
+                xtfloatx2 d_scr1;
+                xtfloatx2 d_scr2;
+                xtfloatx2 d_scr3;
+                d_scr0 = AE_LSX2I(pscratch_src, 0);
+                d_scr1 = AE_LSX2I(pscratch_src, 8);
+                d_scr2 = AE_LSX2I(pscratch_src, 16);
+                d_scr3 = AE_LSX2I(pscratch_src, 24);
+                AE_LSX2XP(d_fil0, pfilt, stride1);
+                AE_LSX2XP(d_fil1, pfilt, stride1);
+                AE_LSX2XP(d_fil2, pfilt, stride1);
+                AE_LSX2XP(d_fil3, pfilt, stride1);
+                AE_LSX2XP(d_fil4, pfilt, stride1);
+                AE_LSX2XP(d_fil5, pfilt, stride1);
+                AE_LSX2XP(d_fil6, pfilt, stride1);
+                AE_LSX2XP(d_fil7, pfilt, stride1);
+
+                _xtfloatx2_temp_00 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil0, d_fil1));
+                _xtfloatx2_temp_01 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil2, d_fil3));
+                _xtfloatx2_temp_02 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil4, d_fil5));
+                _xtfloatx2_temp_03 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil6, d_fil7));
+                d_scr0 = ADD_SX2(d_scr0, _xtfloatx2_temp_00);
+                d_scr1 = ADD_SX2(d_scr1, _xtfloatx2_temp_01);
+                d_scr2 = ADD_SX2(d_scr2, _xtfloatx2_temp_02);
+                d_scr3 = ADD_SX2(d_scr3, _xtfloatx2_temp_03);
+
+                _xtfloatx2_temp_00 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil0, d_fil1));
+                _xtfloatx2_temp_01 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil2, d_fil3));
+                _xtfloatx2_temp_02 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil4, d_fil5));
+                _xtfloatx2_temp_03 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil6, d_fil7));
+                d_scr0 = ADD_SX2(d_scr0, _xtfloatx2_temp_00);
+                d_scr1 = ADD_SX2(d_scr1, _xtfloatx2_temp_01);
+                d_scr2 = ADD_SX2(d_scr2, _xtfloatx2_temp_02);
+                d_scr3 = ADD_SX2(d_scr3, _xtfloatx2_temp_03);
+                AE_SSX2IP(d_scr0, pscratch_src, 8);
+                AE_SSX2IP(d_scr1, pscratch_src, 8);
+                AE_SSX2IP(d_scr2, pscratch_src, 8);
+                AE_SSX2IP(d_scr3, pscratch_src, 8);
+              }
+              xtfloat *pscratch_src_t = (xtfloat *)pscratch_src;
+              for (; out_channel < output_depth; out_channel++)
+              {
+                xtfloatx2 d_fil;
+                xtfloat d_scr0;
+                // xtfloat d_scr1;
+                d_scr0 = XT_LSI(pscratch_src_t, 0);
+                XT_LSX2XP(d_fil, pfilt, stride1);
+                d_scr0 = ADD_SX2(d_scr0, MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil, d_fil)));
+                d_scr0 = ADD_SX2(d_scr0, MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil, d_fil)));
+                XT_SSIP(HIGH_S(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr0)), pscratch_src_t, 4);
+                // XT_SSIP(HIGH_S(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr1)), pscratch_src_t, 4);
+              }
+              pscratch_src = (xtfloatx2*)pscratch_src_t;
+            }
+          }
+        }
+      }
+    }
+  }
+  else
+  {
+    for (int in_y = 0; in_y < input_height; ++in_y)
+    {
+      for (int in_x = 0; in_x < input_width; ++in_x)
+      {
+        const int out_x_orig = in_x*stride_width - pad_width;
+        const int out_y_orig = in_y*stride_height - pad_height;
+        int filt_x_min = -out_x_orig;
+        int filt_x_max = output_width - out_x_orig;
+        int filt_y_min = -out_y_orig;
+        int filt_y_max = output_height - out_y_orig;
+        filt_x_min = (filt_x_min < filter_width) ? filt_x_min : filter_width;
+        filt_x_min = (filt_x_min < 0) ? 0 : filt_x_min;
+        filt_x_max = (filt_x_max < filter_width) ? filt_x_max : filter_width;
+        filt_x_max = (filt_x_max < 0) ? 0 : filt_x_max;
+        filt_y_min = (filt_y_min < filter_height) ? filt_y_min : filter_height;
+        filt_y_min = (filt_y_min < 0) ? 0 : filt_y_min;
+        filt_y_max = (filt_y_max < filter_height) ? filt_y_max : filter_height;
+        filt_y_max = (filt_y_max < 0) ? 0 : filt_y_max;
+        FLOAT32 * __restrict__ pinp =  (FLOAT32*)&input_data[in_y*input_width*input_depth+in_x*input_depth];
+
+        xtfloat *p_inp_align = (xtfloat *)pinp;
+      
+        int in_channel;
+
+        xtfloatx2 _xtfloatx2_temp_00 = ZERO_SX2();
+        xtfloatx2 _xtfloatx2_temp_01 = ZERO_SX2();
+        for (in_channel=0 ; in_channel < (input_depth ); in_channel++)
+        {
+          xtfloat d_inp;
+          XT_LSIP(d_inp, p_inp_align, 4);
+          for (int filter_y = filt_y_min; filter_y < filt_y_max; ++filter_y)
+          {
+            for (int filter_x = filt_x_min; filter_x < filt_x_max; ++filter_x)
+            {
+              // Compute output element location.
+              int out_x = out_x_orig + filter_x;
+              int out_y = out_y_orig + filter_y;
+              xtfloatx2* __restrict__ pscratch_src = (xtfloatx2 *) ((FLOAT32*)&pscratch32[out_y*output_width*output_depth+out_x*output_depth]);
+              FLOAT32* __restrict__ pfilt = (FLOAT32*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
+
+              ae_valign align_scr = AE_LA64_PP(pscratch_src);
+              ae_valign align_out;
+              int out_channel = 0;
+
+              for (; out_channel < (output_depth&~0x3); out_channel+=4)
+              {
+                xtfloat   d_fil0;
+                xtfloat   d_fil1;
+                xtfloat   d_fil2;
+                xtfloat   d_fil3;
+                xtfloatx2 d_scr0;
+                xtfloatx2 d_scr1;
+
+                XT_LASX2IP(d_scr0, align_scr, pscratch_src);
+                XT_LASX2IP(d_scr1, align_scr, pscratch_src);
+                XT_LSXP(d_fil0, pfilt, stride1);
+                XT_LSXP(d_fil1, pfilt, stride1);
+                XT_LSXP(d_fil2, pfilt, stride1);
+                XT_LSXP(d_fil3, pfilt, stride1);
+
+                _xtfloatx2_temp_00 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_inp), AE_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil0), AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil1)));
+                _xtfloatx2_temp_01 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_inp), AE_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil2), AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil3)));
+                d_scr0 = ADD_SX2(d_scr0, _xtfloatx2_temp_00);
+                d_scr1 = ADD_SX2(d_scr1, _xtfloatx2_temp_01);
+                pscratch_src -= 2;
+                XT_SASX2IP(d_scr0, align_out, pscratch_src);
+                XT_SASX2IP(d_scr1, align_out, pscratch_src);
+              }
+              AE_SA64POS_FP(align_out, pscratch_src);
+
+              xtfloat *pscratch_src_t = (xtfloat *)pscratch_src;
+              for (; out_channel < output_depth; out_channel++)
+              {
+                xtfloat d_fil;
+                xtfloat d_scr0;
+                d_scr0 = XT_LSI(pscratch_src_t, 0);
+                XT_LSXP(d_fil, pfilt, stride1);
+                d_scr0 = AE_MOVXTFLOAT_FROMXTFLOATX2(ADD_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr0), MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_inp), AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil))));
+                XT_SSIP(HIGH_S(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr0)), pscratch_src_t, 4);
+              }
+              pscratch_src = (xtfloatx2*)pscratch_src_t;
+            }
+          }
+        }
+      }
+    }
+  }
+  if(bias_data)
+  {
+    xtfloat *pbias = (xtfloat*)((FLOAT32*)bias_data);
+
+    for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+    {
+      xtfloat acc;
+      xtfloat dbias;
+      xtfloat *pscratch = (xtfloat *)((FLOAT32*)&pscratch32[out_channel]);
+      FLOAT32 *pout = (FLOAT32*)&output_data[out_channel];
+      XT_LSIP(dbias, pbias, sizeof(FLOAT32));
+
+      for (int i = 0; i < (output_height*output_width); i++)
+      {
+        XT_LSXP(acc, pscratch, output_depth*sizeof(FLOAT32));
+        XT_SSXP(ADD_S(acc, dbias), pout, output_depth*sizeof(FLOAT32));
+      }
+    }
+  }
+  else
+  {
+    xtfloat *pscratch = (xtfloat*)scratch_buffer;
+    FLOAT32 *pout = (FLOAT32*)output_data;
+    for (int i = 0; i < output_height*output_width; i++)
+    {
+      for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+      {
+        xtfloat acc;
+        XT_LSIP(acc, pscratch, sizeof(FLOAT32));
+        XT_SSIP((acc), pout, sizeof(FLOAT32));
+      }
+    }
+  }    
+}
+#else
 static inline void tconv2d_f32xf32(FLOAT32* output_data,
 		const FLOAT32* input_data,
 		const FLOAT32* filter_data,
@@ -315,6 +574,7 @@ static inline void tconv2d_f32xf32(FLOAT32* output_data,
     }
   }    
 }
+#endif
 
 /* Handle sub-kernel formation and transpose */
 static inline void tconv2d_std_reorder_kernel_f32

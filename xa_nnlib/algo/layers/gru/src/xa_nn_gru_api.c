@@ -171,9 +171,9 @@ static void apply_inplace_lsh(Int16 *dst_src, Int32 len, Int32 lsh)
   {
     /* Loading one value at a time */
     _tmp_var_3 = dst_src[itr];
-    _tmp_var_1 = (ae_f16x4) _tmp_var_3;
+    _tmp_var_1 = int16_rtor_ae_f16x4(_tmp_var_3);
 
-    _tmp_var_3 = AE_SLAA16S(_tmp_var_1, lsh);
+    _tmp_var_3 = ae_f16x4_rtor_int16(AE_SLAA16S(_tmp_var_1, lsh));
     dst_src[itr] = _tmp_var_3;
   }
 }
@@ -564,15 +564,22 @@ static void internal_xa_nn_elm_mul_16x32_32(WORD32 * __restrict__ p_out,
         ae_f16x4 in1;
         ae_f32x2 in2_0, in2_1, out0, out1;
         
-        AE_L16X4_IP(in1, inp1, 8);
-        AE_L32X2_IP(in2_0, inp2, 8);
-        AE_L32X2_IP(in2_1, inp2, 8);
+        ae_int16x4 in1_t;
+        ae_int32x2 in2_0_t;
+        ae_int32x2 in2_1_t;
+        AE_L16X4_IP(in1_t, inp1, 8);
+        AE_L32X2_IP(in2_0_t, inp2, 8);
+        AE_L32X2_IP(in2_1_t, inp2, 8);
+        
+        in1 = AE_MOVF16X4_FROMINT16X4(in1_t);
+        in2_0 = AE_MOVF32X2_FROMINT32X2(in2_0_t);
+        in2_1 = AE_MOVF32X2_FROMINT32X2(in2_1_t);
         
         out0 = AE_MULFP32X16X2RS_H(in2_0, in1);
         out1 = AE_MULFP32X16X2RS_L(in2_1, in1);
         
-        AE_S32X2_IP(out0, out, 8);
-        AE_S32X2_IP(out1, out, 8);      
+        AE_S32X2_IP(AE_MOVINT32X2_FROMF32X2(out0), out, 8);
+        AE_S32X2_IP(AE_MOVINT32X2_FROMF32X2(out1), out, 8);      
     }
 }
 
@@ -602,7 +609,7 @@ static WORD32 internal_xa_nn_elm_add_32x32_32(WORD32 * __restrict__ p_out,
     {
         AE_L32X2_IP(x1, inp1, 2*sizeof(WORD32));
         AE_L32X2_IP(x2, inp2, 2*sizeof(WORD32));
-        y = AE_ADD32S(x1, x2);
+        y = AE_MOVINT32X2_FROMF32X2(AE_ADD32S(AE_MOVF32X2_FROMINT32X2(x1), AE_MOVF32X2_FROMINT32X2(x2)));
         AE_S32X2_IP( y, out,  2*sizeof(WORD32));
     }
 
@@ -629,11 +636,13 @@ static WORD32 xa_nn_vec_interpolation_f32(FLOAT32 * __restrict__ p_out,
     xtfloatx2 *p_ti = (xtfloatx2 *)p_inp2;
     xtfloatx2 *p_r  = (xtfloatx2 *)p_out, one;
 
-    one = XT_SEL32_HH_SX2(1.0f, 1.0f);
+    float d = 1.0f;
+    xtfloatx2 f = AE_MOVXTFLOATX2_FROMXTFLOAT(*(xtfloat*)&d);
+    one = XT_SEL32_HH_SX2(f,f);
 
     for(i=0; i<num_elements >> 1; i++)
     {
-        p_si[i] = p_r[i]  = XT_ADD_SX2(XT_MUL_SX2(p_fi[i], p_si[i]), XT_MUL_SX2(one-p_fi[i], p_ti[i]));
+        p_si[i] = p_r[i]  = XT_ADD_SX2(XT_MUL_SX2(p_fi[i], p_si[i]), XT_MUL_SX2(XT_SUB_SX2(one, p_fi[i]), p_ti[i]));
     }
 
     return 0;

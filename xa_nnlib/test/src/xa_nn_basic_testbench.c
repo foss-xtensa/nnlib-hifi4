@@ -1134,6 +1134,30 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define REQUANTIZE_ASYM32S_ASYM16S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_elm_requantize_asym32s_asym16s ( \
+                (WORD16 *)p_out->p, (WORD32 *)p_inp1->p, \
+                0, cfg.output_zero_bias, \
+                cfg.output_left_shift, cfg.output_multiplier,\
+                cfg.io_length);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+    
+#define REQUANTIZE_ASYM32S_ASYM8S(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_elm_requantize_asym32s_asym8s ( \
+                (WORD8 *)p_out->p, (WORD32 *)p_inp1->p, \
+                0, cfg.output_zero_bias, \
+                cfg.output_left_shift, cfg.output_multiplier,\
+                cfg.io_length);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+
 #define REQUANTIZE_ASYM8U_ASYM8S(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
      && (OPREC == cfg.out_precision)) {\
@@ -1481,6 +1505,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else SQUARE_F32(elm_square, -1, -1) \
     else RSQRT_F32(elm_rsqrt, -1, -1) \
     else SQRT_F32(elm_sqrt, -1, -1) \
+    else REQUANTIZE_ASYM32S_ASYM16S(elm_requantize, -10, -7) \
+    else REQUANTIZE_ASYM32S_ASYM8S(elm_requantize, -10, -4) \
     else REQUANTIZE_ASYM8U_ASYM8S(elm_requantize, -3, -4) \
     else REQUANTIZE_ASYM8S_ASYM32S(elm_requantize, -4, -10) \
     else REQUANTIZE_ASYM16S_ASYM32S(elm_requantize, -7, -10) \
@@ -1540,6 +1566,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else LOGICALAND_BOOL(elm_logicaland, 1, 1) \
     else LOGICALOR_BOOL(elm_logicalor, 1, 1) \
     else LOGICALNOT_BOOL(elm_logicalnot, 1, 1) \
+    else REQUANTIZE_ASYM32S_ASYM16S(elm_requantize, -10, -7) \
+    else REQUANTIZE_ASYM32S_ASYM8S(elm_requantize, -10, -4) \
     else REQUANTIZE_ASYM8U_ASYM8S(elm_requantize, -3, -4) \
     else REQUANTIZE_ASYM8S_ASYM32S(elm_requantize, -4, -10) \
     else REQUANTIZE_ASYM16S_ASYM32S(elm_requantize, -7, -10) \
@@ -1707,6 +1735,14 @@ int xa_nn_main_process(int argc, char *argv[])
   else if(cfg.inp_precision == -4 && cfg.out_precision == -6)
   {
     sprintf(profiler_name, "%s_asym8s_asym16u", cfg.kernel_name);
+  }
+  else if(cfg.inp_precision == -10 && cfg.out_precision == -7)
+  {
+    sprintf(profiler_name, "%s_asym32s_asym16s", cfg.kernel_name);
+  }
+  else if(cfg.inp_precision == -10 && cfg.out_precision == -4)
+  {
+    sprintf(profiler_name, "%s_asym32s_asym8s", cfg.kernel_name);
   }
   else
   {

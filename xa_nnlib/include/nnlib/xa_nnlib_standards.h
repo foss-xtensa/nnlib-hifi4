@@ -164,7 +164,7 @@ typedef struct _xa_nnlib_shape_t{
 
 enum xa_error_severity {
   xa_severity_nonfatal = 0,
-  xa_severity_fatal    = (unsigned int)0xffffffff
+  xa_severity_fatal    = 0x10000
 };
 
 enum xa_error_class {

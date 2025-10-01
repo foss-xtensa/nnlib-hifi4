@@ -379,7 +379,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
 #else        
         MPY_BY_QUANT_MULT_X2_OUT32(out32, acc, out_mult, left_shift, right_shift);
 #endif        
-        out32 = AE_ADD32(out32, AE_MOVDA32(output_offset));
+        out32 = AE_ADD32S(out32, AE_MOVDA32(output_offset));
         out32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out32, AE_MOVDA32(out_activation_min)));
         AE_L32_XP(acc0, pscratch, output_depth*sizeof(WORD32));
         AE_L32_XP(acc1, pscratch1, output_depth*sizeof(WORD32));
@@ -398,7 +398,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
 #else          
         MPY_BY_QUANT_MULT_X2_OUT32(out1_32, acc1, out_mult, left_shift, right_shift);
 #endif        
-        out1_32 = AE_ADD32(out1_32, AE_MOVDA32(output_offset));
+        out1_32 = AE_ADD32S(out1_32, AE_MOVDA32(output_offset));
         out1_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out1_32, AE_MOVDA32(out_activation_min)));
         out16 = AE_SAT16X4(out1_32, out1_32);
         *pout1 = (WORD8)AE_MOVAD16_0(out16);
@@ -432,7 +432,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
 #else
         MPY_BY_QUANT_MULT_X2_OUT32(out0_32, acc, output_multiplier[out_channel], left_shift, right_shift);
 #endif        
-        out0_32 = AE_ADD32(out0_32, AE_MOVDA32(output_offset));
+        out0_32 = AE_ADD32S(out0_32, AE_MOVDA32(output_offset));
         out0_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out0_32, AE_MOVDA32(out_activation_min))); 
         out16 = AE_SAT16X4(out0_32, out0_32);  
         *pout++ = (WORD8)AE_MOVAD16_0(out16);
@@ -704,7 +704,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
           acc = AE_SEL32_LL(acc0, acc1);
           acc = AE_ADD32(acc, dbias);
           MPY_BY_QUANT_MULT_X2_OUT32(out32, acc, out_mult, left_shift, right_shift);
-          out32 = AE_ADD32(out32, AE_MOVDA32(output_offset));
+          out32 = AE_ADD32S(out32, AE_MOVDA32(output_offset));
           out32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out32, AE_MOVDA32(out_activation_min)));
           AE_L32_XP(acc0, pscratch, output_depth*sizeof(WORD32));
           AE_L32_XP(acc1, pscratch1, output_depth*sizeof(WORD32));
@@ -719,7 +719,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
           ae_int32x2 out1_32;
           acc1 = AE_ADD32(acc1, dbias);
           MPY_BY_QUANT_MULT_X2_OUT32(out1_32, acc1, out_mult, left_shift, right_shift);
-          out1_32 = AE_ADD32(out1_32, AE_MOVDA32(output_offset));
+          out1_32 = AE_ADD32S(out1_32, AE_MOVDA32(output_offset));
           out1_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out1_32, AE_MOVDA32(out_activation_min)));
           out16 = AE_SAT16X4(out1_32, out1_32);
           *pout1 = (WORD8)AE_MOVAD16_0(out16);
@@ -747,7 +747,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
           ae_int16x4 out16;
           AE_L32_IP(acc, pscratch_test, sizeof(WORD32));
           MPY_BY_QUANT_MULT_X2_OUT32(out0_32, acc, output_multiplier[out_channel], left_shift, right_shift);
-          out0_32 = AE_ADD32(out0_32, AE_MOVDA32(output_offset));
+          out0_32 = AE_ADD32S(out0_32, AE_MOVDA32(output_offset));
           out0_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out0_32, AE_MOVDA32(out_activation_min))); 
           out16 = AE_SAT16X4(out0_32, out0_32);  
           *pout++ = (WORD8)AE_MOVAD16_0(out16);
@@ -828,7 +828,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         acc1 = AE_ADD64(acc1, AE_MOVINT64_FROMF32(dbias));
         acc = AE_MOVDA32X2(AE_MOVINT32_FROMINT64(acc0), AE_MOVINT32_FROMINT64(acc1));
         MPY_BY_QUANT_MULT_X2_OUT32(out32, acc, out_mult, left_shift, right_shift);
-        out32 = AE_ADD32(out32, AE_MOVDA32(output_offset));
+        out32 = AE_ADD32S(out32, AE_MOVDA32(output_offset));
         out32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out32, AE_MOVDA32(out_activation_min)));
         AE_L64_XP(acc0, pscratch, output_depth*sizeof(WORD64));
         AE_L64_XP(acc1, pscratch1, output_depth*sizeof(WORD64));
@@ -845,7 +845,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         acc1 = AE_SRAI64(acc1, 8);
         acc1 = AE_ADD64(acc1, AE_MOVINT64_FROMF32(dbias));   
         MPY_BY_QUANT_MULT_X2_OUT32(out1_32, AE_MOVDA32X2(AE_MOVINT32_FROMINT64(acc1), AE_MOVINT32_FROMINT64(acc1)), out_mult, left_shift, right_shift);
-        out1_32 = AE_ADD32(out1_32, AE_MOVDA32(output_offset));
+        out1_32 = AE_ADD32S(out1_32, AE_MOVDA32(output_offset));
         out1_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out1_32, AE_MOVDA32(out_activation_min)));
         out16 = AE_SAT16X4(out1_32, out1_32);
         *pout1 = (WORD8)AE_MOVAD16_0(out16);
@@ -874,7 +874,7 @@ static inline void tconv2d_sym8sxasym8s(WORD8* output_data,
         AE_L64_IP(acc, pscratch, sizeof(WORD64));
         acc = AE_SRAI64(acc, 8);   
         MPY_BY_QUANT_MULT_X2_OUT32(out0_32, AE_MOVDA32X2(AE_MOVINT32_FROMINT64(acc), AE_MOVINT32_FROMINT64(acc)), output_multiplier[out_channel], left_shift, right_shift);      
-        out0_32 = AE_ADD32(out0_32, AE_MOVDA32(output_offset));
+        out0_32 = AE_ADD32S(out0_32, AE_MOVDA32(output_offset));
         out0_32 = AE_MIN32(AE_MOVDA32(out_activation_max), AE_MAX32(out0_32, AE_MOVDA32(out_activation_min))); 
         out16 = AE_SAT16X4(out0_32, out0_32);  
         *pout++ = (WORD8)AE_MOVAD16_0(out16);

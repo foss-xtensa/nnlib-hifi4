@@ -50,5 +50,10 @@ int load_rnn_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t 
     buf1D_t *p_cell, buf1D_t *p_ig_W, buf1D_t *p_fg_W, buf1D_t *p_cg_W, buf1D_t *p_og_W,
     buf1D_t *p_ig_U, buf1D_t *p_fg_U, buf1D_t *p_cg_U, buf1D_t *p_og_U, buf1D_t *p_ig_W_bias,
     buf1D_t *p_fg_W_bias, buf1D_t *p_cg_W_bias, buf1D_t *p_og_W_bias);
+int load_gru_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp,
+    buf1D_t *p_hidden, buf1D_t *p_ug_W, buf1D_t *p_rg_W, buf1D_t *p_ms_W, 
+    buf1D_t *p_ug_U, buf1D_t *p_rg_U, buf1D_t *p_ms_U, buf1D_t *p_ug_W_bias,
+    buf1D_t *p_rg_W_bias, buf1D_t *p_ms_W_bias, buf1D_t *p_ug_U_bias,
+    buf1D_t *p_rg_U_bias, buf1D_t *p_ms_U_bias);
 int write_output_data(FILE *fptr_out, buf1D_t *p_out); 
 FILE* file_open(char *file_path, char *file_name, char *mode, int max_file_name_length);

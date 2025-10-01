@@ -26,6 +26,7 @@
 
 #include "xa_nnlib_common.h"
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 WORD32 xa_nn_matmul_sym8sxasym8s_sym16s(
     WORD16 * __restrict__ p_out,
     const WORD8 * __restrict__ p_mat1,
@@ -41,7 +42,8 @@ WORD32 xa_nn_matmul_sym8sxasym8s_sym16s(
     WORD32 vec1_zero_bias,
     WORD32 out_multiplier,
     WORD32 out_shift);
-    
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
+
 WORD32 xa_nn_lstm_getsize(
     WORD32 n_batch,
     WORD32 n_itr,
@@ -59,6 +61,7 @@ WORD32 xa_nn_lstm_getsize(
   return total_scratch_size;
 }
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 static void xa_nn_lstm_gate_integer_8x8_16(
     WORD16 *p_out,
     WORD16 *fc_out_W_ptr,
@@ -252,6 +255,10 @@ WORD32 xa_nn_lstm_sym8sxasym8s_16(
   XA_NNLIB_ARG_CHK_ALIGN(p_lstm_biases->p_fg_W_bias, sizeof(WORD32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_lstm_biases->p_cg_W_bias, sizeof(WORD32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_lstm_biases->p_og_W_bias, sizeof(WORD32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_lstm_biases->p_ig_U_bias, sizeof(WORD32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_lstm_biases->p_fg_U_bias, sizeof(WORD32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_lstm_biases->p_cg_U_bias, sizeof(WORD32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_lstm_biases->p_og_U_bias, sizeof(WORD32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_scratch, 8, 1);
   /* Check FC Quant Parameters */
   XA_NNLIB_ARG_CHK_COND((p_lstm_qp->ig_W_out_shift < -31 || p_lstm_qp->ig_W_out_shift > 31), -1);
@@ -277,10 +284,11 @@ WORD32 xa_nn_lstm_sym8sxasym8s_16(
   WORD16 *ig_fc_U_out_ptr, *fg_fc_U_out_ptr, *cg_fc_U_out_ptr, *og_fc_U_out_ptr;
   WORD32 ret;
 
-  WORD32 use_cifg, time_major;
+  WORD32 use_cifg, time_major, back;
   
   use_cifg = p_lstm_flags->use_cifg;
   time_major = p_lstm_flags->time_major;
+  back = p_lstm_flags->back;
 
   if(!use_cifg)
   {
@@ -387,7 +395,7 @@ WORD32 xa_nn_lstm_sym8sxasym8s_16(
         ret = xa_nn_matXvec_out_stride_sym8sxasym8s_16(ig_fc_U_out_ptr + offset_fc_out,
                                                        p_lstm_weights->p_ig_U,
                                                        p_hidden_state + offset_hidden,
-                                                       NULL,
+                                                       p_lstm_biases->p_ig_U_bias,
                                                        n_cell,
                                                        hidden_size,
                                                        hidden_size,
@@ -402,7 +410,7 @@ WORD32 xa_nn_lstm_sym8sxasym8s_16(
       ret = xa_nn_matXvec_out_stride_sym8sxasym8s_16(fg_fc_U_out_ptr + offset_fc_out,
                                                      p_lstm_weights->p_fg_U,
                                                      p_hidden_state + offset_hidden,
-                                                     NULL,
+                                                     p_lstm_biases->p_fg_U_bias,
                                                      n_cell,
                                                      hidden_size,
                                                      hidden_size,
@@ -416,7 +424,7 @@ WORD32 xa_nn_lstm_sym8sxasym8s_16(
       ret = xa_nn_matXvec_out_stride_sym8sxasym8s_16(cg_fc_U_out_ptr + offset_fc_out,
                                                      p_lstm_weights->p_cg_U,
                                                      p_hidden_state + offset_hidden,
-                                                     NULL,
+                                                     p_lstm_biases->p_cg_U_bias,
                                                      n_cell,
                                                      hidden_size,
                                                      hidden_size,
@@ -430,7 +438,7 @@ WORD32 xa_nn_lstm_sym8sxasym8s_16(
       ret = xa_nn_matXvec_out_stride_sym8sxasym8s_16(og_fc_U_out_ptr + offset_fc_out,
                                                      p_lstm_weights->p_og_U,
                                                      p_hidden_state + offset_hidden,
-                                                     NULL,
+                                                     p_lstm_biases->p_og_U_bias,
                                                      n_cell,
                                                      hidden_size,
                                                      hidden_size,
@@ -442,7 +450,16 @@ WORD32 xa_nn_lstm_sym8sxasym8s_16(
         return ret;
     }
 
-    WORD32 W_fc_out_offset = time_major ? itr_t * n_batch * n_cell : itr_t * n_cell;
+//    WORD32 W_fc_out_offset = time_major ? itr_t * n_batch * n_cell : itr_t * n_cell;
+    
+    WORD32 W_fc_out_offset = 0;
+    if(back){
+      W_fc_out_offset = time_major ? (n_itr-itr_t-1) * n_batch * n_cell : (n_itr-itr_t-1) * n_cell;
+    }
+    else{
+      W_fc_out_offset = time_major ? itr_t * n_batch * n_cell : itr_t * n_cell;
+    }
+
     if(!use_cifg)
     {
       xa_nn_lstm_gate_integer_8x8_16(ig_fc_U_out_ptr,
@@ -507,15 +524,28 @@ WORD32 xa_nn_lstm_sym8sxasym8s_16(
                                  ig_fc_U_out_ptr);
     if(time_major)
     {
-      MEMCPY_8b(&p_out[itr_t*n_batch*n_cell], p_hidden_state, (WORD32)(sizeof(WORD8) * n_batch * n_cell));
+    //  MEMCPY_8b(&p_out[itr_t*n_batch*n_cell], p_hidden_state, (WORD32)(sizeof(WORD8) * n_batch * n_cell));
+      if(back){
+        MEMCPY_8b(&p_out[(n_itr-itr_t-1)*n_batch*n_cell], p_hidden_state, (WORD32)(sizeof(WORD8) * n_batch * n_cell));
+      }
+      else{
+        MEMCPY_8b(&p_out[itr_t*n_batch*n_cell], p_hidden_state, (WORD32)(sizeof(WORD8) * n_batch * n_cell));
+      }
     }
     else
     {
       for(itr_b = 0; itr_b < n_batch; itr_b++)
       {
+      //  MEMCPY_8b(&p_out[(itr_t + itr_b * n_itr) * n_cell], &p_hidden_state[itr_b * n_cell], (WORD32)(sizeof(WORD8) * n_cell));
+       if(back){
+          MEMCPY_8b(&p_out[((n_itr-itr_t-1) + itr_b * n_itr) * n_cell], &p_hidden_state[itr_b * n_cell], (WORD32)(sizeof(WORD8) * n_cell));
+        }
+       else{
         MEMCPY_8b(&p_out[(itr_t + itr_b * n_itr) * n_cell], &p_hidden_state[itr_b * n_cell], (WORD32)(sizeof(WORD8) * n_cell));
+        }
       }
     }
   }
   return 0;
 }
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */

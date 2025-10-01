@@ -1716,7 +1716,7 @@ WORD32 xa_nn_reduce_mean_4D_asym8s_asym8s(WORD8 * __restrict__ p_out
   for(axis_itr=0; axis_itr < num_axis_dims; axis_itr++)
   {
     XA_NNLIB_ARG_CHK_COND(((p_axis[axis_itr] < 0) || (p_axis[axis_itr] > (num_inp_dims - 1))), -1);
-    XA_NNLIB_ARG_CHK_COND((p_inp_shape[p_axis[axis_itr]] > 1024), -1);
+    //XA_NNLIB_ARG_CHK_COND((p_inp_shape[p_axis[axis_itr]] > 1024), -1);
     
     /* Avoid calculation in case of repeated axis dims*/
     if((!axis_itr) || (p_axis[axis_itr] != p_axis[axis_itr-1]))

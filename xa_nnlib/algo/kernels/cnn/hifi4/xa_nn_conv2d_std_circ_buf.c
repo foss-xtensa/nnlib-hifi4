@@ -66,13 +66,12 @@ WORD32 xa_nn_conv2d_std_getsize(
 
 
   /* Unused variables kept for future use */
-  (void)kernel_precision;
   (void)dilation_height;
   (void)dilation_width;
   (void)out_data_format;
 
   WORD32 mem_req = 0;
-  WORD32 input_size;
+  WORD32 input_size, kernel_size;
   WORD32 align_size;
   WORD32 inp_h, inp_w, ker_h, ker_w, x_str, y_str, x_pad, y_pad, out_h, out_w;
 
@@ -141,6 +140,27 @@ WORD32 xa_nn_conv2d_std_getsize(
       break;
   }
 
+  switch(kernel_precision)
+  {
+    case 8:
+    case -4:
+    case -5:
+    case -3:
+      kernel_size = sizeof(WORD8);
+      break;
+    case -7:
+    case 16:
+    case -8:
+      kernel_size = sizeof(WORD16);
+      break;
+    case -1:
+      kernel_size = sizeof(WORD32);
+      break;
+    default:
+      return -1;
+      break;
+  }
+
   // Computing circular buffer size
   // Determine y-bottom padding
   WORD32 y_b_pad = ker_h + (out_h - 1) * y_str - (y_pad + inp_h);
@@ -184,7 +204,7 @@ WORD32 xa_nn_conv2d_std_getsize(
     )
 #endif
   {
-    int padded_kernel_size = kernel_height * kernel_width * kernel_channels_pad * output_channels * input_size;
+    int padded_kernel_size = kernel_height * kernel_width * kernel_channels_pad * output_channels * kernel_size;
     mem_req += ALIGNED_SIZE(padded_kernel_size, ALIGNMENT);
   }
 

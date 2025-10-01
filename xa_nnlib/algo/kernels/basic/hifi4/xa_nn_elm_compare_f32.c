@@ -23,6 +23,7 @@
 #include "xa_nn_basic_state.h"
 #include "xa_nnlib_common_macros.h"
 #include "xa_nnlib_common_fpu.h"
+#include "xa_nnlib_common_bcast_macro.h"
 
 #ifndef AE_MOVAB
 #ifdef AE_MOVAB1
@@ -439,14 +440,17 @@ WORD32 xa_nn_elm_compare_f32xf32_f32(WORD8 * __restrict__ p_out,
 }
 #endif
 #if HAVE_VFPU
-static void internal_elm_greater_lesser_equal_broadcast_2D_f32xf32_f32(WORD8 * __restrict__ p_out,
-                    const    FLOAT32 * __restrict__ p_inp1,
-                    const    FLOAT32 * __restrict__ p_inp2,
-                             WORD32  out_lc,
-                             WORD32  in_lc,
-                             xtbool  sign_flag,
-                             compare_ops_t kernel_type)
+static void internal_elm_greater_lesser_equal_broadcast_2D_f32xf32_f32(void * __restrict__ p_out,
+                    const    void * __restrict__ ptr_inp1,
+                    const    void * __restrict__ ptr_inp2,
+                    bcast_args_t* args)
 {
+  WORD32 out_lc = args->out_lc;
+  WORD32 in_lc = args->in_lc;
+  xtbool sign_flag = args->sign_flag;
+  compare_ops_t kernel_type = args->kernel_type;
+  FLOAT32 *p_inp1 = (FLOAT32*) ptr_inp1;
+  FLOAT32 *p_inp2 = (FLOAT32*) ptr_inp2;
   int i, j;
 
   xtfloatx2  * __restrict__ p_a = (xtfloatx2 *)p_inp1;
@@ -1192,13 +1196,14 @@ static void internal_elm_greater_lesser_equal_broadcast_2D_f32xf32_f32(WORD8 * _
   }
 }
 
-static void internal_elm_greater_lesser_equal_broadcast_f32xf32_f32(WORD8 * __restrict__ p_out,
-                    const    FLOAT32 * __restrict__ p_inp1,
-                    const    FLOAT32 * __restrict__ p_inp2,
-                             WORD32  num_elm,
-                             xtbool  sign_flag,
-                             compare_ops_t kernel_type)
+static void internal_elm_greater_lesser_equal_broadcast_f32xf32_f32(void * __restrict__ p_out,
+                    const    void * __restrict__ p_inp1,
+                    const    void * __restrict__ p_inp2,
+                    bcast_args_t* args)
 {
+  WORD32 num_elm = args->num_elm;
+  xtbool sign_flag = args->sign_flag;
+  compare_ops_t kernel_type = args->kernel_type;
   int i;
   xtfloatx2  * __restrict__ p_a = (xtfloatx2 *)p_inp1;
   xtfloatx2  * __restrict__ p_b = (xtfloatx2 *)p_inp2; 
@@ -1911,185 +1916,20 @@ WORD32 xa_nn_elm_compare_broadcast_4D_f32xf32_f32(WORD8 * __restrict__ p_out,
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((kernel_type < 0) || (kernel_type > 5), -1);
 
-  /* Check shapes */
-  int i;
-  xtbool sign_flag;
-  for(i = 0; i < 4; i++)
-  {
-    if((p_inp1_shape[i] != p_inp2_shape[i] && p_inp1_shape[i] != 1 && p_inp2_shape[i] != 1) ||
-       (p_out_shape[i] != (p_inp1_shape[i] > p_inp2_shape[i] ? p_inp1_shape[i] : p_inp2_shape[i])))
-    {
-      return -1;
-    }
-  }
+  bcast_args_t args = {0};
+  args.inp_elm_size = 4;
+  args.out_elm_size = 1;
+  args.multiplier_sign = 1;
+  args.kernel_type = kernel_type;
 
-  WORD32 inp1_strides[4], inp2_strides[4];
-  inp1_strides[3] = 1;
-  inp2_strides[3] = 1;
-  for(i = 2; i >= 0; i--)
-  {
-    ae_int32x2 d_str, d_shape;
-    d_str = AE_MOVDA32X2(inp1_strides[i + 1], inp2_strides[i + 1]);
-    d_shape = AE_MOVDA32X2(p_inp1_shape[i + 1], p_inp2_shape[i + 1]);
-    d_str = AE_MULP32X2(d_str, d_shape);
-    inp1_strides[i] = AE_MOVAD32_H(d_str);
-    inp2_strides[i] = AE_MOVAD32_L(d_str);
-  }
-
-  int need_broadcast = 0;
-  int inp1_const = 1, inp2_const = 1;
-  for(i = 0; i < 4; i++)
-  {
-    if(p_inp1_shape[i] != p_inp2_shape[i])
-    {
-      if(p_inp1_shape[i] == 1)
-        inp1_strides[i] = 0;
-      else
-        inp2_strides[i] = 0;
-
-      need_broadcast = 1;
-    }
-    if(p_inp1_shape[i] != 1)
-      inp1_const &= 0;
-    if(p_inp2_shape[i] != 1)
-      inp2_const &= 0;
-  }
-  int itr0, itr1, itr2;
-
-  WORD8 *p_out_tmp = p_out;
-  const FLOAT32 *__restrict__ p_inp1_tmp = p_inp1;
-  const FLOAT32 *__restrict__ p_inp2_tmp = p_inp2;
-  if(need_broadcast == 0)
-  {
-    sign_flag = 0;
-    internal_elm_greater_lesser_equal_broadcast_2D_f32xf32_f32(
-                p_out,
-                p_inp1,
-                p_inp2,
-                1,
-                p_out_shape[0] * inp1_strides[0],
-                sign_flag,
-                kernel_type);
-  }
-  else if(inp1_strides[3] == inp2_strides[3])
-  {
-    WORD32 in_lc, out_lc;
-    sign_flag = 0;
-    in_lc = p_out_shape[2] * p_out_shape[3];
-    out_lc = 1;
-    if(inp1_strides[2] == 0)
-    {
-      const FLOAT32 *tmp;
-      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
-      sign_flag = 1;
-      int tmp_strides[2];
-      tmp_strides[0] = inp1_strides[0];
-      tmp_strides[1] = inp1_strides[1];
-
-      inp1_strides[0] = inp2_strides[0];
-      inp1_strides[1] = inp2_strides[1];
-
-      inp2_strides[0] = tmp_strides[0];
-      inp2_strides[1] = tmp_strides[1];
-      in_lc = p_out_shape[3];
-      out_lc = p_out_shape[2];
-    }
-    else if(inp2_strides[2] == 0)
-    {
-      in_lc = p_out_shape[3];
-      out_lc = p_out_shape[2];
-    }
-
-    for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
-    {
-      const FLOAT32 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
-      const FLOAT32 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
-      for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
-      {
-        internal_elm_greater_lesser_equal_broadcast_2D_f32xf32_f32(
-            p_out_tmp,
-            p_inp1_tmp0,
-            p_inp2_tmp0,
-            out_lc,
-            in_lc,
-            sign_flag,
-            kernel_type);
-        p_out_tmp += in_lc * out_lc;
-        p_inp1_tmp0 += inp1_strides[1];
-        p_inp2_tmp0 += inp2_strides[1];
-      }
-      p_inp1_tmp += inp1_strides[0];
-      p_inp2_tmp += inp2_strides[0];
-    }
-  }
-  else if(inp1_const == 1 || inp2_const == 1)
-  {
-    sign_flag = 0;
-    if(inp1_strides[3] == 0)
-    {
-      sign_flag = 1;
-      const FLOAT32 *tmp;
-      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
-    }
-    internal_elm_greater_lesser_equal_broadcast_f32xf32_f32(
-        p_out_tmp,
-        p_inp1_tmp,
-        p_inp2_tmp,
-        p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3],
-        sign_flag,
-        kernel_type);
-  }
-  else
-  {
-    sign_flag = 0;
-    if(inp1_strides[3] == 0)
-    {
-      const FLOAT32 *tmp;
-      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
-      sign_flag = 1;
-      int tmp_strides[3];
-      tmp_strides[0] = inp1_strides[0];
-      tmp_strides[1] = inp1_strides[1];
-      tmp_strides[2] = inp1_strides[2];
-
-      inp1_strides[0] = inp2_strides[0];
-      inp1_strides[1] = inp2_strides[1];
-      inp1_strides[2] = inp2_strides[2];
-
-      inp2_strides[0] = tmp_strides[0];
-      inp2_strides[1] = tmp_strides[1];
-      inp2_strides[2] = tmp_strides[2];
-    }
-    for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
-    {
-      const FLOAT32 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
-      const FLOAT32 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
-      for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
-      {
-        const FLOAT32 *__restrict__ p_inp1_tmp1 = p_inp1_tmp0;
-        const FLOAT32 *__restrict__ p_inp2_tmp1 = p_inp2_tmp0;
-        for(itr2 = 0; itr2 < p_out_shape[2]; itr2++)
-        {
-          {
-            internal_elm_greater_lesser_equal_broadcast_f32xf32_f32(
-                p_out_tmp,
-                p_inp1_tmp1,
-                p_inp2_tmp1,
-                p_out_shape[3], 
-                sign_flag,
-                kernel_type);
-          }
-          p_out_tmp += p_out_shape[3];
-          p_inp1_tmp1 += inp1_strides[2];
-          p_inp2_tmp1 += inp2_strides[2];
-        }
-        p_inp1_tmp0 += inp1_strides[1];
-        p_inp2_tmp0 += inp2_strides[1];
-      }
-      p_inp1_tmp += inp1_strides[0];
-      p_inp2_tmp += inp2_strides[0];
-    }
-  }
-  return 0;
+  return CALL_BCAST(internal_elm_greater_lesser_equal_broadcast_2D_f32xf32_f32, 
+            internal_elm_greater_lesser_equal_broadcast_f32xf32_f32,
+            p_out,
+            p_out_shape,
+            p_inp1,
+            p_inp1_shape,
+            p_inp2,
+            p_inp2_shape,
+            &args);
 }
 #endif

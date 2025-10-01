@@ -30,9 +30,11 @@ WORD32 xa_nn_batch_matmul_getsize(
     WORD32 mat1_precision,
     WORD32 mat2_precision)
 {
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
    /* Pointer alignment checks */
   XA_NNLIB_ARG_CHK_ALIGN(p_mat1_shape, sizeof(WORD32), -1);
   XA_NNLIB_ARG_CHK_ALIGN(p_mat2_shape, sizeof(WORD32), -1);
+#endif
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((mat1_transpose != 0 && mat1_transpose != 1), -1);
   XA_NNLIB_ARG_CHK_COND((mat2_transpose != 0 && mat2_transpose != 1), -1);
@@ -89,6 +91,7 @@ WORD32 xa_nn_batch_matmul_getsize(
   return size;
 }
 
+#ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 /* Following kernel calculates contribution of matrix zero-biases towards final sum */
 static WORD32 internal_calc_mzbsum(WORD16 * __restrict__ p_out, const WORD8 * __restrict__ p_vec, WORD32 mat_zero_bias, WORD32 vec_zero_bias, int cols1)
 {
@@ -474,3 +477,4 @@ WORD32 xa_nn_batch_matmul_asym8sxasym8s_asym8s(
 
   return 0;
 }
+#endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */

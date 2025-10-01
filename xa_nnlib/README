@@ -27,6 +27,47 @@ Cadence HiFi 4 Neural Network (NN) Library
 Revision History
 ======================================================================
 
+Version 5.1.0 API 2.1: September 30, 2025
+
++ Intermediate Release of HiFi4 NN Library
++ Tested using the RJ-2024.3 tools and xt-clang/xt-clang++ compiler
++ Adds the following kernels:
+  xa_nn_elm_requantize_asym32s_asym16s
+  xa_nn_elm_requantize_asym32s_asym8s
+  xa_nn_gru_hidden_state_update_8
+  xa_nn_gru_sym8sxasym8s
++ Supports bit-exact implementation of xa_nn_matmul_f32xf32_f32, xa_nn_transpose_conv_f32 and xa_nn_matXvec_f32_circ kernels.
++ Added group > 1 support in the xa_nn_transpose_conv_sym8sxsym16s kernel.
++ Updated the xa_nn_avgpool_8 kernel to be bit-exact with TFLM for kernel_height * kernel_width > 1024
++ Added hidden FC biases support in LSTM kernel and backward LSTM support.
++ Improved accuracy in sigmoid_sym16s_sym16s and tanh_sym16s_sym16s kernels tie based implementation when input_multiplier=1 and input_left_shift is 0 to 3.
++ Fixes known issues to improve stability.
++ Improves performance of following 4D broadcast kernels: 
+  ADD (quant8, quant16, F32)
+  MUL (quant8, quant16, F32)
+  SUB (quant8, quant16, F32)
+  SQUARED_DIFF (quant8, quant16)
+  DIV (F32)
+  COMPARE (F32)
+  MIN/MAX (F32)
++ xa_nn_conv2d_std_getsize function is modified to return appropriate amount of the scratch space.
+
+Note:
+> The _v2 APIs are in beta stage and may change in next release.
+> Processor Configuration must be built with the SP-VFP option to compile floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for the C++11 standard. 
+  This is supported only with the Xtensa C library. 
+> The library makefile uses '-mno-mul16 -mno-mul32 -mno-div32' compile options. 
+  User may remove these from makefile for improved performance if their core config supports these HW options.
+
+Known issues
+> Compiler optimizations are not available for the ANN C++ source files.
+> 3 failures were seen in the ANN testcases because of differences in reference code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
 
 Version 5.0.0 API 2.0: February 7, 2025
 

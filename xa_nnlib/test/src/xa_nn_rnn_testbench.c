@@ -52,10 +52,13 @@ typedef struct _test_config_t
 {
   lstm_quant_params quant_params;
   lstm_flags flags;
+  gru_quant_params gru_q_params;
+  int time_major;
   int inp_size;
   int n_itr;
   int n_batch;
   int n_cell;
+  int hidden_size;
   int help;
   int ker_precision;
   int io_precision;
@@ -104,7 +107,7 @@ int default_config(test_config_t *p_cfg)
     p_cfg->quant_params.hidden_shift = -9;
     p_cfg->quant_params.input_zero_bias = 0;
     p_cfg->quant_params.hidden_zero_bias = 0;
-
+    
     p_cfg->flags.use_cifg = 0;
     p_cfg->flags.time_major = 0;
 
@@ -112,6 +115,34 @@ int default_config(test_config_t *p_cfg)
     p_cfg->n_itr = 64;
     p_cfg->n_batch = 16;
     p_cfg->n_cell = 96;
+    p_cfg->hidden_size = 96;
+    
+    p_cfg->gru_q_params.ug_W_out_multiplier = 0x40000000;
+    p_cfg->gru_q_params.rg_W_out_multiplier = 0x40000000;
+    p_cfg->gru_q_params.ms_W_out_multiplier = 0x40000000;
+    p_cfg->gru_q_params.ug_U_out_multiplier = 0x40000000;
+    p_cfg->gru_q_params.rg_U_out_multiplier = 0x40000000;
+    p_cfg->gru_q_params.ms_U_out_multiplier = 0x40000000;
+    p_cfg->gru_q_params.rg_fcU_out_multiplier = 0x40000000;
+    p_cfg->gru_q_params.ug_ms_out_multiplier = 0x40000000;
+    p_cfg->gru_q_params.ug_hidden_out_multiplier = 0x40000000;
+    p_cfg->gru_q_params.hidden_multiplier = 0x40000000;
+    
+    p_cfg->gru_q_params.ug_W_out_shift = -4;
+    p_cfg->gru_q_params.rg_W_out_shift = -4;
+    p_cfg->gru_q_params.ms_W_out_shift = -4;
+    p_cfg->gru_q_params.ug_U_out_shift = -4;
+    p_cfg->gru_q_params.rg_U_out_shift = -4;
+    p_cfg->gru_q_params.ms_U_out_shift = -4;
+    p_cfg->gru_q_params.rg_fcU_out_shift = -4;
+    p_cfg->gru_q_params.ug_ms_out_shift = -4;
+    p_cfg->gru_q_params.ug_hidden_out_shift = -4;
+    p_cfg->gru_q_params.hidden_shift = -4;
+    
+    p_cfg->gru_q_params.hidden_zero_bias = 0;
+    p_cfg->gru_q_params.input_zero_bias = 0;
+    
+    p_cfg->time_major = 0;
 
     strcpy(p_cfg->kernel_name,"lstm");
     p_cfg->frames   = 2;
@@ -145,21 +176,33 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_INDICATE("--help", p_cfg->help);
     ARGTYPE_INDICATE("-help", p_cfg->help);
     ARGTYPE_INDICATE("-h", p_cfg->help);
-    ARGTYPE_ONETIME_CONFIG("-input_zero_bias",p_cfg->quant_params.input_zero_bias);
-    ARGTYPE_ONETIME_CONFIG("-hidden_zero_bias",p_cfg->quant_params.hidden_zero_bias);
-    ARGTYPE_ONETIME_CONFIG("-hidden_multiplier",p_cfg->quant_params.hidden_multiplier);
-    ARGTYPE_ONETIME_CONFIG("-hidden_shift",p_cfg->quant_params.hidden_shift);
-    ARGTYPE_ONETIME_CONFIG("-quantized_cell_clip",p_cfg->quant_params.quantized_cell_clip);
-    ARGTYPE_ONETIME_CONFIG("-cell_state_scale",p_cfg->quant_params.cell_state_scale);
+    ARGTYPE_STRING("-kernel_name",p_cfg->kernel_name, MAX_RNN_NAME_LENGTH);
+    if(strcmp(p_cfg->kernel_name,"lstm") == 0)
+    {
+      ARGTYPE_ONETIME_CONFIG("-input_zero_bias",p_cfg->quant_params.input_zero_bias);
+      ARGTYPE_ONETIME_CONFIG("-hidden_zero_bias",p_cfg->quant_params.hidden_zero_bias);
+      ARGTYPE_ONETIME_CONFIG("-hidden_multiplier",p_cfg->quant_params.hidden_multiplier);
+      ARGTYPE_ONETIME_CONFIG("-hidden_shift",p_cfg->quant_params.hidden_shift);
+      ARGTYPE_ONETIME_CONFIG("-quantized_cell_clip",p_cfg->quant_params.quantized_cell_clip);
+      ARGTYPE_ONETIME_CONFIG("-cell_state_scale",p_cfg->quant_params.cell_state_scale);
+      ARGTYPE_ONETIME_CONFIG("-time_major",p_cfg->flags.time_major);
+    }
+    else
+    {
+      ARGTYPE_ONETIME_CONFIG("-input_zero_bias",p_cfg->gru_q_params.input_zero_bias);
+      ARGTYPE_ONETIME_CONFIG("-hidden_zero_bias",p_cfg->gru_q_params.hidden_zero_bias);
+      ARGTYPE_ONETIME_CONFIG("-hidden_multiplier",p_cfg->gru_q_params.hidden_multiplier);
+      ARGTYPE_ONETIME_CONFIG("-hidden_shift",p_cfg->gru_q_params.hidden_shift);
+      ARGTYPE_ONETIME_CONFIG("-time_major",p_cfg->time_major);
+    }
     ARGTYPE_ONETIME_CONFIG("-inp_size",p_cfg->inp_size);
     ARGTYPE_ONETIME_CONFIG("-n_itr",p_cfg->n_itr);
     ARGTYPE_ONETIME_CONFIG("-n_batch",p_cfg->n_batch);
     ARGTYPE_ONETIME_CONFIG("-n_cell",p_cfg->n_cell);
-    ARGTYPE_ONETIME_CONFIG("-time_major",p_cfg->flags.time_major);
+    ARGTYPE_ONETIME_CONFIG("-hidden_size",p_cfg->hidden_size);
     ARGTYPE_ONETIME_CONFIG("-ker_precision",p_cfg->ker_precision);
     ARGTYPE_ONETIME_CONFIG("-io_precision",p_cfg->io_precision);
     ARGTYPE_ONETIME_CONFIG("-cell_precision",p_cfg->cell_precision);
-    ARGTYPE_STRING("-kernel_name",p_cfg->kernel_name, MAX_RNN_NAME_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-frames",p_cfg->frames);
     ARGTYPE_ONETIME_CONFIG("-write_file",p_cfg->write_file);
     ARGTYPE_STRING("-read_inp_file_name",p_cfg->read_inp_file_name, MAX_FILE_NAME_LENGTH);
@@ -190,6 +233,7 @@ void show_usage(void)
     printf("\t-n_itr: Number of time iterations; Default=64\n");
     printf("\t-n_batch: Number of elements in batch dimension; Default=16\n");
     printf("\t-n_cell: Number of elements in cell state; Default=96\n");
+    printf("\t-hidden_size: Number of elements in hidden state; Default=96\n");
     printf("\t-time_major: Order of input and output 1: time is outer most dimension, 0: batch is outer most dimension Default=0\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-kernel_name: lstm; Default=lstm\n");
@@ -224,9 +268,32 @@ void show_usage(void)
               ); \
     XTPWR_PROFILER_STOP(0); \
   }
+  
+#define GRU_8X8(KPREC, IOPREC, KERNEL) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == cfg.ker_precision) && (IOPREC == cfg.io_precision)) { \
+    XTPWR_PROFILER_START(0); \
+        err = xa_nn_gru_sym8sxasym8s \
+              (\
+                (WORD8 *)p_out->p, \
+                (WORD8 *)p_hidden->p, \
+                &gru_weights, \
+                &gru_biases, \
+                (WORD8 *)p_inp->p,\
+                cfg.inp_size, \
+                cfg.hidden_size, \
+                cfg.hidden_size, \
+                cfg.n_batch, \
+                cfg.n_itr, \
+                &cfg.gru_q_params, \
+                cfg.time_major, \
+                p_scratch->p \
+              ); \
+    XTPWR_PROFILER_STOP(0); \
+  }
 
 #define PROCESS_RNN \
     LSTM_8X8_16(-5, -4, 16, lstm) \
+    else GRU_8X8(-5, -4, gru) \
     else {  printf("unsupported RNN kernel\n"); return -1;}
 
 int xa_nn_main_process(int argc, char *argv[])
@@ -255,6 +322,8 @@ int xa_nn_main_process(int argc, char *argv[])
 
 
   /*Declare variables for FC, peephole and layer norm buffers*/
+  lstm_weights_ptrs lstm_weights;
+  lstm_bias_ptrs lstm_biases;
   buf1D_t *p_ig_W;
   buf1D_t *p_fg_W;
   buf1D_t *p_cg_W;
@@ -268,6 +337,24 @@ int xa_nn_main_process(int argc, char *argv[])
   buf1D_t *p_fg_W_bias;
   buf1D_t *p_cg_W_bias;
   buf1D_t *p_og_W_bias;
+  
+  /* declare gru weigth buffers */
+  gru_weights_ptrs gru_weights;
+  gru_bias_ptrs gru_biases;
+  buf1D_t *p_ug_W;
+  buf1D_t *p_rg_W;
+  buf1D_t *p_ms_W;
+  buf1D_t *p_ug_U;
+  buf1D_t *p_rg_U;
+  buf1D_t *p_ms_U;
+
+  buf1D_t *p_ug_W_bias;
+  buf1D_t *p_rg_W_bias;
+  buf1D_t *p_ms_W_bias;
+  
+  buf1D_t *p_ug_U_bias;
+  buf1D_t *p_rg_U_bias;
+  buf1D_t *p_ms_U_bias;
 
   if(default_config(&cfg))
   {
@@ -291,13 +378,22 @@ int xa_nn_main_process(int argc, char *argv[])
   strcpy(dot_add, new_ext);
 #endif
   // Set profiler name
-  if(cfg.ker_precision == -5 && cfg.io_precision == -4 && cfg.cell_precision == 16)
+  if(strcmp(cfg.kernel_name,"lstm") == 0 && cfg.ker_precision == -5 && cfg.io_precision == -4 && cfg.cell_precision == 16)
     sprintf(profiler_name, "%s_sym8sxasym8s_%d", cfg.kernel_name, cfg.cell_precision);
+  else if(strcmp(cfg.kernel_name,"gru") == 0 && cfg.ker_precision == -5 && cfg.io_precision == -4)
+    sprintf(profiler_name, "%s_sym8sxasym8s", cfg.kernel_name);
 
   // Set profiler parameters
-  sprintf(profiler_params, "inp_size=%d, n_itr=%d, n_batch=%d, n_cell=%d",
+  if(strcmp(cfg.kernel_name,"gru") == 0)
+  {
+    sprintf(profiler_params, "inp_size=%d, n_itr=%d, n_batch=%d, hidden_size=%d",
+          cfg.inp_size, cfg.n_itr, cfg.n_batch, cfg.hidden_size);
+  }  
+  else
+  {
+    sprintf(profiler_params, "inp_size=%d, n_itr=%d, n_batch=%d, n_cell=%d",
           cfg.inp_size, cfg.n_itr, cfg.n_batch, cfg.n_cell);
-
+  }
   // Open input file
   if(cfg.write_file)
   {
@@ -320,59 +416,119 @@ int xa_nn_main_process(int argc, char *argv[])
   // Open reference file if verify flag is enabled
   if(cfg.verify)
   {
-    ptr_ref =  create_buf1D((cfg.n_batch * cfg.n_itr * cfg.n_cell), cfg.io_precision);
+    if(strcmp(cfg.kernel_name,"gru") == 0)
+      ptr_ref =  create_buf1D((cfg.n_batch * cfg.n_itr * cfg.hidden_size), cfg.io_precision);
+    else
+      ptr_ref =  create_buf1D((cfg.n_batch * cfg.n_itr * cfg.n_cell), cfg.io_precision);
 
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
 
   // Allocate Memory
-  p_out = create_buf1D((cfg.n_itr * cfg.n_batch * cfg.n_cell), cfg.io_precision); VALIDATE_PTR(p_out);
-  p_hidden = create_buf1D((cfg.n_batch * cfg.n_cell), cfg.io_precision); VALIDATE_PTR(p_hidden);
-  p_cell = create_buf1D((cfg.n_batch * cfg.n_cell), cfg.cell_precision); VALIDATE_PTR(p_cell);
   p_inp = create_buf1D((cfg.n_itr * cfg.n_batch * cfg.inp_size), cfg.io_precision); VALIDATE_PTR(p_inp);
+  if(strcmp(cfg.kernel_name,"gru") == 0)
+  {
+    p_out = create_buf1D((cfg.n_itr * cfg.n_batch * cfg.hidden_size), cfg.io_precision); VALIDATE_PTR(p_out);
+    p_hidden = create_buf1D((cfg.n_batch * cfg.hidden_size), cfg.io_precision); VALIDATE_PTR(p_hidden);
+    
+    p_ug_W = create_buf1D(cfg.hidden_size * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_ug_W);
+    p_rg_W = create_buf1D(cfg.hidden_size * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_rg_W);
+    p_ms_W = create_buf1D(cfg.hidden_size * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_ms_W);
+    p_ug_U = create_buf1D(cfg.hidden_size * cfg.hidden_size, cfg.ker_precision);    VALIDATE_PTR(p_ug_U);
+    p_rg_U = create_buf1D(cfg.hidden_size * cfg.hidden_size, cfg.ker_precision);    VALIDATE_PTR(p_rg_U);
+    p_ms_U = create_buf1D(cfg.hidden_size * cfg.hidden_size, cfg.ker_precision);    VALIDATE_PTR(p_ms_U);
 
-  p_ig_W = create_buf1D(cfg.n_cell * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_ig_W);
-  p_fg_W = create_buf1D(cfg.n_cell * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_fg_W);
-  p_cg_W = create_buf1D(cfg.n_cell * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_cg_W);
-  p_og_W = create_buf1D(cfg.n_cell * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_og_W);
-  p_ig_U = create_buf1D(cfg.n_cell * cfg.n_cell, cfg.ker_precision);    VALIDATE_PTR(p_ig_U);
-  p_fg_U = create_buf1D(cfg.n_cell * cfg.n_cell, cfg.ker_precision);    VALIDATE_PTR(p_fg_U);
-  p_cg_U = create_buf1D(cfg.n_cell * cfg.n_cell, cfg.ker_precision);    VALIDATE_PTR(p_cg_U);
-  p_og_U = create_buf1D(cfg.n_cell * cfg.n_cell, cfg.ker_precision);    VALIDATE_PTR(p_og_U);
+    p_ug_W_bias = create_buf1D(cfg.hidden_size, 32);   VALIDATE_PTR(p_ug_W_bias);
+    p_rg_W_bias = create_buf1D(cfg.hidden_size, 32);   VALIDATE_PTR(p_rg_W_bias);
+    p_ms_W_bias = create_buf1D(cfg.hidden_size, 32);   VALIDATE_PTR(p_ms_W_bias);
+    p_ug_U_bias = create_buf1D(cfg.hidden_size, 32);   VALIDATE_PTR(p_ug_U_bias);
+    p_rg_U_bias = create_buf1D(cfg.hidden_size, 32);   VALIDATE_PTR(p_rg_U_bias);
+    p_ms_U_bias = create_buf1D(cfg.hidden_size, 32);   VALIDATE_PTR(p_ms_U_bias);
 
-  p_ig_W_bias = create_buf1D(cfg.n_cell, 32);   VALIDATE_PTR(p_ig_W_bias);
-  p_fg_W_bias = create_buf1D(cfg.n_cell, 32);   VALIDATE_PTR(p_fg_W_bias);
-  p_cg_W_bias = create_buf1D(cfg.n_cell, 32);   VALIDATE_PTR(p_cg_W_bias);
-  p_og_W_bias = create_buf1D(cfg.n_cell, 32);   VALIDATE_PTR(p_og_W_bias);
+    gru_weights.p_ug_W = (WORD8 *)(p_ug_W->p);
+    gru_weights.p_rg_W = (WORD8 *)(p_rg_W->p);
+    gru_weights.p_ms_W = (WORD8 *)(p_ms_W->p);
+    gru_weights.p_ug_U = (WORD8 *)(p_ug_U->p);
+    gru_weights.p_rg_U = (WORD8 *)(p_rg_U->p);
+    gru_weights.p_ms_U = (WORD8 *)(p_ms_U->p);
 
-  lstm_weights_ptrs lstm_weights;
-  lstm_bias_ptrs lstm_biases;
-  lstm_weights.p_ig_W = (WORD8 *)(p_ig_W->p);
-  lstm_weights.p_fg_W = (WORD8 *)(p_fg_W->p);
-  lstm_weights.p_cg_W = (WORD8 *)(p_cg_W->p);
-  lstm_weights.p_og_W = (WORD8 *)(p_og_W->p);
-  lstm_weights.p_ig_U = (WORD8 *)(p_ig_U->p);
-  lstm_weights.p_fg_U = (WORD8 *)(p_fg_U->p);
-  lstm_weights.p_cg_U = (WORD8 *)(p_cg_U->p);
-  lstm_weights.p_og_U = (WORD8 *)(p_og_U->p);
+    gru_biases.p_ug_W_bias = (WORD32 *)(p_ug_W_bias->p);
+    gru_biases.p_rg_W_bias = (WORD32 *)(p_rg_W_bias->p);
+    gru_biases.p_ms_W_bias = (WORD32 *)(p_ms_W_bias->p);
+    gru_biases.p_ug_U_bias = (WORD32 *)(p_ug_U_bias->p);
+    gru_biases.p_rg_U_bias = (WORD32 *)(p_rg_U_bias->p);
+    gru_biases.p_ms_U_bias = (WORD32 *)(p_ms_U_bias->p);
 
-  lstm_biases.p_ig_W_bias = (WORD32 *)(p_ig_W_bias->p);
-  lstm_biases.p_fg_W_bias = (WORD32 *)(p_fg_W_bias->p);
-  lstm_biases.p_cg_W_bias = (WORD32 *)(p_cg_W_bias->p);
-  lstm_biases.p_og_W_bias = (WORD32 *)(p_og_W_bias->p);
+    scratch_size = xa_nn_gru_getsize(cfg.n_batch, cfg.n_itr, cfg.hidden_size, cfg.io_precision);
+    p_scratch = create_buf1D(scratch_size, 8); VALIDATE_PTR(p_scratch);
+  }
+  else
+  {
+    p_out = create_buf1D((cfg.n_itr * cfg.n_batch * cfg.n_cell), cfg.io_precision); VALIDATE_PTR(p_out);
+    p_hidden = create_buf1D((cfg.n_batch * cfg.n_cell), cfg.io_precision); VALIDATE_PTR(p_hidden);
+    p_cell = create_buf1D((cfg.n_batch * cfg.n_cell), cfg.cell_precision); VALIDATE_PTR(p_cell);
+    
+    p_ig_W = create_buf1D(cfg.n_cell * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_ig_W);
+    p_fg_W = create_buf1D(cfg.n_cell * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_fg_W);
+    p_cg_W = create_buf1D(cfg.n_cell * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_cg_W);
+    p_og_W = create_buf1D(cfg.n_cell * cfg.inp_size, cfg.ker_precision);  VALIDATE_PTR(p_og_W);
+    p_ig_U = create_buf1D(cfg.n_cell * cfg.n_cell, cfg.ker_precision);    VALIDATE_PTR(p_ig_U);
+    p_fg_U = create_buf1D(cfg.n_cell * cfg.n_cell, cfg.ker_precision);    VALIDATE_PTR(p_fg_U);
+    p_cg_U = create_buf1D(cfg.n_cell * cfg.n_cell, cfg.ker_precision);    VALIDATE_PTR(p_cg_U);
+    p_og_U = create_buf1D(cfg.n_cell * cfg.n_cell, cfg.ker_precision);    VALIDATE_PTR(p_og_U);
 
-  scratch_size = xa_nn_lstm_getsize(cfg.n_batch, cfg.n_itr, cfg.n_cell, cfg.cell_precision);
-  p_scratch = create_buf1D(scratch_size, 8); VALIDATE_PTR(p_scratch);
+    p_ig_W_bias = create_buf1D(cfg.n_cell, 32);   VALIDATE_PTR(p_ig_W_bias);
+    p_fg_W_bias = create_buf1D(cfg.n_cell, 32);   VALIDATE_PTR(p_fg_W_bias);
+    p_cg_W_bias = create_buf1D(cfg.n_cell, 32);   VALIDATE_PTR(p_cg_W_bias);
+    p_og_W_bias = create_buf1D(cfg.n_cell, 32);   VALIDATE_PTR(p_og_W_bias);
 
-  XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, 4 * (cfg.n_itr * cfg.n_batch * cfg.n_cell) * (cfg.n_cell + cfg.inp_size), "MAC/cyc", 1);
+    lstm_weights.p_ig_W = (WORD8 *)(p_ig_W->p);
+    lstm_weights.p_fg_W = (WORD8 *)(p_fg_W->p);
+    lstm_weights.p_cg_W = (WORD8 *)(p_cg_W->p);
+    lstm_weights.p_og_W = (WORD8 *)(p_og_W->p);
+    lstm_weights.p_ig_U = (WORD8 *)(p_ig_U->p);
+    lstm_weights.p_fg_U = (WORD8 *)(p_fg_U->p);
+    lstm_weights.p_cg_U = (WORD8 *)(p_cg_U->p);
+    lstm_weights.p_og_U = (WORD8 *)(p_og_U->p);
 
+    lstm_biases.p_ig_W_bias = (WORD32 *)(p_ig_W_bias->p);
+    lstm_biases.p_fg_W_bias = (WORD32 *)(p_fg_W_bias->p);
+    lstm_biases.p_cg_W_bias = (WORD32 *)(p_cg_W_bias->p);
+    lstm_biases.p_og_W_bias = (WORD32 *)(p_og_W_bias->p);
+
+    lstm_biases.p_ig_U_bias = NULL;
+    lstm_biases.p_fg_U_bias = NULL;
+    lstm_biases.p_cg_U_bias = NULL;
+    lstm_biases.p_og_U_bias = NULL;
+
+    scratch_size = xa_nn_lstm_getsize(cfg.n_batch, cfg.n_itr, cfg.n_cell, cfg.cell_precision);
+    p_scratch = create_buf1D(scratch_size, 8); VALIDATE_PTR(p_scratch);
+  }
+
+  if(strcmp(cfg.kernel_name,"lstm") == 0)
+  {
+    XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, 4 * (cfg.n_itr * cfg.n_batch * cfg.n_cell) * (cfg.n_cell + cfg.inp_size), "MAC/cyc", 1);
+  }
+  else if(strcmp(cfg.kernel_name,"gru") == 0)
+  {  
+    XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, 3 * (cfg.n_itr * cfg.n_batch * cfg.hidden_size) * (cfg.hidden_size + cfg.inp_size), "MAC/cyc", 1);
+  }
   // Frame processing loop
   for(frame = 0; frame < cfg.frames; frame++)
   {
-    load_rnn_input_data(cfg.write_file, fptr_inp, p_inp, p_hidden, p_cell,
-        p_ig_W, p_fg_W, p_cg_W, p_og_W, p_ig_U, p_fg_U, p_cg_U, p_og_U,
-        p_ig_W_bias, p_fg_W_bias, p_cg_W_bias, p_og_W_bias);
-
+    if(strcmp(cfg.kernel_name,"gru") == 0)
+    {
+      load_gru_input_data(cfg.write_file, fptr_inp, p_inp, p_hidden, 
+          p_ug_W, p_rg_W, p_ms_W, p_ug_U, p_rg_U, p_ms_U, 
+          p_ug_W_bias, p_rg_W_bias, p_ms_W_bias,
+          p_ug_U_bias, p_rg_U_bias, p_ms_U_bias);
+    }
+    else
+    {
+      load_rnn_input_data(cfg.write_file, fptr_inp, p_inp, p_hidden, p_cell,
+          p_ig_W, p_fg_W, p_cg_W, p_og_W, p_ig_U, p_fg_U, p_cg_U, p_og_U,
+          p_ig_W_bias, p_fg_W_bias, p_cg_W_bias, p_og_W_bias);
+    }
     // Call the kernel_name specified on command line
     PROCESS_RNN;
 
@@ -410,20 +566,38 @@ int xa_nn_main_process(int argc, char *argv[])
   free_buf1D(p_out);
   free_buf1D(p_hidden);
   free_buf1D(p_cell);
-  free_buf1D(p_ig_W);
-  free_buf1D(p_fg_W);
-  free_buf1D(p_cg_W);
-  free_buf1D(p_og_W);
-  free_buf1D(p_ig_U);
-  free_buf1D(p_fg_U);
-  free_buf1D(p_cg_U);
-  free_buf1D(p_og_U);
-  free_buf1D(p_ig_W_bias);
-  free_buf1D(p_fg_W_bias);
-  free_buf1D(p_cg_W_bias);
-  free_buf1D(p_og_W_bias);
   free_buf1D(p_inp);
-
+  if(strcmp(cfg.kernel_name,"gru") == 0)
+  {
+    free_buf1D(p_ug_W);
+    free_buf1D(p_rg_W);
+    free_buf1D(p_ms_W);
+    free_buf1D(p_ug_W);
+    free_buf1D(p_ug_U);
+    free_buf1D(p_rg_U);
+    free_buf1D(p_ms_U);
+    free_buf1D(p_ug_W_bias);
+    free_buf1D(p_rg_W_bias);
+    free_buf1D(p_ms_W_bias);
+    free_buf1D(p_ug_U_bias);
+    free_buf1D(p_rg_U_bias);
+    free_buf1D(p_ms_U_bias);
+  }
+  else
+  {
+    free_buf1D(p_ig_W);
+    free_buf1D(p_fg_W);
+    free_buf1D(p_cg_W);
+    free_buf1D(p_og_W);
+    free_buf1D(p_ig_U);
+    free_buf1D(p_fg_U);
+    free_buf1D(p_cg_U);
+    free_buf1D(p_og_U);
+    free_buf1D(p_ig_W_bias);
+    free_buf1D(p_fg_W_bias);
+    free_buf1D(p_cg_W_bias);
+    free_buf1D(p_og_W_bias);
+  }
   if(cfg.verify)
   {
     fclose(fptr_ref);

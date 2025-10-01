@@ -252,24 +252,42 @@ static inline ae_int16x4 AE_L8X4F_I(const WORD8 *p, int inc)
 { \
   ae_int8x8 out32; \
   out32 = AE_SEL8X8(AE_MOVINT8X8_FROMINT16X4(outbuf_0), AE_MOVINT8X8_FROMINT16X4(outbuf_1), AE_MOVINT8X8_FROMINT32X2(AE_MOVDA32X2(0x080a0c0e, 0x00020406))); \
-  AE_S32_H_XP(AE_MOVINT32X2_FROMINT8X8(out32), (ae_int32 *)pOut, out_offset); \
-  AE_S32_L_XP(AE_MOVINT32X2_FROMINT8X8(out32), (ae_int32 *)pOut, out_offset); \
+  ae_int32 *p32_Out = (ae_int32 *)pOut; \
+  AE_S32_H_XP(AE_MOVINT32X2_FROMINT8X8(out32), p32_Out, out_offset); \
+  AE_S32_L_XP(AE_MOVINT32X2_FROMINT8X8(out32), p32_Out, out_offset); \
+  pOut = (WORD8*)p32_Out; \
 }
 #define STORE_16x4_8x4(outbuf, pOut, out_offset) \
 { \
   ae_int8x8 out32; \
+  ae_int32 *p32_Out = (ae_int32 *)pOut; \
   out32 = AE_SEL8X8(AE_MOVINT8X8_FROMINT16X4(outbuf), AE_MOVINT8X8_FROMINT16X4(outbuf), AE_MOVINT8X8_FROMINT32X2(AE_MOVDA32X2(0x080a0c0e, 0x00020406))); \
-  AE_S32_H_XP(AE_MOVINT32X2_FROMINT8X8(out32), (ae_int32 *)pOut, out_offset); \
+  AE_S32_H_XP(AE_MOVINT32X2_FROMINT8X8(out32), p32_Out, out_offset); \
+  pOut = (WORD8 *)p32_Out; \
+}
+#define STORE_16x4_8x4_pINT32(outbuf, pOut, out_offset) \
+{ \
+  ae_int8x8 out32; \
+  out32 = AE_SEL8X8(AE_MOVINT8X8_FROMINT16X4(outbuf), AE_MOVINT8X8_FROMINT16X4(outbuf), AE_MOVINT8X8_FROMINT32X2(AE_MOVDA32X2(0x080a0c0e, 0x00020406))); \
+  AE_S32_H_XP(AE_MOVINT32X2_FROMINT8X8(out32), pOut, out_offset); \
 }
 #else
 #define STORE_16x4x2_8x4x2(outbuf_0, outbuf_1, pOut, out_offset) \
 { \
-  AE_S8X4U_XP(outbuf_0, (ae_int32 *)pOut, out_offset); \
-  AE_S8X4U_XP(outbuf_1, (ae_int32 *)pOut, out_offset); \
+  ae_int32 *p32_Out = (ae_int32 *)pOut; \
+  AE_S8X4U_XP(outbuf_0, p32_Out, out_offset); \
+  AE_S8X4U_XP(outbuf_1, p32_Out, out_offset); \
+  pOut = (WORD8 *)p32_Out; \
 }
 #define STORE_16x4_8x4(outbuf, pOut, out_offset) \
 { \
-  AE_S8X4U_XP(outbuf, (ae_int32 *)pOut, out_offset); \
+  ae_int32 *p32_Out = (ae_int32 *)pOut; \
+  AE_S8X4U_XP(outbuf, p32_Out, out_offset); \
+  pOut = (WORD8 *)p32_Out; \
+}
+#define STORE_16x4_8x4_pINT32(outbuf, pOut, out_offset) \
+{ \
+  AE_S8X4U_XP(outbuf, pOut, out_offset); \
 }
 #endif // #ifndef AE_S8X4U_XP
 

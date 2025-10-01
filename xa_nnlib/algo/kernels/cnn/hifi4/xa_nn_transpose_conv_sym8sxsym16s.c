@@ -109,8 +109,9 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
     int input_depth, int output_depth,
     int input_height, int input_width,
     int filter_height, int filter_width,
+    int indepth_per_grp, int outdepth_per_grp,
     int output_height, int output_width,
-    int num_elements,
+    int num_elements, int num_groups,
     int *output_shift, int *output_multiplier,
     int64_t* scratch_buffer,
     WORD32 out_activation_min,
@@ -131,8 +132,9 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
 #if XCHAL_HAVE_HIFI1S
   if(input_data && filter_data && output_data && scratch_buffer &&
       (((unsigned int)input_data&0x7)==0) && (((unsigned int)filter_data&0x7)==0) && (((unsigned int)output_data&0x7) == 0) &&
-      (((unsigned int)scratch_buffer&0x7) == 0) && ((input_depth&0xF)==0))
+      (((unsigned int)scratch_buffer&0x7) == 0) && ((indepth_per_grp&0xF)==0))
   {
+    for (int g = 0; g < num_groups; ++g)
     {
       //tbd : batch = 1, need to handle other values and in_x_min/max= 0 .. need toc heck for other values
       for (int in_y = 0; in_y < input_height; ++in_y)
@@ -153,9 +155,9 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
           filt_y_min = (filt_y_min < 0) ? 0 : filt_y_min;
           filt_y_max = (filt_y_max < filter_height) ? filt_y_max : filter_height;
           filt_y_max = (filt_y_max < 0) ? 0 : filt_y_max;
-          pinp =  (WORD16*)&input_data[in_y*input_width*input_depth+in_x*input_depth];
+          pinp =  (WORD16*)&input_data[in_y*input_width*input_depth+in_x*input_depth+g*indepth_per_grp];
           int in_channel = 0;
-          for (; in_channel + 15 < input_depth; in_channel+=16)
+          for (; in_channel + 15 < indepth_per_grp; in_channel+=16)
           {
             ae_int16x4 d_inp, d_inp1, d_inp2, d_inp3;
             AE_L16X4_IP(d_inp, (ae_int16x4*)pinp, sizeof(WORD64));
@@ -170,15 +172,15 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
                 // Compute output element location.
                 int out_x = out_x_orig + filter_x;
                 int out_y = out_y_orig + filter_y;
-                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth];
+                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth+g*outdepth_per_grp];
                 ae_int64 d_scr;
-                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
+                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel+g*indepth_per_grp];
                 ae_int8x8 d_fil, d_fil1;
 
                 AE_L8X8_IP(d_fil, (ae_int8x8*)pfilt, 8);
                 AE_L8X8_XP(d_fil1, (ae_int8x8*)pfilt, stride1-8);
 
-                for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                for (int out_channel = 0; out_channel < outdepth_per_grp; ++out_channel)
                 {
                   d_scr = AE_L64_I(pscratch_src, 0);
                   AE_MULAO8X16 (d_scr, d_inp, d_inp1, d_fil);
@@ -198,8 +200,9 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
 #endif // XCHAL_HAVE_HIFI1S  
   if(input_data && filter_data && output_data && scratch_buffer &&
       (((unsigned int)input_data&0x7)==0) && (((unsigned int)filter_data&0x3)==0) && (((unsigned int)output_data&0x7) == 0) &&
-      (((unsigned int)scratch_buffer&0x7) == 0) && ((input_depth&0x3)==0))
+      (((unsigned int)scratch_buffer&0x7) == 0) && ((indepth_per_grp&0x3)==0) )
   {
+    for (int g = 0; g < num_groups; ++g)
 #if XCHAL_HAVE_HIFI1S
     {
       for (int in_y = 0; in_y < input_height; ++in_y)
@@ -220,9 +223,9 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
           filt_y_min = (filt_y_min < 0) ? 0 : filt_y_min;
           filt_y_max = (filt_y_max < filter_height) ? filt_y_max : filter_height;
           filt_y_max = (filt_y_max < 0) ? 0 : filt_y_max;
-          pinp =  (WORD16*)&input_data[in_y*input_width*input_depth+in_x*input_depth];
+          pinp =  (WORD16*)&input_data[in_y*input_width*input_depth+in_x*input_depth+g*indepth_per_grp];
           int in_channel = 0;
-          for (; in_channel + 15 < input_depth; in_channel+=16)
+          for (; in_channel + 15 < indepth_per_grp; in_channel+=16)
           {
             ae_int16x4 d_inp, d_inp1, d_inp2, d_inp3;
             AE_L16X4_IP(d_inp, (ae_int16x4*)pinp, sizeof(WORD64));
@@ -237,9 +240,9 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
                 // Compute output element location.
                 int out_x = out_x_orig + filter_x;
                 int out_y = out_y_orig + filter_y;
-                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth];
+                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth+g*outdepth_per_grp];
                 ae_int64 d_scr;
-                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
+                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + g*indepth_per_grp + in_channel];
                 ae_int8x8 d_fil, d_fil1;
                 ae_valign filter_align = AE_LA64_PP(pfilt);
 
@@ -247,7 +250,7 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
                 AE_LA8X8_IP(d_fil1, filter_align, (ae_int8x8*)pfilt);
                 pfilt += (stride1-16);
 
-                for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                for (int out_channel = 0; out_channel < outdepth_per_grp; ++out_channel)
                 {
                   d_scr = AE_L64_I(pscratch_src, 0);
                   AE_MULAO8X16 (d_scr, d_inp, d_inp1, d_fil);
@@ -261,7 +264,7 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
               }
             }
           }
-          for (; in_channel + 3 < input_depth; in_channel+=4)
+          for (; in_channel + 3 < indepth_per_grp; in_channel+=4)
           {
             ae_int16x4 d_inp;
             AE_L16X4_IP(d_inp, (ae_int16x4*)pinp, sizeof(WORD64));
@@ -273,14 +276,14 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
                 // Compute output element location.
                 int out_x = out_x_orig + filter_x;//out_x_origin + filter_x;
                 int out_y = out_y_orig + filter_y;//out_y_origin + filter_y;
-                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth];
+                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth + g*outdepth_per_grp];
                 ae_int64 d_scr;
-                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
+                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + g*indepth_per_grp + in_channel];
                 ae_int16x4 d_fil;
 
                 AE_L8X4S_XP(d_fil, pfilt, stride1);
 
-                for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                for (int out_channel = 0; out_channel < outdepth_per_grp; ++out_channel)
                 {
                   d_scr = AE_L64_I(pscratch_src, 0);
                   AE_MULAAAAQ16(d_scr, d_inp, d_fil);
@@ -314,9 +317,9 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
           filt_y_min = (filt_y_min < 0) ? 0 : filt_y_min;
           filt_y_max = (filt_y_max < filter_height) ? filt_y_max : filter_height;
           filt_y_max = (filt_y_max < 0) ? 0 : filt_y_max;
-          pinp =  (WORD16*)&input_data[in_y*input_width*input_depth+in_x*input_depth];
+          pinp =  (WORD16*)&input_data[in_y*input_width*input_depth+in_x*input_depth+g*indepth_per_grp];
           int in_channel = 0;
-          for (; in_channel + 15 < input_depth; in_channel+=16)
+          for (; in_channel + 15 < indepth_per_grp; in_channel+=16)
           {
             ae_int16x4 d_inp, d_inp1, d_inp2, d_inp3;
             AE_L16X4_IP(d_inp, (ae_int16x4*)pinp, sizeof(WORD64));
@@ -331,9 +334,9 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
                 // Compute output element location.
                 int out_x = out_x_orig + filter_x;//out_x_origin + filter_x;
                 int out_y = out_y_orig + filter_y;//out_y_origin + filter_y;
-                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth];
+                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth+g*outdepth_per_grp];
                 ae_int64 d_scr;
-                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
+                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel + g*indepth_per_grp];
                 ae_int16x4 d_fil, d_fil1, d_fil2, d_fil3;
 #if XCHAL_HAVE_HIFI1
                 AE_L8X4S_IP(d_fil, pfilt, sizeof(WORD32));
@@ -347,7 +350,7 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
                 AE_L8X4F_XP(d_fil3, pfilt, (stride1-12));
 #endif  
 
-                for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                for (int out_channel = 0; out_channel < outdepth_per_grp; ++out_channel)
                 {
                   d_scr = AE_L64_I(pscratch_src, 0);
                   AE_MULAAAAQ16(d_scr, d_inp, d_fil);
@@ -371,7 +374,7 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
               }
             }
           }
-          for (; in_channel + 3 < input_depth; in_channel+=4)
+          for (; in_channel + 3 < indepth_per_grp; in_channel+=4)
           {
             ae_int16x4 d_inp;
             AE_L16X4_IP(d_inp, (ae_int16x4*)pinp, sizeof(WORD64));
@@ -383,16 +386,16 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
                 // Compute output element location.
                 int out_x = out_x_orig + filter_x;//out_x_origin + filter_x;
                 int out_y = out_y_orig + filter_y;//out_y_origin + filter_y;
-                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth];
+                ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth+g*outdepth_per_grp];
                 ae_int64 d_scr;
-                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel];
+                WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth + filter_x*input_depth + in_channel+ g*indepth_per_grp];
                 ae_int16x4 d_fil;
 #if XCHAL_HAVE_HIFI1
                 AE_L8X4S_XP(d_fil, pfilt, stride1);
 #else
                 AE_L8X4F_XP(d_fil, pfilt, stride1);
 #endif
-                for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                for (int out_channel = 0; out_channel < outdepth_per_grp; ++out_channel)
                 {
                   d_scr = AE_L64_I(pscratch_src, 0);
                   AE_MULAAAAQ16(d_scr, d_inp, d_fil);
@@ -410,15 +413,85 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
       }
     }
 #endif	
+  }  
+  else if(input_data && filter_data && scratch_buffer &&
+    (((unsigned int)input_data&0x3)==0) && (((unsigned int)filter_data&0x3)==0) &&
+    (((unsigned int)scratch_buffer&0x7)==0) && (indepth_per_grp==1) && (outdepth_per_grp==1) && (num_groups & 0x3)==0 )
+  {
+    for (int in_y = 0; in_y < input_height; ++in_y)
+    {
+      for (int in_x = 0; in_x < input_width; ++in_x)
+      {
+        const int out_x_origin = (in_x * stride_width) - pad_width;
+        const int out_y_origin = (in_y * stride_height) - pad_height;
+        int filt_x_min = -out_x_origin;
+        int filt_x_max = output_width - out_x_origin;
+        int filt_y_min = -out_y_origin;
+        int filt_y_max = output_height - out_y_origin;
+        filt_x_min = (filt_x_min < filter_width) ? filt_x_min : filter_width;
+        filt_x_min = (filt_x_min < 0) ? 0 : filt_x_min;
+        filt_x_max = (filt_x_max < filter_width) ? filt_x_max : filter_width;
+        filt_x_max = (filt_x_max < 0) ? 0 : filt_x_max;
+        filt_y_min = (filt_y_min < filter_height) ? filt_y_min : filter_height;
+        filt_y_min = (filt_y_min < 0) ? 0 : filt_y_min;
+        filt_y_max = (filt_y_max < filter_height) ? filt_y_max : filter_height;
+        filt_y_max = (filt_y_max < 0) ? 0 : filt_y_max;
+
+        for (int filter_y = filt_y_min; filter_y < filt_y_max; ++filter_y)
+        {
+          for (int filter_x = filt_x_min; filter_x < filt_x_max; ++filter_x)
+          {
+            pinp =  (WORD16*)&input_data[in_y*input_width*input_depth+in_x*input_depth];
+
+            const int out_x = out_x_origin + filter_x;
+            const int out_y = out_y_origin + filter_y;
+            ae_int64 *pscratch_src = (ae_int64*)&scratch_buffer[out_y*output_width*output_depth+out_x*output_depth];
+
+            WORD8* pfilt = (WORD8*)&filter_data[filter_y*filter_width*input_depth+filter_x*input_depth];
+            for (int g = 0; g < num_groups; g+=4)
+            {
+              ae_int16x4 d_inp0;
+              ae_int16x4 d_fil0;
+              ae_int64 d_scr0, d_scr1, d_scr2, d_scr3;
+              ae_int32x2 d_tmp0, d_tmp1, d_one = AE_MOVDA32(1);
+              
+              AE_L16X4_IP(d_inp0, (ae_int64 *)pinp, sizeof(WORD64));
+#if XCHAL_HAVE_HIFI1
+              AE_L8X4S_IP(d_fil0, pfilt, sizeof(WORD32));
+#else
+              AE_L8X4F_IP(d_fil0, pfilt, sizeof(WORD32));
+#endif
+              d_scr0 = AE_L64_I(pscratch_src, 0);
+              d_scr1 = AE_L64_I(pscratch_src, 8);
+              d_scr2 = AE_L64_I(pscratch_src, 16);
+              d_scr3 = AE_L64_I(pscratch_src, 24);
+              
+              AE_MUL16X4(d_tmp0, d_tmp1, d_inp0, d_fil0);
+              
+              AE_MULA32_HH(d_scr0, d_tmp0, d_one);
+              AE_MULA32_LL(d_scr1, d_tmp0, d_one);
+              AE_MULA32_HH(d_scr2, d_tmp1, d_one);
+              AE_MULA32_LL(d_scr3, d_tmp1, d_one);
+              
+              AE_S64_I(d_scr1, pscratch_src, 8);
+              AE_S64_I(d_scr2, pscratch_src, 16);
+              AE_S64_I(d_scr3, pscratch_src, 24);
+              AE_S64_IP(d_scr0, pscratch_src, 32);
+            }
+          }
+        }
+      }
+    }
   }
   else
   {
+    for (int g = 0; g < num_groups; ++g)
     {
       for (int in_y = 0; in_y < input_height; ++in_y)
       {
         for (int in_x = 0; in_x < input_width; ++in_x)
         {
-          for (int in_channel = 0; in_channel < input_depth; ++in_channel)
+          for (int in_channel = 0; in_channel < indepth_per_grp; ++in_channel)
           {
             const int out_x_origin = (in_x * stride_width) - pad_width;
             const int out_y_origin = (in_y * stride_height) - pad_height;
@@ -430,15 +503,15 @@ static inline void tconv2d_sym8sxsym16s(WORD16* output_data,
                 const int out_y = out_y_origin + filter_y;
                 if ((out_x >= 0) && (out_x < output_width) && (out_y >= 0) && (out_y < output_height))
                 {
-                  for (int out_channel = 0; out_channel < output_depth; ++out_channel)
+                  for (int out_channel = 0; out_channel < outdepth_per_grp; ++out_channel)
                   {
-                    const int32_t input_value = input_data[((in_y)*input_width+in_x)*input_depth+in_channel];
+                    const int32_t input_value = input_data[((in_y)*input_width+in_x)*input_depth+g*indepth_per_grp+in_channel];
 #if XCHAL_HAVE_HIFI1
-                    const int32_t filter_value = filter_data[(((out_channel*filter_height)+filter_y)*filter_width+filter_x)*input_depth+in_channel];
+                    const int32_t filter_value = filter_data[(((out_channel*filter_height)+filter_y)*filter_width+filter_x)*input_depth+g*indepth_per_grp+in_channel];
 #else
-                    const int32_t filter_value = filter_data[(((out_channel*filter_height)+filter_y)*filter_width+filter_x)*input_depth+in_channel]<<8;
+                    const int32_t filter_value = filter_data[(((out_channel*filter_height)+filter_y)*filter_width+filter_x)*input_depth+g*indepth_per_grp+in_channel]<<8;
 #endif
-                    scratch_buffer[((out_y)*output_width+out_x)*output_depth+out_channel] += input_value * filter_value;
+                    scratch_buffer[((out_y)*output_width+out_x)*output_depth+g*outdepth_per_grp+out_channel] += input_value * filter_value;
                   }
                 }
               }
@@ -893,13 +966,16 @@ int xa_nn_transpose_conv_v2_sym8sxsym16s(WORD16* output_data,
   XA_NNLIB_ARG_CHK_COND((out_activation_max < -32768) || (out_activation_max > 32767), -1);
   XA_NNLIB_ARG_CHK_COND((out_activation_max < out_activation_min), -1);
 
-  /* Temporary change till we add suppport for group > 1 */
-  (void)num_groups;
+  XA_NNLIB_ARG_CHK_COND(( num_groups <=0), -1);
+  XA_NNLIB_ARG_CHK_COND(((input_depth % num_groups)!=0),-1);
+  const int indepth_per_grp = input_depth / num_groups;
+  XA_NNLIB_ARG_CHK_COND(((output_depth % num_groups)!=0),-1);
+  const int outdepth_per_grp = output_depth / num_groups;
   
   int ker_grt_inp = (filter_width > input_width || filter_height > input_height);
   int str_leq_ker = (stride_width <= filter_width && stride_height <= filter_height);
 
-  if(!ker_grt_inp && str_leq_ker)
+  if(!ker_grt_inp && str_leq_ker && (num_groups == 1))
   {
     transpose_conv2d_std_sym8sxsym16s(output_data, input_data, filter_data, bias_data,
     stride_width, stride_height, pad_width, pad_height, input_depth, output_depth,
@@ -910,8 +986,8 @@ int xa_nn_transpose_conv_v2_sym8sxsym16s(WORD16* output_data,
   {
     tconv2d_sym8sxsym16s(output_data, input_data, filter_data, bias_data,
     stride_width, stride_height, pad_width, pad_height, input_depth, output_depth,
-    input_height, input_width, filter_height, filter_width,  output_height, output_width,
-    num_elements, output_shift, output_multiplier, scratch_buffer, out_activation_min, out_activation_max, p_dma_cfg);
+    input_height, input_width, filter_height, filter_width, indepth_per_grp, outdepth_per_grp, output_height, output_width,
+    num_elements, num_groups, output_shift, output_multiplier, scratch_buffer, out_activation_min, out_activation_max, p_dma_cfg);
   }
 
   return 0;

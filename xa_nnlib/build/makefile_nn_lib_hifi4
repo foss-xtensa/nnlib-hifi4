@@ -44,6 +44,12 @@ ifneq ($(DISABLE_ACT_TIE), 1)
 CFLAGS += -DUSE_HIFI_ACT_TIE
 endif
 
+AGGRESSIVE_FLOAT_OPT ?= 1
+
+ifeq ($(AGGRESSIVE_FLOAT_OPT), 0)
+CFLAGS += -DNO_AGGR_FLOAT_OPT=1 -fno-unsafe-math-optimizations
+endif
+
 ifeq ($(SINGLE_ROUNDING), 1)
 CFLAGS += -DTFLITE_SINGLE_ROUNDING=1
 else
@@ -230,7 +236,9 @@ BASICOBJS = \
     xa_nn_elm_mul_quant16.o\
     xa_nn_elm_sub_quant8.o\
     xa_nn_elm_minmax_8.o\
-    xa_nn_elm_minmax_f32.o\
+    xa_nn_elm_min_f32.o\
+    xa_nn_elm_max_f32.o\
+    xa_nn_elm_clamp_f32.o\
     xa_nn_elm_quantize.o\
     xa_nn_elm_add_f32.o \
     xa_nn_elm_sub_f32.o \
@@ -263,6 +271,7 @@ BASICOBJS = \
     xa_nn_elm_add_quant16.o \
     xa_nn_elm_squared_diff_quant8.o \
     xa_nn_elm_squared_diff_quant16.o \
+    xa_nn_gru_utils.o \
     xa_nn_lstm_utils.o
 
 NORMO2OBJS = \
@@ -295,7 +304,8 @@ REORGO2OBJS = \
   xa_nn_shuffle_8.o
 
 RNNO2OBJS = \
-  xa_nn_lstm_8.o
+  xa_nn_lstm_8.o \
+  xa_nn_gru_8.o
 
 ifeq ($(BUILD_SCRATCH_SIZE_LIB), 1)
 CFLAGS += -DENABLE_SCRATCH_SIZE_API_ONLY 
@@ -307,7 +317,10 @@ LIBO2OBJS = \
   xa_nn_circ_buf.o \
   xa_nn_transpose_conv_circ_buf.o \
   xa_nn_softmax_asym8_asym8.o \
-  xa_nn_reduce_asym8s_asym8s.o
+  xa_nn_reduce_asym8s_asym8s.o \
+  xa_nn_batch_matmul_asym8sxasym8s.o \
+  xa_nn_lstm_8.o \
+  xa_nn_gru_8.o
 else
 LIBO2OBJS = $(MATXVECO2OBJS) $(ACTIVATIONSO2OBJS) $(NDSPO2OBJS) $(CONVO2OBJS) $(FCO2OBJS) $(POOLO2OBJS) $(GRUO2OBJS) $(LSTMO2OBJS) $(CNNO2OBJS) $(BASICOBJS) $(NORMO2OBJS) $(REORGO2OBJS) $(RNNO2OBJS)
 LIBOSOBJS = $(COMMONOSOBJS)

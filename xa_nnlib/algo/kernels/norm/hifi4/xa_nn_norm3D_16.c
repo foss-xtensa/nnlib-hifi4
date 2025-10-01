@@ -182,7 +182,7 @@ WORD32 xa_nn_norm_calc_3D_16_nhwc(
     internal_norm_vec(&accum, p_inp, inp_len);
 
     ae_int64 norm64, norm64_c;
-    CALC_NORM_FROM_ACC64(norm64, accum, out_rshift, 0xFFFFFFFF);
+    CALC_NORM_FROM_ACC64(norm64, accum, out_rshift, 0x7FFFFFFF);
     WORD8 nsaShift = 16 - AE_NSAZ32_L(AE_MOVINT32X2_FROMINT64(norm64));
     nsaShift = (nsaShift<0) ? 0 : nsaShift;
     
@@ -211,7 +211,7 @@ WORD32 xa_nn_norm_calc_3D_16_nhwc(
         internal_norm_vecx2(&accum0, &accum1, p_inp_ch0, p_inp_ch1, input_channels);
 
         ae_int64 norm64, norm64_c;
-        CALC_NORM_FROM_ACC64(norm64, accum0, out_rshift, 0xFFFFFFFF);
+        CALC_NORM_FROM_ACC64(norm64, accum0, out_rshift, 0x7FFFFFFF);
         WORD8 nsaShift = 16 - AE_NSAZ32_L(AE_MOVINT32X2_FROMINT64(norm64));
         nsaShift = (nsaShift<0) ? 0 : nsaShift;
         
@@ -220,7 +220,7 @@ WORD32 xa_nn_norm_calc_3D_16_nhwc(
         p_outnorm[iw + (ih * input_width)]     = (UWORD16) prsqrt[norm16u];
         p_outnsa[iw + (ih * input_width)]      = nsaShift + out_rshift;
 
-        CALC_NORM_FROM_ACC64(norm64, accum1, out_rshift, 0xFFFFFFFF);
+        CALC_NORM_FROM_ACC64(norm64, accum1, out_rshift, 0x7FFFFFFF);
         nsaShift = 16 - AE_NSAZ32_L(AE_MOVINT32X2_FROMINT64(norm64));
         nsaShift = (nsaShift<0) ? 0 : nsaShift;
         
@@ -239,7 +239,7 @@ WORD32 xa_nn_norm_calc_3D_16_nhwc(
         internal_norm_vec(&accum, p_inp_ch, input_channels);
 
         ae_int64 norm64, norm64_c;
-        CALC_NORM_FROM_ACC64(norm64, accum, out_rshift, 0xFFFFFFFF);
+        CALC_NORM_FROM_ACC64(norm64, accum, out_rshift, 0x7FFFFFFF);
         WORD8 nsaShift = 16 - AE_NSAZ32_L(AE_MOVINT32X2_FROMINT64(norm64));
         nsaShift = (nsaShift<0) ? 0 : nsaShift;
         
@@ -425,7 +425,7 @@ WORD32 xa_nn_norm_apply_3D_16_nhwc(
   XA_NNLIB_ARG_CHK_ALIGN(p_out_multiplier, sizeof(WORD16), -1);
 
   /* Param Checks*/
-  XA_NNLIB_ARG_CHK_COND((out_shift > 0), -1);
+  XA_NNLIB_ARG_CHK_COND((out_shift > 15 ) || (out_shift < -15), -1);
   XA_NNLIB_ARG_CHK_COND((input_height <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_width <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);

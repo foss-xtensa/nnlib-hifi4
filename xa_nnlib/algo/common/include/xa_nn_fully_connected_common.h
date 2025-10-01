@@ -456,7 +456,6 @@ WORD32 xa_nn_fully_connected_asym4sxasym8s_asym8s
   XA_NNLIB_ARG_CHK_COND((weight_zero_bias < -127 || weight_zero_bias > 128), -1);
   XA_NNLIB_ARG_CHK_COND((out_shift < -31 || out_shift > 31), -1);
   XA_NNLIB_ARG_CHK_COND((out_zero_bias < -128 || out_zero_bias > 127), -1);
-  XA_NNLIB_ARG_CHK_COND(((weight_depth % 2) != 0), -1);
 
   WORD32 ret = 0;
   ret = xa_nn_matXvec_asym4sxasym8s_asym8s

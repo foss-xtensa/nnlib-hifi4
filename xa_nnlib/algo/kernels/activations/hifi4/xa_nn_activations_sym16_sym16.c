@@ -54,9 +54,10 @@ static const uint16_t sigmoid_table_uint16[257] = {
 
 #endif
 
+#if !(defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4))
 void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
-                                                   const WORD16 *p_vec,
-                                                   WORD32 vec_length)
+                                            const WORD16 *p_vec,
+                                            WORD32 vec_length)
 {
   ae_int16x4 *  __restrict__ in_ptr_align  = (ae_int16x4 *)p_vec;
   WORD16 *  __restrict__ out_ptr = (WORD16 *)p_out;
@@ -65,7 +66,7 @@ void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
   ae_valign  out_align   = AE_ZALIGN64();
 
   ae_int16x4 inp0;
-#if !(defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4))
+
   ae_int32x2 inp_x_inp_mul0, inp_x_inp_mul1;
   ae_int32x2 uint8_max     = 255;
   ae_int32x2 res_sat_val   = 33553408; /* Value for saturation: 33553408 = (0x7FFF << 10) */
@@ -81,19 +82,11 @@ void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
   ae_int16x4 ut;
   int input_multiplier = 3;
   ae_int16x4 inp_mult = input_multiplier;
-#else
-  ae_int16x4 sign_bit_mask = AE_MOVDA16(0x7FFF);
-  WUR_AE_SAR(4);
-#endif  
 
   int i;
   for (i = 0; i < vec_length >> 2; i++) {
     AE_LA16X4_IP(inp0, inp_align, in_ptr_align);
-#if defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4)
-    ae_int16x4 out = AE_SIGMOID16X4(inp0);
-    out = AE_SRAI16(out, 1);
-    out = AE_AND16(out, sign_bit_mask);
-#else
+
     AE_MUL16X4(inp_x_inp_mul0, inp_x_inp_mul1, inp0, inp_mult);
     abs_inp_x_inp_mul0 = AE_ABS32S(inp_x_inp_mul0);
     abs_inp_x_inp_mul1 = AE_ABS32S(inp_x_inp_mul1);
@@ -170,7 +163,6 @@ void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
     res1 = AE_SRAI32(res1, 10);
 
     ae_int16x4 out = AE_SAT16X4(res0, res1);
-#endif
     AE_SA16X4_IP(out, out_align, (ae_int16x4 *)out_ptr); 
   }
 
@@ -178,15 +170,6 @@ void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
   p_vec = (WORD16 *)in_ptr_align;
   p_out = (WORD16 *)out_ptr;
 
-#if defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4)
-  for (i = 0; i < (vec_length & 3); i++) {
-    AE_L16_IP(inp0, (ae_int16 *)p_vec, sizeof(WORD16));    
-    ae_int16x4 out = AE_SIGMOID16X4(inp0);
-    out = AE_SRAI16(out, 1);
-    out = AE_AND16(out, sign_bit_mask);    
-    AE_S16_0_IP(out, (ae_int16 *)p_out, sizeof(WORD16));  
-  }
-#else
   /* Following code is directly adapted from TFLM ref code */
   for (i = 0; i < (vec_length & 3); ++i, p_vec++, p_out++) {
     WORD32 input_data = ((*p_vec) * input_multiplier);
@@ -207,8 +190,45 @@ void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
     result >>= 10;
     *p_out =(WORD16)result;
   }
-#endif
 }
+#else /* #if !(defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4)) */
+void internal_vec_sigmoid_sym16s_sym16s_spc(WORD16 *p_out,
+                                            const WORD16 *p_vec,
+                                            WORD32 input_left_shift,
+                                            WORD32 vec_length)
+{
+  ae_int16x4 *  __restrict__ in_ptr_align  = (ae_int16x4 *)p_vec;
+  WORD16 *  __restrict__ out_ptr = (WORD16 *)p_out;
+
+  ae_valign inp_align = AE_LA64_PP(in_ptr_align);
+  ae_valign  out_align   = AE_ZALIGN64();
+
+  ae_int16x4 inp0;
+  ae_int16x4 sign_bit_mask = AE_MOVDA16(0x7FFF);
+  WUR_AE_SAR(4-input_left_shift);
+
+  int i;
+  for (i = 0; i < vec_length >> 2; i++) {
+    AE_LA16X4_IP(inp0, inp_align, in_ptr_align);
+    ae_int16x4 out = AE_SIGMOID16X4(inp0);
+    out = AE_SRAI16(out, 1);
+    out = AE_AND16(out, sign_bit_mask);
+    AE_SA16X4_IP(out, out_align, (ae_int16x4 *)out_ptr); 
+  }
+
+  AE_SA64POS_FP(out_align, out_ptr);
+  p_vec = (WORD16 *)in_ptr_align;
+  p_out = (WORD16 *)out_ptr;
+
+  for (i = 0; i < (vec_length & 3); i++) {
+    AE_L16_IP(inp0, (ae_int16 *)p_vec, sizeof(WORD16));    
+    ae_int16x4 out = AE_SIGMOID16X4(inp0);
+    out = AE_SRAI16(out, 1);
+    out = AE_AND16(out, sign_bit_mask);    
+    AE_S16_0_IP(out, (ae_int16 *)p_out, sizeof(WORD16));  
+  }
+}
+#endif /* #if !(defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4)) */
 
 /* The scale of input for TFLM reference is 4096*3, which is maintained in the LUT based implementation 
  * in xa_nn_vec_sigmoid_sym16s_sym16s(). 
@@ -228,10 +248,20 @@ WORD32 xa_nn_vec_sigmoid_sym16s_sym16s(WORD16 *p_out,
   XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);  
   XA_NNLIB_ARG_CHK_COND((input_left_shift < 0), -1); 
 
-  if(input_multiplier == 0 && input_left_shift==0){
-    internal_vec_sigmoid_sym16s_sym16s_spc(p_out,p_vec, vec_length);
+#if !(defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4))
+  if(input_multiplier == 0 && input_left_shift==0)
+  {
+    internal_vec_sigmoid_sym16s_sym16s_spc(p_out, p_vec, vec_length);
     return 0;
   }
+#else
+  if((input_multiplier == 0 && input_left_shift==0)
+    ||(input_multiplier == 1 && (input_left_shift >= 0 && input_left_shift <= 3)))
+  {
+    internal_vec_sigmoid_sym16s_sym16s_spc(p_out, p_vec, input_left_shift, vec_length);
+    return 0;
+  }
+#endif
 
   if (input_multiplier == 0) {  
 #if (defined(USE_HIFI_ACT_TIE) && defined(AE_SIGMOID16X4))    
@@ -429,6 +459,40 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
   XA_NNLIB_ARG_CHK_ALIGN(p_vec, sizeof(WORD16), -1);
   XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);  
 
+  int i;
+  ae_int16x4 * __restrict__ in_ptr_align = (ae_int16x4 *)p_vec;
+  WORD16 * __restrict__ out_ptr = (WORD16 *)p_out;
+
+  ae_valign inp_align, out_align;
+
+  inp_align = AE_LA64_PP(in_ptr_align);
+  out_align = AE_ZALIGN64();
+  ae_int16x4 inp0;
+#if (defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4))
+  if((input_multiplier == 0 && input_left_shift==0)
+    ||(input_multiplier == 1 && (input_left_shift >= 0 && input_left_shift <= 3)))
+  {
+    WUR_AE_SAR(4-input_left_shift);
+    for (i = 0; i < (vec_length >> 2); i++)
+    {
+      AE_LA16X4_IP(inp0, inp_align, in_ptr_align);    
+      ae_int16x4 out = AE_TANH16X4(inp0);
+      AE_SA16X4_IP(out, out_align, (ae_int16x4 *)out_ptr);
+    }
+    AE_SA64POS_FP(out_align, out_ptr);
+    p_vec = (WORD16 *)in_ptr_align;
+    p_out = (WORD16 *)out_ptr;
+
+    for (i = 0; i < (vec_length & 3); i++)
+    {
+      AE_L16_IP(inp0, (ae_int16 *)p_vec, sizeof(WORD16));    
+      ae_int16x4 out = AE_TANH16X4(inp0);   
+      AE_S16_0_IP(out, (ae_int16 *)p_out, sizeof(WORD16));  
+    }
+    return 0;
+  }
+#endif
+
   if (input_multiplier == 0) {  
 #if (defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4))    
     input_multiplier = 1 << input_left_shift;
@@ -440,14 +504,8 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
 
   WORD32 round = (input_left_shift > 0) ? 1 << (input_left_shift - 1) : 0;
 
-  ae_int16x4 inp_mult = input_multiplier; 
-  ae_int16x4 * __restrict__ in_ptr_align  = (ae_int16x4 *)p_vec;
-  WORD16 * __restrict__ out_ptr = (WORD16 *)p_out;
+  ae_int16x4 inp_mult = input_multiplier;
 
-  ae_valign inp_align    = AE_LA64_PP(in_ptr_align);
-  ae_valign  out_align   = AE_ZALIGN64();
-
-  ae_int16x4 inp0;
   ae_int32x2 inp_x_inp_mul0, inp_x_inp_mul1;
 #if !(defined(USE_HIFI_ACT_TIE) && defined(AE_TANH16X4))
   ae_int32x2 uint8_max       = 255;
@@ -471,7 +529,6 @@ WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
   WUR_AE_SAR(4);
 #endif
 
-  int i;
   for (i = 0; i < (vec_length >> 2); i++) {
 
     AE_LA16X4_IP(inp0, inp_align, in_ptr_align);    

@@ -147,6 +147,7 @@ typedef struct _xa_dma_cfg_t
 #define xa_nn_dilated_conv2d_depthwise_getsize  xa_nn_dilated_conv2d_depthwise_getsize_hifi5
 #define xa_nn_dilated_conv2d_std_getsize        xa_nn_dilated_conv2d_std_getsize_hifi5
 #define xa_nn_lstm_getsize                      xa_nn_lstm_getsize_hifi5
+#define xa_nn_gru_getsize                       xa_nn_gru_getsize_hifi5
 #define xa_nn_maxpool_getsize                   xa_nn_maxpool_getsize_hifi5
 #define xa_nn_reduce_getsize_nhwc               xa_nn_reduce_getsize_nhwc_hifi5
 #define xa_nn_transpose_conv_getsize            xa_nn_transpose_conv_getsize_hifi5
@@ -162,6 +163,7 @@ typedef struct _xa_dma_cfg_t
 #define xa_nn_dilated_conv2d_depthwise_getsize  xa_nn_dilated_conv2d_depthwise_getsize_hifi4
 #define xa_nn_dilated_conv2d_std_getsize        xa_nn_dilated_conv2d_std_getsize_hifi4
 #define xa_nn_lstm_getsize                      xa_nn_lstm_getsize_hifi4
+#define xa_nn_gru_getsize                       xa_nn_gru_getsize_hifi4
 #define xa_nn_maxpool_getsize                   xa_nn_maxpool_getsize_hifi4
 #define xa_nn_reduce_getsize_nhwc               xa_nn_reduce_getsize_nhwc_hifi4
 #define xa_nn_transpose_conv_getsize            xa_nn_transpose_conv_getsize_hifi4
@@ -3207,6 +3209,34 @@ typedef struct _xa_dma_cfg_t
       WORD32 clip,
       WORD32 num_elms);
 
+WORD32 xa_nn_gru_hidden_state_update_8(WORD8* p_hidden_state,
+    const WORD16* p_update_gate,
+    const WORD16* p_modulated_state,
+    WORD32 update_to_modulated_state_multiplier,
+    WORD32 update_to_modulated_state_shift,
+    WORD32 update_to_hidden_state_multiplier,
+    WORD32 update_to_hidden_state_shift,
+    WORD32 out_multiplier,
+    WORD32 out_shift,
+    WORD32 hidden_zero_bias,
+    WORD32 num_elms);
+
+  WORD32 xa_nn_elm_requantize_asym32s_asym16s(WORD16 * __restrict__ p_out,
+      const WORD32 * __restrict__ p_inp,
+      WORD32 inp_zero_bias,
+      WORD32 out_zero_bias,
+      WORD32 out_shift,
+      WORD32 out_multiplier,
+      WORD32 num_elm);
+      
+  WORD32 xa_nn_elm_requantize_asym32s_asym8s(WORD8 * __restrict__ p_out,
+      const WORD32 * __restrict__ p_inp,
+      WORD32 inp_zero_bias,
+      WORD32 out_zero_bias,
+      WORD32 out_shift,
+      WORD32 out_multiplier,
+      WORD32 num_elm);
+      
   WORD32 xa_nn_elm_requantize_asym8s_asym8u(UWORD8 * __restrict__ p_out,
       const WORD8 * __restrict__ p_inp,
       WORD32 inp_zero_bias,
@@ -3954,6 +3984,10 @@ typedef struct _lstm_bias_ptrs
   VOID *p_fg_W_bias;
   VOID *p_cg_W_bias;
   VOID *p_og_W_bias;
+  VOID *p_ig_U_bias;
+  VOID *p_fg_U_bias;
+  VOID *p_cg_U_bias;
+  VOID *p_og_U_bias;
 } lstm_bias_ptrs;
 
 typedef struct _lstm_quant_params
@@ -3986,6 +4020,7 @@ typedef struct _lstm_flags
 {
   WORD32 time_major;
   WORD32 use_cifg;
+  WORD32 back;
 } lstm_flags;
 
 WORD32 xa_nn_lstm_getsize(
@@ -4010,6 +4045,76 @@ WORD32 xa_nn_lstm_sym8sxasym8s_16(
     lstm_quant_params *p_lstm_qp,
     lstm_flags *p_lstm_flags,
     void*  p_scratch);
+
+
+typedef struct _gru_weights_ptrs
+{
+    VOID *p_ug_W;
+    VOID *p_rg_W;
+    VOID *p_ms_W;
+    VOID *p_ug_U;
+    VOID *p_rg_U;
+    VOID *p_ms_U;
+} gru_weights_ptrs;
+
+typedef struct _gru_bias_ptrs
+{
+    VOID *p_ug_W_bias;
+    VOID *p_rg_W_bias;
+    VOID *p_ms_W_bias;
+    VOID *p_ug_U_bias;
+    VOID *p_rg_U_bias;
+    VOID *p_ms_U_bias;
+} gru_bias_ptrs;
+
+typedef struct _gru_quant_params
+{
+    WORD32 ug_W_out_multiplier;
+    WORD32 rg_W_out_multiplier;
+    WORD32 ms_W_out_multiplier;
+    WORD32 ug_U_out_multiplier;
+    WORD32 rg_U_out_multiplier;
+    WORD32 ms_U_out_multiplier;
+    WORD32 rg_fcU_out_multiplier;
+    WORD32 ug_ms_out_multiplier;
+    WORD32 ug_hidden_out_multiplier;
+    WORD32 hidden_multiplier;
+    WORD32 ug_W_out_shift;
+    WORD32 rg_W_out_shift;
+    WORD32 ms_W_out_shift;
+    WORD32 ug_U_out_shift;
+    WORD32 rg_U_out_shift;
+    WORD32 ms_U_out_shift;
+    WORD32 rg_fcU_out_shift;
+    WORD32 ug_ms_out_shift;
+    WORD32 ug_hidden_out_shift;
+    WORD32 hidden_shift;
+    WORD32 hidden_zero_bias;
+    WORD32 input_zero_bias;
+} gru_quant_params;
+
+WORD32 xa_nn_gru_getsize(
+    WORD32 n_batch,
+    WORD32 n_itr,
+    WORD32 hidden_size,
+    WORD32 hidden_precision);
+
+WORD32 xa_nn_gru_sym8sxasym8s(
+    WORD8* p_out,
+    const WORD8* p_hidden_state,
+    const gru_weights_ptrs *p_gru_weights,
+    const gru_bias_ptrs *p_gru_biases,
+    const WORD8* p_inp,
+    WORD32 inp_size,
+    WORD32 hidden_size,
+    WORD32 out_size,
+    WORD32 n_batch,
+    WORD32 n_itr,
+    const gru_quant_params *p_gru_qp,
+    WORD32 time_major,
+    void* p_scratch
+);
+    
 
 
   /* Mapping the functions names from previous naming convension for backward compatibility */

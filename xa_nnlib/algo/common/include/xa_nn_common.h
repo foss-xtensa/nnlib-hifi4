@@ -115,7 +115,7 @@ extern const int32_t tab_invQ30[128];
 
 // special XCC type casting of pointers
 #ifdef __cplusplus
-#define castxcc(type_,ptr)  (ptr)
+#define castxcc(type_,ptr)  (type_ *)(ptr)
 #else
 #define castxcc(type_,ptr)  (type_ *)(ptr)
 #endif
@@ -131,7 +131,7 @@ extern const int32_t tab_invQ30[128];
 #if  defined (__cplusplus) || defined(COMPILER_XTENSA)
 
 #else
-#error sorry, C compiler is not supported excluding the XCC
+//#error sorry, C compiler is not supported excluding the XCC
 #endif
 #endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 
@@ -187,6 +187,11 @@ __pragma (warning(pop))
 #endif
 
 #if defined (COMPILER_GNU)
+#define DISCARD_FUN_FOR_NONVOID_RETURN(retval_type,name,arglist) \
+__attribute__ ((section ("/DISCARD/"))) \
+retval_type name arglist \
+{ return (retval_type) 0; }
+
 #define F_UNDERSCORE " "
 #define DISCARD_FUN(retval_type,name,arglist)    \
 __asm__                        \
@@ -219,5 +224,17 @@ retval_type name arglist \
 
 /* maximum size (in bytes) allocated storage on stack by temporary arrays inside library functions */
 #define MAX_ALLOCA_SZ 512
+
+#ifndef AE_MOVXTFLOATX2_FROMXTFLOAT
+#define AE_MOVXTFLOATX2_FROMXTFLOAT(x) (x)
+#endif
+
+#ifndef AE_MOVXTFLOAT_FROMXTFLOATX2
+#define AE_MOVXTFLOAT_FROMXTFLOATX2(x) (x)
+#endif
+
+#ifndef XT_CONST_SX2
+#define XT_CONST_SX2 CONST_SX2
+#endif
 
 #endif

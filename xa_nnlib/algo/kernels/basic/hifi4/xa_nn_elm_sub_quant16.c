@@ -23,6 +23,7 @@
 #include "xa_nn_basic_state.h"
 #include "xa_nnlib_kernels_api.h"
 #include "xa_nnlib_common_macros.h"
+#include "xa_nnlib_common_bcast_macro.h"
 
 #if XCHAL_HAVE_HIFI1
 
@@ -60,25 +61,29 @@
 	out = AE_MULFP32X2RS(inp1, right_shift); \
 }
 
-static void internal_elm_sub_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __restrict__ p_out,
-                            WORD32  out_zero_bias,
-                            WORD32  out_left_shift,
-                            WORD32  out_multiplier,
-                            WORD32  out_activation_min,
-                            WORD32  out_activation_max,
-                    const   WORD16 * __restrict__ p_inp1,
-                            WORD32  inp1_zero_bias,
-                            WORD32  inp1_left_shift,
-                            WORD32  inp1_multiplier,
-                    const   WORD16 * __restrict__ p_inp2,
-                            WORD32  inp2_zero_bias,
-                            WORD32  inp2_left_shift,
-                            WORD32  inp2_multiplier,
-                            WORD32  left_shift,
-                            WORD32  out_lc,
-                            WORD32  in_lc)
+static void internal_elm_sub_broadcast_2D_asym16sxasym16s_asym16s(void * __restrict__ ptr_out,
+                    const    void * __restrict__ ptr_inp1,
+                    const    void * __restrict__ ptr_inp2,
+                    bcast_args_t* args)
 {
+  WORD32  out_zero_bias = args->out_zero_bias;
+  WORD32  out_left_shift = args->out_shift;
+  WORD32  out_multiplier = args->out_multiplier;
+  WORD32  out_activation_min = args->out_activation_min;
+  WORD32  out_activation_max = args->out_activation_max;
+  WORD32  inp1_zero_bias = args->inp1_zero_bias;
+  WORD32  inp1_left_shift = args->inp1_left_shift;
+  WORD32  inp1_multiplier = args->inp1_multiplier;
+  WORD32  inp2_zero_bias = args->inp2_zero_bias;
+  WORD32  inp2_left_shift = args->inp2_left_shift;
+  WORD32  inp2_multiplier = args->inp2_multiplier;
+  WORD32  left_shift = args->left_shift;
+  WORD32  out_lc = args->out_lc;
+  WORD32  in_lc = args->in_lc;
   int i, j;
+  WORD16 * __restrict__ p_inp1 = (WORD16*)ptr_inp1;
+  WORD16 * __restrict__ p_inp2 = (WORD16*)ptr_inp2;
+  WORD16 *__restrict__ p_out = (WORD16*)ptr_out;
   WORD16 * __restrict__ p_a = (WORD16 *)p_inp1;
   WORD16 * __restrict__ p_b = (WORD16 *)p_inp2;
   WORD16 *__restrict__ p_c;
@@ -363,23 +368,24 @@ static void internal_elm_sub_broadcast_2D_asym16sxasym16s_asym16s(WORD16 * __res
   return;
 }
 
-static void internal_elm_sub_broadcast_asym16sxasym16s_asym16s(WORD16 * __restrict__ p_out,
-                            WORD32  out_zero_bias,
-                            WORD32  out_left_shift,
-                            WORD32  out_multiplier,
-                            WORD32  out_activation_min,
-                            WORD32  out_activation_max,
-                    const    WORD16 * __restrict__ p_inp1,
-                            WORD32  inp1_zero_bias,
-                            WORD32  inp1_left_shift,
-                            WORD32  inp1_multiplier,
-                    const    WORD16 * __restrict__ p_inp2,
-                            WORD32  inp2_zero_bias,
-                            WORD32  inp2_left_shift,
-                            WORD32  inp2_multiplier,
-                            WORD32  left_shift,
-                            WORD32  num_elm)
+static void internal_elm_sub_broadcast_asym16sxasym16s_asym16s(void * __restrict__ p_out,
+                    const    void * __restrict__ p_inp1,
+                    const    void * __restrict__ p_inp2,
+                    bcast_args_t* args)
 {
+  WORD32  out_zero_bias = args->out_zero_bias;
+  WORD32  out_left_shift = args->out_shift;
+  WORD32  out_multiplier = args->out_multiplier;
+  WORD32  out_activation_min = args->out_activation_min;
+  WORD32  out_activation_max = args->out_activation_max;
+  WORD32  inp1_zero_bias = args->inp1_zero_bias;
+  WORD32  inp1_left_shift = args->inp1_left_shift;
+  WORD32  inp1_multiplier = args->inp1_multiplier;
+  WORD32  inp2_zero_bias = args->inp2_zero_bias;
+  WORD32  inp2_left_shift = args->inp2_left_shift;
+  WORD32  inp2_multiplier = args->inp2_multiplier;
+  WORD32  left_shift = args->left_shift;
+  WORD32  num_elm = args->num_elm;
   int i;
   WORD16 * __restrict__ p_a = (WORD16 *)p_inp1;
   WORD16 * __restrict__ p_b = (WORD16 *)p_inp2;
@@ -649,274 +655,30 @@ WORD32 xa_nn_elm_sub_broadcast_4D_asym16sxasym16s_asym16s(WORD16 * __restrict__ 
   XA_NNLIB_ARG_CHK_COND(((out_activation_max < -32768) || (out_activation_max > 32767)), -1);
   XA_NNLIB_ARG_CHK_COND((out_activation_max < out_activation_min), -1);
 
-  /* Check shapes */
-  int i;
-  for(i = 0; i < 4; i++)
-  {
-    if((p_inp1_shape[i] != p_inp2_shape[i] && p_inp1_shape[i] != 1 && p_inp2_shape[i] != 1) ||
-       (p_out_shape[i] != (p_inp1_shape[i] > p_inp2_shape[i] ? p_inp1_shape[i] : p_inp2_shape[i])))
-    {
-      return -1;
-    }
-  }
+  bcast_args_t args = {0};
+  args.out_zero_bias = out_zero_bias;
+  args.out_shift = out_left_shift;
+  args.out_multiplier = out_multiplier;
+  args.out_activation_min = out_activation_min;
+  args.out_activation_max = out_activation_max;
+  args.inp1_zero_bias = inp1_zero_bias;
+  args.inp1_left_shift = inp1_left_shift;
+  args.inp1_multiplier = inp1_multiplier;
+  args.inp2_zero_bias = inp2_zero_bias;
+  args.inp2_left_shift = inp2_left_shift;
+  args.inp2_multiplier = inp2_multiplier;
+  args.left_shift = left_shift;
+  args.out_elm_size = args.inp_elm_size = 2;
+  args.multiplier_sign = -1;
 
-  WORD32 inp1_strides[4], inp2_strides[4];
-  inp1_strides[3] = 1;
-  inp2_strides[3] = 1;
-  for(i = 2; i >= 0; i--)
-  {
-    ae_int32x2 d_str, d_shape;
-    d_str = AE_MOVDA32X2(inp1_strides[i + 1], inp2_strides[i + 1]);
-    d_shape = AE_MOVDA32X2(p_inp1_shape[i + 1], p_inp2_shape[i + 1]);
-    d_str = AE_MULP32X2(d_str, d_shape);
-    inp1_strides[i] = AE_MOVAD32_H(d_str);
-    inp2_strides[i] = AE_MOVAD32_L(d_str);
-  }
-
-  int need_broadcast = 0;
-  int inp1_const = 1, inp2_const = 1;
-  for(i = 0; i < 4; i++)
-  {
-    if(p_inp1_shape[i] != p_inp2_shape[i])
-    {
-      if(p_inp1_shape[i] == 1)
-        inp1_strides[i] = 0;
-      else
-        inp2_strides[i] = 0;
-
-      need_broadcast = 1;
-    }
-    if(p_inp1_shape[i] != 1)
-      inp1_const &= 0;
-    if(p_inp2_shape[i] != 1)
-      inp2_const &= 0;
-  }
-  int itr0, itr1, itr2;
-
-  WORD16 *p_out_tmp = p_out;
-  const WORD16 *__restrict__ p_inp1_tmp = p_inp1;
-  const WORD16 *__restrict__ p_inp2_tmp = p_inp2;
-
-  if(need_broadcast == 0)
-  {
-    internal_elm_sub_broadcast_2D_asym16sxasym16s_asym16s(
-                p_out,
-                out_zero_bias,
-                out_left_shift,
-                out_multiplier,
-                out_activation_min,
-                out_activation_max,
-                p_inp1,
-                inp1_zero_bias,
-                inp1_left_shift,
-                inp1_multiplier,
-                p_inp2,
-                inp2_zero_bias,
-                inp2_left_shift,
-                inp2_multiplier,
-                left_shift,
-                1,
-                p_out_shape[0] * inp1_strides[0]);
-  }
-  else if(inp1_strides[3] == inp2_strides[3])
-  {
-    WORD32 in_lc, out_lc;
-    WORD32 inp1_zb, inp1_ls, inp1_mult;
-    WORD32 inp2_zb, inp2_ls, inp2_mult;
-    WORD32 out_mult;
-
-    inp1_zb = inp1_zero_bias;
-    inp1_ls = inp1_left_shift;
-    inp1_mult = inp1_multiplier;
-    inp2_zb = inp2_zero_bias;
-    inp2_ls = inp2_left_shift;
-    inp2_mult = inp2_multiplier;
-    out_mult = out_multiplier;
-
-    in_lc = p_out_shape[2] * p_out_shape[3];
-    out_lc = 1;
-    if(inp1_strides[2] == 0)
-    {
-      inp2_zb = inp1_zero_bias;
-      inp2_ls = inp1_left_shift;
-      inp2_mult = inp1_multiplier;
-      inp1_zb = inp2_zero_bias;
-      inp1_ls = inp2_left_shift;
-      inp1_mult = inp2_multiplier;
-      out_mult = -out_multiplier;
-      const WORD16 *tmp;
-      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
-
-      int tmp_strides[2];
-      tmp_strides[0] = inp1_strides[0];
-      tmp_strides[1] = inp1_strides[1];
-
-      inp1_strides[0] = inp2_strides[0];
-      inp1_strides[1] = inp2_strides[1];
-
-      inp2_strides[0] = tmp_strides[0];
-      inp2_strides[1] = tmp_strides[1];
-      in_lc = p_out_shape[3];
-      out_lc = p_out_shape[2];
-    }
-    else if(inp2_strides[2] == 0)
-    {
-      in_lc = p_out_shape[3];
-      out_lc = p_out_shape[2];
-    }
-
-   for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
-    {
-      const WORD16 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
-      const WORD16 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
-      for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
-      {
-        internal_elm_sub_broadcast_2D_asym16sxasym16s_asym16s(
-            p_out_tmp,
-            out_zero_bias,
-            out_left_shift,
-            out_mult,
-            out_activation_min,
-            out_activation_max,
-            p_inp1_tmp0,
-            inp1_zb,
-            inp1_ls,
-            inp1_mult,
-            p_inp2_tmp0,
-            inp2_zb,
-            inp2_ls,
-            inp2_mult,
-            left_shift,
-            out_lc,
-            in_lc);
-        p_out_tmp += in_lc * out_lc;
-        p_inp1_tmp0 += inp1_strides[1];
-        p_inp2_tmp0 += inp2_strides[1];
-      }
-      p_inp1_tmp += inp1_strides[0];
-      p_inp2_tmp += inp2_strides[0];
-    }
-  }
-  else if(inp1_const == 1 || inp2_const == 1)
-  {
-    WORD32 inp1_zb, inp1_ls, inp1_mult;
-    WORD32 inp2_zb, inp2_ls, inp2_mult;
-    WORD32 out_mult;
-    inp1_zb = inp1_zero_bias;
-    inp1_ls = inp1_left_shift;
-    inp1_mult = inp1_multiplier;
-    inp2_zb = inp2_zero_bias;
-    inp2_ls = inp2_left_shift;
-    inp2_mult = inp2_multiplier;
-    out_mult = out_multiplier;
-    if(inp1_strides[3] == 0)
-    {
-      inp2_zb = inp1_zero_bias;
-      inp2_ls = inp1_left_shift;
-      inp2_mult = inp1_multiplier;
-      inp1_zb = inp2_zero_bias;
-      inp1_ls = inp2_left_shift;
-      inp1_mult = inp2_multiplier;
-      out_mult = -out_multiplier;
-      const WORD16 *tmp;
-      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
-    }
-    internal_elm_sub_broadcast_asym16sxasym16s_asym16s(
-        p_out_tmp,
-        out_zero_bias,
-        out_left_shift,
-        out_mult,
-        out_activation_min,
-        out_activation_max,
-        p_inp1_tmp,
-        inp1_zb,
-        inp1_ls,
-        inp1_mult,
-        p_inp2_tmp,
-        inp2_zb,
-        inp2_ls,
-        inp2_mult,
-        left_shift,
-        p_out_shape[0] * p_out_shape[1] * p_out_shape[2] * p_out_shape[3]);
-  }
-  else
-  {
-    WORD32 inp1_zb, inp1_ls, inp1_mult;
-    WORD32 inp2_zb, inp2_ls, inp2_mult;
-    WORD32 out_mult;
-    inp1_zb = inp1_zero_bias;
-    inp1_ls = inp1_left_shift;
-    inp1_mult = inp1_multiplier;
-    inp2_zb = inp2_zero_bias;
-    inp2_ls = inp2_left_shift;
-    inp2_mult = inp2_multiplier;
-    out_mult = out_multiplier;
-    if(inp1_strides[3] == 0)
-    {
-      inp2_zb = inp1_zero_bias;
-      inp2_ls = inp1_left_shift;
-      inp2_mult = inp1_multiplier;
-      inp1_zb = inp2_zero_bias;
-      inp1_ls = inp2_left_shift;
-      inp1_mult = inp2_multiplier;
-      out_mult = -out_multiplier;
-      const WORD16 *tmp;
-      tmp = p_inp1_tmp;   p_inp1_tmp = p_inp2_tmp;    p_inp2_tmp = tmp;
-
-      int tmp_strides[3];
-      tmp_strides[0] = inp1_strides[0];
-      tmp_strides[1] = inp1_strides[1];
-      tmp_strides[2] = inp1_strides[2];
-
-      inp1_strides[0] = inp2_strides[0];
-      inp1_strides[1] = inp2_strides[1];
-      inp1_strides[2] = inp2_strides[2];
-
-      inp2_strides[0] = tmp_strides[0];
-      inp2_strides[1] = tmp_strides[1];
-      inp2_strides[2] = tmp_strides[2];
-    }
-    for(itr0 = 0; itr0 < p_out_shape[0]; itr0++)
-    {
-      const WORD16 *__restrict__ p_inp1_tmp0 = p_inp1_tmp;
-      const WORD16 *__restrict__ p_inp2_tmp0 = p_inp2_tmp;
-      for(itr1 = 0; itr1 < p_out_shape[1]; itr1++)
-      {
-        const WORD16 *__restrict__ p_inp1_tmp1 = p_inp1_tmp0;
-        const WORD16 *__restrict__ p_inp2_tmp1 = p_inp2_tmp0;
-        for(itr2 = 0; itr2 < p_out_shape[2]; itr2++)
-        {
-          {
-            internal_elm_sub_broadcast_asym16sxasym16s_asym16s(
-                p_out_tmp,
-                out_zero_bias,
-                out_left_shift,
-                out_mult,
-                out_activation_min,
-                out_activation_max,
-                p_inp1_tmp1,
-                inp1_zb,
-                inp1_ls,
-                inp1_mult,
-                p_inp2_tmp1,
-                inp2_zb,
-                inp2_ls,
-                inp2_mult,
-                left_shift,
-                p_out_shape[3]);
-          }
-          p_out_tmp += p_out_shape[3];
-          p_inp1_tmp1 += inp1_strides[2];
-          p_inp2_tmp1 += inp2_strides[2];
-        }
-        p_inp1_tmp0 += inp1_strides[1];
-        p_inp2_tmp0 += inp2_strides[1];
-      }
-      p_inp1_tmp += inp1_strides[0];
-      p_inp2_tmp += inp2_strides[0];
-    }
-  }
-
-  return 0;
+  return CALL_BCAST(internal_elm_sub_broadcast_2D_asym16sxasym16s_asym16s, 
+            internal_elm_sub_broadcast_asym16sxasym16s_asym16s,
+            p_out,
+            p_out_shape,
+            p_inp1,
+            p_inp1_shape,
+            p_inp2,
+            p_inp2_shape,
+            &args);
 }
 

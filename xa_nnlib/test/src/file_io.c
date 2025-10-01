@@ -504,6 +504,67 @@ int load_rnn_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, buf1D_t 
   return 0;
 }
 
+int load_gru_input_data(int write_file, FILE *fptr_inp, buf1D_t *p_inp, 
+    buf1D_t *p_hidden, buf1D_t *p_ug_W, buf1D_t *p_rg_W, buf1D_t *p_ms_W, 
+    buf1D_t *p_ug_U, buf1D_t *p_rg_U, buf1D_t *p_ms_U, buf1D_t *p_ug_W_bias,
+    buf1D_t *p_rg_W_bias, buf1D_t *p_ms_W_bias, buf1D_t *p_ug_U_bias,
+    buf1D_t *p_rg_U_bias, buf1D_t *p_ms_U_bias)
+{
+  if(write_file)
+  {
+    /* Set random input data */
+    set_rand_inp_buf1D(p_inp);
+    set_rand_inp_buf1D(p_hidden);
+    set_rand_inp_buf1D(p_ug_W);
+    set_rand_inp_buf1D(p_rg_W);
+    set_rand_inp_buf1D(p_ms_W);
+    set_rand_inp_buf1D(p_ug_U);
+    set_rand_inp_buf1D(p_rg_U);
+    set_rand_inp_buf1D(p_ms_U);
+    set_rand_inp_buf1D(p_ug_W_bias);
+    set_rand_inp_buf1D(p_rg_W_bias);
+    set_rand_inp_buf1D(p_ms_W_bias);
+    set_rand_inp_buf1D(p_ug_U_bias);
+    set_rand_inp_buf1D(p_rg_U_bias);
+    set_rand_inp_buf1D(p_ms_U_bias);
+
+    /* Write input data into file */      
+    write_buf1D_to_file(fptr_inp, p_inp);
+    write_buf1D_to_file(fptr_inp, p_hidden);
+    write_buf1D_to_file(fptr_inp, p_ug_W);
+    write_buf1D_to_file(fptr_inp, p_rg_W);
+    write_buf1D_to_file(fptr_inp, p_ms_W);
+    write_buf1D_to_file(fptr_inp, p_ug_U);
+    write_buf1D_to_file(fptr_inp, p_rg_U);
+    write_buf1D_to_file(fptr_inp, p_ms_U);
+    write_buf1D_to_file(fptr_inp, p_ug_W_bias);
+    write_buf1D_to_file(fptr_inp, p_rg_W_bias);
+    write_buf1D_to_file(fptr_inp, p_ms_W_bias);
+    write_buf1D_to_file(fptr_inp, p_ug_U_bias);
+    write_buf1D_to_file(fptr_inp, p_rg_U_bias);
+    write_buf1D_to_file(fptr_inp, p_ms_U_bias);
+  }
+  else
+  {
+    /* Read input data from file */
+    read_buf1D_from_file(fptr_inp, p_inp);
+    read_buf1D_from_file(fptr_inp, p_hidden);
+    read_buf1D_from_file(fptr_inp, p_ug_W);
+    read_buf1D_from_file(fptr_inp, p_rg_W);
+    read_buf1D_from_file(fptr_inp, p_ms_W);
+    read_buf1D_from_file(fptr_inp, p_ug_U);
+    read_buf1D_from_file(fptr_inp, p_rg_U);
+    read_buf1D_from_file(fptr_inp, p_ms_U);
+    read_buf1D_from_file(fptr_inp, p_ug_W_bias);
+    read_buf1D_from_file(fptr_inp, p_rg_W_bias);
+    read_buf1D_from_file(fptr_inp, p_ms_W_bias);
+    read_buf1D_from_file(fptr_inp, p_ug_U_bias);
+    read_buf1D_from_file(fptr_inp, p_rg_U_bias);
+    read_buf1D_from_file(fptr_inp, p_ms_U_bias);
+  }
+  return 0;
+}
+
 int write_output_data(FILE *fptr_out, buf1D_t *p_out) 
 {  
   write_buf1D_to_file(fptr_out, p_out);                  
