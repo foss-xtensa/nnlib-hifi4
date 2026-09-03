@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -53,7 +53,7 @@ typedef struct _test_config_t
   lstm_quant_params quant_params;
   lstm_flags flags;
   gru_quant_params gru_q_params;
-  int time_major;
+  gru_flags gru_flags;
   int inp_size;
   int n_itr;
   int n_batch;
@@ -110,6 +110,7 @@ int default_config(test_config_t *p_cfg)
     
     p_cfg->flags.use_cifg = 0;
     p_cfg->flags.time_major = 0;
+    p_cfg->flags.back = 0;
 
     p_cfg->inp_size = 128;
     p_cfg->n_itr = 64;
@@ -142,7 +143,8 @@ int default_config(test_config_t *p_cfg)
     p_cfg->gru_q_params.hidden_zero_bias = 0;
     p_cfg->gru_q_params.input_zero_bias = 0;
     
-    p_cfg->time_major = 0;
+    p_cfg->gru_flags.time_major = 0;
+    p_cfg->gru_flags.back = 0;
 
     strcpy(p_cfg->kernel_name,"lstm");
     p_cfg->frames   = 2;
@@ -186,6 +188,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       ARGTYPE_ONETIME_CONFIG("-quantized_cell_clip",p_cfg->quant_params.quantized_cell_clip);
       ARGTYPE_ONETIME_CONFIG("-cell_state_scale",p_cfg->quant_params.cell_state_scale);
       ARGTYPE_ONETIME_CONFIG("-time_major",p_cfg->flags.time_major);
+      ARGTYPE_ONETIME_CONFIG("-back",p_cfg->flags.back);
     }
     else
     {
@@ -193,7 +196,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
       ARGTYPE_ONETIME_CONFIG("-hidden_zero_bias",p_cfg->gru_q_params.hidden_zero_bias);
       ARGTYPE_ONETIME_CONFIG("-hidden_multiplier",p_cfg->gru_q_params.hidden_multiplier);
       ARGTYPE_ONETIME_CONFIG("-hidden_shift",p_cfg->gru_q_params.hidden_shift);
-      ARGTYPE_ONETIME_CONFIG("-time_major",p_cfg->time_major);
+      ARGTYPE_ONETIME_CONFIG("-time_major",p_cfg->gru_flags.time_major);
+      ARGTYPE_ONETIME_CONFIG("-back",p_cfg->gru_flags.back);
     }
     ARGTYPE_ONETIME_CONFIG("-inp_size",p_cfg->inp_size);
     ARGTYPE_ONETIME_CONFIG("-n_itr",p_cfg->n_itr);
@@ -235,6 +239,7 @@ void show_usage(void)
     printf("\t-n_cell: Number of elements in cell state; Default=96\n");
     printf("\t-hidden_size: Number of elements in hidden state; Default=96\n");
     printf("\t-time_major: Order of input and output 1: time is outer most dimension, 0: batch is outer most dimension Default=0\n");
+    printf("\t-back: Direction, 0 : Forward 1: Backward\n");
     printf("\t-frames: Positive number; Default=2\n");
     printf("\t-kernel_name: lstm; Default=lstm\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
@@ -285,7 +290,7 @@ void show_usage(void)
                 cfg.n_batch, \
                 cfg.n_itr, \
                 &cfg.gru_q_params, \
-                cfg.time_major, \
+                &cfg.gru_flags, \
                 p_scratch->p \
               ); \
     XTPWR_PROFILER_STOP(0); \
@@ -386,13 +391,13 @@ int xa_nn_main_process(int argc, char *argv[])
   // Set profiler parameters
   if(strcmp(cfg.kernel_name,"gru") == 0)
   {
-    sprintf(profiler_params, "inp_size=%d, n_itr=%d, n_batch=%d, hidden_size=%d",
-          cfg.inp_size, cfg.n_itr, cfg.n_batch, cfg.hidden_size);
+    sprintf(profiler_params, "inp_size=%d, n_itr=%d, n_batch=%d, hidden_size=%d, time_major=%d, back=%d",
+          cfg.inp_size, cfg.n_itr, cfg.n_batch, cfg.hidden_size, cfg.gru_flags.time_major, cfg.gru_flags.back);
   }  
   else
   {
-    sprintf(profiler_params, "inp_size=%d, n_itr=%d, n_batch=%d, n_cell=%d",
-          cfg.inp_size, cfg.n_itr, cfg.n_batch, cfg.n_cell);
+    sprintf(profiler_params, "inp_size=%d, n_itr=%d, n_batch=%d, n_cell=%d, time_major=%d, back=%d",
+          cfg.inp_size, cfg.n_itr, cfg.n_batch, cfg.n_cell, cfg.flags.time_major, cfg.flags.back);
   }
   // Open input file
   if(cfg.write_file)

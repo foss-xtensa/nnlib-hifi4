@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -26,6 +26,43 @@ Cadence HiFi 4 Neural Network (NN) Library
 ======================================================================
 Revision History
 ======================================================================
+
+Version 5.2.0 API 2.2: September 3, 2026
+
++ Intermediate Release of HiFi4 NN Library
++ Tested using the RJ-2026.6 tools and xt-clang/xt-clang++ compiler
++ Adds the following kernels:
+  Normalization
+    xa_nn_instance_norm_3D_8_8_nhwc
+  LUT-based activations and softmax
+    xa_nn_vec_batch_softmax_{lut_asym8s_asym8s,sym16s_16}
+    xa_nn_vec_apply_lut_asym8s_asym8s
+    xa_nn_init_lut_asym8s_{sigmoid,tanh,softmax}
+  Resize
+    xa_nn_resize_nearest_neighbour_16_16
+  GRU
+    xa_nn_gru_hidden_state_update_16
++ Updates the xa_nn_gru_sym8sxasym8s API.
++ Updates the xa_nn_norm_calc_3D_8_nhwc API: removes the reciprocal table (precip)
++ Removed kernel API xa_nn_conv2d_std_getsize_sym4s 
++ Fixes known issues to improve stability.
+
+Note:
+> The _v2 APIs are in beta stage and may change in next release.
+> Processor Configuration must be built with the SP-VFP option to compile floating point variants of the kernels.
+> The ANN test bench and the supporting libraries need support for the C++11 standard. 
+  This is supported only with the Xtensa C library. 
+> The library makefile uses '-mno-mul16 -mno-mul32 -mno-div32' compile options. 
+  User may remove these from makefile for improved performance if their core config supports these HW options.
+
+Known issues
+> Compiler optimizations are not available for the ANN C++ source files.
+> 3 failures were seen in the ANN testcases because of differences in reference code implementations:
+    DEPTHWISE_CONV2D_FLOAT_LARGE_2_WEIGHTS_AS_INPUTS
+    LOCAL_RESPONSE_NORM_FLOAT_4
+    LOCAL_RESPONSE_NORM_FLOAT_4_RELAXED
+
+----------------------------------------------------------------------
 
 Version 5.1.0 API 2.1: September 30, 2025
 
@@ -296,12 +333,12 @@ Version 3.1.0 API 1.5: April 20, 2023
   STRIDED_SLICE (32-bit)
   TRANSPOSE (8-bit)
 + Adds support for new datatypes for TFLM operators:
-  SUB (single precision float inputs/outputs, with 4D broadcast)
-  QUANTIZE (single precision float to asymmetric quantized int16)
-  DEQUANTIZE (asymmetric quantized int16 to single precision float)
+  SUB (single precision float inputs/outputs, with 4D broadcast)
+  QUANTIZE (single precision float to asymmetric quantized int16)
+  DEQUANTIZE (asymmetric quantized int16 to single precision float)
 + Adds kernels xa_nn_matmul_sym8sxsym16s_sym16s, xa_nn_lstm_cell_state_update_16
-  xa_nn_elm_mul_sym16sxsym16s_asym8s and xa_nn_elm_add_16x16_16 for supporting TFLM
-  LSTM operator.
+  xa_nn_elm_mul_sym16sxsym16s_asym8s and xa_nn_elm_add_16x16_16 for supporting TFLM
+  LSTM operator.
 + Adds single precision float support for existing GRU layer
 + Adds Pytorch GRU equations support for precisions 8x16, 16x16 and float32xfloat32 
   to existing GRU layer

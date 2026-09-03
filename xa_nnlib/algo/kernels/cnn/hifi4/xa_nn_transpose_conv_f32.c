@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -24,6 +24,14 @@
 #include "xa_nnlib_common_macros.h"
 #include "xa_nn_transpose_conv_state.h"
 #include <string.h>
+
+#ifndef ZERO_SX2
+#define ZERO_SX2 XT_ZERO_SX2
+#endif
+
+#ifndef ZERO_S
+#define ZERO_S XT_ZERO_S
+#endif
 
 #if HAVE_VFPU
 #if NO_AGGR_FLOAT_OPT
@@ -79,7 +87,7 @@ static inline void tconv2d_f32xf32(FLOAT32* output_data,
         for (in_channel=0 ; in_channel < (input_depth & ~0x1); in_channel+=2)
         {
           xtfloatx2 d_inp;
-          AE_LSX2IP(d_inp, pinp, 2*sizeof(FLOAT32));
+          XT_LSX2IP(d_inp, pinp, 2*sizeof(FLOAT32));
           for (int filter_y = filt_y_min; filter_y < filt_y_max; ++filter_y)
           {
             for (int filter_x = filt_x_min; filter_x < filt_x_max; ++filter_x)
@@ -106,40 +114,40 @@ static inline void tconv2d_f32xf32(FLOAT32* output_data,
                 xtfloatx2 d_scr1;
                 xtfloatx2 d_scr2;
                 xtfloatx2 d_scr3;
-                d_scr0 = AE_LSX2I(pscratch_src, 0);
-                d_scr1 = AE_LSX2I(pscratch_src, 8);
-                d_scr2 = AE_LSX2I(pscratch_src, 16);
-                d_scr3 = AE_LSX2I(pscratch_src, 24);
-                AE_LSX2XP(d_fil0, pfilt, stride1);
-                AE_LSX2XP(d_fil1, pfilt, stride1);
-                AE_LSX2XP(d_fil2, pfilt, stride1);
-                AE_LSX2XP(d_fil3, pfilt, stride1);
-                AE_LSX2XP(d_fil4, pfilt, stride1);
-                AE_LSX2XP(d_fil5, pfilt, stride1);
-                AE_LSX2XP(d_fil6, pfilt, stride1);
-                AE_LSX2XP(d_fil7, pfilt, stride1);
+                d_scr0 = XT_LSX2I(pscratch_src, 0);
+                d_scr1 = XT_LSX2I(pscratch_src, 8);
+                d_scr2 = XT_LSX2I(pscratch_src, 16);
+                d_scr3 = XT_LSX2I(pscratch_src, 24);
+                XT_LSX2XP(d_fil0, pfilt, stride1);
+                XT_LSX2XP(d_fil1, pfilt, stride1);
+                XT_LSX2XP(d_fil2, pfilt, stride1);
+                XT_LSX2XP(d_fil3, pfilt, stride1);
+                XT_LSX2XP(d_fil4, pfilt, stride1);
+                XT_LSX2XP(d_fil5, pfilt, stride1);
+                XT_LSX2XP(d_fil6, pfilt, stride1);
+                XT_LSX2XP(d_fil7, pfilt, stride1);
 
-                _xtfloatx2_temp_00 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil0, d_fil1));
-                _xtfloatx2_temp_01 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil2, d_fil3));
-                _xtfloatx2_temp_02 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil4, d_fil5));
-                _xtfloatx2_temp_03 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil6, d_fil7));
-                d_scr0 = ADD_SX2(d_scr0, _xtfloatx2_temp_00);
-                d_scr1 = ADD_SX2(d_scr1, _xtfloatx2_temp_01);
-                d_scr2 = ADD_SX2(d_scr2, _xtfloatx2_temp_02);
-                d_scr3 = ADD_SX2(d_scr3, _xtfloatx2_temp_03);
+                _xtfloatx2_temp_00 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_HIGH_S(d_inp)), XT_SEL32_HH_SX2(d_fil0, d_fil1));
+                _xtfloatx2_temp_01 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_HIGH_S(d_inp)), XT_SEL32_HH_SX2(d_fil2, d_fil3));
+                _xtfloatx2_temp_02 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_HIGH_S(d_inp)), XT_SEL32_HH_SX2(d_fil4, d_fil5));
+                _xtfloatx2_temp_03 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_HIGH_S(d_inp)), XT_SEL32_HH_SX2(d_fil6, d_fil7));
+                d_scr0 = XT_ADD_SX2(d_scr0, _xtfloatx2_temp_00);
+                d_scr1 = XT_ADD_SX2(d_scr1, _xtfloatx2_temp_01);
+                d_scr2 = XT_ADD_SX2(d_scr2, _xtfloatx2_temp_02);
+                d_scr3 = XT_ADD_SX2(d_scr3, _xtfloatx2_temp_03);
 
-                _xtfloatx2_temp_00 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil0, d_fil1));
-                _xtfloatx2_temp_01 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil2, d_fil3));
-                _xtfloatx2_temp_02 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil4, d_fil5));
-                _xtfloatx2_temp_03 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil6, d_fil7));
-                d_scr0 = ADD_SX2(d_scr0, _xtfloatx2_temp_00);
-                d_scr1 = ADD_SX2(d_scr1, _xtfloatx2_temp_01);
-                d_scr2 = ADD_SX2(d_scr2, _xtfloatx2_temp_02);
-                d_scr3 = ADD_SX2(d_scr3, _xtfloatx2_temp_03);
-                AE_SSX2IP(d_scr0, pscratch_src, 8);
-                AE_SSX2IP(d_scr1, pscratch_src, 8);
-                AE_SSX2IP(d_scr2, pscratch_src, 8);
-                AE_SSX2IP(d_scr3, pscratch_src, 8);
+                _xtfloatx2_temp_00 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_LOW_S(d_inp)), XT_SEL32_LL_SX2(d_fil0, d_fil1));
+                _xtfloatx2_temp_01 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_LOW_S(d_inp)), XT_SEL32_LL_SX2(d_fil2, d_fil3));
+                _xtfloatx2_temp_02 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_LOW_S(d_inp)), XT_SEL32_LL_SX2(d_fil4, d_fil5));
+                _xtfloatx2_temp_03 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_LOW_S(d_inp)), XT_SEL32_LL_SX2(d_fil6, d_fil7));
+                d_scr0 = XT_ADD_SX2(d_scr0, _xtfloatx2_temp_00);
+                d_scr1 = XT_ADD_SX2(d_scr1, _xtfloatx2_temp_01);
+                d_scr2 = XT_ADD_SX2(d_scr2, _xtfloatx2_temp_02);
+                d_scr3 = XT_ADD_SX2(d_scr3, _xtfloatx2_temp_03);
+                XT_SSX2IP(d_scr0, pscratch_src, 8);
+                XT_SSX2IP(d_scr1, pscratch_src, 8);
+                XT_SSX2IP(d_scr2, pscratch_src, 8);
+                XT_SSX2IP(d_scr3, pscratch_src, 8);
               }
               xtfloat *pscratch_src_t = (xtfloat *)pscratch_src;
               for (; out_channel < output_depth; out_channel++)
@@ -149,10 +157,10 @@ static inline void tconv2d_f32xf32(FLOAT32* output_data,
                 // xtfloat d_scr1;
                 d_scr0 = XT_LSI(pscratch_src_t, 0);
                 XT_LSX2XP(d_fil, pfilt, stride1);
-                d_scr0 = ADD_SX2(d_scr0, MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(HIGH_S(d_inp)), AE_SEL32_HH_SX2(d_fil, d_fil)));
-                d_scr0 = ADD_SX2(d_scr0, MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(LOW_S(d_inp)), AE_SEL32_LL_SX2(d_fil, d_fil)));
-                XT_SSIP(HIGH_S(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr0)), pscratch_src_t, 4);
-                // XT_SSIP(HIGH_S(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr1)), pscratch_src_t, 4);
+                d_scr0 = XT_ADD_SX2(d_scr0, XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_HIGH_S(d_inp)), XT_SEL32_HH_SX2(d_fil, d_fil)));
+                d_scr0 = XT_ADD_SX2(d_scr0, XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(XT_LOW_S(d_inp)), XT_SEL32_LL_SX2(d_fil, d_fil)));
+                XT_SSIP(XT_HIGH_S(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr0)), pscratch_src_t, 4);
+                // XT_SSIP(XT_HIGH_S(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr1)), pscratch_src_t, 4);
               }
               pscratch_src = (xtfloatx2*)pscratch_src_t;
             }
@@ -223,10 +231,10 @@ static inline void tconv2d_f32xf32(FLOAT32* output_data,
                 XT_LSXP(d_fil2, pfilt, stride1);
                 XT_LSXP(d_fil3, pfilt, stride1);
 
-                _xtfloatx2_temp_00 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_inp), AE_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil0), AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil1)));
-                _xtfloatx2_temp_01 = MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_inp), AE_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil2), AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil3)));
-                d_scr0 = ADD_SX2(d_scr0, _xtfloatx2_temp_00);
-                d_scr1 = ADD_SX2(d_scr1, _xtfloatx2_temp_01);
+                _xtfloatx2_temp_00 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_inp), XT_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil0), AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil1)));
+                _xtfloatx2_temp_01 = XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_inp), XT_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil2), AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil3)));
+                d_scr0 = XT_ADD_SX2(d_scr0, _xtfloatx2_temp_00);
+                d_scr1 = XT_ADD_SX2(d_scr1, _xtfloatx2_temp_01);
                 pscratch_src -= 2;
                 XT_SASX2IP(d_scr0, align_out, pscratch_src);
                 XT_SASX2IP(d_scr1, align_out, pscratch_src);
@@ -240,8 +248,8 @@ static inline void tconv2d_f32xf32(FLOAT32* output_data,
                 xtfloat d_scr0;
                 d_scr0 = XT_LSI(pscratch_src_t, 0);
                 XT_LSXP(d_fil, pfilt, stride1);
-                d_scr0 = AE_MOVXTFLOAT_FROMXTFLOATX2(ADD_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr0), MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_inp), AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil))));
-                XT_SSIP(HIGH_S(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr0)), pscratch_src_t, 4);
+                d_scr0 = AE_MOVXTFLOAT_FROMXTFLOATX2(XT_ADD_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr0), XT_MUL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(d_inp), AE_MOVXTFLOATX2_FROMXTFLOAT(d_fil))));
+                XT_SSIP(XT_HIGH_S(AE_MOVXTFLOATX2_FROMXTFLOAT(d_scr0)), pscratch_src_t, 4);
               }
               pscratch_src = (xtfloatx2*)pscratch_src_t;
             }
@@ -265,7 +273,7 @@ static inline void tconv2d_f32xf32(FLOAT32* output_data,
       for (int i = 0; i < (output_height*output_width); i++)
       {
         XT_LSXP(acc, pscratch, output_depth*sizeof(FLOAT32));
-        XT_SSXP(ADD_S(acc, dbias), pout, output_depth*sizeof(FLOAT32));
+        XT_SSXP(XT_ADD_S(acc, dbias), pout, output_depth*sizeof(FLOAT32));
       }
     }
   }

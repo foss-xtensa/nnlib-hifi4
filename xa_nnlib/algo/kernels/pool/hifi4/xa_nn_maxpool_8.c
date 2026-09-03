@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -311,9 +311,7 @@ const WORD8* __restrict__ p_inp,
       WORD32  y_padding,
       WORD32  out_height,
       WORD32  out_width,
-#ifdef NNLIB_V2
       WORD32  inp_data_format,
-#endif
       WORD32  out_data_format,
       VOID   *p_scratch)
 {
@@ -336,16 +334,10 @@ const WORD8* __restrict__ p_inp,
     XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
-#ifndef NNLIB_V2
-    XA_NNLIB_ARG_CHK_COND((out_data_format != 1), -1);
-#else
     XA_NNLIB_ARG_CHK_COND((out_data_format != 0) && (out_data_format != 1), -1);
-#endif
-#ifdef NNLIB_V2
     XA_NNLIB_ARG_CHK_COND((inp_data_format != 0) && (inp_data_format != 1), -1);
     // Different I/O data formats (not supported!)
     XA_NNLIB_ARG_CHK_COND((out_data_format != inp_data_format), -1);
-#endif
 
     if((input_channels == 1) || (out_data_format == 1))
     {
@@ -382,7 +374,6 @@ const WORD8* __restrict__ p_inp,
                     );
         }
     }
-#ifdef NNLIB_V2
     else
     {
         xa_nn_maxpool_8_hwc(
@@ -402,7 +393,6 @@ const WORD8* __restrict__ p_inp,
                 p_scratch);
 
     }
-#endif
     return 0;
 }
 

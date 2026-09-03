@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -31,7 +31,7 @@
 /* A constant to let API copy small strings to buffers outside */
 #define XA_API_STR_LEN            30
 #define XA_APIVERSION_MAJOR 2
-#define XA_APIVERSION_MINOR 1
+#define XA_APIVERSION_MINOR 2
 
 /* last compatible version */
 /* sometimes a new API version is just for a bugfix, or a added feature  in */

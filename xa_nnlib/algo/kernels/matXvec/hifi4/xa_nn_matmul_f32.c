@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -30,6 +30,14 @@
 #endif
 
 #include "xa_nnlib_common_macros.h"
+
+#ifndef ZERO_SX2
+#define ZERO_SX2 XT_ZERO_SX2
+#endif
+
+#ifndef ZERO_S
+#define ZERO_S XT_ZERO_S
+#endif
 
 /*----------------------------Main function---------------------------------*/
 
@@ -81,11 +89,11 @@ static inline void _xa_nn_dot_product_4_rows_1_vecs_offset_aligned
       x00 = XT_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(*(px0)), AE_MOVXTFLOATX2_FROMXTFLOAT(*(px1)));
       x20 = XT_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(*(px2)), AE_MOVXTFLOATX2_FROMXTFLOAT(*(px3)));
       y0 = AE_MOVXTFLOATX2_FROMXTFLOAT(*(py));
-      acc00 = ADD_SX2(acc00, MUL_SX2(x00, y0));
-      acc20 = ADD_SX2(acc20, MUL_SX2(x20, y0));
+      acc00 = XT_ADD_SX2(acc00, XT_MUL_SX2(x00, y0));
+      acc20 = XT_ADD_SX2(acc20, XT_MUL_SX2(x20, y0));
   }
-  z0 = ADD_SX2(z0, acc00);
-  z1 = ADD_SX2(z1, acc20);
+  z0 = XT_ADD_SX2(z0, acc00);
+  z1 = XT_ADD_SX2(z1, acc20);
 
   *out_0_0 = z0;
   *out_1_0 = z1;
@@ -150,23 +158,23 @@ static inline void _xa_nn_dot_product_4_rows_4_vecs_offset_aligned
       vec2_0 = AE_MOVXTFLOATX2_FROMXTFLOAT(*(p_vec2));
       vec3_0 = AE_MOVXTFLOATX2_FROMXTFLOAT(*(p_vec3));
       
-      acc_row0_vec0 = ADD_SX2(acc_row0_vec0, MUL_SX2(x00, vec0_0));
-      acc_row2_vec0 = ADD_SX2(acc_row2_vec0, MUL_SX2(x20, vec0_0));
-      acc_row0_vec1 = ADD_SX2(acc_row0_vec1, MUL_SX2(x00, vec1_0));
-      acc_row2_vec1 = ADD_SX2(acc_row2_vec1, MUL_SX2(x20, vec1_0));
-      acc_row0_vec2 = ADD_SX2(acc_row0_vec2, MUL_SX2(x00, vec2_0));
-      acc_row2_vec2 = ADD_SX2(acc_row2_vec2, MUL_SX2(x20, vec2_0));
-      acc_row0_vec3 = ADD_SX2(acc_row0_vec3, MUL_SX2(x00, vec3_0));
-      acc_row2_vec3 = ADD_SX2(acc_row2_vec3, MUL_SX2(x20, vec3_0));
+      acc_row0_vec0 = XT_ADD_SX2(acc_row0_vec0, XT_MUL_SX2(x00, vec0_0));
+      acc_row2_vec0 = XT_ADD_SX2(acc_row2_vec0, XT_MUL_SX2(x20, vec0_0));
+      acc_row0_vec1 = XT_ADD_SX2(acc_row0_vec1, XT_MUL_SX2(x00, vec1_0));
+      acc_row2_vec1 = XT_ADD_SX2(acc_row2_vec1, XT_MUL_SX2(x20, vec1_0));
+      acc_row0_vec2 = XT_ADD_SX2(acc_row0_vec2, XT_MUL_SX2(x00, vec2_0));
+      acc_row2_vec2 = XT_ADD_SX2(acc_row2_vec2, XT_MUL_SX2(x20, vec2_0));
+      acc_row0_vec3 = XT_ADD_SX2(acc_row0_vec3, XT_MUL_SX2(x00, vec3_0));
+      acc_row2_vec3 = XT_ADD_SX2(acc_row2_vec3, XT_MUL_SX2(x20, vec3_0));
   }
-  z0 = ADD_SX2(z0, acc_row0_vec0);
-  z1 = ADD_SX2(z1, acc_row2_vec0);
-  z2 = ADD_SX2(z2, acc_row0_vec1);
-  z3 = ADD_SX2(z3, acc_row2_vec1);
-  z4 = ADD_SX2(z4, acc_row0_vec2);
-  z5 = ADD_SX2(z5, acc_row2_vec2);
-  z6 = ADD_SX2(z6, acc_row0_vec3);
-  z7 = ADD_SX2(z7, acc_row2_vec3);
+  z0 = XT_ADD_SX2(z0, acc_row0_vec0);
+  z1 = XT_ADD_SX2(z1, acc_row2_vec0);
+  z2 = XT_ADD_SX2(z2, acc_row0_vec1);
+  z3 = XT_ADD_SX2(z3, acc_row2_vec1);
+  z4 = XT_ADD_SX2(z4, acc_row0_vec2);
+  z5 = XT_ADD_SX2(z5, acc_row2_vec2);
+  z6 = XT_ADD_SX2(z6, acc_row0_vec3);
+  z7 = XT_ADD_SX2(z7, acc_row2_vec3);
 
   *out_0_0 = z0;
   *out_1_0 = z1;
@@ -207,8 +215,8 @@ static inline void _xa_nn_dot_product_1_row_4_vecs_unaligned
   acc20 = acc21 = acc30 = acc31 = ZERO_SX2();
   acc22 = acc23 = acc32 = acc33 = ZERO_SX2();
 
-  acc20 =  ADD_SX2(ADD_SX2(acc20, acc21), ADD_SX2(acc22, acc23));
-  acc30 =  ADD_SX2(ADD_SX2(acc30, acc31), ADD_SX2(acc32, acc33));
+  acc20 =  XT_ADD_SX2(XT_ADD_SX2(acc20, acc21), XT_ADD_SX2(acc22, acc23));
+  acc30 =  XT_ADD_SX2(XT_ADD_SX2(acc30, acc31), XT_ADD_SX2(acc32, acc33));
 
   acc00 = ZERO_SX2();
   acc20 = ZERO_SX2();
@@ -217,11 +225,11 @@ static inline void _xa_nn_dot_product_1_row_4_vecs_unaligned
       v00 = XT_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(*(pv0)), AE_MOVXTFLOATX2_FROMXTFLOAT(*(pv1)));
       v20 = XT_SEL32_LL_SX2(AE_MOVXTFLOATX2_FROMXTFLOAT(*(pv2)), AE_MOVXTFLOATX2_FROMXTFLOAT(*(pv3)));
       y0 = AE_MOVXTFLOATX2_FROMXTFLOAT(*(py));
-      acc00 = ADD_SX2(acc00, MUL_SX2(v00, y0));
-      acc20 = ADD_SX2(acc20, MUL_SX2(v20, y0));
+      acc00 = XT_ADD_SX2(acc00, XT_MUL_SX2(v00, y0));
+      acc20 = XT_ADD_SX2(acc20, XT_MUL_SX2(v20, y0));
   }
-  z0 = ADD_SX2(z0, acc00);
-  z1 = ADD_SX2(z1, acc20);
+  z0 = XT_ADD_SX2(z0, acc00);
+  z1 = XT_ADD_SX2(z1, acc20);
 
   *out_0_0 = z0;
   *out_1_0 = z1;
@@ -353,10 +361,10 @@ WORD32 xa_nn_matmul_f32xf32_f32(
             ,vec_offset
             );
          
-          AE_SSXP(AE_MOVXTFLOAT_FROMXTFLOATX2(XT_SEL32_HH_SX2(z0,z0)), p_out_0, out_stride*sizeof(xtfloat));
-          AE_SSXP(AE_MOVXTFLOAT_FROMXTFLOATX2(z0), p_out_1, out_stride*sizeof(xtfloat));
-          AE_SSXP(AE_MOVXTFLOAT_FROMXTFLOATX2(XT_SEL32_HH_SX2(z1,z1)), p_out_2, out_stride*sizeof(xtfloat));
-          AE_SSXP(AE_MOVXTFLOAT_FROMXTFLOATX2(z1), p_out_3, out_stride*sizeof(xtfloat));
+          XT_SSXP(AE_MOVXTFLOAT_FROMXTFLOATX2(XT_SEL32_HH_SX2(z0,z0)), p_out_0, out_stride*sizeof(xtfloat));
+          XT_SSXP(AE_MOVXTFLOAT_FROMXTFLOATX2(z0), p_out_1, out_stride*sizeof(xtfloat));
+          XT_SSXP(AE_MOVXTFLOAT_FROMXTFLOATX2(XT_SEL32_HH_SX2(z1,z1)), p_out_2, out_stride*sizeof(xtfloat));
+          XT_SSXP(AE_MOVXTFLOAT_FROMXTFLOATX2(z1), p_out_3, out_stride*sizeof(xtfloat));
         }
       }
       /* Tail loop for vec unroll */
@@ -418,13 +426,13 @@ WORD32 xa_nn_matmul_f32xf32_f32(
           {
               vec_batch_0_0 = AE_MOVXTFLOATX2_FROMXTFLOAT(*((xtfloat *)p_vec_batch_0));
               mat1_0_0 = AE_MOVXTFLOATX2_FROMXTFLOAT(*((xtfloat *)p_mat1_0));
-              _xtfloatx2_temp = MUL_SX2(vec_batch_0_0, mat1_0_0);
-              acc_row0_vec0 = ADD_SX2(acc_row0_vec0, _xtfloatx2_temp);
+              _xtfloatx2_temp = XT_MUL_SX2(vec_batch_0_0, mat1_0_0);
+              acc_row0_vec0 = XT_ADD_SX2(acc_row0_vec0, _xtfloatx2_temp);
           }
           if(p_bias!=NULL)
           {
             XT_LSIP(bias, pbias, 4);
-            acc_row0_vec0 = AE_MOVXTFLOATX2_FROMXTFLOAT(ADD_S(AE_MOVXTFLOAT_FROMXTFLOATX2(acc_row0_vec0), bias));
+            acc_row0_vec0 = AE_MOVXTFLOATX2_FROMXTFLOAT(XT_ADD_S(AE_MOVXTFLOAT_FROMXTFLOATX2(acc_row0_vec0), bias));
           }
          
           XT_SSXP(AE_MOVXTFLOAT_FROMXTFLOATX2(acc_row0_vec0), p_out_0, out_stride*sizeof(xtfloat));
@@ -772,3 +780,22 @@ WORD32 xa_nn_matmul_f32xf32_f32(
 }
 #endif
 #endif
+
+WORD32 xa_nn_matmul_v2_f32xf32_f32(
+    FLOAT32 * __restrict__ p_out,          
+    const FLOAT32 * __restrict__ p_mat1,   
+    const FLOAT32 * __restrict__ p_mat2,
+    const FLOAT32 * __restrict__ pt_bias,
+    WORD32 rows,
+    WORD32 cols,
+    WORD32 row_stride,
+    WORD32 vec_count,                      
+    WORD32 vec_offset,
+    WORD32 out_offset,
+    WORD32 out_stride,
+    FLOAT32 out_activation_min,
+    FLOAT32 out_activation_max,
+    xa_dma_cfg_t *p_dma_cfg)
+{
+    return -1;
+}

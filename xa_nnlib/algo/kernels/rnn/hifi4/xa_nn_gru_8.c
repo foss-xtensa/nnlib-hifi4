@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -142,11 +142,14 @@ WORD32 xa_nn_gru_sym8sxasym8s(
   WORD32 n_batch,
   WORD32 n_itr,
   const gru_quant_params *p_gru_qp,
-  WORD32 time_major,
+  gru_flags *p_gru_flags,
   void* p_scratch
 )
 {
-  
+ WORD32 time_major, back;
+
+ time_major = p_gru_flags->time_major;
+ back = p_gru_flags->back; 
   /* NULL Pointer Checks */
   XA_NNLIB_ARG_CHK_PTR(p_out, -1);
   XA_NNLIB_ARG_CHK_PTR(p_hidden_state, -1);
@@ -331,8 +334,13 @@ WORD32 xa_nn_gru_sym8sxasym8s(
     if(ret != 0)
       return ret;
 
-    WORD32 W_fc_out_offset = time_major ? itr_t * n_batch * hidden_size : itr_t * hidden_size;
-
+    WORD32 W_fc_out_offset = 0;
+    if(back) {
+       W_fc_out_offset = time_major ? (n_itr - itr_t - 1) * n_batch * hidden_size :(n_itr - itr_t - 1) * hidden_size;
+    }
+    else{
+       W_fc_out_offset = time_major ? itr_t * n_batch * hidden_size : itr_t * hidden_size;
+    }
     xa_nn_gru_gate_integer_8x8_16(
       rg_fc_U_out_ptr,
       rg_fc_W_out_ptr + W_fc_out_offset,
@@ -386,17 +394,25 @@ WORD32 xa_nn_gru_sym8sxasym8s(
     /* Memcpy hidden state to output */
     if(time_major)
     {
-      MEMCPY_8b(&p_out[itr_t * n_batch * hidden_size], updated_hidden_state, (WORD32)(sizeof(WORD8) * n_batch * hidden_size));
+      if(back){ 
+        MEMCPY_8b(&p_out[(n_itr - itr_t - 1) * n_batch * hidden_size], updated_hidden_state, (WORD32)(sizeof(WORD8) * n_batch * hidden_size));
+      }
+      else{
+        MEMCPY_8b(&p_out[itr_t * n_batch * hidden_size], updated_hidden_state, (WORD32)(sizeof(WORD8) * n_batch * hidden_size));
+      } 
     }
     else
     {
       for(itr_b = 0; itr_b < n_batch; itr_b++)
       {
-        MEMCPY_8b(&p_out[(itr_t + itr_b * n_itr) * hidden_size], &updated_hidden_state[itr_b * hidden_size], (WORD32)(sizeof(WORD8) * hidden_size));
+        if(back){
+          MEMCPY_8b(&p_out[((n_itr - itr_t - 1) + itr_b * n_itr) * hidden_size], &updated_hidden_state[itr_b * hidden_size], (WORD32)(sizeof(WORD8) * hidden_size));
+        }
+        else{
+          MEMCPY_8b(&p_out[(itr_t + itr_b * n_itr) * hidden_size], &updated_hidden_state[itr_b * hidden_size], (WORD32)(sizeof(WORD8) * hidden_size));
+        }
       }
     }
-
-
   }
   return 0;
 }

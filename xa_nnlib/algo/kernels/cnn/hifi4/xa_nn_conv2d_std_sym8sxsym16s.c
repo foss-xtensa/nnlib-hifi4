@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -464,7 +464,7 @@ static VOID* align_weightbuffer_rows(VOID *p_scratch /*dest*/, const WORD8 *p_ke
     int row_length     = kw*kc;
     int row_length_pad = PADDED_SIZE(kw*kc, 4);
 
-    if( row_length_pad == row_length){
+    if( row_length_pad == row_length && (((unsigned int)p_kernel & 0x7) == 0)){
       return (VOID *)p_kernel;
     }
 
@@ -778,7 +778,8 @@ WORD32 xa_nn_dilated_conv2d_std_v2_per_chan_sym8sxsym16s(
   WORD32 out_width_over_x_r_pad = 0;
   // Determine x-right padding
   WORD32 x_r_pad = kernel_width_dilation + (out_width - 1) * x_stride - (x_padding + input_width);//dilation
-  XA_NNLIB_ARG_CHK_COND((x_r_pad<0), -1);
+  // XA_NNLIB_ARG_CHK_COND((x_r_pad<0), -1);
+  x_r_pad = x_r_pad < 0 ? 0 : x_r_pad;
   if(x_r_pad >= kernel_width_dilation)//dilation
   {
     out_width_over_x_r_pad = conv_x_right_pad(x_padding, input_width, x_stride, out_width, out_height, out_channels, out_channels_offset, out_width_offset, out_height_offset, p_bias, p_out, p_out_multiplier, p_out_shift, out_activation_min, out_activation_max);
@@ -787,7 +788,8 @@ WORD32 xa_nn_dilated_conv2d_std_v2_per_chan_sym8sxsym16s(
 
   // Determine y-bottom padding
   WORD32 y_b_pad = kernel_height_dilation + (out_height - 1) * y_stride - (y_padding + input_height);
-  XA_NNLIB_ARG_CHK_COND((y_b_pad<0), -1);
+  // XA_NNLIB_ARG_CHK_COND((y_b_pad<0), -1);
+  y_b_pad = y_b_pad < 0 ? 0 : y_b_pad;
 
   XA_NNLIB_ARG_CHK_COND((kernel_height_dilation > ( y_padding + input_height + y_b_pad)), -1);//dilation
   XA_NNLIB_ARG_CHK_COND((kernel_width_dilation  > ( x_padding + input_width  + x_r_pad)), -1);//dilation
@@ -990,6 +992,7 @@ WORD32 xa_nn_conv2d_std_v2_per_chan_sym8sxsym16s(
   XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
   /* Pointer alignment checks */
   XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(WORD64), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_kernel, ALIGNMENT>>1, -1);   
   /* Basic Parameter checks */
   XA_NNLIB_ARG_CHK_COND((input_height <= 0 || input_width <= 0), -1);
   XA_NNLIB_ARG_CHK_COND((input_channels <= 0), -1);
@@ -1010,7 +1013,8 @@ WORD32 xa_nn_conv2d_std_v2_per_chan_sym8sxsym16s(
     XA_NNLIB_ARG_CHK_COND((p_out_shift[itr] < -31 || p_out_shift[itr] > 15), -1);
   }
 
-  if ( !(x_padding) && !(input_channels & 0x3) && !(out_channels & 0x3) && !(out_width & 0x1) && (out_data_format == 0) && ((out_width-1)*x_stride <=(input_width-kernel_width) ) && p_bias)
+  if ( !(x_padding) && !(input_channels & 0x3) && !(out_channels & 0x3) && !(out_width & 0x1) && (out_data_format == 0) && ((out_width-1)*x_stride <=(input_width-kernel_width) ) && p_bias
+       && (((unsigned int)p_inp&0x7)==0) )
   {
     int ret_val=0;
     ret_val=xa_nn_conv2d_std_per_chan_sym8sxsym16s_no_circ_buf(p_out,
@@ -1041,7 +1045,7 @@ WORD32 xa_nn_conv2d_std_v2_per_chan_sym8sxsym16s(
     return ret_val;
   }
 
-  if ( !(x_padding) && (input_channels == 2) && !(out_channels & 0x3) && !(out_width & 0x1) && (out_data_format == 0) && ((out_width-1)*x_stride <=(input_width-kernel_width) ) && p_bias)
+  if ( !(x_padding) && /*(input_channels == 2) &&*/  !(out_channels & 0x3) && !(out_width & 0x1) && (out_data_format == 0) && ((out_width-1)*x_stride <=(input_width-kernel_width) ) && p_bias)
   {
     int ret_val=0;
     VOID *p_kernel_padded = align_weightbuffer_rows(p_scratch /*dest*/, p_kernel /*src*/, out_channels, kernel_height, kernel_width, input_channels);

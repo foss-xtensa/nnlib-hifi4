@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -986,6 +986,281 @@ WORD32 xa_nn_vec_softmax_asym8s_16( WORD16 * __restrict__ p_out,
 
     return 0;
 }
+
+WORD32 xa_nn_vec_softmax_lut_asym8s_asym8s(WORD8 * __restrict__ p_out,
+                            WORD8 * __restrict__ p_vec,
+                            WORD32 * __restrict__ p_lut,
+                            WORD32  vec_length,
+                            pVOID __restrict__  p_scratch)
+{
+    /* NULL pointer checks */
+    XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+    XA_NNLIB_ARG_CHK_PTR(p_vec, -1);
+    XA_NNLIB_ARG_CHK_PTR(p_scratch, -1);
+    /* Pointer alignment checks */
+    XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD8), -1);
+    XA_NNLIB_ARG_CHK_ALIGN(p_vec, sizeof(WORD8), -1);
+    /* Basic Parameter checks */
+    XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
+
+    int i;
+    int shift_bits_reciprocal;
+    WORD8 *p_in = (WORD8 *)p_vec;
+    WORD32 *p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
+    ae_int32x2 x32, x10;
+    ae_int32x2 unsat_out32, unsat_out10, out32, out10;
+    ae_int32x2 exp_x32, exp_x10, sum_exp, recip_sum_exp;
+    ae_int16x4 max_16, m0_16;
+
+    ae_int64 sum_exp_64;
+    ae_valign align_dst;
+    /* Second operand for XOR instruction used in SUB_128 */
+    ae_int64 offset_xor = AE_MOVINT64_FROMINT32X2(AE_MOVDA32(128));
+    ae_int32x2 a_min, a_max;
+#if XCHAL_HAVE_HIFI1
+    ae_valign align_out = AE_ZALIGN64();
+#endif
+
+    ae_int32x2 z = AE_ZERO32();
+    a_min = AE_ZERO32();
+    a_max = AE_MOVDA32(255);
+
+    int pre_loop_count;
+    int main_loop_count;
+    int post_loop_count;
+
+    if(vec_length > 3)
+    {
+        pre_loop_count = (int)p_vec & 0x3;
+        pre_loop_count = (4 - pre_loop_count) & 3;
+        main_loop_count = vec_length - pre_loop_count;
+        post_loop_count = (main_loop_count & 3);
+        main_loop_count = main_loop_count >> 2;
+    }
+    else
+    {
+        pre_loop_count = 0;
+        main_loop_count = 0;
+        post_loop_count = vec_length;
+    }
+
+#if !XCHAL_HAVE_HIFI1
+    xtbool4 b0;
+#endif
+    ae_int16x4 max, temp16X4;
+    ae_f16x4 x;
+
+    // Calculating Max
+    {
+        max = AE_MOVDA16(0x8000);
+        __Pragma("no_unroll");
+        for(i=0; i < pre_loop_count; i++)
+        {
+            int i1;
+            i1 = (WORD16)(*p_in++);
+            temp16X4 = AE_MOVDA16(i1);
+            MAX_16X4(max, temp16X4)
+        }
+        for(i=0; i < main_loop_count; i++)
+        {
+#if XCHAL_HAVE_HIFI1
+            AE_L8X4S_IP(x, p_in, 4*sizeof(WORD8));
+#else
+            AE_L8X4F_IP(x, p_in, 4*sizeof(WORD8));
+            x = AE_SRAI16(x, 8);
+#endif
+            MAX_16X4(max, x)
+        }
+        __Pragma("no_unroll");
+        for(i=0; i < post_loop_count; i++)
+        {
+            int i1;
+            i1 = (WORD16) p_in[i];
+            temp16X4 = AE_MOVDA16(i1);
+            MAX_16X4(max, temp16X4)
+        }
+
+        ae_int32x2 temp1, temp2;
+        temp1 = AE_MOVINT32X2_FROMINT16X4(max);
+        temp2 = AE_SRAA32S(temp1, 16);
+        temp1 = AE_SLAA32(temp1, 16);
+        temp1 = AE_SRAA32S(temp1, 16);
+        temp1 = AE_MAX32(temp1, temp2);
+        temp2 = AE_SEL32_LH(temp1, temp1);
+        temp2 = AE_MAX32(temp1, temp2);
+        max_16 = AE_MOVDA16(AE_MOVAD32_L(temp2));
+    }
+
+    sum_exp = z; // setting to zero
+
+    p_in = (WORD8 *)p_vec;
+
+    align_dst = AE_ZALIGN64(); // zero alignment reg
+
+    ae_int16x4 max_16_off = AE_SUB16(AE_MOVDA16(255), max_16);
+
+    // pre loop
+    __Pragma("no_unroll");
+    for(i=0; i < pre_loop_count; i++)
+    {
+        int rem_x;
+        rem_x = (WORD32)(*p_in++);
+        ae_int16x4 rem_16 = AE_MOVDA16(rem_x);
+        ae_int16x4 m0_off = AE_ADD16(rem_16, max_16_off);
+        ae_int32x2 idx32 = AE_SEXT32X2D16_32(m0_off);
+        idx32 = AE_SLAI32(idx32, 2); // convert to byte offset
+
+        WORD32 v0;
+        v0 = AE_MOVAD32_L(idx32);
+
+        ae_int32x2 out0 = AE_L32_X((ae_int32 *)p_lut, v0);
+        AE_S32_L_IP(out0, (ae_int32 *)p_exp, sizeof(WORD32));
+
+        out0 = AE_SRAA32RS(out0, 12);
+        sum_exp = AE_ADD32S(sum_exp, out0);
+    }
+
+    sum_exp = AE_SEL32_HH(sum_exp, z);
+
+    // main loop
+    for(i=0; i < main_loop_count; i++)
+    {
+#if XCHAL_HAVE_HIFI1
+        AE_L8X4S_IP(m0_16, p_in, 4*sizeof(WORD8));
+#else
+        AE_L8X4F_IP(m0_16, p_in, 4*sizeof(WORD8));
+        m0_16 = AE_SRAI16(m0_16, 8);
+#endif
+        ae_int16x4 m0_16_off = AE_ADD16(m0_16, max_16_off);
+
+        x32 = AE_SEXT32X2D16_32(m0_16_off);
+        x10 = AE_SEXT32X2D16_10(m0_16_off);
+        x32 = AE_SLAI32(x32, 2); // convert to byte offset
+        x10 = AE_SLAI32(x10, 2);
+
+        WORD32 v0, v1, v2, v3;
+        v3 = AE_MOVAD32_H(x32);
+        v2 = AE_MOVAD32_L(x32);
+        v1 = AE_MOVAD32_H(x10);
+        v0 = AE_MOVAD32_L(x10);
+
+        ae_int32x2 out3 = AE_L32_X((ae_int32 *)p_lut, v3);
+        ae_int32x2 out2 = AE_L32_X((ae_int32 *)p_lut, v2);
+        ae_int32x2 out1 = AE_L32_X((ae_int32 *)p_lut, v1);
+        ae_int32x2 out0 = AE_L32_X((ae_int32 *)p_lut, v0);
+
+        exp_x32 = AE_SEL32_HH(out3, out2);
+        exp_x10 = AE_SEL32_HH(out1, out0);
+
+        AE_SA32X2_IP(exp_x32, align_dst, (ae_int32x2 *)p_exp);
+        AE_SA32X2_IP(exp_x10, align_dst, (ae_int32x2 *)p_exp);
+
+        exp_x32 = AE_SRAA32RS(exp_x32, 12);
+        exp_x10 = AE_SRAA32RS(exp_x10, 12);
+
+        sum_exp = AE_ADD32S(sum_exp, exp_x32);
+        sum_exp = AE_ADD32S(sum_exp, exp_x10);
+    }
+    sum_exp = AE_ADD32S_HL_LH(sum_exp, sum_exp);
+    AE_SA64POS_FP(align_dst, p_exp); // finalize the stream
+
+    // remainder loop
+    __Pragma("no_unroll");
+    for(i=0; i < post_loop_count; i++)
+    {
+        int rem_x;
+        rem_x = (WORD32)(*p_in++);
+        ae_int16x4 rem_16 = AE_MOVDA16(rem_x);
+        ae_int16x4 m0_off = AE_ADD16(rem_16, max_16_off);
+        ae_int32x2 idx32 = AE_SEXT32X2D16_32(m0_off);
+        idx32 = AE_SLAI32(idx32, 2); // convert to byte offset
+
+        WORD32 v0;
+        v0 = AE_MOVAD32_L(idx32);
+
+        ae_int32x2 out0 = AE_L32_X((ae_int32 *)p_lut, v0);
+        AE_S32_L_IP(out0, (ae_int32 *)p_exp, sizeof(WORD32));
+
+        out0 = AE_SRAA32RS(out0, 12);
+        sum_exp = AE_ADD32S(sum_exp, out0);
+    }
+
+    sum_exp_64 = AE_SRAI64(AE_MOVINT64_FROMINT32X2(sum_exp), 32);
+    recip_sum_exp = GetReciprocal(sum_exp_64, 12, &shift_bits_reciprocal);
+    p_exp = (WORD32 *)ALIGN_PTR(p_scratch, ALIGNMENT);
+
+    for(i=0; i<(vec_length >> 2); i++)
+    {
+        AE_L32X2_IP(exp_x32, (ae_int32x2 *)p_exp, 2*sizeof(WORD32));
+        AE_L32X2_IP(exp_x10, (ae_int32x2 *)p_exp, 2*sizeof(WORD32));
+
+        unsat_out32 = AE_MULFP32X2RAS(exp_x32, recip_sum_exp);
+        unsat_out32 = AE_SRAA32RS(unsat_out32, shift_bits_reciprocal + 31 - 8);
+        CLAMP_VAL(out32, unsat_out32, a_min, a_max);
+        SUB_128(out32)
+
+        unsat_out10 = AE_MULFP32X2RAS(exp_x10, recip_sum_exp);
+        unsat_out10 = AE_SRAA32RS(unsat_out10, shift_bits_reciprocal + 31 - 8);
+        CLAMP_VAL(out10, unsat_out10, a_min, a_max);
+        SUB_128(out10)
+
+#if XCHAL_HAVE_HIFI1
+        ae_f16x4 x_temp = AE_CVT16X4(out32, out10);
+        AE_SA8X4U_IP(x_temp, align_out, (ae_int32*)p_out);
+#else
+        STORE_8X4_FROM_32X4(p_out, out32, out10)
+#endif
+    }
+#if XCHAL_HAVE_HIFI1
+    AE_SA64POS_FP(align_out, p_out);
+#endif
+
+    // remainder loop
+    __Pragma("no_unroll");
+    for(i=0; i < (vec_length & 3); i++)
+    {
+        int o1;
+        AE_L32_IP(exp_x32, (ae_int32 *)p_exp, sizeof(WORD32));
+
+        unsat_out32 = AE_MULFP32X2RAS(exp_x32, recip_sum_exp);
+        unsat_out32 = AE_SRAA32RS(unsat_out32, shift_bits_reciprocal + 31 - 8);
+        CLAMP_VAL(out32, unsat_out32, a_min, a_max);
+        SUB_128(out32)
+
+        o1 = AE_MOVAD32_H(out32);
+        *p_out++ = (WORD8)o1;
+    }
+
+    return 0;
+}
+
+WORD32 xa_nn_vec_batch_softmax_lut_asym8s_asym8s(WORD8 * __restrict__ p_out,
+                            const  WORD8 * __restrict__ p_vec,
+                            WORD32 * __restrict__ p_lut,
+                            WORD32  vec_length,
+                            WORD32  batch_size,
+                            pVOID __restrict__  p_scratch)
+{
+  int batch;
+  WORD32 ret = 0;
+  
+  for(batch = 0; batch < batch_size; batch++)
+  {
+    ret = xa_nn_vec_softmax_lut_asym8s_asym8s(
+      p_out + batch * vec_length,
+      (WORD8*)(p_vec + batch * vec_length),
+      p_lut,
+      vec_length,
+      p_scratch
+    );
+    
+    if(ret != 0)
+      return ret;
+  }
+  
+  return 0;
+}
+
 #endif // #ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 
 int get_softmax_scratch_size(int inp_precision, int out_precision, int length)

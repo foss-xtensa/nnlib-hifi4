@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -20,8 +20,8 @@
 
 ******************************************************************************/
 
-#ifndef __XA_NN_AVGPOOL_STATE_H__
-#define __XA_NN_AVGPOOL_STATE_H__
+#ifndef __XA_NN_MAXPOOL_STATE_H__
+#define __XA_NN_MAXPOOL_STATE_H__
 
 #define ALIGNMENT   8   /* 8 bytes alignment */
 
@@ -104,5 +104,5 @@ const WORD16* __restrict__ p_inp,
       WORD32   out_width,
       pVOID    p_scratch_in);
 
-#endif /* #ifndef __XA_NN_AVGPOOL_STATE_H__ */
+#endif /* #ifndef __XA_NN_MAXPOOL_STATE_H__ */
 

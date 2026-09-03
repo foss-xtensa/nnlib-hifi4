@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -2012,8 +2012,6 @@ WORD32 xa_nn_elm_quantize_f32_asym16s(WORD16 * __restrict__ p_out,
   ae_int32x2 quant_max = AE_MOVDA32(32767);
   ae_int32x2 quant_min = AE_MOVDA32(-32768);
   xtfloatx2 d_out_scale = (xtfloatx2)*out_scale_ptr;
-  xtfloatx2 d_one = XT_FLOAT_SX2(AE_MOVDA32(1), 0);
-  xtfloatx2 d_one_over_out_scale = XT_DIV_SX2(d_one, d_out_scale);
 
   for(i = 0; i < (num_elm >> 2); i++)
   {
@@ -2023,8 +2021,8 @@ WORD32 xa_nn_elm_quantize_f32_asym16s(WORD16 * __restrict__ p_out,
 
     XT_LASX2IP(d_inp0, align_inp, p_i);
     XT_LASX2IP(d_inp1, align_inp, p_i);
-    d_inp0_t = XT_MUL_SX2(d_inp0, d_one_over_out_scale);
-    d_inp1_t = XT_MUL_SX2(d_inp1, d_one_over_out_scale);
+    d_inp0_t = XT_DIV_SX2(d_inp0, d_out_scale);
+    d_inp1_t = XT_DIV_SX2(d_inp1, d_out_scale);
     d_inp0_t = XT_FIROUND_SX2(d_inp0_t);
     d_inp1_t = XT_FIROUND_SX2(d_inp1_t);    
     d_out32_0 = XT_TRUNC_SX2(d_inp0_t, 0);
@@ -2045,7 +2043,7 @@ WORD32 xa_nn_elm_quantize_f32_asym16s(WORD16 * __restrict__ p_out,
     xtfloat d_inp0_t;
     ae_int32x2 d_out32_0;
     XT_LSIP(d_inp0, (xtfloat *)p_i, sizeof(FLOAT32));
-    d_inp0_t = XT_MUL_S(d_inp0, d_one_over_out_scale);
+    d_inp0_t = XT_DIV_S(d_inp0, d_out_scale);
     d_inp0_t = XT_FIROUND_S(d_inp0_t);
     d_out32_0 = XT_TRUNC_S(d_inp0_t, 0);    
     d_out32_0 = AE_ADD32S(d_out32_0, d_out_zero_bias);

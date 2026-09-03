@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -48,8 +48,12 @@
   #include <xtensa/config/core-isa.h>
   #include <xtensa/tie/xt_core.h>
   #include <xtensa/tie/xt_misc.h>
+#if (XCHAL_HAVE_HIFIN)
+  #include <xtensa/tie/xt_hifin.h>
+#else
   #include <xtensa/tie/xt_hifi3.h>
   #include <xtensa/tie/xt_hifi2.h>
+#endif
 #if (XCHAL_HAVE_HIFI5_VFPU || XCHAL_HAVE_HIFI4_VFPU || XCHAL_HAVE_HIFI3Z_VFPU || XCHAL_HAVE_HIFI3_VFPU)
   #include <xtensa/tie/xt_FP.h>
 #endif
@@ -65,7 +69,9 @@
 //#include STRINGIZE(PPCAT(cstub,XTENSA_CORE).h)
 //#include STRINGIZE(PPCAT(PPCAT(cstub,XTENSA_CORE),c.h))
 #ifndef ENABLE_SCRATCH_SIZE_API_ONLY
+#if !(XCHAL_HAVE_HIFIN)
 #include "xtensa/tie/xt_hifi3.h"
+#endif
 #include "xtensa/config/core-isa.h"
 #endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
 #endif

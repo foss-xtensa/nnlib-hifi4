@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,7 +40,9 @@
 #include "xa_nn_common.h"
 
 /* all vector single precision floating point instructions */
-#if ( (XCHAL_HAVE_HIFI5_VFPU) )
+#if ( (XCHAL_HAVE_HIFIN_SP_VFPU) )
+#define HAVE_VFPU 1
+#elif ( (XCHAL_HAVE_HIFI5_VFPU) )
 #define HAVE_VFPU 1
 #elif ( (XCHAL_HAVE_HIFI4_VFPU) )
 #define HAVE_VFPU 1
@@ -55,13 +57,13 @@
 #endif
 
 /* all scalar single precision floating point instructions */
-#if ( XCHAL_HAVE_HIFI5_VFPU || XCHAL_HAVE_HIFI4_VFPU || XCHAL_HAVE_HIFI3Z_VFPU || XCHAL_HAVE_HIFI3_VFPU || XCHAL_HAVE_HIFI1_VFPU || XCHAL_HAVE_FP )
+#if ( XCHAL_HAVE_HIFIN_SP_VFPU || XCHAL_HAVE_HIFI5_VFPU || XCHAL_HAVE_HIFI4_VFPU || XCHAL_HAVE_HIFI3Z_VFPU || XCHAL_HAVE_HIFI3_VFPU || XCHAL_HAVE_HIFI1_VFPU || XCHAL_HAVE_FP )
 #define HAVE_FPU 1
 #else
 #define HAVE_FPU 0
 #endif
 
-#if XCHAL_HAVE_HIFI5_HP_VFPU
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
 #define HAVE_HP_VFPU 1
 #else
 #define HAVE_HP_VFPU 0

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -115,6 +115,12 @@ typedef struct _test_config_t
   int dstMemmoveOffset;
   //memsset
   float value;
+  //gru hidden state update
+  int update_to_modulated_state_multiplier;
+  int update_to_modulated_state_shift;
+  int update_to_hidden_state_multiplier;
+  int update_to_hidden_state_shift;
+  int hidden_zero_bias;
 }test_config_t;
 
 int default_config(test_config_t *p_cfg)
@@ -167,6 +173,11 @@ int default_config(test_config_t *p_cfg)
     p_cfg->srcMemmoveOffset = 0;
     p_cfg->dstMemmoveOffset = 0;
     p_cfg->value = 0.0;
+    p_cfg->update_to_modulated_state_multiplier = 1073741824;
+    p_cfg->update_to_modulated_state_shift = 0;
+    p_cfg->update_to_hidden_state_multiplier = 1073741824;
+    p_cfg->update_to_hidden_state_shift = 0;
+    p_cfg->hidden_zero_bias = 0;
     p_cfg->kernel_type = 0;
 
     int itr;
@@ -305,6 +316,11 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-src_memmove_offset", p_cfg->srcMemmoveOffset);
     ARGTYPE_ONETIME_CONFIG("-dst_memmove_offset", p_cfg->dstMemmoveOffset);
     ARGTYPE_ONETIME_CONFIG_F32("-val_memset", p_cfg->value);
+    ARGTYPE_ONETIME_CONFIG("-utm_multiplier", p_cfg->update_to_modulated_state_multiplier);
+    ARGTYPE_ONETIME_CONFIG("-utm_shift", p_cfg->update_to_modulated_state_shift);
+    ARGTYPE_ONETIME_CONFIG("-uth_multiplier", p_cfg->update_to_hidden_state_multiplier);
+    ARGTYPE_ONETIME_CONFIG("-uth_shift", p_cfg->update_to_hidden_state_shift);
+    ARGTYPE_ONETIME_CONFIG("-hidden_zero_bias", p_cfg->hidden_zero_bias);
 
     ARGTYPE_ONETIME_CONFIG_ARRAY("-read_out_shape_str", p_cfg->output_shape, p_cfg->num_out_dims, p_cfg->read_out_shape_str);
 
@@ -649,6 +665,22 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                     (FLOAT32 *) p_inp1->p,\
                     cfg.input1_shape, \
                     (FLOAT32 *) p_inp2->p,\
+                    cfg.input2_shape\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define BROADCAST_4D_F16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_##KERNEL##_f16xf16_f16\
+                (\
+                    (WORD16 *) p_out->p,\
+                    cfg.output_shape, \
+                    (WORD16 *) p_inp1->p,\
+                    cfg.input1_shape, \
+                    (WORD16 *) p_inp2->p,\
                     cfg.input2_shape\
                 );\
     XTPWR_PROFILER_STOP(0);\
@@ -1436,8 +1468,51 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                 );\
     XTPWR_PROFILER_STOP(0);\
    }
+
+#define GRU_HIDDEN_STATE_UPDATE_8(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_gru_hidden_state_update_8\
+                (\
+                    (WORD8 *) p_inp1->p,\
+                    (WORD16 *) p_inp2->p,\
+                    (WORD16 *) p_inp3->p,\
+                    cfg.update_to_modulated_state_multiplier,\
+                    cfg.update_to_modulated_state_shift,\
+                    cfg.update_to_hidden_state_multiplier,\
+                    cfg.update_to_hidden_state_shift,\
+                    cfg.output_multiplier,\
+                    cfg.output_left_shift,\
+                    cfg.hidden_zero_bias,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define GRU_HIDDEN_STATE_UPDATE_16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name, #KERNEL) && (IPREC == cfg.inp_precision) \
+     && (OPREC == cfg.out_precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_gru_hidden_state_update_16\
+                (\
+                    (WORD16 *) p_inp1->p,\
+                    (WORD16 *) p_inp2->p,\
+                    (WORD16 *) p_inp3->p,\
+                    cfg.update_to_modulated_state_multiplier,\
+                    cfg.update_to_modulated_state_shift,\
+                    cfg.update_to_hidden_state_multiplier,\
+                    cfg.update_to_hidden_state_shift,\
+                    cfg.output_multiplier,\
+                    cfg.output_left_shift,\
+                    cfg.hidden_zero_bias,\
+                    cfg.io_length\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
  
 #if HIFI_VFPU
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
 #define PROCESS_BASIC_FUNC \
     BASIC_FLOAT32(elm_mul, -1, -1) \
     else BASIC_FLOAT32(elm_add, -1, -1) \
@@ -1525,7 +1600,105 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else MEMMOVE_8_8(memmove, -4, -4) \
     else MEMMOVE_16_16(memmove, -8, -8) \
     else MEMSET_F32(memset, -1, -1) \
+    else BROADCAST_4D_F16(elm_sub_broadcast_4D, -2, -2) \
+    else BROADCAST_4D_F16(elm_mul_broadcast_4D, -2, -2) \
+    else BROADCAST_4D_F16(elm_add_broadcast_4D, -2, -2) \
+    else BROADCAST_4D_F16(elm_div_broadcast_4D, -2, -2) \
+    else GRU_HIDDEN_STATE_UPDATE_8(gru_hidden_state_update, 8, 8) \
+    else GRU_HIDDEN_STATE_UPDATE_16(gru_hidden_state_update, 16, 16) \
     else {  printf("unsupported basic operation\n"); return -1;}
+#else
+#define PROCESS_BASIC_FUNC \
+    BASIC_FLOAT32(elm_mul, -1, -1) \
+    else BASIC_FLOAT32(elm_add, -1, -1) \
+    else BASIC_FLOAT32(elm_sub, -1, -1) \
+    else BASIC_FLOAT32(elm_mul, -1, -1) \
+    else BASIC_FLOAT32(elm_mul_acc, -1, -1) \
+    else BASIC_FLOAT32(elm_div, -1, -1) \
+    else FLOOR_F32(elm_floor, -1, -1) \
+    else MUL_ASYM8(elm_mul, -3, -3) \
+    else MUL_ASYM8S(elm_mul, -4, -4) \
+    else MUL_BROADCAST_4D_ASYM8S(elm_mul_broadcast_4D, -4, -4) \
+    else MUL_BROADCAST_4D_SYM16S(elm_mul_broadcast_4D, -8, -8) \
+    else ADD_ASYM8(elm_add, -3, -3) \
+    else ADD_ASYM8S(elm_add, -4, -4) \
+    else MATH_BROADCAST_4D_ASYM8S(elm_add_broadcast_4D, -4, -4) \
+    else MATH_BROADCAST_4D_ASYM16S(elm_add_broadcast_4D, -7, -7) \
+    else SUB_ASYM8(elm_sub, -3, -3) \
+    else SUB_ASYM8S(elm_sub, -4, -4) \
+    else MATH_BROADCAST_4D_ASYM8S(elm_sub_broadcast_4D, -4, -4) \
+    else MATH_BROADCAST_4D_ASYM16S(elm_sub_broadcast_4D, -7, -7) \
+    else BROADCAST_4D_F32(elm_sub_broadcast_4D, -1, -1) \
+    else BROADCAST_4D_F32(elm_mul_broadcast_4D, -1, -1) \
+    else BROADCAST_4D_F32(elm_add_broadcast_4D, -1, -1) \
+    else BROADCAST_4D_F32(elm_div_broadcast_4D, -1, -1) \
+    else BROADCAST_4D_F32(elm_min_4D_Bcast, -1, -1) \
+    else BROADCAST_4D_F32(elm_max_4D_Bcast, -1, -1) \
+    else MATH_BROADCAST_4D_ASYM8S(elm_squared_diff_broadcast_4D, -4, -4) \
+    else SQUARED_DIFF_BROADCAST_4D_SYM16S(elm_squared_diff_broadcast_4D, -8, -8) \
+    else MINMAX_8(elm_min, -4, -4)\
+    else MINMAX_8(elm_max, -4, -4)\
+    else MINMAX_F32(elm_min, -1, -1)\
+    else MINMAX_F32(elm_max, -1, -1)\
+    else CLAMP_F32(elm_clamp, -1, -1)\
+    else MINMAX_BCAST_8(elm_min_4D_Bcast, -4, -4)\
+    else MINMAX_BCAST_8(elm_max_4D_Bcast, -4, -4)\
+    else MINMAX_BCAST_8(elm_min_8D_Bcast, -4, -4)\
+    else MINMAX_BCAST_8(elm_max_8D_Bcast, -4, -4)\
+    else BROADCAST_8(broadcast, 8, 8)\
+    else BROADCAST_32(broadcast, 32, 32)\
+    else DOT_PROD_OUT_ASYM8S(dot_prod, 16, -4) \
+    else SELECT_32(elm_sel, 32, 32) \
+    else COMPARE_F32(elm_compare, -1, 8) \
+    else COMPARE_BCAST_F32(elm_compare_broadcast_4D, -1, 8) \
+    else SELECT_BCAST_32(elm_sel_broadcast_4D, 32, 32) \
+    else EQUAL_ASYM8S(elm_equal, -4, -4) \
+    else NOTEQUAL_ASYM8S(elm_notequal, -4, -4) \
+    else GREATER_ASYM8S(elm_greater, -4, -4) \
+    else GREATEREQUAL_ASYM8S(elm_greaterequal, -4, -4) \
+    else LESS_ASYM8S(elm_less, -4, -4) \
+    else LESSEQUAL_ASYM8S(elm_lessequal, -4, -4) \
+    else REDUCE_MAX_ASYM8S(reduce_max_4D, -4, -4) \
+    else REDUCE_MEAN_ASYM8S(reduce_mean_4D, -4, -4) \
+    else REDUCE_MAX_ASYM16S(reduce_max_4D, -7, -7) \
+    else REDUCE_MEAN_ASYM16S(reduce_mean_4D, -7, -7) \
+    else LOGICALAND_BOOL(elm_logicaland, 1, 1) \
+    else LOGICALOR_BOOL(elm_logicalor, 1, 1) \
+    else LOGICALNOT_BOOL(elm_logicalnot, 1, 1) \
+    else SINE_F32(elm_sine, -1, -1) \
+    else COSINE_F32(elm_cosine, -1, -1) \
+    else LOGN_F32(elm_logn, -1, -1) \
+    else ABS_F32(elm_abs, -1, -1) \
+    else CEIL_F32(elm_ceil, -1, -1) \
+    else ROUND_F32(elm_round, -1, -1) \
+    else NEG_F32(elm_neg, -1, -1) \
+    else SQUARE_F32(elm_square, -1, -1) \
+    else RSQRT_F32(elm_rsqrt, -1, -1) \
+    else SQRT_F32(elm_sqrt, -1, -1) \
+    else REQUANTIZE_ASYM32S_ASYM16S(elm_requantize, -10, -7) \
+    else REQUANTIZE_ASYM32S_ASYM8S(elm_requantize, -10, -4) \
+    else REQUANTIZE_ASYM8U_ASYM8S(elm_requantize, -3, -4) \
+    else REQUANTIZE_ASYM8S_ASYM32S(elm_requantize, -4, -10) \
+    else REQUANTIZE_ASYM16S_ASYM32S(elm_requantize, -7, -10) \
+    else REQUANTIZE_ASYM16S_ASYM16S(elm_requantize, -7, -7) \
+    else REQUANTIZE_ASYM16S_ASYM8S(elm_requantize, -7, -4) \
+    else REQUANTIZE_ASYM8S_ASYM8S(elm_requantize, -4, -4) \
+    else REQUANTIZE_ASYM8S_ASYM8U(elm_requantize, -4, -3) \
+    else REQUANTIZE_ASYM8S_ASYM16S(elm_requantize, -4, -7) \
+    else REQUANTIZE_ASYM8S_ASYM16U(elm_requantize, -4, -6) \
+    else DEQUANTIZE_ASYM8S_F32(elm_dequantize, -4, -1) \
+    else DEQUANTIZE_ASYM8U_F32(elm_dequantize, -3, -1) \
+    else DEQUANTIZE_ASYM16S_F32(elm_dequantize, -7, -1) \
+    else QUANTIZE_F32_ASYM8S(elm_quantize, -1, -4) \
+    else QUANTIZE_F32_ASYM8U(elm_quantize, -1, -3) \
+    else QUANTIZE_F32_ASYM16S(elm_quantize, -1, -7) \
+    else MEMMOVE_8_8(memmove, -4, -4) \
+    else MEMMOVE_16_16(memmove, -8, -8) \
+    else MEMSET_F32(memset, -1, -1) \
+    else GRU_HIDDEN_STATE_UPDATE_8(gru_hidden_state_update, 8, 8) \
+    else GRU_HIDDEN_STATE_UPDATE_16(gru_hidden_state_update, 16, 16) \
+    else {  printf("unsupported basic operation\n"); return -1;}
+#endif
 #else
 #define PROCESS_BASIC_FUNC \
     MUL_ASYM8(elm_mul, -3, -3) \
@@ -1579,6 +1752,8 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else REQUANTIZE_ASYM8S_ASYM16U(elm_requantize, -4, -6) \
     else MEMMOVE_8_8(memmove, -4, -4) \
     else MEMMOVE_16_16(memmove, -8, -8) \
+    else GRU_HIDDEN_STATE_UPDATE_8(gru_hidden_state_update, 8, 8) \
+    else GRU_HIDDEN_STATE_UPDATE_16(gru_hidden_state_update, 16, 16) \
     else {  printf("unsupported basic operation\n"); return -1;}
 #endif
 
@@ -1692,6 +1867,10 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_name, "%s_8_8", cfg.kernel_name);
   }
+  else if(cfg.inp_precision == 16 && cfg.out_precision == 16)
+  {
+    sprintf(profiler_name, "%s_16_16", cfg.kernel_name);
+  }
   else if(cfg.inp_precision == 32 && cfg.out_precision == 32)
   {
     sprintf(profiler_name, "%s_32_32", cfg.kernel_name);
@@ -1743,6 +1922,10 @@ int xa_nn_main_process(int argc, char *argv[])
   else if(cfg.inp_precision == -10 && cfg.out_precision == -4)
   {
     sprintf(profiler_name, "%s_asym32s_asym8s", cfg.kernel_name);
+  }
+  else if(cfg.inp_precision == -2 && cfg.out_precision == -2)
+  {
+    sprintf(profiler_name, "%s_f16_f16", cfg.kernel_name);
   }
   else
   {
@@ -1803,7 +1986,7 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     no_of_inputs = 1;
   }
-  else if(!strcmp(cfg.kernel_name, "elm_sel") || !strcmp(cfg.kernel_name, "elm_sel_broadcast_4D") || !strcmp(cfg.kernel_name, "elm_clamp"))
+  else if(!strcmp(cfg.kernel_name, "elm_sel") || !strcmp(cfg.kernel_name, "elm_sel_broadcast_4D") || !strcmp(cfg.kernel_name, "elm_clamp") || !strcmp(cfg.kernel_name, "gru_hidden_state_update"))
   {
     no_of_inputs = 3;
   }
@@ -1926,6 +2109,13 @@ int xa_nn_main_process(int argc, char *argv[])
 	}
   else if( !strcmp(cfg.kernel_name, "broadcast")) {
     p_inp1 = create_buf1D(inp_length, cfg.inp_precision); VALIDATE_PTR(p_inp1);
+  }
+  else if( !strcmp(cfg.kernel_name, "gru_hidden_state_update") )
+  {
+    /* hidden_state is 8-bit (asym8s) or 16-bit (sym16s); update_gate and modulated_state are always 16-bit */
+    p_inp1 = create_buf1D(cfg.io_length, cfg.inp_precision); VALIDATE_PTR(p_inp1);
+    p_inp2 = create_buf1D(cfg.io_length, SYM16S_TYPE); VALIDATE_PTR(p_inp2);
+    p_inp3 = create_buf1D(cfg.io_length, SYM16S_TYPE); VALIDATE_PTR(p_inp3);
   }
   else if( !strcmp(cfg.kernel_name, "elm_add_broadcast_4D") || 
            !strcmp(cfg.kernel_name, "elm_sub_broadcast_4D") || 
@@ -2080,6 +2270,15 @@ int xa_nn_main_process(int argc, char *argv[])
     if(!strcmp(cfg.kernel_name,"memmove"))
     {
       if(cfg.inp_precision == -8 && cfg.out_precision == -8)
+        memcpy(p_out->p, p_inp1->p, (cfg.io_length<<1));
+      else
+        memcpy(p_out->p, p_inp1->p, cfg.io_length);
+    }
+
+    /* gru_hidden_state_update writes the result in-place into p_inp1 (hidden_state); copy it to p_out */
+    if(!strcmp(cfg.kernel_name,"gru_hidden_state_update"))
+    {
+      if(cfg.out_precision == 16)
         memcpy(p_out->p, p_inp1->p, (cfg.io_length<<1));
       else
         memcpy(p_out->p, p_inp1->p, cfg.io_length);

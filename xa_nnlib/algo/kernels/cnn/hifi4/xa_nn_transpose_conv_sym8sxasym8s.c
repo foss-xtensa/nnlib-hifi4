@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -1271,6 +1271,14 @@ int xa_nn_transpose_conv_v2_sym8sxasym8s(WORD8* output_data,
   const int indepth_per_grp = input_depth / num_groups;
   XA_NNLIB_ARG_CHK_COND(((output_depth % num_groups)!=0),-1);
   const int outdepth_per_grp = output_depth / num_groups;
+  int vec_itr;
+  for(vec_itr = 0; vec_itr < output_depth; vec_itr++)
+  {
+    if((output_shift[vec_itr] > 31) || (output_shift[vec_itr] < -31))
+    {
+      return -1;
+    }
+  }
   
   int ker_grt_inp = (filter_width > input_width || filter_height > input_height);
   int str_leq_ker = (stride_width <= filter_width && stride_height <= filter_height);

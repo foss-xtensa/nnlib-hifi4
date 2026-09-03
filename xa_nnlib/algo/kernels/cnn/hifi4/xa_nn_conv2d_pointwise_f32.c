@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -36,6 +36,23 @@ DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_conv2d_pointwise_f32,(
     WORD32  out_channels,
     WORD32  out_data_format))
 #else /* #if !HAVE_VFPU */
+
+WORD32 xa_nn_conv2d_pointwise_v2_f32(
+    FLOAT32* __restrict__ p_out,
+    FLOAT32* __restrict__ p_kernel,
+    FLOAT32* __restrict__ p_inp,
+    FLOAT32* __restrict__ p_bias,
+    WORD32  input_height,
+    WORD32  input_width,
+    WORD32  input_channels,
+    WORD32  out_channels,
+    WORD32  out_data_format,
+    FLOAT32 out_activation_min,
+    FLOAT32 out_activation_max,
+    xa_dma_cfg_t *p_dma_cfg)
+{
+    return -1;
+}
 
 static WORD32 xa_nn_conv2d_pointwise_nhwc_f32(
     FLOAT32* __restrict__ p_out,

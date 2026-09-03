@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -2135,6 +2135,74 @@ WORD32 xa_nn_vec_tanh_asym8s_asym8s(WORD8 *p_out,
     WORD16 m0_out8 = m0;
     *p_o++ = (WORD8)m0_out8;
 #endif
+  }
+
+  return 0;
+}
+
+WORD32 xa_nn_vec_apply_lut_asym8s_asym8s(WORD8 * __restrict__ p_out,
+                      const WORD8 * __restrict__ p_vec,
+                            WORD8 * __restrict__ p_lut,
+                            WORD32 lut_len,
+                            WORD32 vec_length)
+{
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_vec, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_lut, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_vec, sizeof(WORD8), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_lut, sizeof(WORD8), -1);
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND((vec_length <= 0), -1);
+  XA_NNLIB_ARG_CHK_COND((lut_len != 256), -1);
+
+  int i;
+  const WORD8 *pin = p_vec;
+  WORD8 *pout = p_out;
+
+  ALIGN_REGISTER_TYPE align_src;
+#if XCHAL_HAVE_HIFI1
+  align_src = AE_LA64_PP((ae_int16x4 *)pin);
+#else
+  PRIME_8X4F(pin, align_src);
+#endif
+
+  for(i = 0; i < (vec_length >> 2); i++)
+  {
+    ae_int16x4 d0;
+    ae_int32x2 d32_0, d32_1;
+    WORD32 v0, v1, v2, v3;
+
+#if XCHAL_HAVE_HIFI1
+    AE_LA8X4S_IP(d0, align_src, pin);
+#else
+    AE_LA8X4F_IP(d0, align_src, pin);
+    d0 = AE_SRAI16(d0, 8);
+#endif
+
+    /* Mask to unsigned byte indices [0,255]; LUT is pre-permuted */
+    d0 = AE_AND16(d0, AE_MOVDA16(0xFF));
+    d32_0 = AE_SEXT32X2D16_32(d0);
+    d32_1 = AE_SEXT32X2D16_10(d0);
+    v0 = AE_MOVAD32_H(d32_0);
+    v1 = AE_MOVAD32_L(d32_0);
+    v2 = AE_MOVAD32_H(d32_1);
+    v3 = AE_MOVAD32_L(d32_1);
+
+    /* Scalar LUT lookups and store */
+    pout[0] = p_lut[v0];
+    pout[1] = p_lut[v1];
+    pout[2] = p_lut[v2];
+    pout[3] = p_lut[v3];
+    pout += 4;
+  }
+
+  for(i = 0; i < (vec_length & 3); i++)
+  {
+    UWORD8 index = (UWORD8)(*pin++);
+    *pout++ = p_lut[index];
   }
 
   return 0;

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -23,14 +23,29 @@
 #define __XA_NNLIB_LEGACY_COMPAT_H__
 #ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 #include <xtensa/config/core-isa.h>
+#if !(XCHAL_HAVE_HIFIN)
 #include "xtensa/tie/xt_hifi2.h"
+#else
+#include "xtensa/tie/xt_hifin.h"
+#endif
 #endif /* #ifndef ENABLE_SCRATCH_SIZE_API_ONLY */
+
+/* Unified ETIE LUT availability check */
+#if ETIE_LUT && defined(AE_LUTSETN_2X32)
+#define HAVE_ETIE_LUT 1
+#else
+#define HAVE_ETIE_LUT 0
+#endif
+
 #include "xa_nnlib_api.h"
 #include "xa_nnlib_standards.h"
 #include "xa_nnlib_err_chk.h"
+
+#if !(XCHAL_HAVE_HIFIN) && !defined(hifi_iq)
 #include "xa_nnlib_hifi_isa_compat.h"
 #include "xa_nn_common.h"
 #include "xa_nnlib_common_internal.h"
+#endif
 #endif /* __XA_NNLIB_LEGACY_COMPAT_H__ */
 
 #define RI9_HWVERSION 281090

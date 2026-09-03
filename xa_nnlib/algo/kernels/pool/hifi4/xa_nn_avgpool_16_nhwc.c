@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -339,42 +339,51 @@ const WORD16* __restrict__ p_inp,
                 }while(1);
 
                 // Saving Output
-                ae_int32x2 den_h, den_w, d_tmp32, d_out1, d_tmp32hw;
-                ae_int64 d_tmp;
+                ae_int32x2 d_tmp32, d_out1, d_tmp32hw;
                 WORD32 *p_out1;
 
                 p_out1 = (WORD32 *)p_dst;
 
-                if(kernel_height * kernel_width <= 1024)
+                WORD32 den, den_h, den_w;
+                den_h = p_den_height[itr_oh];
+                den_w = p_den_width[itr_ow];
+                den = den_h * den_w;
+                if(den <= 1024)
                 {
-                    d_tmp32hw = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh] * p_den_width[itr_ow]]);
-                }
-                else
-                {
-                    den_h = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh]]);
-                    den_w = AE_MOVDA32(inv_256_tbl[p_den_width[itr_ow]]);
-                    d_tmp = AE_MUL32U_LL(den_h, den_w);
-
-                    /* Max value of den_h or den_w is 0x80000000
-                      so 1 left shift is possible without overflow */
-                    d_tmp32hw = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
-                }
-
+                    d_tmp32hw = AE_MOVDA32(inv_256_tbl[den]);
 
 #if XCHAL_HAVE_HIFI1 /* Perf fix on RI11 */
 #pragma concurrent
 #endif
-                for(i=0; i<input_channels; i++)
-                {
-                    d_out1 = AE_MOVDA32(p_out1[i]);
+                    for(i=0; i<input_channels; i++)
+                    {
+                      d_out1 = AE_MOVDA32(p_out1[i]);
 #if XCHAL_HAVE_HIFI1
-                    d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32hw);
-                    AE_S16_0_IP(AE_MOVINT16X4_FROMINT32X2(d_tmp32), (ae_int16*)p_out_temp, sizeof(WORD16));
+                      d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32hw);
+                      AE_S16_0_IP(AE_MOVINT16X4_FROMINT32X2(d_tmp32), (ae_int16*)p_out_temp, sizeof(WORD16));
 #else
-                    d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
-                    p_out_temp[i] = (WORD16)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
+                      d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32hw);
+                      p_out_temp[i] = (WORD16)AE_MOVAD32_L(AE_SRAI32(d_tmp32, 0));
 #endif
+                    }
+
                 }
+                else
+                {
+                    int64_t out;
+                    for(i=0; i<input_channels; i++)
+                    {
+                        out = p_out1[i];
+
+                        out = den != 0 ? (out + (out > 0 ? (den/2):(-den/2))) : 0;
+                        out = (out!=0) ? ((out>INT32_MAX) ?(INT32_MAX/den): ((out<INT32_MIN)?(INT32_MIN/den):(WORD32)out/den)):0;
+
+                        p_out_temp[i] = (WORD32)out;
+                    }
+                }
+
+
+
             }
             else
             {

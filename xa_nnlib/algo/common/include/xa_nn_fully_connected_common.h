@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -70,6 +70,62 @@ WORD32 xa_nn_fully_connected_f32
   return ret;
 }
 #endif /* #if !HAVE_VFPU */
+
+#if !HAVE_VFPU
+DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_fully_connected_v2_f32,
+    (FLOAT32 *__restrict__ p_out
+   ,const FLOAT32 *__restrict__ p_weight
+   ,const FLOAT32 *__restrict__ p_inp
+   ,const FLOAT32 *__restrict__ p_bias
+   ,WORD32  weight_depth
+   ,WORD32  out_depth
+   ,FLOAT32 out_activation_min
+   ,FLOAT32 out_activation_max
+   ,xa_dma_cfg_t *p_dma_cfg
+    )
+    )
+#else /* #if !HAVE_VFPU */
+WORD32 xa_nn_fully_connected_v2_f32
+  (FLOAT32 *__restrict__ p_out
+   ,const FLOAT32 *__restrict__ p_weight
+   ,const FLOAT32 *__restrict__ p_inp
+   ,const FLOAT32 *__restrict__ p_bias
+   ,WORD32  weight_depth
+   ,WORD32  out_depth
+   ,FLOAT32 out_activation_min
+   ,FLOAT32 out_activation_max
+   ,xa_dma_cfg_t *p_dma_cfg
+  )
+{
+  /* NULL pointer checks */
+  XA_NNLIB_ARG_CHK_PTR(p_out, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_weight, -1);
+  XA_NNLIB_ARG_CHK_PTR(p_inp, -1);
+  /* Pointer alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_weight, sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(FLOAT32), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_bias, sizeof(FLOAT32), -1);
+  /* Basic Parameter checks */
+  XA_NNLIB_ARG_CHK_COND((out_depth <= 0), -1);
+
+  WORD32 ret = 0;
+  ret = xa_nn_matXvec_v2_f32xf32_f32
+    (p_out
+     ,(FLOAT32 *)p_weight
+     ,(FLOAT32 *)p_inp
+     ,(FLOAT32 *)p_bias
+     ,out_depth
+     ,weight_depth
+     ,weight_depth
+     ,out_activation_min
+     ,out_activation_max
+     ,p_dma_cfg
+    );
+  return ret;
+}
+#endif /* #if !HAVE_VFPU */
+
 
 WORD32 xa_nn_fully_connected_16x16_16
   (pWORD16 __restrict__ p_out

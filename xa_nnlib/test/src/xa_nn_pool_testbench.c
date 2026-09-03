@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -158,7 +158,7 @@ void show_usage(void)
     printf("\t-inp_precision: 8, 16, -1(single prec float); Default=16\n");
     printf("\t-out_precision: 8, 16, -1(single prec float); Default=16\n");
     printf("\t-frames: Positive number; Default=2\n");
-    printf("\t-kernel_name: avgpool, maxpool; Default=""avgpool""\n");
+    printf("\t-kernel_name: avgpool, maxpool, maxpoolId, maxunpool; Default=""avgpool""\n");
     printf("\t-write_file: set to 1 to write input and output vectors to file; Default=0\n");
     printf("\t-read_inp_file_name: Full filename for reading inputs (order - inp) \n");
     printf("\t-read_ref_file_name: Full filename for reading reference output \n");
@@ -227,6 +227,24 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
+#define AVGPOOL_KERNEL_F_F16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_f16 ( \
+        (WORD16 *)p_out->p, (WORD16 *) p_inp->p, \
+        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, \
+        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+        cfg.inp_data_format, cfg.out_data_format, p_scratch);\
+    XTPWR_PROFILER_STOP(0);\
+  }
+#else
+#define AVGPOOL_KERNEL_F_F16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    printf("Unsupported Kernel!\n");\
+  }
+#endif
+
 #define AVGPOOL_KERNEL_FN(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -248,6 +266,24 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         cfg.inp_data_format, cfg.out_data_format, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
   }
+
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
+#define MAXPOOL_KERNEL_F_F16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_f16 ( \
+        (WORD16 *)p_out->p, (WORD16 *) p_inp->p, \
+        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, \
+        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+        cfg.inp_data_format, cfg.out_data_format, p_scratch);\
+    XTPWR_PROFILER_STOP(0);\
+  }
+#else
+#define MAXPOOL_KERNEL_F_F16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
+    printf("Unsupported Kernel!\n");\
+  }
+#endif
 
 #define MAXPOOL_KERNEL_FN(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.kernel_name,#KERNEL) && (IPREC == p_inp->precision)) {\
@@ -276,9 +312,11 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     AVGPOOL_KERNEL_FN(avgpool, 16, 16) \
     else AVGPOOL_KERNEL_FN(avgpool, 8, 8) \
     else AVGPOOL_KERNEL_F_FN(avgpool, -1, -1) \
+    else AVGPOOL_KERNEL_F_F16(avgpool, -2, -2) \
     else MAXPOOL_KERNEL_FN(maxpool, 8, 8) \
     else MAXPOOL_KERNEL_FN(maxpool, 16, 16) \
     else MAXPOOL_KERNEL_F_FN(maxpool, -1, -1) \
+    else MAXPOOL_KERNEL_F_F16(maxpool, -2, -2) \
     else POOL_KERNEL_ASYM8_FN(maxpool, -3, -3) \
     else POOL_KERNEL_ASYM8_FN(avgpool, -3, -3) \
     else {  printf("unsupported pooling operation\n"); return -1;}
@@ -310,6 +348,10 @@ int xa_nn_main_process(int argc, char *argv[])
   buf1D_t *p_inp;
   buf1D_t *p_out;
   buf1D_t *p_ref;
+  buf1D_t *p_out_Id = NULL;   /* maxpoolId_v2: packed argmax indices (output) */
+  buf1D_t *p_inp_Id = NULL;   /* maxunpool:    packed argmax indices (input)  */
+  buf1D_t *p_ref_Id = NULL;   /* maxpoolId_v2: reference index buffer         */
+  int is_maxpoolId = 0, is_maxunpool = 0;
 
   FILE *fptr_inp;
   FILE *fptr_out;
@@ -339,6 +381,9 @@ int xa_nn_main_process(int argc, char *argv[])
   inp_size = cfg.input_height * cfg.input_width * cfg.input_channels;
   out_size = cfg.out_height * cfg.out_width * cfg.input_channels;
 
+  is_maxpoolId = !strcmp(cfg.kernel_name, "maxpoolId");
+  is_maxunpool = !strcmp(cfg.kernel_name, "maxunpool");
+
   // Set profiler name 
   if(cfg.kernel_name[0])
   {
@@ -351,6 +396,18 @@ int xa_nn_main_process(int argc, char *argv[])
     
     // If VFPU is not supported, return
     if(!HIFI_VFPU)
+    {
+      printf("%s: NOT TESTED\n", profiler_name);
+      return 0;
+    }
+  }
+  else if(cfg.inp_precision == -2)
+  {
+    sprintf(profiler_params, "_f16");
+    strcat(profiler_name, profiler_params);
+    
+    // If HP_VFPU is not supported, return
+    if(!HIFI_HP_VFPU)
     {
       printf("%s: NOT TESTED\n", profiler_name);
       return 0;
@@ -401,17 +458,24 @@ int xa_nn_main_process(int argc, char *argv[])
   if(cfg.verify)
   {
     p_ref = create_buf1D(out_size, cfg.out_precision); 
+    if(is_maxpoolId){ p_ref_Id = create_buf1D(out_size, 8); VALIDATE_PTR(p_ref_Id); }
     fptr_ref = file_open(pb_ref_file_path, cfg.read_ref_file_name, "rb", XA_MAX_CMD_LINE_LENGTH);
   }
 
   // Allocate Memory
   p_inp = create_buf1D(inp_size, cfg.inp_precision);                              VALIDATE_PTR(p_inp);
   p_out = create_buf1D(out_size, cfg.out_precision);                              VALIDATE_PTR(p_out);
+  if(is_maxpoolId){ p_out_Id = create_buf1D(out_size, 8); VALIDATE_PTR(p_out_Id); }
+  if(is_maxunpool){ p_inp_Id = create_buf1D(inp_size, 8); VALIDATE_PTR(p_inp_Id); }
 
   if(!strcmp(cfg.kernel_name,"avgpool"))
     num_ops = out_size * (1 + cfg.kernel_height * cfg.kernel_width);
   else if(!strcmp(cfg.kernel_name,"maxpool"))
     num_ops = out_size * cfg.kernel_height * cfg.kernel_width;
+  else if(is_maxpoolId)
+    num_ops = out_size * cfg.kernel_height * cfg.kernel_width;
+  else if(is_maxunpool)
+    num_ops = inp_size;
 
   XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, num_ops, "OPs/cyc", 1);
 
@@ -466,10 +530,63 @@ int xa_nn_main_process(int argc, char *argv[])
   for(frame = 0; frame < cfg.frames; frame++)
   {
     // If write_file enabled, generate random data for input, else read from file
-    load_pool_input_data(cfg.write_file, fptr_inp, p_inp);
-    
+    if(is_maxunpool)
+    {
+      /* maxunpool consumes value + packed Id buffers. Ids must be valid
+       * (ky < kernel_height, kx < kernel_width) or the scatter writes OOB. */
+      if(cfg.write_file)
+      {
+        int e;
+        set_rand_inp_buf1D(p_inp);
+        for(e = 0; e < p_inp_Id->length; e++)
+        {
+          int ky = rand() % cfg.kernel_height;
+          int kx = rand() % cfg.kernel_width;
+          ((UWORD8 *)p_inp_Id->p)[e] = (UWORD8)((ky << 4) | (kx & 0xF));
+        }
+        write_buf1D_to_file(fptr_inp, p_inp);
+        write_buf1D_to_file(fptr_inp, p_inp_Id);
+      }
+      else
+      {
+        read_buf1D_from_file(fptr_inp, p_inp);
+        read_buf1D_from_file(fptr_inp, p_inp_Id);
+      }
+    }
+    else
+    {
+      load_pool_input_data(cfg.write_file, fptr_inp, p_inp);
+    }
+
     // Call the cnn kernel_name specified on command line
-    PROCESS_POOL;
+    if(is_maxpoolId || is_maxunpool)
+    {
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
+      XTPWR_PROFILER_START(0);
+      if(is_maxpoolId)
+        err = xa_nn_maxpoolId_v2_f16(
+            (WORD16 *)p_out->p, (UWORD8 *)p_out_Id->p, (WORD16 *)p_inp->p,
+            cfg.input_height, cfg.input_width, cfg.input_channels,
+            cfg.kernel_height, cfg.kernel_width, cfg.x_stride, cfg.y_stride,
+            cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width,
+            cfg.inp_data_format, cfg.out_data_format, p_scratch, NULL, NULL, NULL);
+      else
+        err = xa_nn_maxunpool_f16(
+            (WORD16 *)p_out->p, (WORD16 *)p_inp->p, (UWORD8 *)p_inp_Id->p,
+            cfg.input_height, cfg.input_width, cfg.input_channels,
+            cfg.kernel_height, cfg.kernel_width, cfg.x_stride, cfg.y_stride,
+            cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width,
+            cfg.inp_data_format, cfg.out_data_format, p_scratch);
+      XTPWR_PROFILER_STOP(0);
+#else
+      printf("Unsupported Kernel!\n");
+      err = -1;
+#endif
+    }
+    else
+    {
+      PROCESS_POOL;
+    }
 
     if(err)
     {
@@ -481,14 +598,23 @@ int xa_nn_main_process(int argc, char *argv[])
     XTPWR_PROFILER_UPDATE(0);
     XTPWR_PROFILER_PRINT(0);
 
-    // Write output into file
+    // Write output into file (maxpoolId also emits its packed Id buffer)
     write_buf1D_to_file(fptr_out, p_out);
+    if(is_maxpoolId)
+      write_buf1D_to_file(fptr_out, p_out_Id);
 
     // If verify flag enabled, compare output against reference
     if(cfg.verify)
     {
+      int ok;
       read_buf1D_from_file(fptr_ref, p_ref);
-      pass_count += compare_buf1D(p_ref, p_out, cfg.verify, cfg.out_precision, 1);
+      ok = compare_buf1D(p_ref, p_out, cfg.verify, cfg.out_precision, 1);
+      if(is_maxpoolId)
+      {
+        read_buf1D_from_file(fptr_ref, p_ref_Id);
+        ok &= compare_buf1D(p_ref_Id, p_out_Id, cfg.verify, 8, 1);
+      }
+      pass_count += ok;
     }
     else
     {
@@ -504,11 +630,14 @@ int xa_nn_main_process(int argc, char *argv[])
   // Free all buffers
   free_buf1D(p_inp);
   free_buf1D(p_out);
+  if(p_out_Id) free_buf1D(p_out_Id);
+  if(p_inp_Id) free_buf1D(p_inp_Id);
 
   if(cfg.verify)
   {
     fclose(fptr_ref);
     free_buf1D(p_ref);
+    if(p_ref_Id) free_buf1D(p_ref_Id);
   }
 
   free(p_scratch);

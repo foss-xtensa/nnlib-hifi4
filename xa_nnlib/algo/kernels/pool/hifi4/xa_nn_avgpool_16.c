@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -243,7 +243,7 @@ const WORD16 *__restrict__ p_inp,
 
         WORD32 *ptr_out1 = (WORD32 *)((WORD32 *)p_scratch + total_out_width);
         ae_int32x2 d_tmp32, d_out1;
-        ae_int64 d_tmp;
+        //ae_int64 d_tmp;
         if(kernel_height * kernel_width <= 1024)
         {
           WORD32 den_hw;
@@ -262,23 +262,24 @@ const WORD16 *__restrict__ p_inp,
         }
         else
         {
-          ae_int32x2 den_h, den_w;
-          den_h = AE_MOVDA32(inv_256_tbl[p_den_height[itr_oh]]);
-          for(itr_ow = 0; itr_ow < out_width; itr_ow++)
+
+          WORD32 den_h, den_w, den;
+          int64_t out;
+          den_h = p_den_height[itr_oh];
+          for(itr_ow = 0; itr_ow < out_width; itr_ow+=1)
           {
-            den_w = AE_MOVDA32(inv_256_tbl[p_den_width[itr_ow]]);
-            d_out1 = *(ae_int32 *)(&ptr_out1[itr_ow*x_stride]);
-            d_tmp = AE_MUL32U_LL(den_h, den_w);
-            /* Max value of den_h or den_w is 0x80000000
-            so 1 left shift is possible without overflow */
-            d_tmp32 = AE_TRUNCI32X2F64S(d_tmp, d_tmp, 1);
-#if XCHAL_HAVE_HIFI1
-            d_tmp32 = AE_MULFP32X2RS_L(d_out1, d_tmp32);
-#else
-            d_tmp32 = AE_MULFP32X2RS(d_out1, d_tmp32);
-#endif
-            p_out[itr_oh*out_width+itr_ow] = AE_SAT16X4(d_tmp32, d_tmp32);
+              den_w = p_den_width[itr_ow];
+              
+              den = den_h * den_w;
+              
+              out = ptr_out1[itr_ow*x_stride];
+
+              out = den != 0 ? (out + (out > 0 ? (den/2):(-den/2))) : 0;
+              out = (out!=0) ? ((out>INT32_MAX) ?(INT32_MAX/den): ((out<INT32_MIN)?(INT32_MIN/den):(WORD32)out/den)):0;
+
+              p_out[itr_oh*out_width+itr_ow] = (WORD32)out;
           }
+
         }
     }
 }
@@ -297,9 +298,7 @@ const WORD16* __restrict__ p_inp,
       WORD32  y_padding,
       WORD32  out_height,
       WORD32  out_width,
-#ifdef NNLIB_V2
       WORD32  inp_data_format,
-#endif
       WORD32  out_data_format,
       VOID *p_scratch)
 {
@@ -320,20 +319,14 @@ const WORD16* __restrict__ p_inp,
     XA_NNLIB_ARG_CHK_COND((y_stride <= 0 || x_stride <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
-#ifndef NNLIB_V2
-    XA_NNLIB_ARG_CHK_COND((out_data_format != 1), -1);
-#else
     XA_NNLIB_ARG_CHK_COND((out_data_format != 0) && (out_data_format != 1), -1);
-#endif
     /* Implementation dependent checks */
     XA_NNLIB_ARG_CHK_COND((kernel_height > 1024), -1);
     XA_NNLIB_ARG_CHK_COND((kernel_width > 1024), -1);
 
-#ifdef NNLIB_V2
     XA_NNLIB_ARG_CHK_COND((inp_data_format != 0) && (inp_data_format != 1), -1);
     // Different I/O data formats (not supported!)
     XA_NNLIB_ARG_CHK_COND((out_data_format != inp_data_format), -1);
-#endif
 
     if((input_channels == 1) || (out_data_format == 1))
     {
@@ -390,7 +383,6 @@ const WORD16* __restrict__ p_inp,
                     );
         }
     }
-#ifdef NNLIB_V2
     else
     {
         int i;
@@ -459,7 +451,6 @@ const WORD16* __restrict__ p_inp,
                 ,p_den_height
                 ,p_den_width);
     }
-#endif
 
     return 0;
 }

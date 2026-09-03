@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -1096,3 +1096,19 @@ WORD32 xa_nn_dot_prod_f32xf32_f32(
 
 #endif
 
+
+WORD32 xa_nn_matXvec_v2_f32xf32_f32(
+      FLOAT32  * __restrict__ p_out,             
+      const FLOAT32  * __restrict__ p_mat,     
+      const FLOAT32  * __restrict__ p_vec,  
+      const FLOAT32  * __restrict__ p_bias,   
+      WORD32 rows,                       
+      WORD32 cols,                                 
+      WORD32 row_stride,                     
+      FLOAT32 out_activation_min,
+      FLOAT32 out_activation_max,
+      xa_dma_cfg_t *p_dma_cfg
+      )
+{
+  return -1;
+}

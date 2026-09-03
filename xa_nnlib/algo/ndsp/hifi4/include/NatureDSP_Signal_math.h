@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -421,11 +421,11 @@ int32_t scl_sqrt64x32(int64_t x);
   ----------------
   Returned packed value:
   scl_rsqrt32x32():
-  bits 23�0 fractional part
-  bits 31�24 exponent
+  bits 23-0 fractional part
+  bits 31-24 exponent
   scl_rsqrt16x16():
-  bits 15�0 fractional part
-  bits 31�16 exponent
+  bits 15-0 fractional part
+  bits 31-16 exponent
 
 -------------------------------------------------------------------------*/
 void vec_rsqrt32x32 ( int32_t * frac, int16_t * exp, const int32_t * x, int N);

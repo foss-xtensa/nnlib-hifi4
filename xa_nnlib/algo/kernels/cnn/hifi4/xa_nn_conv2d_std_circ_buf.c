@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -23,6 +23,7 @@
 #include "xa_nnlib_common_macros.h"
 #include "xa_nn_conv2d_std_state.h"
 #include <string.h>
+
 
 WORD32 xa_nn_conv2d_std_getsize(
     WORD32 input_height,
@@ -189,6 +190,11 @@ WORD32 xa_nn_conv2d_std_getsize(
   /* scratch memory for convolution using matrix multiplication */
   mem_req += ALIGNED_SIZE(cir_buf_size_bytes, ALIGNMENT);
   mem_req += BUS_WIDTH;
+
+  if (!(x_padding) && !(output_channels & 0x3) && !(out_width & 0x1) && (out_data_format == 0) && ((out_width - 1) * x_stride <= (input_width - kernel_width))){
+    WORD32 padded_kernel_mem_req = output_channels * kernel_height * ALIGNED_SIZE(kernel_width * input_channels, 4);
+    mem_req = padded_kernel_mem_req > mem_req ? padded_kernel_mem_req : mem_req;
+  }
 
 #if !ENABLE_PADDING_CONV2D_STD
   if(
@@ -389,7 +395,7 @@ WORD32 xa_nn_conv2d_getsize(
 #else
   if(
       (input_precision != PREC_16) &&
-      (kernel_channels_pad != kernel_channels)
+      (kernel_channels_pad != kernel_channels) 
     )
 #endif
   {
@@ -612,9 +618,10 @@ VOID xa_nn_conv2d_std_init_state(
   }
 
   WORD32 cir_buf_size_bytes = (y_padding + input_height + y_b_pad) * kernel_width * input_channels_pad * input_size;
+
   while(cir_buf_size_bytes%16 !=0)
   {
-    cir_buf_size_bytes+= kernel_width*input_channels_pad*input_size;
+    cir_buf_size_bytes+= kernel_width * input_channels_pad * input_size;
   }
 
   p_mem += cir_buf_size_bytes;
@@ -636,7 +643,7 @@ VOID xa_nn_conv2d_std_init_state(
     )
 #else
   if(
-      (input_precision != PREC_16) &&
+      (input_precision != PREC_16) && 
       (input_channels_pad != input_channels)
     )
 #endif
@@ -666,7 +673,6 @@ VOID xa_nn_conv2d_std_init_state(
         kernel_size = 0;
         break;
     }
-
     memset(p_mem, 0, output_channels*kernel_height*kernel_width*input_channels_pad*kernel_size);
     pWORD8 p_src = (pWORD8) p_kernel;
     pWORD8 p_dst = (pWORD8) p_state->p_kernel_padded;
@@ -686,6 +692,7 @@ VOID xa_nn_conv2d_std_init_state(
     }
   }
 
+  
 }
 
 VOID xa_nn_conv2d_group_init_state(
@@ -971,6 +978,7 @@ VOID conv2d_std_init_cir_buf(
   WORD8 *p_inp = (WORD8 *)*pp_inp;
   WORD32 planes_to_add = x_stride > kernel_width ? 0 : kernel_width - x_stride;
   WORD32 planes_to_keep = kernel_width - planes_to_add;
+  
   WORD8 *p_dst = (WORD8 *)p_state->cir_buf.p_curr;
   AE_ADDCIRC16X4_XC((ae_int16x4 *)p_dst, planes_to_keep * input_channels_pad * input_bytewidth);
 

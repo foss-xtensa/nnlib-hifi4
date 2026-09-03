@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -181,7 +181,8 @@ bool SVDF::Eval() {
     // The right most column is used to save temporary output (with the size of
     // num_filters). This is achieved by starting at state->data.f and having the
     // stride equal to memory_size.
-    float scratch[batch_size * num_filters];
+    // float scratch[batch_size * num_filters];
+    float *scratch = (float*)malloc(batch_size * num_filters * sizeof(float));
     for (int b = 0; b < batch_size; b++) {
         float* state_out_ptr_batch =
             GetBuffer<float>(state_out_) + b * memory_size * num_filters;

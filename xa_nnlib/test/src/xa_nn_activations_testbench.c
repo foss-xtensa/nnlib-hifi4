@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -32,12 +32,13 @@
 #include "cmdline_parser.h"
 #include "file_io.h"
 #include "nnlib/xa_nnlib_api.h"
+#include <stdint.h>
 
 #define PROF_ALLOCATE
 #include "xt_profiler.h"
 
 #define MAX_FILE_NAME_LENGTH       256
-#define MAX_ACTIVATION_NAME_LENGTH 20
+#define MAX_ACTIVATION_NAME_LENGTH 40
 
 #define XA_MAX_CMD_LINE_LENGTH 300
 #define XA_MAX_ARGS 30
@@ -69,6 +70,7 @@ typedef struct _test_config_t
   int integer_bits;
   int help;
   int num_elements;
+  int batch_size;
   int relu_threshold;
   int inp_precision;
   int out_precision;
@@ -76,6 +78,11 @@ typedef struct _test_config_t
   int activation_max; // used in relu_asym8/16/8
   float activation_min_f32;
   float activation_max_f32;
+  // f16-specific scalar parameters (stored as WORD16 bit patterns)
+  int scale_beta_f16;   // softmax_f16_f16: beta scaling factor (default 1.0 = 0x3C00)
+  int slope_f16;        // leaky_relu_f16_f16: scalar slope (default ~0.1 = 0x2E66)
+  int alpha_f16;        // selu_f16_f16: alpha parameter (default ~1.6733 = 0x3FD6)
+  int lambda_f16;       // selu_f16_f16: lambda parameter (default ~1.0507 = 0x3A88)
   char activation[MAX_ACTIVATION_NAME_LENGTH];
   int frames;
   int write_file;
@@ -106,6 +113,7 @@ int default_config(test_config_t *p_cfg)
     p_cfg->out_shift = -8;
     p_cfg->out_zero_bias = 0;
     p_cfg->num_elements = 32;
+    p_cfg->batch_size = 1;
     p_cfg->relu_threshold = (1<<15); // threshold=1, Q16.15
     p_cfg->inp_precision = 32;
     p_cfg->out_precision = 32;
@@ -114,6 +122,10 @@ int default_config(test_config_t *p_cfg)
     p_cfg->activation_max = 127; 
     p_cfg->activation_min_f32 = 0.0; 
     p_cfg->activation_max_f32 = 1.0; 
+    p_cfg->scale_beta_f16 = 0x3C00;  // 1.0 in f16
+    p_cfg->slope_f16      = 0x2E66;  // ~0.1 in f16
+    p_cfg->alpha_f16      = 0x3FD6;  // ~1.6733 (SELU alpha) in f16
+    p_cfg->lambda_f16     = 0x3A88;  // ~1.0507 (SELU lambda) in f16
     strcpy(p_cfg->activation,"sigmoid");
     p_cfg->frames   = 2;  
     p_cfg->write_file = 0;  
@@ -135,6 +147,7 @@ void show_usage(void)
 {
     printf ("Usage xt-run <binary> [Options]\n");
     printf("\t-num_elements : number of elements; Default=32\n");
+    printf("\t-batch_size : number of batches for batch_softmax; Default=1\n");
     printf("\t-relu_threshold : threshold for relu in Q16.15; Default=32768 (=1 in Q16.15)\n");
     printf("\t-inp_precision : 16, 32, -1(single prec float),-2(half prec float), -3 (asym8u), -4 (asym8s), -7 (asym16s) or -8 (sym16s); Default=32\n");
     printf("\t-out_precision : 16, 32, -1(single prec float),-2(half prec float), -3 (asym8u), -4 (asym8s), -7 (asym16s) or -8 (sym16s); Default=32\n");
@@ -168,6 +181,13 @@ void show_usage(void)
     printf("\t-out_multiplier: Multiplier value for output Default=0x40000000\n");
     printf("\t-out_shift: Shift value for output Default=0\n");
     printf("\t-out_zero_bias: Zero bias value for output Default=0\n");
+    printf("\t =========================================\n ");
+    printf("\t ===== F16 specific parameters ===========\n ");
+    printf("\t =========================================\n ");
+    printf("\t-scale_beta_f16: softmax_f16 beta scaling factor as WORD16 bit pattern; Default=0x3C00 (1.0f16)\n");
+    printf("\t-slope_f16: leaky_relu_f16 scalar slope as WORD16 bit pattern; Default=0x2E66 (~0.1f16)\n");
+    printf("\t-alpha_f16: selu_f16 alpha as WORD16 bit pattern; Default=0x3FD6 (~1.6733f16)\n");
+    printf("\t-lambda_f16: selu_f16 lambda as WORD16 bit pattern; Default=0x3A88 (~1.0507f16)\n");
 }
 
 void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
@@ -201,6 +221,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-out_zero_bias",p_cfg->out_zero_bias);
     ARGTYPE_ONETIME_CONFIG("-integer_bits",p_cfg->integer_bits);
     ARGTYPE_ONETIME_CONFIG("-num_elements",p_cfg->num_elements);
+    ARGTYPE_ONETIME_CONFIG("-batch_size",p_cfg->batch_size);
     ARGTYPE_ONETIME_CONFIG("-relu_threshold",p_cfg->relu_threshold);
     ARGTYPE_ONETIME_CONFIG("-inp_precision",p_cfg->inp_precision);
     ARGTYPE_ONETIME_CONFIG("-out_precision",p_cfg->out_precision);
@@ -208,6 +229,10 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     ARGTYPE_ONETIME_CONFIG("-activation_max",p_cfg->activation_max);
     ARGTYPE_ONETIME_CONFIG_F32("-activation_min_f32",p_cfg->activation_min_f32);
     ARGTYPE_ONETIME_CONFIG_F32("-activation_max_f32",p_cfg->activation_max_f32);
+    ARGTYPE_ONETIME_CONFIG("-scale_beta_f16",p_cfg->scale_beta_f16);
+    ARGTYPE_ONETIME_CONFIG("-slope_f16",p_cfg->slope_f16);
+    ARGTYPE_ONETIME_CONFIG("-alpha_f16",p_cfg->alpha_f16);
+    ARGTYPE_ONETIME_CONFIG("-lambda_f16",p_cfg->lambda_f16);
     ARGTYPE_STRING("-activation",p_cfg->activation, MAX_ACTIVATION_NAME_LENGTH);
     ARGTYPE_ONETIME_CONFIG("-frames",p_cfg->frames);
     ARGTYPE_ONETIME_CONFIG("-write_file",p_cfg->write_file);
@@ -253,6 +278,22 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                     cfg.input_range_radius,\
                     cfg.input_multiplier,\
                     cfg.input_left_shift,\
+                    cfg.num_elements\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define APPLY_LUT_ASYM8s(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
+    WORD8 apply_lut_buf[256]; \
+    xa_nn_init_lut_asym8s_sigmoid(apply_lut_buf, cfg.zero_point, cfg.input_range_radius, cfg.input_multiplier, cfg.input_left_shift); \
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_vec_apply_lut_asym8s_asym8s\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp->p,\
+                    apply_lut_buf,\
+                    256,\
                     cfg.num_elements\
                 );\
     XTPWR_PROFILER_STOP(0);\
@@ -415,6 +456,21 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#define BATCH_SOFTMAX_ASYM8s(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_vec_batch_softmax_lut_asym8s_asym8s\
+                (\
+                    (WORD8 *) p_out->p,\
+                    (WORD8 *) p_inp->p,\
+                    (WORD32 *)p_lut->p,\
+                    cfg.num_elements,\
+                    cfg.batch_size,\
+                    (pVOID)p_scratch->p\
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
 #define SOFTMAX_ASYM8s_16(KERNEL, IPREC, OPREC) \
   if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -441,6 +497,21 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
                     cfg.input_left_shift,\
                     cfg.input_multiplier,\
                     cfg.num_elements \
+                );\
+    XTPWR_PROFILER_STOP(0);\
+  }
+
+#define BATCH_SOFTMAX_SYM16s_16(KERNEL, IPREC, OPREC) \
+  if(!strcmp(cfg.activation,#KERNEL) && (IPREC == cfg.inp_precision) && (OPREC == p_out->precision)) {\
+    XTPWR_PROFILER_START(0);\
+        err = xa_nn_vec_batch_softmax_sym16s_16\
+                (\
+                    (WORD16 *) p_out->p,\
+                    (WORD16 *) p_inp->p,\
+                    cfg.input_left_shift,\
+                    cfg.input_multiplier,\
+                    cfg.num_elements,\
+                    cfg.batch_size\
                 );\
     XTPWR_PROFILER_STOP(0);\
   }
@@ -516,7 +587,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         printf("unsupported activation\n"); return -1;} 
 #endif
 
-#if HIFI_HP_VFPU && hifi5
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
 #define ACTIVATION_FN_F16(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
       XTPWR_PROFILER_START(0);\
@@ -529,6 +600,70 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
 #define ACTIVATION_FN_F16(IPREC, OPREC, ACTIVATION) \
     if((IPREC == p_inp->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
         printf("unsupported activation\n"); return -1;} 
+#endif
+
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
+#define SOFTMAX_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+      WORD16 scale_beta_f16 = (WORD16)cfg.scale_beta_f16; \
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_vec_softmax_f16_f16 ( \
+                (WORD16 *)p_out->p, (WORD16 *)p_inp->p, \
+                &scale_beta_f16, cfg.num_elements);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+#else
+#define SOFTMAX_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+        printf("unsupported activation\n"); return -1;}
+#endif
+
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
+#define LEAKY_RELU_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+      WORD16 slope_f16 = (WORD16)cfg.slope_f16; \
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_vec_leaky_relu_f16_f16 ( \
+                (WORD16 *)p_out->p, (WORD16 *)p_inp->p, \
+                &slope_f16, cfg.num_elements);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+#else
+#define LEAKY_RELU_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+        printf("unsupported activation\n"); return -1;}
+#endif
+
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
+#define PRELU_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_vec_prelu_f16_f16 ( \
+                (WORD16 *)p_out->p, (WORD16 *)p_inp->p, \
+                (WORD16 *)p_inp_alpha->p, cfg.num_elements);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+#else
+#define PRELU_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+        printf("unsupported activation\n"); return -1;}
+#endif
+
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
+#define SELU_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && (OPREC == p_out->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+      WORD16 alpha_f16  = (WORD16)cfg.alpha_f16; \
+      WORD16 lambda_f16 = (WORD16)cfg.lambda_f16; \
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_vec_selu_f16_f16 ( \
+                (WORD16 *)p_out->p, (WORD16 *)p_inp->p, \
+                &alpha_f16, &lambda_f16, cfg.num_elements);\
+      XTPWR_PROFILER_STOP(0);\
+    }
+#else
+#define SELU_FN_F16(IPREC, OPREC, ACTIVATION) \
+    if((IPREC == p_inp->precision) && !strcmp(cfg.activation,#ACTIVATION)) {\
+        printf("unsupported activation\n"); return -1;}
 #endif
 
 #if HIFI_VFPU
@@ -564,6 +699,15 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else ACTIVATION_FN_F32(-1, -1, tanh) \
     else ACTIVATION_FN_F16(-2, -2, sigmoid) \
     else ACTIVATION_FN_F16(-2, -2, tanh) \
+    else ACTIVATION_FN_F16(-2, -2, hardswish) \
+    else ACTIVATION_FN_F16(-2, -2, exp) \
+    else ACTIVATION_FN_F16(-2, -2, sqrt) \
+    else SOFTMAX_FN_F16(-2, -2, softmax) \
+    else LEAKY_RELU_FN_F16(-2, -2, leaky_relu) \
+    else PRELU_FN_F16(-2, -2, prelu) \
+    else SELU_FN_F16(-2, -2, selu) \
+    else ACTIVATION_FN_F16(-2, -2, log) \
+    else ACTIVATION_FN_F16(-2, -2, logsoftmax) \
     else RELU_FN_F32(-1, -1, relu) \
     else ACTIVATION_FN_F32(-1, -1, relu1) \
     else ACTIVATION_FN_F32(-1, -1, relu6) \
@@ -579,10 +723,13 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else HSWISH_ASYM8S_FN(-4, -4, hard_swish)\
     else SOFTMAX_ASYM8(softmax, -3, -3) \
     else SOFTMAX_ASYM8s(softmax, -4, -4) \
+    else BATCH_SOFTMAX_ASYM8s(batch_softmax, -4, -4) \
     else SOFTMAX_ASYM8s_16(softmax, -4, 16) \
     else SOFTMAX_SYM16s_16(softmax, -8, 16) \
+    else BATCH_SOFTMAX_SYM16s_16(batch_softmax_sym16s, -8, 16) \
     else SIGMOID_ASYM8(sigmoid, -3, -3) \
     else SIGMOID_ASYM8s(sigmoid, -4, -4) \
+    else APPLY_LUT_ASYM8s(apply_lut_sigmoid, -4, -4) \
     else SIGMOID_SYM16s(sigmoid, -8, -8) \
     else TANH_ASYM8s(tanh, -4, -4) \
     else TANH_SYM16s(tanh, -8, -8) \
@@ -609,6 +756,7 @@ int xa_nn_main_process(int argc, char *argv[])
   FILE *fptr_out;
   FILE *fptr_ref;
   buf1D_t *p_scratch;
+  buf1D_t *p_lut = NULL;
   int scratch_size;
 
   if(default_config(&cfg))
@@ -695,7 +843,10 @@ int xa_nn_main_process(int argc, char *argv[])
   }
 
   // Set profiler parameters
-  sprintf(profiler_params, "N=%d", cfg.num_elements);
+  if(!strcmp(cfg.activation,"batch_softmax") || !strcmp(cfg.activation,"batch_softmax_sym16s"))
+    sprintf(profiler_params, "N=%d,B=%d", cfg.num_elements, cfg.batch_size);
+  else
+    sprintf(profiler_params, "N=%d", cfg.num_elements);
   
   
 
@@ -721,7 +872,7 @@ int xa_nn_main_process(int argc, char *argv[])
   // Open reference file if verify flag is enabled
   if(cfg.verify)
   {
-    ptr_ref =  create_buf1D(cfg.num_elements, cfg.out_precision); 
+    ptr_ref =  create_buf1D((!strcmp(cfg.activation,"batch_softmax") || !strcmp(cfg.activation,"batch_softmax_sym16s")) ? cfg.num_elements * cfg.batch_size : cfg.num_elements, cfg.out_precision); 
 #if defined(USE_HIFI_ACT_TIE) && (defined(AE_SIGMOID16X4X2) || defined(AE_SIGMOID16X4) || defined(AE_TANH16X4X2) || defined(AE_TANH16X4))
   if((!strcmp(cfg.activation,"sigmoid") || !strcmp(cfg.activation,"tanh")) && 
       (((cfg.inp_precision == -4) && (cfg.out_precision == -4))
@@ -738,8 +889,18 @@ int xa_nn_main_process(int argc, char *argv[])
   }
 
   // Allocate Memory
-  p_inp = create_buf1D(cfg.num_elements, cfg.inp_precision); VALIDATE_PTR(p_inp);
-  p_out = create_buf1D(cfg.num_elements, cfg.out_precision); VALIDATE_PTR(p_out);
+  {
+    int alloc_elements = (!strcmp(cfg.activation,"batch_softmax") || !strcmp(cfg.activation,"batch_softmax_sym16s")) ? cfg.num_elements * cfg.batch_size : cfg.num_elements;
+    p_inp = create_buf1D(alloc_elements, cfg.inp_precision); VALIDATE_PTR(p_inp);
+    p_out = create_buf1D(alloc_elements, cfg.out_precision); VALIDATE_PTR(p_out);
+    /* For batch_softmax, enforce 32-byte alignment on inp/out so the HiFi-IQ
+     * fast path (which checks pointer alignment) is reachable. */
+    if(!strcmp(cfg.activation,"batch_softmax"))
+    {
+      p_inp->p = (void *)(((uintptr_t)p_inp->p + 31) & ~(uintptr_t)31);
+      p_out->p = (void *)(((uintptr_t)p_out->p + 31) & ~(uintptr_t)31);
+    }
+  }
 
   if(!strcmp(cfg.activation,"prelu"))
   {
@@ -751,9 +912,30 @@ int xa_nn_main_process(int argc, char *argv[])
       scratch_size = get_softmax_scratch_size(cfg.inp_precision, cfg.out_precision, cfg.num_elements);
       p_scratch = create_buf1D(scratch_size, 8); VALIDATE_PTR(p_scratch);
   }
+
+  if(!strcmp(cfg.activation,"batch_softmax") && (cfg.inp_precision == -4) && (cfg.out_precision == -4))
+  {
+      /* LUT: 256 WORD32 entries, initialized via library function */
+      p_lut = create_buf1D(256, 32); VALIDATE_PTR(p_lut);
+      xa_nn_init_lut_asym8s_softmax(
+          (WORD32 *)p_lut->p,
+          cfg.diffmin,
+          cfg.input_multiplier,
+          cfg.input_left_shift);
+
+      /* Scratch for batch softmax.
+       * Allocate with 31 bytes of headroom so p can be rounded up to a
+       * 32-byte boundary - required for the HiFi-IQ fast path. */
+      scratch_size = get_softmax_scratch_size(cfg.inp_precision, cfg.out_precision, 4 * cfg.num_elements);
+      p_scratch = create_buf1D(scratch_size + 31, 8); VALIDATE_PTR(p_scratch);
+      p_scratch->p = (void *)(((uintptr_t)p_scratch->p + 31) & ~(uintptr_t)31);
+  }
   
   
-  XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, cfg.num_elements, "cyc/point", 0);
+  {
+    int profiler_elements = (!strcmp(cfg.activation,"batch_softmax") || !strcmp(cfg.activation,"batch_softmax_sym16s")) ? cfg.num_elements * cfg.batch_size : cfg.num_elements;
+    XTPWR_PROFILER_OPEN(0, profiler_name, profiler_params, profiler_elements, "cyc/point", 0);
+  }
 
   // Frame processing loop
   for(frame = 0; frame < cfg.frames; frame++)

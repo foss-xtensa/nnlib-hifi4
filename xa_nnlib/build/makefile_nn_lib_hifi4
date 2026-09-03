@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+# Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -32,7 +32,6 @@ endif
 
 CFLAGS += \
       -DMODEL_INT16 \
-      -DNNLIB_V2 \
 
 CFLAGS += -Dhifi4
 
@@ -50,10 +49,10 @@ ifeq ($(AGGRESSIVE_FLOAT_OPT), 0)
 CFLAGS += -DNO_AGGR_FLOAT_OPT=1 -fno-unsafe-math-optimizations
 endif
 
-ifeq ($(SINGLE_ROUNDING), 1)
-CFLAGS += -DTFLITE_SINGLE_ROUNDING=1
-else
+ifeq ($(SINGLE_ROUNDING), 0)
 CFLAGS += -DTFLITE_SINGLE_ROUNDING=0
+else
+CFLAGS += -DTFLITE_SINGLE_ROUNDING=1
 endif
 
 vpath %.c $(ROOTDIR)/algo/kernels/matXvec/hifi4
@@ -224,7 +223,8 @@ CNNO2OBJS = \
     xa_nn_cnn_api.o
 
 COMMONOSOBJS = \
-  xa_nnlib_common_api.o
+  xa_nnlib_common_api.o \
+  xa_nn_lut_init.o
 
 
 BASICOBJS = \
@@ -280,7 +280,8 @@ NORMO2OBJS = \
   xa_nn_batch_norm_8.o \
   xa_nn_norm3D_8.o \
   xa_nn_norm3D_16.o \
-  xa_nn_renorm_8.o
+  xa_nn_renorm_8.o \
+  xa_nn_instance_norm_3D_8_8.o
 
 REORGO2OBJS = \
   xa_nn_depth_to_space_8.o \

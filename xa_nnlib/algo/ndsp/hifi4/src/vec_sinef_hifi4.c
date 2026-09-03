@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -50,6 +50,7 @@ DISCARD_FUN(void,xa_nnlib_vec_sinef,( float32_t * restrict y, const float32_t * 
 #elif HAVE_VFPU
 
 #define sz_f32    (int)sizeof(float32_t)
+#define blkSize_scr (MAX_ALLOCA_SZ/sz_f32)
 #if XCHAL_HAVE_HIFI1
 /*===========================================================================
   Vector matematics:
@@ -168,7 +169,7 @@ void xa_nnlib_vec_sinef( float32_t * restrict y,
   /* Block size, blkLen <= blkSize */
   const int blkSize = MAX_ALLOCA_SZ/sz_f32;
   /* Allocate a fixed-size scratch area on the stack. */
-  float32_t ALIGN(8) scr[blkSize];
+  float32_t ALIGN(8) scr[blkSize_scr];
 
   int n;
 
@@ -630,7 +631,7 @@ void xa_nnlib_vec_sinef( float32_t * restrict y,
   /* Block size, blkLen <= blkSize */
   const int blkSize = MAX_ALLOCA_SZ/sz_f32;
   /* Allocate a fixed-size scratch area on the stack. */
-  float32_t ALIGN(8) scr[blkSize];
+  float32_t ALIGN(8) scr[blkSize_scr];
 
   int n;
 
@@ -954,6 +955,7 @@ void xa_nnlib_vec_sinef( float32_t * restrict y,
 #endif /*XCHAL_HAVE_HIFI1*/
 #elif HAVE_FPU
 #define sz_f32    (int)sizeof(float32_t)
+#define blkSize_scr (MAX_ALLOCA_SZ/sz_f32)
 
 /*===========================================================================
   Vector matematics:
@@ -1017,7 +1019,7 @@ void xa_nnlib_vec_sinef( float32_t * restrict y, const float32_t * restrict x, i
   /* Block size, blkLen <= blkSize */
   const int blkSize = MAX_ALLOCA_SZ / sz_f32;
   /* Allocate a fixed-size scratch area on the stack. */
-  float32_t ALIGN(8) scr[blkSize];
+  float32_t ALIGN(8) scr[blkSize_scr];
 
   int n;
   if (N <= 0) return;

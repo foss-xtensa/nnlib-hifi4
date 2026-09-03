@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -463,6 +463,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     }\
   }
 
+#if HIFI_VFPU
 #define TRANSPOSE_CONV_KERNEL_F32XF32_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -474,6 +475,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         p_scratch);\
     XTPWR_PROFILER_STOP(0);\
   }
+#else
+#define TRANSPOSE_CONV_KERNEL_F32XF32_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    printf("unsupported convolution\n"); return -1;\
+  }
+#endif
 
 #define CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
@@ -523,6 +530,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }
 
+#if HIFI_VFPU
 #define CONV1D_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -533,7 +541,14 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         cfg.out_data_format, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
   }
+#else
+#define CONV1D_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    printf("unsupported convolution\n"); return -1;\
+  }
+#endif
 
+#if HIFI_VFPU
 #define CONV_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -544,7 +559,15 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         cfg.out_data_format, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
   }
+#else
+#define CONV_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    printf("unsupported convolution\n"); return -1;\
+  }
+#endif
 
+
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
 #define CONV_KERNEL_F16_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -555,8 +578,35 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         cfg.out_data_format, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
   }
+#else
+#define CONV_KERNEL_F16_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    printf("unsupported convolution\n"); return -1;\
+  }
+#endif
 
 
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
+#define CONV_DILATED_STD_KERNEL_F16_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_##KERNEL##_v2_f16 ( \
+        (WORD16 *)p_out->p, (WORD16 *) p_kernel->p, (WORD16 *) p_inp->p, (WORD16 *)p_bias->p, \
+        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, \
+        cfg.dilation_height, cfg.dilation_width, \
+        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+        0 /* inp_data_format always DWH for f16 dilated_conv2d_std_v2*/, cfg.out_data_format, p_scratch, NULL, NULL, NULL);\
+    XTPWR_PROFILER_STOP(0);\
+  }
+#else
+#define CONV_DILATED_STD_KERNEL_F16_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    printf("unsupported convolution\n"); return -1;\
+  }
+#endif
+
+
+#if HIFI_VFPU
 #define CONV_DS_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -580,16 +630,34 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         XTPWR_PROFILER_PRINT(1); \
     } \
   }
+#else
+#define CONV_DS_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    printf("unsupported convolution\n"); return -1;\
+  }
+#endif
 
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
 #define CONV_DS_KERNEL_F16_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
-    XTPWR_PROFILER_START(0);\
-    err = xa_nn_conv2d_depthwise_f16 ( \
-        (WORD16 *)p_dw_out->p, (WORD16 *) p_kernel->p, (WORD16 *) p_inp->p, (WORD16 *)p_bias->p, \
-        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, \
-        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
-        cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
-    XTPWR_PROFILER_STOP(0);\
+    if(cfg.v2){\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_conv2d_depthwise_v2_f16 ( \
+          (WORD16 *)p_dw_out->p, (WORD16 *) p_kernel->p, (WORD16 *) p_inp->p, (WORD16 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch, NULL, NULL, NULL);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
+    else{\
+      XTPWR_PROFILER_START(0);\
+      err = xa_nn_conv2d_depthwise_f16 ( \
+          (WORD16 *)p_dw_out->p, (WORD16 *) p_kernel->p, (WORD16 *) p_inp->p, (WORD16 *)p_bias->p, \
+          cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, \
+          cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+          cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
+      XTPWR_PROFILER_STOP(0);\
+    }\
     if(!cfg.pointwise_profile_only) { \
         XTPWR_PROFILER_UPDATE(0); \
         XTPWR_PROFILER_PRINT(0); \
@@ -604,6 +672,12 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         XTPWR_PROFILER_PRINT(1); \
     } \
   }
+#else
+#define CONV_DS_KERNEL_F16_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    printf("unsupported convolution\n"); return -1;\
+  }
+#endif
 
 
 #define CONV_DS_KERNEL_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
@@ -762,6 +836,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     } \
   }
 
+#if HIFI_VFPU
 #define DILATED_CONV_DEPTH_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
   (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
     XTPWR_PROFILER_START(0);\
@@ -772,6 +847,30 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
         cfg.inp_data_format, 0 /* out_data_format always DWH*/, p_scratch);\
     XTPWR_PROFILER_STOP(0);\
   }
+#else
+#define DILATED_CONV_DEPTH_KERNEL_F_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    printf("unsupported convolution\n"); return -1;\
+  }
+#endif
+
+#if HIFI_HP_VFPU && (hifi5 || hifi_iq)
+#define DILATED_CONV_DS_KERNEL_F16_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    XTPWR_PROFILER_START(0);\
+    err = xa_nn_dilated_conv2d_depthwise_v2_f16 ( \
+        (WORD16 *) p_out->p, (WORD16 *) p_kernel->p, (WORD16 *) p_inp->p, (WORD16 *)p_bias->p, \
+        cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, cfg.dilation_height, cfg.dilation_width, \
+        cfg.x_stride, cfg.y_stride, cfg.x_padding, cfg.y_padding, cfg.out_height, cfg.out_width, \
+        0 /* inp_data_format always DWH for f16 dilated depthwise v2*/, 0 /* out_data_format always DWH*/, p_scratch, NULL, NULL, NULL);\
+    XTPWR_PROFILER_STOP(0);\
+  }
+#else
+#define DILATED_CONV_DS_KERNEL_F16_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
+  (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias->precision)) {\
+    printf("unsupported convolution\n"); return -1;\
+  }
+#endif
 
 #define CONV_PT_KERNEL_SYM8SXSYM16S_PC_FN(KERNEL, KPREC, IPREC, OPREC, BPREC) \
     (!strcmp(cfg.kernel_name,#KERNEL) && (KPREC == p_kernel_point->precision) && (IPREC == p_inp->precision) && (OPREC == p_out->precision) && (BPREC == p_bias_point->precision)) {\
@@ -832,8 +931,6 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     XTPWR_PROFILER_STOP(0);\
   }\
 
-#if HIFI_VFPU
-#if HIFI_HP_VFPU && hifi5
 #define PROCESS_CONV \
     if CONV_KERNEL_FN(conv2d_std, 8, 16, 16, 16) \
     else if CONV_KERNEL_FN(conv2d_std, 8, 8, 8, 8) \
@@ -848,6 +945,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
     else if TRANSPOSE_CONV_KERNEL_F32XF32_FN(transpose_conv,-1,-1,-1,-1) \
     else if CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(dilated_conv2d_std,-5,-4,-4, 32) \
+    else if CONV_DILATED_STD_KERNEL_F16_FN(dilated_conv2d_std, -2, -2, -2, -2) \
     else if CONV_KERNEL_F_FN(conv2d_std, -1, -1, -1, -1) \
     else if CONV_KERNEL_F16_FN(conv2d_std, -2, -2, -2, -2) \
     else if CONV_DS_KERNEL_F_FN(conv2d_depth, -1, -1, -1, -1) \
@@ -859,6 +957,7 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else if CONV_DS_KERNEL_SYM8_PC_FN(conv2d_depth,-5,-4,-4,32) \
     else if DILATED_CONV_DS_KERNEL_SYM8_PC_FN(dilated_conv2d_depth, -5, -4, -4, 32) \
     else if DILATED_CONV_DS_KERNEL_SYM8XSYM16S_PC_FN(dilated_conv2d_depth, -5, -8, -8, 64) \
+    else if DILATED_CONV_DS_KERNEL_F16_FN(dilated_conv2d_depth, -2, -2, -2, -2) \
     else if DILATED_CONV_DEPTH_KERNEL_F_FN(dilated_conv2d_depth, -1, -1, -1, -1) \
     else if CONV_PT_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_point,-5,-8,-8,64) \
     else if CONV_DS_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_depth,-5,-8,-8,64) \
@@ -868,101 +967,6 @@ void parse_arguments(int argc, char** argv, test_config_t *p_cfg)
     else if CONV1D_KERNEL_ASYM8_FN(conv1d_std, -3, -3, -3, 32) \
     else if CONV1D_KERNEL_F_FN(conv1d_std, -1, -1, -1, -1) \
     else {printf("[Error] [%s] convolution is not supported\n", cfg.kernel_name); return -1;}
-#else /* HIFI_HP_VFPU  && hifi5 */
-#define PROCESS_CONV \
-    if CONV_KERNEL_FN(conv2d_std, 8, 16, 16, 16) \
-    else if CONV_KERNEL_FN(conv2d_std, 8, 8, 8, 8) \
-    else if CONV_KERNEL_FN(conv2d_std, 16, 16, 16, 16) \
-    else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
-    else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
-    else if CONV_KERNEL_SYM4S_PC_FN(conv2d_std,-12,-4,-4, 32) \
-    else if CONV_UN_KERNEL_SYM8S_PC_FN(conv2d,-5,-4,-4, 32) \
-    else if CONV_UN_KERNEL_SYM8SXSYM16S_PC_FN(conv2d,-5,-8,-8, 64) \
-    else if CONV_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_std,-5,-8,-8, 64) \
-    else if TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(transpose_conv,-5,-4,-4, 32) \
-    else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
-    else if TRANSPOSE_CONV_KERNEL_F32XF32_FN(transpose_conv,-1,-1,-1,-1) \
-    else if CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(dilated_conv2d_std,-5,-4,-4, 32) \
-    else if CONV_KERNEL_F_FN(conv2d_std, -1, -1, -1, -1) \
-    else if CONV_DS_KERNEL_F_FN(conv2d_depth, -1, -1, -1, -1) \
-    else if CONV_DS_KERNEL_FN(conv2d_depth,8,16,16,16) \
-    else if CONV_DS_KERNEL_FN(conv2d_depth,16,16,16,16) \
-    else if CONV_DS_KERNEL_FN(conv2d_depth,8,8,8,8) \
-    else if CONV_DS_KERNEL_ASYM8_FN(conv2d_depth,-3,-3,-3,32) \
-    else if CONV_DS_KERNEL_SYM8_PC_FN(conv2d_depth,-5,-4,-4,32) \
-    else if DILATED_CONV_DS_KERNEL_SYM8_PC_FN(dilated_conv2d_depth, -5, -4, -4, 32) \
-    else if DILATED_CONV_DS_KERNEL_SYM8XSYM16S_PC_FN(dilated_conv2d_depth, -5, -8, -8, 64) \
-    else if DILATED_CONV_DEPTH_KERNEL_F_FN(dilated_conv2d_depth, -1, -1, -1, -1) \
-    else if CONV_PT_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_point,-5,-8,-8,64) \
-    else if CONV_DS_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_depth,-5,-8,-8,64) \
-    else if CONV1D_KERNEL_FN(conv1d_std, 8, 16, 16, 16) \
-    else if CONV1D_KERNEL_FN(conv1d_std, 8, 8, 8, 8) \
-    else if CONV1D_KERNEL_FN(conv1d_std, 16, 16, 16, 16) \
-    else if CONV1D_KERNEL_ASYM8_FN(conv1d_std, -3, -3, -3, 32) \
-    else if CONV1D_KERNEL_F_FN(conv1d_std, -1, -1, -1, -1) \
-    else {printf("[Error] [%s] convolution is not supported\n", cfg.kernel_name); return -1;}
-#endif /* HIFI_HP_VFPU  && hifi5 */
-#else /* HIFI_VFPU */
-#if HIFI_HP_VFPU && hifi5
-#define PROCESS_CONV \
-    if CONV_KERNEL_FN(conv2d_std, 8, 16, 16, 16) \
-    else if CONV_KERNEL_FN(conv2d_std, 8, 8, 8, 8) \
-    else if CONV_KERNEL_FN(conv2d_std, 16, 16, 16, 16) \
-    else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
-    else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
-    else if CONV_KERNEL_SYM4S_PC_FN(conv2d_std,-12,-4,-4, 32) \
-    else if CONV_UN_KERNEL_SYM8S_PC_FN(conv2d,-5,-4,-4, 32) \
-    else if CONV_UN_KERNEL_SYM8SXSYM16S_PC_FN(conv2d,-5,-8,-8, 64) \
-    else if CONV_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_std,-5,-8,-8, 64) \
-    else if TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(transpose_conv,-5,-4,-4, 32) \
-    else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
-    else if CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(dilated_conv2d_std,-5,-4,-4, 32) \
-    else if CONV_DS_KERNEL_FN(conv2d_depth,8,16,16,16) \
-    else if CONV_DS_KERNEL_FN(conv2d_depth,16,16,16,16) \
-    else if CONV_DS_KERNEL_FN(conv2d_depth,8,8,8,8) \
-    else if CONV_DS_KERNEL_ASYM8_FN(conv2d_depth,-3,-3,-3,32) \
-    else if CONV_DS_KERNEL_SYM8_PC_FN(conv2d_depth,-5,-4,-4,32) \
-    else if CONV_KERNEL_F16_FN(conv2d_std, -2, -2, -2, -2) \
-    else if CONV_DS_KERNEL_F16_FN(conv2d_depth, -2, -2, -2, -2) \
-    else if DILATED_CONV_DS_KERNEL_SYM8_PC_FN(dilated_conv2d_depth, -5, -4, -4, 32) \
-    else if DILATED_CONV_DS_KERNEL_SYM8XSYM16S_PC_FN(dilated_conv2d_depth, -5, -8, -8, 64) \
-    else if CONV_PT_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_point,-5,-8,-8,64) \
-    else if CONV_DS_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_depth,-5,-8,-8,64) \
-    else if CONV1D_KERNEL_FN(conv1d_std, 8, 16, 16, 16) \
-    else if CONV1D_KERNEL_FN(conv1d_std, 8, 8, 8, 8) \
-    else if CONV1D_KERNEL_FN(conv1d_std, 16, 16, 16, 16) \
-    else if CONV1D_KERNEL_ASYM8_FN(conv1d_std, -3, -3, -3, 32) \
-    else {printf("[Error] [%s] convolution is not supported\n", cfg.kernel_name); return -1;}
-#else /* HIFI_HP_VFPU && hifi5 */
-#define PROCESS_CONV \
-    if CONV_KERNEL_FN(conv2d_std, 8, 16, 16, 16) \
-    else if CONV_KERNEL_FN(conv2d_std, 8, 8, 8, 8) \
-    else if CONV_KERNEL_FN(conv2d_std, 16, 16, 16, 16) \
-    else if CONV_KERNEL_ASYM8_FN(conv2d_std, -3, -3, -3, 32) \
-    else if CONV_KERNEL_SYM8S_PC_FN(conv2d_std,-5,-4,-4, 32) \
-    else if CONV_KERNEL_SYM4S_PC_FN(conv2d_std,-12,-4,-4, 32) \
-    else if CONV_UN_KERNEL_SYM8S_PC_FN(conv2d,-5,-4,-4, 32) \
-    else if CONV_UN_KERNEL_SYM8SXSYM16S_PC_FN(conv2d,-5,-8,-8, 64) \
-    else if CONV_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_std,-5,-8,-8, 64) \
-    else if TRANSPOSE_CONV_KERNEL_SYM8SXASYM8S_FN(transpose_conv,-5,-4,-4, 32) \
-    else if TRANSPOSE_CONV_KERNEL_SYM8SXSYM16S_FN(transpose_conv,-5,-8,-8, 64) \
-    else if CONV_DILATIONAL_KERNEL_SYM8S_PC_FN(dilated_conv2d_std,-5,-4,-4, 32) \
-    else if CONV_DS_KERNEL_FN(conv2d_depth,8,16,16,16) \
-    else if CONV_DS_KERNEL_FN(conv2d_depth,16,16,16,16) \
-    else if CONV_DS_KERNEL_FN(conv2d_depth,8,8,8,8) \
-    else if CONV_DS_KERNEL_ASYM8_FN(conv2d_depth,-3,-3,-3,32) \
-    else if CONV_DS_KERNEL_SYM8_PC_FN(conv2d_depth,-5,-4,-4,32) \
-    else if DILATED_CONV_DS_KERNEL_SYM8_PC_FN(dilated_conv2d_depth, -5, -4, -4, 32) \
-    else if DILATED_CONV_DS_KERNEL_SYM8XSYM16S_PC_FN(dilated_conv2d_depth, -5, -8, -8, 64) \
-    else if CONV_PT_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_point,-5,-8,-8,64) \
-    else if CONV_DS_KERNEL_SYM8SXSYM16S_PC_FN(conv2d_depth,-5,-8,-8,64) \
-    else if CONV1D_KERNEL_FN(conv1d_std, 8, 16, 16, 16) \
-    else if CONV1D_KERNEL_FN(conv1d_std, 8, 8, 8, 8) \
-    else if CONV1D_KERNEL_FN(conv1d_std, 16, 16, 16, 16) \
-    else if CONV1D_KERNEL_ASYM8_FN(conv1d_std, -3, -3, -3, 32) \
-    else {printf("[Error] [%s] convolution is not supported\n", cfg.kernel_name); return -1;}
-#endif /* HIFI_HP_VFPU && hifi5 */    
-#endif /* HIFI_VFPU */
 
 int xa_nn_main_process(int argc, char *argv[])
 {
@@ -1325,11 +1329,11 @@ int xa_nn_main_process(int argc, char *argv[])
   else if(!strcmp(cfg.kernel_name,"conv2d_point"))
   {
     sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, out_channels=%d, out_height=%d, out_width=%d", 
-      cfg.input_height, cfg.input_width, cfg.input_channels, cfg.out_channels, cfg.input_height, cfg.input_width);
+      cfg.input_height, cfg.input_width, cfg.input_channels, cfg.out_channels, cfg.out_height, cfg.out_width);
   }
   else if(!strcmp(cfg.kernel_name,"dilated_conv2d_depth"))
   {
-    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, channels_multiplier=%d, kernel_width=%d, dilation_height=%d, dilation_width=%d, out_height=%d, out_width=%d", 
+    sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, channels_multiplier=%d, dilation_height=%d, dilation_width=%d, out_height=%d, out_width=%d", 
       cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.channels_multiplier, cfg.dilation_height, cfg.dilation_width, cfg.out_height, cfg.out_width);
   }
   else
@@ -1339,7 +1343,7 @@ int xa_nn_main_process(int argc, char *argv[])
     sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d", 
       cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, cfg.out_height, cfg.out_width);
     }
-    if(!strcmp(cfg.kernel_name,"transpose_conv"))
+    else if(!strcmp(cfg.kernel_name,"transpose_conv"))
     {
     sprintf(profiler_params, "input_height=%d, input_width=%d, input_channels=%d, kernel_height=%d, kernel_width=%d, out_channels=%d, out_height=%d, out_width=%d, num_groups=%d", 
       cfg.input_height, cfg.input_width, cfg.input_channels, cfg.kernel_height, cfg.kernel_width, cfg.out_channels, cfg.out_height, cfg.out_width, cfg.num_groups);
@@ -1490,13 +1494,6 @@ int xa_nn_main_process(int argc, char *argv[])
   // Get persistent size and allocate 
   if((!strcmp(cfg.kernel_name,"conv2d_std")))
   {
-    if(cfg.kernel_precision == -12)
-    {
-    scratch_size = xa_nn_conv2d_std_getsize_sym4s(cfg.input_height,cfg.input_channels,cfg.kernel_height,cfg.kernel_width,cfg.y_stride,cfg.y_padding,
-        cfg.out_height, cfg.out_channels, cfg.inp_precision); PRINT_VAR(scratch_size)
-    }
-    else
-    {
     scratch_size=xa_nn_conv2d_std_getsize(cfg.input_height
                                           ,cfg.input_width
                                           ,cfg.input_channels
@@ -1516,7 +1513,6 @@ int xa_nn_main_process(int argc, char *argv[])
                                           ,cfg.dilation_width
                                           ,cfg.out_data_format
                                           ); PRINT_VAR(scratch_size)
-    }
   }
   else if((!strcmp(cfg.kernel_name,"conv2d")))
   {

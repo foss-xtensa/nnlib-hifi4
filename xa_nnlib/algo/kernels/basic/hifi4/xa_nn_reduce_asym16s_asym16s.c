@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -940,7 +940,7 @@ WORD32 xa_nn_reduce_mean_4D_asym16s_asym16s(WORD16 * __restrict__ p_out
   {
     current = p_axis[axis_itr];
     XA_NNLIB_ARG_CHK_COND(((current < 0) || (current > (num_inp_dims - 1))), -1);
-    XA_NNLIB_ARG_CHK_COND((p_inp_shape[current] > 1024), -1);
+    //XA_NNLIB_ARG_CHK_COND((p_inp_shape[current] > 1024), -1);
 
     /* Avoid calculation in case of repeated axis dims*/
     if(current != past)
@@ -1081,9 +1081,12 @@ WORD32 xa_nn_reduce_mean_4D_asym16s_asym16s(WORD16 * __restrict__ p_out
       }
       else
       {
+        /* Saturate -inp_zero_bias*num_elm_in_axis to int32 (16-bit zero-bias can
+           overflow int32); pure scalar avoids toolchain-fragile 64-bit intrinsics. */
         WORD64 tot_bias = (WORD64)(-inp_zero_bias) * (WORD64)(num_elm_in_axis);
-        tot_bias = AE_MIN64(AE_MOVDA32(2147483647), AE_MAX64(tot_bias, AE_MOVDA32(-2147483648)));
-        ae_int32x2 total_bias = AE_MOVDA32(AE_MOVINT32_FROMINT64(tot_bias));
+        tot_bias = tot_bias > (WORD64)2147483647 ? (WORD64)2147483647 : tot_bias;
+        tot_bias = tot_bias < (WORD64)(-2147483647 - 1) ? (WORD64)(-2147483647 - 1) : tot_bias;
+        ae_int32x2 total_bias = AE_MOVDA32((WORD32)tot_bias);
         for(itr = 0; itr < (out_length >> 3); itr++)
         {
           ae_int32x2 wout1, wout2, wout3, wout4;

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -143,69 +143,6 @@ static WORD32 xa_nn_maxpool_getsize_nhwc(WORD32  inp_precision,
 
 }
 
-#ifndef NNLIB_V2
-WORD32 xa_nn_maxpool_getsize(
-    WORD32 inp_precision,
-    WORD32 input_width,
-    WORD32 kernel_height,
-    WORD32 kernel_width,
-    WORD32 x_stride,
-    WORD32 y_stride,
-    WORD32 x_padding,
-    WORD32 out_width)
-{
-    int total_size, state_size, scratch_size;
-    int full_buf_width, full_out_width;
-    int inp_bytewidth, acc_bytewidth;
-
-    XA_NNLIB_CHK_COND((input_width <= 0), -1);
-    XA_NNLIB_CHK_COND((kernel_height <= 0), -1);
-    XA_NNLIB_CHK_COND((kernel_width <= 0), -1);
-    XA_NNLIB_CHK_COND((kernel_width > input_width), -1);
-    XA_NNLIB_CHK_COND((x_stride <= 0), -1);
-    XA_NNLIB_CHK_COND((y_stride <= 0), -1);
-    XA_NNLIB_CHK_COND((x_padding < 0), -1);
-    XA_NNLIB_CHK_COND((out_width <= 0), -1);
-
-
-    switch(inp_precision)
-    {
-        case 8:
-            inp_bytewidth = sizeof(WORD8);
-            acc_bytewidth = sizeof(WORD16);
-            break;
-        case 16:
-            inp_bytewidth = sizeof(WORD16);
-            acc_bytewidth = sizeof(WORD16);
-            break;
-        case -1:
-            inp_bytewidth = sizeof(WORD32);
-            acc_bytewidth = sizeof(WORD32);
-            break;
-        case -3:
-            inp_bytewidth = sizeof(UWORD8);
-            acc_bytewidth = sizeof(WORD32);
-            break;
-        default:
-            return -1;
-            break;
-    }
-
-    /* State size */
-    state_size = ALIGNED_SIZE(sizeof(xa_nn_maxpool_state_t), ALIGNMENT);
-    /* Output scratch buffer size */
-    full_buf_width = kernel_width + (out_width - 1)*x_stride;
-    full_buf_width = XT_MAX(full_buf_width, x_padding + input_width);
-    full_buf_width = ALIGNED_SIZE(full_buf_width, ALIGNMENT/2);
-    /* maxpool: Need 2 rows of padded input width as acratch for temp output */
-    full_out_width = ALIGNED_SIZE(full_buf_width + kernel_width, 4);
-    scratch_size = 2 * full_out_width*acc_bytewidth;
-
-    /* Total size */
-    total_size = state_size + scratch_size;
-    return total_size;
-}
-#else
 WORD32 xa_nn_maxpool_getsize(
         WORD32 input_channels,
         WORD32 inp_precision,
@@ -263,7 +200,6 @@ WORD32 xa_nn_maxpool_getsize(
 
     return scratch_size;
 }
-#endif
 
 #ifndef ENABLE_SCRATCH_SIZE_API_ONLY
 WORD32 xa_nn_maxpool_init(

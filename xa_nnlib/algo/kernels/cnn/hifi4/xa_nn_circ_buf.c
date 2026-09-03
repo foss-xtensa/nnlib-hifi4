@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -806,7 +806,7 @@ void xa_nn_dilated_circ_buf_nhwc_add_cols(
     for(i = 0; i < left_pad; i += dilation_width)
     {
         p_dst = (pWORD8)p_circ_buf->p_curr;
-#pragma loop_count min=1
+
         for(j = 0; j < circ_buf_height; j++)
         {
             memset(p_dst, 0, p_circ_buf->row_offset*bytewidth);
@@ -915,7 +915,7 @@ void xa_nn_dilated_circ_buf_nhwc_add_cols(
     for(; i < n_cols; i += dilation_width)
     {
         p_dst = (pWORD8)p_circ_buf->p_curr;
-#pragma loop_count min=1
+
         for(j = 0; j < circ_buf_height; j++)
         {
             memset(p_dst, 0, p_circ_buf->row_offset*bytewidth);

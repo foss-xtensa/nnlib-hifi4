@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -632,6 +632,67 @@ static float machine_eps(float value, int sum_length)
     return eps_sum;
 }
 
+/* Convert an f16 bit pattern (uint16) to a float32 value. */
+static float f16_to_f32(unsigned short h)
+{
+  unsigned int sign     = (h >> 15) & 0x1;
+  unsigned int exponent = (h >> 10) & 0x1F;
+  unsigned int mantissa = h & 0x3FF;
+  unsigned int f;
+  float result;
+
+  if (exponent == 0) {
+    if (mantissa == 0) {
+      f = sign << 31; /* +-0 */
+    } else {
+      /* denormal: normalize into float32 */
+      unsigned int e = 113; /* 127 - 14 */
+      while (!(mantissa & 0x400)) { mantissa <<= 1; e--; }
+      mantissa &= 0x3FF;
+      f = (sign << 31) | (e << 23) | (mantissa << 13);
+    }
+  } else if (exponent == 31) {
+    f = (sign << 31) | (0xFF << 23) | (mantissa << 13); /* Inf or NaN */
+  } else {
+    f = (sign << 31) | ((exponent + 112) << 23) | (mantissa << 13); /* normal */
+  }
+  memcpy(&result, &f, sizeof(result));
+  return result;
+}
+
+static float machine_eps_f16(float value, int sum_length)
+{
+    float epsilon = 9.765625e-4f; /* f16 machine epsilon = 2^-10 */
+    int eps_exp;
+    frexpf(value, &eps_exp);
+    /* eps below is 1 ULP at this magnitude = epsilon * 2^(eps_exp-1) */
+    float eps = ldexpf(epsilon, eps_exp - 1);
+    /* sum_length accumulation error
+     * For kernels without accumulation, sum_length can be set to 0 (1-ULP) or 1 (2-ULP), or even higher if needed.
+    */
+    return ((sum_length + 1) / 2 + 1) * eps;
+}
+
+static int verify_epsf16(void *p_ref, void *p_out, int len, int sum_length)
+{
+  int i;
+  const unsigned short *r = (const unsigned short *)p_ref;
+  const unsigned short *o = (const unsigned short *)p_out;
+  float ref_lo, ref_hi;
+  float eps;
+
+  for (i = 0; i < len; i++)
+  {
+    float ref_f32 = f16_to_f32(r[i]);
+    float out_f32 = f16_to_f32(o[i]);
+    eps = machine_eps_f16(ref_f32, sum_length);
+    ref_lo = ref_f32 - eps;
+    ref_hi = ref_f32 + eps;
+    if (out_f32 < ref_lo || out_f32 > ref_hi) { return -1; }
+  }
+  return 0;
+}
+
 static int verify_epsf32(void *p_ref, void *p_out, int len, int sum_length)
 {
   int i;
@@ -667,8 +728,20 @@ int compare_buf1D(buf1D_t *pbuf_ref, buf1D_t *pbuf_out, int method, int precisio
            return 1;
        }
 
-   } 
-  if(method == 1 && (precision != -1)) /* Bitexact match */
+   }
+  if(method == 1 && (precision == -2)) /*For f16 cases only*/
+   {
+       int length = pbuf_ref->length;
+       if(verify_epsf16(pbuf_ref->p, pbuf_out->p, length, sum_length))
+       {
+           return 0;
+       }
+       else
+       {
+           return 1;
+       }
+   }
+  if(method == 1 && (precision != -1) && (precision != -2)) /* Bitexact match */
    {
        int size_in_bytes = (pbuf_ref->bytes_per_element * pbuf_ref->length);
        if(verify_bitexact(pbuf_ref->p, pbuf_out->p, size_in_bytes))

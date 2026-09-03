@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -40,9 +40,7 @@ const FLOAT32* __restrict__ p_inp,
     WORD32  y_padding,
     WORD32  out_height,
     WORD32  out_width,
-#ifdef NNLIB_V2
     WORD32  inp_data_format,
-#endif
     WORD32  out_data_format,
     VOID *handle))
 #else /* #if !HAVE_VFPU */
@@ -290,9 +288,7 @@ const FLOAT32* __restrict__ p_inp,
       WORD32  y_padding,
       WORD32  out_height,
       WORD32  out_width,
-#ifdef NNLIB_V2
       WORD32  inp_data_format,
-#endif
       WORD32  out_data_format,
       VOID *p_scratch)
 {
@@ -312,12 +308,10 @@ const FLOAT32* __restrict__ p_inp,
     XA_NNLIB_ARG_CHK_COND((y_padding < 0 || x_padding < 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_height <= 0 || out_width <= 0), -1);
     XA_NNLIB_ARG_CHK_COND((out_data_format != 0) && (out_data_format != 1), -1);
-#ifdef NNLIB_V2
     XA_NNLIB_ARG_CHK_COND((inp_data_format != 0) && (inp_data_format != 1), -1);
 
     // Different I/O formats (not supported!)
     XA_NNLIB_ARG_CHK_COND((out_data_format != inp_data_format), -1);
-#endif
 
     if((input_channels == 1) || (out_data_format == 1))
     {

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -32,6 +32,24 @@
 DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_resize_nearest_neighbour_8_8,
   (pWORD8 __restrict__ p_out
   ,const WORD8 *__restrict__ p_inp
+  ,WORD32  input_batch
+  ,WORD32  input_height
+  ,WORD32  input_width
+  ,WORD32  input_channels
+  ,WORD32  out_batch
+  ,WORD32  out_height
+  ,WORD32  out_width
+  ,WORD32  out_channels
+  ,FLOAT32 height_scale
+  ,FLOAT32 width_scale
+  ,FLOAT32 height_offset
+  ,FLOAT32 width_offset
+  ,WORD32  align_corners
+  ))
+
+DISCARD_FUN_FOR_NONVOID_RETURN(WORD32, xa_nn_resize_nearest_neighbour_16_16,
+  (pWORD16 __restrict__ p_out
+  ,const WORD16 *__restrict__ p_inp
   ,WORD32  input_batch
   ,WORD32  input_height
   ,WORD32  input_width
@@ -116,5 +134,35 @@ WORD32 xa_nn_resize_nearest_neighbour_8_8
 
   return 0;
 }
+
+WORD32 xa_nn_resize_nearest_neighbour_16_16
+  (pWORD16 __restrict__ p_out
+  ,const WORD16 *__restrict__ p_inp
+  ,WORD32  input_batch
+  ,WORD32  input_height
+  ,WORD32  input_width
+  ,WORD32  input_channels
+  ,WORD32  out_batch
+  ,WORD32  out_height
+  ,WORD32  out_width
+  ,WORD32  out_channels
+  ,FLOAT32 height_scale
+  ,FLOAT32 width_scale
+  ,FLOAT32 height_offset
+  ,FLOAT32 width_offset
+  ,WORD32  align_corners
+  )
+{
+  /* Alignment checks */
+  XA_NNLIB_ARG_CHK_ALIGN(p_out, sizeof(WORD16), -1);
+  XA_NNLIB_ARG_CHK_ALIGN(p_inp, sizeof(WORD16), -1);
+
+  return xa_nn_resize_nearest_neighbour_8_8((WORD8 *)p_out,
+          (const WORD8 *)p_inp, input_batch, input_height, input_width,
+          input_channels * 2, out_batch, out_height, out_width,
+          out_channels * 2, height_scale, width_scale, height_offset,
+          width_offset, align_corners);
+}
+
 #endif
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -136,14 +136,28 @@ typedef struct _xa_dma_cfg_t
 
 #ifdef ENABLE_SCRATCH_SIZE_API_ONLY
 
-#if defined(hifi5)
+#if defined(hifi_iq)
+#define get_softmax_scratch_size                get_softmax_scratch_size_hifi_iq
+#define xa_nn_avgpool_getsize                   xa_nn_avgpool_getsize_hifi_iq
+#define xa_nn_batch_matmul_getsize              xa_nn_batch_matmul_getsize_hifi_iq
+#define xa_nn_conv2d_depthwise_getsize          xa_nn_conv2d_depthwise_getsize_hifi_iq
+#define xa_nn_conv2d_getsize                    xa_nn_conv2d_getsize_hifi_iq
+#define xa_nn_conv2d_std_getsize                xa_nn_conv2d_std_getsize_hifi_iq
+#define xa_nn_dilated_conv2d_depthwise_getsize  xa_nn_dilated_conv2d_depthwise_getsize_hifi_iq
+#define xa_nn_dilated_conv2d_std_getsize        xa_nn_dilated_conv2d_std_getsize_hifi_iq
+#define xa_nn_lstm_getsize                      xa_nn_lstm_getsize_hifi_iq
+#define xa_nn_gru_getsize                       xa_nn_gru_getsize_hifi_iq
+#define xa_nn_maxpool_getsize                   xa_nn_maxpool_getsize_hifi_iq
+#define xa_nn_reduce_getsize_nhwc               xa_nn_reduce_getsize_nhwc_hifi_iq
+#define xa_nn_transpose_conv_getsize            xa_nn_transpose_conv_getsize_hifi_iq
+
+#elif defined(hifi5)
 #define get_softmax_scratch_size                get_softmax_scratch_size_hifi5
 #define xa_nn_avgpool_getsize                   xa_nn_avgpool_getsize_hifi5
 #define xa_nn_batch_matmul_getsize              xa_nn_batch_matmul_getsize_hifi5
 #define xa_nn_conv2d_depthwise_getsize          xa_nn_conv2d_depthwise_getsize_hifi5
 #define xa_nn_conv2d_getsize                    xa_nn_conv2d_getsize_hifi5
 #define xa_nn_conv2d_std_getsize                xa_nn_conv2d_std_getsize_hifi5
-#define xa_nn_conv2d_std_getsize_sym4s          xa_nn_conv2d_std_getsize_sym4s_hifi5
 #define xa_nn_dilated_conv2d_depthwise_getsize  xa_nn_dilated_conv2d_depthwise_getsize_hifi5
 #define xa_nn_dilated_conv2d_std_getsize        xa_nn_dilated_conv2d_std_getsize_hifi5
 #define xa_nn_lstm_getsize                      xa_nn_lstm_getsize_hifi5
@@ -159,7 +173,6 @@ typedef struct _xa_dma_cfg_t
 #define xa_nn_conv2d_depthwise_getsize          xa_nn_conv2d_depthwise_getsize_hifi4
 #define xa_nn_conv2d_getsize                    xa_nn_conv2d_getsize_hifi4
 #define xa_nn_conv2d_std_getsize                xa_nn_conv2d_std_getsize_hifi4
-#define xa_nn_conv2d_std_getsize_sym4s          xa_nn_conv2d_std_getsize_sym4s_hifi4
 #define xa_nn_dilated_conv2d_depthwise_getsize  xa_nn_dilated_conv2d_depthwise_getsize_hifi4
 #define xa_nn_dilated_conv2d_std_getsize        xa_nn_dilated_conv2d_std_getsize_hifi4
 #define xa_nn_lstm_getsize                      xa_nn_lstm_getsize_hifi4
@@ -554,7 +567,20 @@ typedef struct _xa_dma_cfg_t
       WORD32 row_stride2                            /*!< [in] row stride for mat2 */
       );
 
-#if XCHAL_HAVE_HIFI5_HP_VFPU
+   WORD32 xa_nn_matXvec_v2_f32xf32_f32(
+      FLOAT32  * __restrict__ p_out,                /*!< [out] f32b result: rows x 1 */
+      const FLOAT32  * __restrict__ p_mat,         /*!< [in] f32b mat: rows x cols */
+      const FLOAT32  * __restrict__ p_vec,         /*!< [in] f32b vec: cols x 1 */
+      const FLOAT32  * __restrict__ p_bias,         /*!< [in] f32b bias: rows x 1 */
+      WORD32 rows,                                  /*!< [in] number of rows */
+      WORD32 cols,                                 /*!< [in] number of columns of mat */
+      WORD32 row_stride,                           /*!< [in] row stride for mat */
+      FLOAT32 out_activation_min,
+      FLOAT32 out_activation_max,
+      xa_dma_cfg_t *p_dma_cfg
+      );
+
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
   WORD32 xa_nn_matXvec_f16xf16_f16(
       WORD16  * __restrict__ p_out,                /*!< [out] f16b result: rows x 1 */
       const WORD16  * __restrict__ p_mat1,         /*!< [in] f16b mat1: rows x cols1 */
@@ -569,6 +595,19 @@ typedef struct _xa_dma_cfg_t
       WORD32 row_stride2                            /*!< [in] row stride for mat2 */
       );
 
+  WORD32 xa_nn_matXvec_v2_f16xf16_f16(
+      WORD16  * __restrict__ p_out,
+      const WORD16  * __restrict__ p_mat,
+      const WORD16  * __restrict__ p_vec,
+      const WORD16  * __restrict__ p_bias,
+      WORD32 rows,
+      WORD32 cols,
+      WORD32 row_stride,
+      const WORD16  * out_activation_min,
+      const WORD16  * out_activation_max,
+      xa_dma_cfg_t *p_dma_cfg
+      );
+
   WORD32 xa_nn_matmul_f16xf16_f16(
       WORD16 * __restrict__ p_out,
       const WORD16 * __restrict__ p_mat1,
@@ -581,6 +620,22 @@ typedef struct _xa_dma_cfg_t
       WORD32 vec_offset,
       WORD32 out_offset,
       WORD32 out_stride);
+
+  WORD32 xa_nn_matmul_v2_f16xf16_f16(
+      WORD16 * __restrict__ p_out,
+      const WORD16 * __restrict__ p_mat1,
+      const WORD16 * __restrict__ p_vec1,
+      const WORD16 * __restrict__ p_bias,
+      WORD32 rows,
+      WORD32 cols1,
+      WORD32 row_stride1,
+      WORD32 vec_count,
+      WORD32 vec_offset,
+      WORD32 out_offset,
+      WORD32 out_stride,
+      const WORD16 *out_activation_min,
+      const WORD16 *out_activation_max,
+      xa_dma_cfg_t *p_dma_cfg);
 #endif
 
   WORD32 xa_nn_matXvec_batch_f32xf32_f32(
@@ -593,6 +648,22 @@ typedef struct _xa_dma_cfg_t
       WORD32 row_stride1,                           /*!< [in] row stride for mat1 */
       WORD32 vec_count                              /*!< [in] number of vectors: 2, 4, 2n */
       );
+
+  WORD32 xa_nn_matmul_v2_f32xf32_f32(
+      FLOAT32 * __restrict__ p_out,
+      const FLOAT32 * __restrict__ p_mat1,
+      const FLOAT32 * __restrict__ p_mat2,
+      const FLOAT32 * __restrict__ p_bias,
+      WORD32 rows,
+      WORD32 cols,
+      WORD32 row_stride,
+      WORD32 vec_count,
+      WORD32 vec_offset,
+      WORD32 out_offset,
+      WORD32 out_stride,
+      FLOAT32 out_activation_min,
+      FLOAT32 out_activation_max,
+      xa_dma_cfg_t *p_dma_cfg);
 
   WORD32 xa_nn_matmul_f32xf32_f32(
       FLOAT32  * __restrict__ p_out,                /*!< [out] f32 result: rows x vec count */
@@ -729,6 +800,24 @@ typedef struct _xa_dma_cfg_t
       WORD32 out_activation_max,
       xa_dma_cfg_t *p_dma_cfg);
 
+  WORD32 xa_nn_matXvec_v2_asym4sxasym8s_asym8s(
+      WORD8 * __restrict__ p_out,
+      const WORD8 * __restrict__ p_mat1,
+      const WORD8 * __restrict__ p_vec1,
+      const WORD32 * __restrict__ p_bias,
+      WORD32 rows,
+      WORD32 cols1,
+      WORD32 row_stride1,
+      WORD32 mat1_zero_bias,
+      WORD32 vec1_zero_bias,
+      WORD32 out_multiplier,
+      WORD32 out_shift,
+      WORD32 out_zero_bias,
+      pVOID p_scratch,
+      WORD32 out_activation_min,
+      WORD32 out_activation_max,
+      xa_dma_cfg_t *p_dma_cfg);
+
   WORD32 xa_nn_matXvec_asym4sxasym8s_asym8s(
       WORD8 * __restrict__ p_out,
       const WORD8 * __restrict__ p_mat1,
@@ -783,6 +872,53 @@ typedef struct _xa_dma_cfg_t
       const WORD16 * __restrict__ p_vec,        /* input data, floating point */
       WORD32        vec_length);                  /* length of vectors */
 
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
+  WORD32 xa_nn_vec_leaky_relu_f16_f16(
+      WORD16       * __restrict__ p_out,  
+      const WORD16 * __restrict__ p_vec,  
+      WORD16 *      slope,         
+      WORD32        vec_length);
+
+  WORD32 xa_nn_vec_prelu_f16_f16(
+      WORD16       * __restrict__ p_out,  
+      const WORD16 * __restrict__ p_vec,  
+      WORD16 *      slope,         
+      WORD32        vec_length);
+
+  WORD32 xa_nn_vec_hardswish_f16_f16(
+      WORD16       * __restrict__ p_out,  
+      const WORD16 * __restrict__ p_vec,         
+      WORD32        vec_length);
+      
+  WORD32 xa_nn_vec_exp_f16_f16(
+      WORD16       * __restrict__ p_out,  
+      const WORD16 * __restrict__ p_vec,         
+      WORD32        vec_length);
+
+  WORD32 xa_nn_vec_sqrt_f16_f16(
+      WORD16       * __restrict__ p_out,  
+      const WORD16 * __restrict__ p_vec,         
+      WORD32        vec_length);
+
+  WORD32 xa_nn_vec_selu_f16_f16(
+      WORD16       * __restrict__ p_out,  
+      const WORD16 * __restrict__ p_vec, 
+      WORD16* alpha,
+      WORD16* lambda,         
+      WORD32        vec_length);
+
+  WORD32 xa_nn_vec_logsoftmax_f16_f16(
+      WORD16       * __restrict__ p_out,  
+      const WORD16 * __restrict__ p_vec,         
+      WORD32        vec_length);
+
+  WORD32 xa_nn_vec_log_f16_f16(
+      WORD16       * __restrict__ p_out,  
+      const WORD16 * __restrict__ p_vec,         
+      WORD32        vec_length);
+
+#endif
+
   WORD32 xa_nn_vec_relu_f32_f32(
       FLOAT32       * __restrict__ p_out,        /*!< [out] result: vec_length x 1, floating point */
       const FLOAT32 * __restrict__ p_vec,        /*!< [in] input data: vec_length x 1, floating point */
@@ -812,6 +948,13 @@ typedef struct _xa_dma_cfg_t
       const FLOAT32 * __restrict__ p_vec,        /*!< [in] input data: vec_length x 1, floating point */
       WORD32        vec_length                   /*!< [in] length of vectors */
       );
+
+  WORD32 xa_nn_vec_softmax_f16_f16(
+      WORD16       * __restrict__ p_out,
+      const WORD16 * __restrict__ p_vec,
+      WORD16 *      pscale_beta,
+      WORD32        vec_length
+    );
 
   WORD32 xa_nn_vec_sigmoid_32_16(
       WORD16       * __restrict__ p_out,         /*!< [out] result: vec_length x 1, Q0.15 */
@@ -1080,17 +1223,6 @@ typedef struct _xa_dma_cfg_t
       WORD32 out_data_format
       );
 
-  WORD32 xa_nn_conv2d_std_getsize_sym4s(
-      WORD32 input_height,
-      WORD32 input_channels,
-      WORD32 kernel_height,
-      WORD32 kernel_width,
-      WORD32 y_stride,
-      WORD32 y_padding,
-      WORD32 out_height,
-      WORD32 out_channels,
-      WORD32 input_precision);
-
   WORD32 xa_nn_dilated_conv2d_std_getsize(
       WORD32 input_height,
       WORD32 input_channels,
@@ -1190,7 +1322,56 @@ typedef struct _xa_dma_cfg_t
       WORD32 out_data_format,
       VOID *p_handle);
 
-#if XCHAL_HAVE_HIFI5_HP_VFPU
+  WORD32 xa_nn_conv2d_std_v2_f32(
+      FLOAT32* __restrict__ p_out,
+      const FLOAT32* __restrict__ p_inp,
+      const FLOAT32* __restrict__ p_kernel,
+      const FLOAT32* __restrict__ p_bias,
+      WORD32 input_height,
+      WORD32 input_width,
+      WORD32 input_channels,
+      WORD32 kernel_height,
+      WORD32 kernel_width,
+      WORD32 out_channels,
+      WORD32 x_stride,
+      WORD32 y_stride,
+      WORD32 x_padding,
+      WORD32 y_padding,
+      WORD32 out_height,
+      WORD32 out_width,
+      WORD32 out_data_format,
+      VOID *p_handle,
+      FLOAT32 out_activation_min,
+      FLOAT32 out_activation_max,
+      struct _xa_dma_cfg_t *p_dma_cfg);
+
+  WORD32 xa_nn_conv2d_pointwise_f32(
+      FLOAT32* __restrict__ p_out,
+      FLOAT32* __restrict__ p_kernel,
+      FLOAT32* __restrict__ p_inp,
+      FLOAT32* __restrict__ p_bias,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  input_channels,
+      WORD32  out_channels,
+      WORD32  out_data_format);
+
+  WORD32 xa_nn_conv2d_pointwise_v2_f32(
+        FLOAT32* __restrict__ p_out,
+        FLOAT32* __restrict__ p_kernel,
+        FLOAT32* __restrict__ p_inp,
+        FLOAT32* __restrict__ p_bias,
+        WORD32  input_height,
+        WORD32  input_width,
+        WORD32  input_channels,
+        WORD32  out_channels,
+        WORD32  out_data_format,
+        FLOAT32 out_activation_min,
+        FLOAT32 out_activation_max,
+        struct _xa_dma_cfg_t *p_dma_cfg);
+
+
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
   WORD32 xa_nn_conv2d_std_f16(
       WORD16* __restrict__ p_out,
       const WORD16* __restrict__ p_inp,
@@ -1210,20 +1391,72 @@ typedef struct _xa_dma_cfg_t
       WORD32 out_width,
       WORD32 out_data_format,
       VOID *p_scratch);
+
+  WORD32 xa_nn_conv2d_std_v2_f16(
+      WORD16* __restrict__ p_out,
+      const WORD16* __restrict__ p_inp,
+      const WORD16* __restrict__ p_kernel,
+      const WORD16* __restrict__ p_bias,
+      WORD32 input_height,
+      WORD32 input_width,
+      WORD32 input_channels,
+      WORD32 kernel_height,
+      WORD32 kernel_width,
+      WORD32 out_channels,
+      WORD32 x_stride,
+      WORD32 y_stride,
+      WORD32 x_padding,
+      WORD32 y_padding,
+      WORD32 out_height,
+      WORD32 out_width,
+      WORD32 out_data_format,
+      VOID *p_scratch,
+      const WORD16* out_activation_min,
+      const WORD16* out_activation_max,
+      struct _xa_dma_cfg_t *p_dma_cfg);
+
+  WORD32 xa_nn_dilated_conv2d_std_v2_f16(
+      WORD16* __restrict__ p_out,
+      const WORD16* __restrict__ p_kernel,
+      const WORD16* __restrict__ p_inp,
+      const WORD16* __restrict__ p_bias,
+      WORD32 input_height,
+      WORD32 input_width,
+      WORD32 input_channels,
+      WORD32 kernel_height,
+      WORD32 kernel_width,
+      WORD32 out_channels,
+      WORD32 dilation_height,
+      WORD32 dilation_width,
+      WORD32 x_stride,
+      WORD32 y_stride,
+      WORD32 x_padding,
+      WORD32 y_padding,
+      WORD32 out_height,
+      WORD32 out_width,
+      WORD32 inp_data_format,
+      WORD32 out_data_format,
+      pVOID p_scratch,
+      const WORD16* out_activation_min,
+      const WORD16* out_activation_max,
+      struct _xa_dma_cfg_t *p_dma_cfg);
 #endif
 
-  WORD32 xa_nn_conv2d_pointwise_f32(
-      FLOAT32* __restrict__ p_out,
-      FLOAT32* __restrict__ p_kernel,
-      FLOAT32* __restrict__ p_inp,
-      FLOAT32* __restrict__ p_bias,
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
+  WORD32 xa_nn_conv2d_pointwise_v2_f16(
+      WORD16* __restrict__ p_out,
+      WORD16* __restrict__ p_kernel,
+      WORD16* __restrict__ p_inp,
+      WORD16* __restrict__ p_bias,
       WORD32  input_height,
       WORD32  input_width,
       WORD32  input_channels,
       WORD32  out_channels,
-      WORD32  out_data_format);
+      WORD32  out_data_format,
+      const WORD16* out_activation_min,
+      const WORD16* out_activation_max,
+      xa_dma_cfg_t *p_dma_cfg);
 
-#if XCHAL_HAVE_HIFI5_HP_VFPU
   WORD32 xa_nn_conv2d_pointwise_f16(
       WORD16* __restrict__ p_out,
       WORD16* __restrict__ p_kernel,
@@ -1368,7 +1601,7 @@ typedef struct _xa_dma_cfg_t
       WORD32  out_data_format,
       pVOID p_scratch);
 
-#if XCHAL_HAVE_HIFI5_HP_VFPU
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
   WORD32 xa_nn_conv2d_depthwise_f16(
       WORD16* __restrict__ p_out,
       const WORD16* __restrict__ p_kernel,
@@ -1389,6 +1622,56 @@ typedef struct _xa_dma_cfg_t
       WORD32  inp_data_format,
       WORD32  out_data_format,
       pVOID p_scratch);
+
+  WORD32 xa_nn_conv2d_depthwise_v2_f16(
+      WORD16* __restrict__ p_out,
+      const WORD16* __restrict__ p_kernel,
+      const WORD16* __restrict__ p_inp,
+      const WORD16* __restrict__ p_bias,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  input_channels,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  channels_multiplier,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
+      WORD32  inp_data_format,
+      WORD32  out_data_format,
+      pVOID p_scratch,
+      const WORD16 *pout_activation_min,
+      const WORD16 *pout_activation_max,
+      xa_dma_cfg_t *p_dma_cfg);
+
+  WORD32 xa_nn_dilated_conv2d_depthwise_v2_f16(
+      WORD16* __restrict__ p_out,
+      const WORD16* __restrict__ p_kernel,
+      const WORD16* __restrict__ p_inp,
+      const WORD16* __restrict__ p_bias,
+      WORD32  input_height,
+      WORD32  input_width,
+      WORD32  input_channels,
+      WORD32  kernel_height,
+      WORD32  kernel_width,
+      WORD32  channels_multiplier,
+      WORD32  dilation_height,
+      WORD32  dilation_width,
+      WORD32  x_stride,
+      WORD32  y_stride,
+      WORD32  x_padding,
+      WORD32  y_padding,
+      WORD32  out_height,
+      WORD32  out_width,
+      WORD32  inp_data_format,
+      WORD32  out_data_format,
+      pVOID p_scratch,
+      const WORD16* out_activation_min,
+      const WORD16* out_activation_max,
+      xa_dma_cfg_t *p_dma_cfg);
 #endif
 
   WORD32 xa_nn_conv2d_depthwise_8x16
@@ -1507,6 +1790,24 @@ typedef struct _xa_dma_cfg_t
       WORD32  out_data_format,            /*!< [in] output data format: WHD */
       VOID *p_scratch);                   /*!< [in] scratch memory of size given by xa_nn_avgpool_getsize with inp_precision=-1 */
 
+  WORD32 xa_nn_avgpool_f16(
+    WORD16* __restrict__ p_out_t,
+    const WORD16* __restrict__ p_inp,
+    WORD32  input_height,
+    WORD32  input_width,
+    WORD32  input_channels,
+    WORD32  kernel_height,
+    WORD32  kernel_width,
+    WORD32  x_stride,
+    WORD32  y_stride,
+    WORD32  x_padding,
+    WORD32  y_padding,
+    WORD32  out_height,
+    WORD32  out_width,
+    WORD32  inp_data_format,
+    WORD32  out_data_format,
+    VOID   *p_scratch);
+
   WORD32 xa_nn_avgpool_asym8u(
       UWORD8* __restrict__ p_out,
       const UWORD8* __restrict__ p_inp,
@@ -1596,6 +1897,65 @@ typedef struct _xa_dma_cfg_t
       WORD32  out_data_format,
       VOID   *p_scratch);
 
+  WORD32 xa_nn_maxpool_f16(
+    WORD16* __restrict__ p_out,
+    const WORD16* __restrict__ p_inp,
+    WORD32  input_height,
+    WORD32  input_width,
+    WORD32  input_channels,
+    WORD32  kernel_height,
+    WORD32  kernel_width,
+    WORD32  x_stride,
+    WORD32  y_stride,
+    WORD32  x_padding,
+    WORD32  y_padding,
+    WORD32  out_height,
+    WORD32  out_width,
+    WORD32  inp_data_format,
+    WORD32  out_data_format,
+    VOID   *p_scratch);
+
+  WORD32 xa_nn_maxpoolId_v2_f16(
+    WORD16* __restrict__ p_out,
+    UWORD8* __restrict__ p_out_Id,
+    const WORD16* __restrict__ p_inp,
+    WORD32  input_height,
+    WORD32  input_width,
+    WORD32  input_channels,
+    WORD32  kernel_height,
+    WORD32  kernel_width,
+    WORD32  x_stride,
+    WORD32  y_stride,
+    WORD32  x_padding,
+    WORD32  y_padding,
+    WORD32  out_height,
+    WORD32  out_width,
+    WORD32  inp_data_format,
+    WORD32  out_data_format,
+    VOID   *p_scratch,
+    WORD16 *pout_activation_min,
+    WORD16 *pout_activation_max,
+    xa_dma_cfg_t *p_dma_cfg);
+
+  WORD32 xa_nn_maxunpool_f16(
+    WORD16* __restrict__ p_out,
+    const WORD16* __restrict__ p_inp,
+    const UWORD8* __restrict__ p_inp_Id,
+    WORD32  input_height,
+    WORD32  input_width,
+    WORD32  input_channels,
+    WORD32  kernel_height,
+    WORD32  kernel_width,
+    WORD32  x_stride,
+    WORD32  y_stride,
+    WORD32  x_padding,
+    WORD32  y_padding,
+    WORD32  out_height,
+    WORD32  out_width,
+    WORD32  inp_data_format,
+    WORD32  out_data_format,
+    VOID   *p_scratch );
+
   WORD32 xa_nn_maxpool_asym8u(
       UWORD8* __restrict__ p_out,
       const UWORD8* __restrict__ p_inp,
@@ -1631,7 +1991,7 @@ typedef struct _xa_dma_cfg_t
       WORD32 inp_data_format,
       WORD32 out_data_format);
 
-#if XCHAL_HAVE_HIFI5_HP_VFPU
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
   WORD32 xa_nn_fully_connected_f16
     (WORD16 *__restrict__ p_out
      ,const WORD16 *__restrict__ p_weight
@@ -1640,6 +2000,19 @@ typedef struct _xa_dma_cfg_t
      ,WORD32  weight_depth
      ,WORD32  out_depth
     );
+
+  WORD32 xa_nn_fully_connected_v2_f16
+    (WORD16 *__restrict__ p_out
+     ,const WORD16 *__restrict__ p_weight
+     ,const WORD16 *__restrict__ p_inp
+     ,const WORD16 *__restrict__ p_bias
+     ,WORD32  weight_depth
+     ,WORD32  out_depth
+     ,const WORD16 *p_out_act_min
+     ,const WORD16 *p_out_act_max
+     ,xa_dma_cfg_t *p_dma_cfg
+    );
+
 #endif
 
   WORD32 xa_nn_fully_connected_f32
@@ -1649,6 +2022,18 @@ typedef struct _xa_dma_cfg_t
      ,const FLOAT32 *__restrict__ p_bias
      ,WORD32  weight_depth
      ,WORD32  out_depth
+    );
+
+  WORD32 xa_nn_fully_connected_v2_f32
+    (FLOAT32 *__restrict__ p_out
+    ,const FLOAT32 *__restrict__ p_weight
+    ,const FLOAT32 *__restrict__ p_inp
+    ,const FLOAT32 *__restrict__ p_bias
+    ,WORD32  weight_depth
+    ,WORD32  out_depth
+    ,FLOAT32 out_activation_min
+    ,FLOAT32 out_activation_max
+    ,xa_dma_cfg_t *p_dma_cfg
     );
 
   WORD32 xa_nn_fully_connected_16x16_16
@@ -1767,6 +2152,24 @@ typedef struct _xa_dma_cfg_t
    ,xa_dma_cfg_t *p_dma_cfg
   );
 
+  WORD32 xa_nn_fully_connected_v2_asym4sxasym8s_asym8s
+  (WORD8 *__restrict__ p_out
+   ,const WORD8 *__restrict__ p_weight
+   ,const WORD8 *__restrict__ p_inp
+   ,const WORD32 *__restrict__ p_bias
+   ,WORD32  weight_depth
+   ,WORD32  out_depth
+   ,WORD32  input_zero_bias
+   ,WORD32  weight_zero_bias
+   ,WORD32  out_multiplier
+   ,WORD32  out_shift
+   ,WORD32  out_zero_bias
+   ,VOID *p_scratch
+   ,WORD32  out_activation_min
+   ,WORD32  out_activation_max
+   ,xa_dma_cfg_t *p_dma_cfg
+  );
+
   WORD32 xa_nn_fully_connected_asym4sxasym8s_asym8s
     (WORD8 *__restrict__ p_out
      ,const WORD8 *__restrict__ p_weight
@@ -1825,6 +2228,25 @@ typedef struct _xa_dma_cfg_t
       WORD32  input_beta_multiplier,
       WORD32  vec_length);
 
+  WORD32 xa_nn_init_lut_asym8s_softmax(WORD32 * __restrict__ p_lut,
+      WORD32 diffmin,
+      WORD32 input_beta_multiplier,
+      WORD32 input_beta_left_shift);
+
+  WORD32 xa_nn_vec_batch_softmax_lut_asym8s_asym8s(WORD8 * __restrict__ p_out,
+      const WORD8 * __restrict__ p_vec,
+      WORD32 * __restrict__ p_lut,
+      WORD32 vec_length,
+      WORD32 batch_size,
+      pVOID p_scratch);
+
+  WORD32 xa_nn_vec_batch_softmax_sym16s_16(WORD16 * __restrict__ p_out,
+      const   WORD16 * __restrict__ p_vec,
+      WORD32  input_beta_left_shift,
+      WORD32  input_beta_multiplier,
+      WORD32  vec_length,
+      WORD32  batch_size);
+
   WORD32 xa_nn_vec_sigmoid_asym8u_asym8u(UWORD8 *p_out,
       const UWORD8 *p_vec,
       WORD32 zero_point,
@@ -1846,6 +2268,7 @@ typedef struct _xa_dma_cfg_t
       WORD32 input_multiplier,
       WORD32 input_left_shift,
       WORD32 vec_length);
+      
 
   int get_softmax_scratch_size(int inp_precision, int out_precision, int length);
 
@@ -1930,6 +2353,28 @@ typedef struct _xa_dma_cfg_t
       WORD32 input_multiplier,
       WORD32 input_left_shift,
       WORD32 vec_length);
+
+  WORD32 xa_nn_vec_apply_lut_asym8s_asym8s(WORD8 * __restrict__ p_out,
+      const WORD8 * __restrict__ p_vec,
+      WORD8 * __restrict__ p_lut,
+      WORD32 lut_len,
+      WORD32 vec_length);
+
+  /* Initialise a 256-entry sigmoid LUT for use with
+   * xa_nn_vec_apply_lut_asym8s_asym8s.*/
+  WORD32 xa_nn_init_lut_asym8s_sigmoid(WORD8  * __restrict__ p_lut,
+      WORD32  zero_point,
+      WORD32  input_range_radius,
+      WORD32  input_multiplier,
+      WORD32  input_left_shift);
+
+  /* Initialise a 256-entry tanh LUT for use with
+   * xa_nn_vec_apply_lut_asym8s_asym8s.*/
+  WORD32 xa_nn_init_lut_asym8s_tanh(WORD8  * __restrict__ p_lut,
+      WORD32  zero_point,
+      WORD32  input_range_radius,
+      WORD32  input_multiplier,
+      WORD32  input_left_shift);
 
   WORD32 xa_nn_vec_tanh_sym16s_sym16s(WORD16 *p_out,
       const WORD16 *p_vec,
@@ -2279,6 +2724,34 @@ typedef struct _xa_dma_cfg_t
       WORD32 out_zero_bias,
       WORD32 out_data_format,
       VOID *p_scratch);
+
+  WORD32 xa_nn_conv2d_std_v2_per_chan_sym4sxasym8s(
+      WORD8* __restrict__ p_out,
+      const WORD8* __restrict__ p_inp,
+      const WORD8* __restrict__ p_kernel,
+      const WORD32* __restrict__ p_bias,
+      WORD32 input_height,
+      WORD32 input_width,
+      WORD32 input_channels,
+      WORD32 kernel_height,
+      WORD32 kernel_width,
+      WORD32 out_channels,
+      WORD32 x_stride,
+      WORD32 y_stride,
+      WORD32 x_padding,
+      WORD32 y_padding,
+      WORD32 out_height,
+      WORD32 out_width,
+      WORD32 input_zero_bias,
+      WORD32 * p_out_multiplier,
+      WORD32 * p_out_shift,
+      WORD32 out_zero_bias,
+      WORD32 out_data_format,
+      VOID *p_scratch,
+      WORD32 out_activation_min,
+      WORD32 out_activation_max,
+      xa_dma_cfg_t *p_dma_cfg);
+
 
   WORD32 xa_nn_dilated_conv2d_std_v2_per_chan_sym8sxasym8s(
       WORD8* __restrict__ p_out,
@@ -3014,6 +3487,15 @@ typedef struct _xa_dma_cfg_t
       const FLOAT32 * __restrict__ p_inp2,
       const WORD32 *const p_inp2_shape);
 
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
+  WORD32 xa_nn_elm_add_broadcast_4D_f16xf16_f16(WORD16 * __restrict__ p_out,
+        const WORD32 *const p_out_shape,
+        const WORD16 * __restrict__ p_inp1,
+        const WORD32 *const p_inp1_shape,
+        const WORD16 * __restrict__ p_inp2,
+        const WORD32 *const p_inp2_shape);
+#endif
+
   WORD32 xa_nn_elm_add_16x16_16(WORD16 * __restrict__ p_out,
       const WORD16 * __restrict__ p_inp1,
       const WORD16 * __restrict__ p_inp2,
@@ -3044,6 +3526,15 @@ typedef struct _xa_dma_cfg_t
       const WORD32 *const p_inp1_shape,
       const FLOAT32 * __restrict__ p_inp2,
       const WORD32 *const p_inp2_shape);
+
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
+  WORD32 xa_nn_elm_sub_broadcast_4D_f16xf16_f16(WORD16 * __restrict__ p_out,
+        const WORD32 *const p_out_shape,
+        const WORD16 * __restrict__ p_inp1,
+        const WORD32 *const p_inp1_shape,
+        const WORD16 * __restrict__ p_inp2,
+        const WORD32 *const p_inp2_shape);
+#endif
 
   WORD32 xa_nn_elm_sub_asym8uxasym8u_asym8u(UWORD8 * __restrict__ p_out,
       WORD32  out_zero_bias,
@@ -3155,6 +3646,15 @@ typedef struct _xa_dma_cfg_t
       const FLOAT32 * __restrict__ p_inp2,
       const WORD32 *const p_inp2_shape);
 
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
+  WORD32 xa_nn_elm_mul_broadcast_4D_f16xf16_f16(WORD16 * __restrict__ p_out,
+        const WORD32 *const p_out_shape,
+        const WORD16 * __restrict__ p_inp1,
+        const WORD32 *const p_inp1_shape,
+        const WORD16 * __restrict__ p_inp2,
+        const WORD32 *const p_inp2_shape);
+#endif
+
   WORD32 xa_nn_elm_mul_sym16sxsym16s_asym8s(WORD8 * __restrict__ p_out,
       WORD32  out_zero_bias,
       WORD32  out_shift,
@@ -3210,6 +3710,18 @@ typedef struct _xa_dma_cfg_t
       WORD32 num_elms);
 
 WORD32 xa_nn_gru_hidden_state_update_8(WORD8* p_hidden_state,
+    const WORD16* p_update_gate,
+    const WORD16* p_modulated_state,
+    WORD32 update_to_modulated_state_multiplier,
+    WORD32 update_to_modulated_state_shift,
+    WORD32 update_to_hidden_state_multiplier,
+    WORD32 update_to_hidden_state_shift,
+    WORD32 out_multiplier,
+    WORD32 out_shift,
+    WORD32 hidden_zero_bias,
+    WORD32 num_elms);
+
+WORD32 xa_nn_gru_hidden_state_update_16(WORD16* p_hidden_state,
     const WORD16* p_update_gate,
     const WORD16* p_modulated_state,
     WORD32 update_to_modulated_state_multiplier,
@@ -3829,12 +4341,12 @@ WORD32 xa_nn_gru_hidden_state_update_8(WORD8* p_hidden_state,
       ,WORD32 out_data_format);
 
  WORD32 xa_nn_norm_calc_3D_8_nhwc(WORD16 * p_out
+      ,WORD8 * p_outnsa
       ,const WORD8 * p_inp
       ,int input_height, int input_width, int input_channels
       ,int accross_depth_flag
       ,int out_shift
-      ,const UWORD16 *prsqrt, int rsqrt_shift, int rsqrt_table_len
-      ,const UWORD16 *precip, int recip_shift);
+      ,const UWORD16 *prsqrt, int rsqrt_table_len);
 
  WORD32 xa_nn_norm_calc_3D_16_nhwc(UWORD16 * p_outnorm
      ,WORD8 * p_outnsa
@@ -3848,6 +4360,7 @@ WORD32 xa_nn_gru_hidden_state_update_8(WORD8* p_hidden_state,
       WORD8 * p_out,
       const WORD8 * p_inp,
       WORD16 *p_inp_normdata,
+      const WORD8 *p_inp_nsadata,
       int input_height, int input_width, int input_channels,
       int accross_depth_flag,
       int per_chan_flag,
@@ -3874,6 +4387,22 @@ WORD32 xa_nn_gru_hidden_state_update_8(WORD8* p_hidden_state,
       WORD32 renorm_shift,
       WORD32 input_zero_bias,
       WORD32 output_zero_bias);
+  
+  WORD32 xa_nn_instance_norm_3D_8_8_nhwc(
+    WORD8 *p_out,
+    const WORD8 *p_inp,
+    const WORD16 *p_alpha,
+    const WORD32 *p_beta,
+    const WORD32 *p_rsqrt,
+    WORD32 input_height,
+    WORD32 input_width,
+    WORD32 input_channels,
+    WORD32 output_shift,   
+    WORD32 mean_shift,  
+    WORD32 mean_scale,  
+    WORD32 sq_acc_shift, 
+    WORD32 min_val,     
+    WORD32 max_val);
 
   WORD32 xa_nn_resize_bilinear_8_8(pWORD8 __restrict__ p_out
       ,const WORD8 *__restrict__ p_inp
@@ -3892,6 +4421,22 @@ WORD32 xa_nn_gru_hidden_state_update_8(WORD8* p_hidden_state,
 
   WORD32 xa_nn_resize_nearest_neighbour_8_8(pWORD8 __restrict__ p_out
       ,const WORD8 *__restrict__ p_inp
+      ,WORD32  input_batch
+      ,WORD32  input_height
+      ,WORD32  input_width
+      ,WORD32  input_channels
+      ,WORD32  out_batch
+      ,WORD32  out_height
+      ,WORD32  out_width
+      ,WORD32  out_channels
+      ,FLOAT32 height_scale
+      ,FLOAT32 width_scale
+      ,FLOAT32 height_offset
+      ,FLOAT32 width_offset
+      ,WORD32  align_corners);
+
+  WORD32 xa_nn_resize_nearest_neighbour_16_16(pWORD16 __restrict__ p_out
+      ,const WORD16 *__restrict__ p_inp
       ,WORD32  input_batch
       ,WORD32  input_height
       ,WORD32  input_width
@@ -3949,6 +4494,15 @@ WORD32 xa_nn_gru_hidden_state_update_8(WORD8* p_hidden_state,
       const WORD32 *const p_inp1_shape,
       const FLOAT32 * __restrict__ p_inp2,
       const WORD32 *const p_inp2_shape);
+      
+#if (XCHAL_HAVE_HIFI5_HP_VFPU || XCHAL_HAVE_HIFIN_HP_VFPU)
+  WORD32 xa_nn_elm_div_broadcast_4D_f16xf16_f16(WORD16 * __restrict__ p_out,
+        const WORD32 *const p_out_shape,
+        const WORD16 * __restrict__ p_inp1,
+        const WORD32 *const p_inp1_shape,
+        const WORD16 * __restrict__ p_inp2,
+        const WORD32 *const p_inp2_shape);
+#endif
 
   WORD32 xa_nn_elm_select_32x32_32(WORD32 * __restrict__ p_out,
       const WORD32 * __restrict__ p_inp1,
@@ -4099,6 +4653,12 @@ WORD32 xa_nn_gru_getsize(
     WORD32 hidden_size,
     WORD32 hidden_precision);
 
+typedef struct _gru_flags
+{
+    WORD32 back;
+    WORD32 time_major;
+} gru_flags;
+
 WORD32 xa_nn_gru_sym8sxasym8s(
     WORD8* p_out,
     const WORD8* p_hidden_state,
@@ -4111,8 +4671,25 @@ WORD32 xa_nn_gru_sym8sxasym8s(
     WORD32 n_batch,
     WORD32 n_itr,
     const gru_quant_params *p_gru_qp,
-    WORD32 time_major,
+    gru_flags *p_gru_flags,
     void* p_scratch
+);
+
+WORD32 xa_nn_matmul_sym8sxasym8s_sym16s(
+    WORD16 * __restrict__ p_out,
+    const WORD8 * __restrict__ p_mat1,
+    const WORD8 * __restrict__ p_vec1,
+    const WORD32 * __restrict__ p_bias,
+    WORD32 rows,
+    WORD32 cols1,
+    WORD32 row_stride1,
+    WORD32 vec_count,
+    WORD32 vec_offset,
+    WORD32 out_offset,
+    WORD32 out_stride,
+    WORD32 vec1_zero_bias,
+    WORD32 out_multiplier,
+    WORD32 out_shift
 );
     
 

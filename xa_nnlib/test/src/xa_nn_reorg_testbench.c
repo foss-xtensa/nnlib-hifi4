@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2018-2025 Cadence Design Systems, Inc.
+* Copyright (c) 2018-2026 Cadence Design Systems, Inc.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -875,6 +875,11 @@ int xa_nn_main_process(int argc, char *argv[])
   {
     sprintf(profiler_params, "input_batch=%d, input_height=%d, input_width=%d, input_channels=%d, out_batch=%d, out_height=%d, out_width=%d, out_channels=%d",
       cfg.input_batch, cfg.input_height, cfg.input_width, cfg.input_channels, cfg.out_batch, cfg.out_height, cfg.out_width, cfg.out_channels);
+  }
+  else if(strcmp(cfg.kernel_name, "shuffle_3D") == 0)
+  {
+    sprintf(profiler_params, "input_batch=%d, input_height=%d, input_width=%d, input_channels=%d, out_batch=%d, out_height=%d, out_width=%d, out_channels=%d, interleave_group=%d",
+      cfg.input_batch, cfg.input_height, cfg.input_width, cfg.input_channels, cfg.out_batch, cfg.out_height, cfg.out_width, cfg.out_channels, cfg.interleave_group);
   }
   else
   {
